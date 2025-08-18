@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FocusEd AI JavaScript Code Execution Lambda Function
+
+Resources:
+  # JavaScript Executor  
+  JavaScriptExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-js-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["index.handler"]
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: ["*"]
+          AllowMethods: ["POST"]
+          AllowHeaders: ["*"]
+    Metadata:
+      DockerTag: nodejs18-v1
+      DockerContext: ./javascript
+      Dockerfile: Dockerfile
+
+Outputs:
+  JavaScriptExecutorUrl:
+    Description: "JavaScript Executor Function URL"
+    Value: !GetAtt JavaScriptExecutorUrl.FunctionUrl

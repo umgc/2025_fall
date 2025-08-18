@@ -1,0 +1,1 @@
+{"success": true,"output": "🔥 Advanced C++ Test\n===================\n\nOriginal array: 64 34 25 12 22 11 90 \nSorted array: 11 12 22 25 34 64 90 \nUppercase: HELLO WORLD\nSum: 258\nAverage: 36.8571\n\n✅ C++ execution complete!\n","error": "","language": "CPP","executionTimeMs": 2369,"container": "cpp:gcc"}

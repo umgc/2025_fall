@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FocusEd AI Python Code Execution Lambda Function
+
+Globals:
+  Function:
+    Timeout: 90
+    MemorySize: 512
+
+Resources:
+  # Python Executor
+  PythonExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-python-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["lambda_function.lambda_handler"]
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - "*"
+    Metadata:
+      DockerTag: python3.9-v1
+      DockerContext: ./python
+      Dockerfile: Dockerfile
+
+Outputs:
+  PythonExecutorUrl:
+    Description: "Python Executor Function URL"
+    Value: !GetAtt PythonExecutorUrl.FunctionUrl

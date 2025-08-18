@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FocusEd AI Code Execution Lambda Functions - All Languages
+
+Globals:
+  Function:
+    Timeout: 90
+    MemorySize: 512
+
+Resources:
+  # Python Executor
+  PythonExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-python-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["lambda_function.lambda_handler"]
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - "*"
+    Metadata:
+      DockerTag: python3.9-v1
+      DockerContext: ./python
+      Dockerfile: Dockerfile
+
+  # JavaScript Executor  
+  JavaScriptExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-javascript-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["index.handler"]
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - "*"
+    Metadata:
+      DockerTag: nodejs18-v1
+      DockerContext: ./javascript
+      Dockerfile: Dockerfile
+
+  # Java Executor
+  JavaExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-java-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["JavaExecutor::handleRequest"]
+      Timeout: 120
+      MemorySize: 1024
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - "*"
+    Metadata:
+      DockerTag: java17-v1
+      DockerContext: ./java
+      Dockerfile: Dockerfile
+
+  # C++ Executor
+  CppExecutor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: focusedai-cpp-executor
+      PackageType: Image
+      ImageConfig:
+        Command: ["cpp-executor"]
+      Timeout: 120
+      MemorySize: 1024
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+          AllowHeaders:
+            - "*"
+    Metadata:
+      DockerTag: cpp-v1
+      DockerContext: ./cpp
+      Dockerfile: Dockerfile
+
+Outputs:
+  PythonExecutorUrl:
+    Description: "Python Executor Function URL"
+    Value: !GetAtt PythonExecutorUrl.FunctionUrl
+    
+  JavaScriptExecutorUrl:
+    Description: "JavaScript Executor Function URL"
+    Value: !GetAtt JavaScriptExecutorUrl.FunctionUrl
+    
+  JavaExecutorUrl:
+    Description: "Java Executor Function URL"
+    Value: !GetAtt JavaExecutorUrl.FunctionUrl
+    
+  CppExecutorUrl:
+    Description: "C++ Executor Function URL"
+    Value: !GetAtt CppExecutorUrl.FunctionUrl

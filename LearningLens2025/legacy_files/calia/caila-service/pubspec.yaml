@@ -1,0 +1,29 @@
+name: focused_ai_app
+description: A dual-mode AI education assistant for students and teachers.
+version: 1.0.0+1
+publish_to: 'none' # This app is not meant to be published yet
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.4.0
+  url_launcher: ^6.2.4
+
+  # UI/UX enhancements
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/focused_ai_logo.png
+    - assets/googleg.png
+    - assets/Google_G.png
