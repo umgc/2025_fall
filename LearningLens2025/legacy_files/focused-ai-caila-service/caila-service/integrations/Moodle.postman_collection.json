@@ -1,0 +1,865 @@
+{
+	"info": {
+		"_postman_id": "f3af74ff-2d2e-4c10-a549-f423ee0c2243",
+		"name": "Moodle",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "5552170"
+	},
+	"item": [
+		{
+			"name": "Teacher Auth",
+			"item": [
+				{
+					"name": "Teacher 0",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=teacher0&password=Teacher0pass!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "teacher0"
+								},
+								{
+									"key": "password",
+									"value": "Teacher0pass!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teacher 1",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=teacher1&password=Teacher1pass!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "teacher1"
+								},
+								{
+									"key": "password",
+									"value": "Teacher1pass!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=admin&password=UMGC2025teamc!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "admin"
+								},
+								{
+									"key": "password",
+									"value": "UMGC2025teamc!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Student Auth",
+			"item": [
+				{
+					"name": "Student 0",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=student0&password=Student0pass!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "student0"
+								},
+								{
+									"key": "password",
+									"value": "Student0pass!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Student 1",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=student1&password=Student1pass!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "student1"
+								},
+								{
+									"key": "password",
+									"value": "Student1pass!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Student 2",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/login/token.php?username=student2&password=Student2pass!&service=fai_moodle",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"login",
+								"token.php"
+							],
+							"query": [
+								{
+									"key": "username",
+									"value": "student2"
+								},
+								{
+									"key": "password",
+									"value": "Student2pass!"
+								},
+								{
+									"key": "service",
+									"value": "fai_moodle"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Functions",
+			"item": [
+				{
+					"name": "core_course_get_courses",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_course_get_courses&moodlewsrestformat=json",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_course_get_courses"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "core_enrol_get_users_courses",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_enrol_get_users_courses&moodlewsrestformat=json&userid=7",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_enrol_get_users_courses"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "userid",
+									"value": "7"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "core_enrol_get_enrolled_users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_enrol_get_enrolled_users&moodlewsrestformat=json&courseid=2",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_enrol_get_enrolled_users"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "courseid",
+									"value": "2"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "mod_assign_get_assignments",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=mod_assign_get_assignments&moodlewsrestformat=json",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "mod_assign_get_assignments"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "mod_assign_get_submissions",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=3ee8081638c7cb9a203a035cc4d6d6f5&wsfunction=mod_assign_get_submissions&moodlewsrestformat=json&assignmentids[0]=1",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "3ee8081638c7cb9a203a035cc4d6d6f5"
+								},
+								{
+									"key": "wsfunction",
+									"value": "mod_assign_get_submissions"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "assignmentids[0]",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "core_files_get_files",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_files_get_files&moodlewsrestformat=json&contextid=1&component&filearea&itemid=1&filepath&filename",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_files_get_files"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "contextid",
+									"value": "1"
+								},
+								{
+									"key": "component",
+									"value": null
+								},
+								{
+									"key": "filearea",
+									"value": null
+								},
+								{
+									"key": "itemid",
+									"value": "1"
+								},
+								{
+									"key": "filepath",
+									"value": null
+								},
+								{
+									"key": "filename",
+									"value": null
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Example of getting a submission file",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/pluginfile.php/25/assignsubmission_file/submission_files/1/test.txt?token=b1387f7d154ec94a34959da7e7a57e0c",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"pluginfile.php",
+								"25",
+								"assignsubmission_file",
+								"submission_files",
+								"1",
+								"test.txt"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "token",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c",
+									"type": "text"
+								},
+								{
+									"key": "filearea",
+									"value": "draft",
+									"type": "text"
+								},
+								{
+									"key": "itemid",
+									"value": "987654321",
+									"type": "text"
+								},
+								{
+									"key": "filepath",
+									"value": "/Assignments/",
+									"type": "text"
+								},
+								{
+									"key": "filename",
+									"value": "file.txt",
+									"type": "text"
+								},
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/Zaid/Downloads/sendtoassignmentsfolderplease.txt"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/upload.php",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"upload.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "core_user_add_user_private_files",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_user_add_user_private_files&moodlewsrestformat=json&draftid=123456789",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_user_add_user_private_files"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "draftid",
+									"value": "123456789"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "core_files_get_files Get private files",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": []
+						},
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=core_files_get_files&moodlewsrestformat=json&contextid=5&component=user&filearea=private&itemid=0&filepath=&filename=",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "core_files_get_files"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "contextid",
+									"value": "5"
+								},
+								{
+									"key": "component",
+									"value": "user"
+								},
+								{
+									"key": "filearea",
+									"value": "private"
+								},
+								{
+									"key": "itemid",
+									"value": "0"
+								},
+								{
+									"key": "filepath",
+									"value": ""
+								},
+								{
+									"key": "filename",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Example of getting a private file",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/pluginfile.php/5/user/private/moodleassignment.txt?token=b1387f7d154ec94a34959da7e7a57e0c",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"pluginfile.php",
+								"5",
+								"user",
+								"private",
+								"moodleassignment.txt"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "mod_assign_get_submissions copy",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://18.188.18.80/moodle/webservice/rest/server.php?wstoken=b1387f7d154ec94a34959da7e7a57e0c&wsfunction=mod_assign_get_submissions&moodlewsrestformat=json&assignmentids[0]=1",
+							"protocol": "http",
+							"host": [
+								"18",
+								"188",
+								"18",
+								"80"
+							],
+							"path": [
+								"moodle",
+								"webservice",
+								"rest",
+								"server.php"
+							],
+							"query": [
+								{
+									"key": "wstoken",
+									"value": "b1387f7d154ec94a34959da7e7a57e0c"
+								},
+								{
+									"key": "wsfunction",
+									"value": "mod_assign_get_submissions"
+								},
+								{
+									"key": "moodlewsrestformat",
+									"value": "json"
+								},
+								{
+									"key": "assignmentids[0]",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
