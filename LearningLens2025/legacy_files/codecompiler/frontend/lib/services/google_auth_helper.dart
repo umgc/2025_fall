@@ -2,6 +2,7 @@
 import 'dart:html' as html;
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 
@@ -273,7 +274,7 @@ class SimpleGoogleAuth {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'client_id': clientId,
-          'client_secret': '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', // Your client secret
+          'client_secret': Platform.environment["GOOGLE_CLIENT_SECRET"].toString(), // Your client secret
           'refresh_token': _refreshToken!,
           'grant_type': 'refresh_token',
         },
