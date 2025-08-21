@@ -1,41 +1,26 @@
 Weekly Narrative Report – Team E
 
-Week of [MM/DD/YYYY]
+Week of [08/18/2025]
 
 1. Summary of Work Completed
 
-List features/issues closed with references to GitHub issues/PRs.
-
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
-
-Highlight what was merged into main vs. still in feature branches.
+Receieved list of requirements from customer. Established team roles and created tasks needed to complete the SRS and project plan.
 
 2. Milestones & Deliverables
-
-State if you are on track, ahead, or behind milestone deadlines.
-
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
+Behind on milestone deadline for SRS and Project plan due to delayed delivery of customer requirements.
 
 3. Metrics Snapshot (Optional)
 
-GitHub activity metrics (commits, PRs merged, issues closed).
-
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
+None.
 
 4. Issues / Blockers
 
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+Current version of project is not functioning correctly due to missing dependencies and a badly organized github repo.
 
 5. Next Week’s Plan
 
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+Continue generation of SRS and project plan documents. Continue troubleshooting of Learning Lens project. Meet with client to go over requirements and needs.
 
 6. Cross-Team Coordination
 
-Any collaboration or help needed from other teams.
-
-Example: “Need Team B to expose new endpoints for integration testing.”
+None.
