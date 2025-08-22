@@ -43,6 +43,11 @@ resource "aws_instance" "moodle_instance" {
   key_name = aws_key_pair.moodle-key-pair.key_name
 }
 
+resource "aws_eip" "lb" {
+  instance = aws_instance.moodle_instance.id
+  domain   = "vpc"
+}
+
 resource "local_sensitive_file" "pem_file" {
   filename = pathexpand("~/.ssh/${aws_key_pair.moodle-key-pair.key_name}.pem")
   file_permission = "600"
