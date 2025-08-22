@@ -1,41 +1,18 @@
 Weekly Narrative Report – Team B
 
-Week of [MM/DD/YYYY]
+Week of 08/14/2025 - 08/20/2025
 
 1. Summary of Work Completed
-
-List features/issues closed with references to GitHub issues/PRs.
-
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
-
-Highlight what was merged into main vs. still in feature branches.
+- Initiated requirements gathering with the client and Product Owner (PO).
+- Confirmed repository setup; all team members have access and can push to GitHub.
 
 2. Milestones & Deliverables
-
-State if you are on track, ahead, or behind milestone deadlines.
-
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
-
-3. Metrics Snapshot (Optional)
-
-GitHub activity metrics (commits, PRs merged, issues closed).
-
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
-
+- Status: On track.
+- Project Management Plan (PMP): In progress; targeted for completion next week.
+- Software Requirements Specification (SRS): Requirements elicitation underway; targeted for completion next week.
+- 
 4. Issues / Blockers
-
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+None.
 
 5. Next Week’s Plan
-
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
-
-6. Cross-Team Coordination
-
-Any collaboration or help needed from other teams.
-
-Example: “Need Team B to expose new endpoints for integration testing.”
+- Complete PMP and SRS
