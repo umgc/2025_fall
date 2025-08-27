@@ -257,18 +257,14 @@ STRIPE_PUBLISHABLE_KEY=test_key
     testWidgets('FriendRequestsScreen renders correctly', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: FriendRequestsScreen(userId: 1)),
-      );
+      await tester.pumpWidget(const MaterialApp(home: FriendRequestsScreen()));
 
       expect(find.byType(FriendRequestsScreen), findsOneWidget);
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
     testWidgets('NewPostScreen renders correctly', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: NewPostScreen(userId: 1)),
-      );
+      await tester.pumpWidget(const MaterialApp(home: NewPostScreen()));
 
       expect(find.byType(NewPostScreen), findsOneWidget);
       expect(find.byType(Scaffold), findsOneWidget);
