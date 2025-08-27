@@ -1,6 +1,6 @@
 Weekly Narrative Report – Team C
 
-Week of [08/20/1995]
+Week of [08/20/2025]
 
 1. Summary of Work Completed
 
