@@ -1,35 +1,23 @@
-Weekly Narrative Report – Team A
-
-Week of [MM/DD/YYYY]
+Week of 08/25/2025
 
 Summary of Work Completed
-List features/issues closed with references to GitHub issues/PRs.
-
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
-
-Highlight what was merged into main vs. still in feature branches.
+    - Completed Project Management Plan (PMP) Sections 3 and 6.
+    - Completed Software Requirements Specification (SRS) Sections 4 and 5.
+    - Created UI/UX mockups for Team B features and shared for review.
 
 Milestones & Deliverables
-State if you are on track, ahead, or behind milestone deadlines.
-
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
-
-Metrics Snapshot (Optional)
-GitHub activity metrics (commits, PRs merged, issues closed).
-
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
+    - On track for Milestone 1 submission.
+    - On track for SRS submission.
 
 Issues / Blockers
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+    - No issues or blockers reported.
 
 Next Week’s Plan
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+    - Kick off Technical Design Document (TDD) first draft; create corresponding GitHub issue(s) for tracking.
+    - Begin Software Test Plan (STP) outline and test strategy; create corresponding GitHub issue(s) for tracking.
 
 Cross-Team Coordination
-Any collaboration or help needed from other teams.
-
-Example: “Need Team B to expose new endpoints for integration testing.”
+    - Coordinate across all teams to finalize Milestone 1 by merging and reconciling all document contributions (PMP, SRS, UI/UX).
+    - Align on document structure, terminology, and version control.
+    - Schedule a joint review session to resolve overlaps and gaps.
+    - Designate an integration owner to manage final compilation and approvals.
