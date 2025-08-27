@@ -5,6 +5,7 @@ Summary of Work Completed
     - Completed Project Management Plan (PMP) Sections 3 and 6.
     - Completed Software Requirements Specification (SRS) Sections 4 and 5.
     - Created UI/UX mockups for Team B features and shared for review.
+    - Created modern CareConnect logo
 
 Milestones & Deliverables
 
