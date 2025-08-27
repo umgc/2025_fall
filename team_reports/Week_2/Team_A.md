@@ -1,63 +1,212 @@
-CareConnect – Team A
-Weekly Narrative Report (Week 2)
-Period: August 19–26, 2025
-Prepared by: Team A (Lead: Sadina Phan-Wagner)
+# CareConnect – Team A  
 
-1. Executive Summary
+**Weekly Narrative Report (Week 2)**  
 
-Week 2 was a pivotal moment for Team A as we moved from high-level planning into fully defining the requirements and scope of CareConnect. We delivered our Project Management Plan (PMP v1.0) and the first complete draft of our Software Requirements Specification (SRS v1.0). Together, these set a strong foundation for Milestone 1.
+**Period:** August 19–27, 2025  
 
-The PMP formalized our schedule, RACI, risk controls, and monitoring approach, while the SRS captured detailed system features like the Telemedicine Call Assistant, Medical Visit Notetaker, and Calendar Assistant. These features directly address client needs and show our commitment to building a product that is not only technically sound but also deeply useful for caregivers and patients.
+**Prepared by:** Team A (Lead: *Sadina Phan-Wagner*)  
+---
+## 1. Executive Summary  
+Week 2 was a pivotal moment for **Team A** as we moved from high-level planning into fully defining the requirements and scope of *CareConnect*.  
+We delivered:  
+- **Project Management Plan (PMP v1.0)**  
+- **Software Requirements Specification (SRS v1.0)**  
+Together, these set a strong foundation for Milestone 1.  
+- The **PMP** formalized schedule, RACI, risk controls, monitoring approach, privacy & security safeguards, and KPIs.  
 
-This week also marked the start of our cost and hours tracking process, allowing us to see where our estimates lined up  and where adjustments are needed.
+- The **SRS** captured detailed system features like the Telemedicine Call Assistant, Medical Visit Notetaker, and Calendar Assistant—directly addressing client needs.  
+- We also launched cost and hours tracking to compare planned vs. actual work and build a burn-rate baseline.  
+---
+## 2. Key Accomplishments  
+### Project Management Plan (PMP v1.0) – Finalized (8/17/25)  
 
-2. Key Accomplishments
+- Defined **scope, success criteria, communication plan, stakeholder map**.  
 
-Project Management Plan (PMP v1.0) finalized (8/17/25), including:
-Scope, success criteria, communication plan, and stakeholder map.
-RACI assignments to clarify ownership and accountability across BA, QA, DevOps, UX, Mobile, and API roles.
-Privacy & Security plan that explicitly aligns with HIPAA and GDPR safeguards.
-Dashboard KPIs to track requirements coverage, test pass %, and defect density.
-Software Requirements Specification (SRS v1.0) drafted (8/22/25), with:
-Core functional requirements (user management, telemedicine notes, visit notetaker, billing/subscriptions, analytics, AI assistant, alerts, wearable data integration).
-Non-functional requirements for security, performance, accessibility, and offline support.
-Traceability framework started so requirements can be tracked through to testing.
-Client needs translated into requirements, including:
-Telemedicine Call Assistant with diarization, ASL support, caregiver alerts, and PII detection.
-Medical Visit Notetaker with transcription, triggers, and secure storage.
-Calendar Assistant that can capture AI-derived appointments but still keep caregiver oversight.
-Data and cost tracking established:
-Team A’s weekly labor plan created and logged into the Master Tracker.
-Actual hours collected and compared to estimates to start building a burn-rate baseline.
-3. Challenges & Risks
+- Established **RACI assignments** across BA, QA, DevOps, UX, Mobile, and API roles.  
 
-Ambitious scope: It’s tempting to include every advanced feature (AI, wearables, multilingual), but we need to stay realistic about what fits into the 12-week capstone.
-Technical ramp-up: Several of us are still building skills in Flutter/Dart and AWS services, which may slow early development.
-Variance in hours: Early tracking shows our actual hours are already running higher than planned. This is manageable now, but we’ll need to watch closely to avoid a trend.
-Dependencies: APIs for wearables and smart devices may limit what’s possible in the MVP.
-We are addressing these risks by tightening prioritization, keeping features in a MoSCoW framework (Must, Should, Could, Won’t), and documenting issues promptly in the RAID log.
+- Embedded **HIPAA/GDPR privacy & security safeguards**.  
 
-4. Next Week’s Focus (Week 3)
+- Created a **dashboard KPI framework** (requirements coverage, test pass %, defect density).  
+### Software Requirements Specification (SRS v1.0) – Drafted (8/22/25)  
 
-Freeze the requirements baseline after incorporating feedback from the client and faculty.
-Complete UI/UX wireframes for patient and caregiver dashboards, Telemedicine Notes, and the Calendar Assistant.
-Begin drafting the Technical Design Document (TDD), translating SRS requirements into an implementable cloud-native architecture.
-Expand the data dictionary to cover users, patients, care tasks, billing, health logs, and analytics metrics.
-Continue tracking hours and costs, with a consolidated Team A labor report for Week 3.
+- **Core functional requirements:**  
 
-5. Reflection & Alignment 
+  - User management  
 
-This week reinforced the importance of balancing vision with practicality. As a team, we’ve shown that we can not only capture the “big ideas” but also translate them into clear, testable requirements and structured plans.
-Our deliverables are clear, traceable, and professional, hitting the rubric for clarity and technical soundness.
-We’re demonstrating communication and accountability by aligning artifacts across PMP, SRS, Master Tracker, and client needs.
-By starting early with RAID logs, cost tracking, and an RTM scaffold, we are going beyond the minimum expectations.
-We’re actively applying lessons from previous capstones such as reconciling scope contradictions and building in regulatory/privacy controls early.
+  - Telemedicine notes & visit notetaker  
 
-Overall, Team A is ahead of pace for Milestone 1. We’re confident that the groundwork we’ve laid in Week 2 will keep us on track for an A+ trajectory.
+  - Billing/subscriptions  
 
-Closing Thought:
+  - Analytics & reporting  
 
-This week felt like the project came alive, the PMP gave us structure, the SRS gave us voice, and our conversations with the client gave us clarity. While challenges remain, we’re now working from a solid, professional foundation, and we’re excited to keep building CareConnect into something that makes a real difference.
+  - AI assistant & caregiver alerts  
+
+  - Wearable data integration  
+
+- **Non-functional requirements:** security, performance, accessibility, offline support.  
+
+- **Traceability framework** started to ensure end-to-end requirement coverage.  
+
+- **Client needs translated into features:**  
+
+  - Telemedicine Call Assistant (diarization, ASL support, caregiver alerts, PII detection).  
+
+  - Medical Visit Notetaker (transcription, triggers, secure storage).  
+
+  - Calendar Assistant (AI-derived appointments + caregiver oversight).  
+
+### Data & Cost Tracking  
+
+- Team A’s weekly labor plan created and logged in the **Master Tracker**.  
+
+- Actual hours collected and compared to estimates to establish a **burn-rate baseline**.  
+
+### Completed Work  
+
+- Drafted/refined **SRS: Overall Description & Constraints**.  
+
+- Reviewed **PMP: Assumptions & Monitoring/Reporting** for consistency.  
+
+- Participated in **client & team meetings**, clarifying constraints.  
+
+- Updated **decision tracker** and cross-checked requirements traceability.  
+
+- Refined **BNS → functional requirements → SRS integration**.  
+
+- Re-made **Technical Architecture Diagram** to reflect new integrations/dependencies.  
+
+- Built **data dictionary & API endpoint list** for legacy code base; began AWS configuration & local dev setup.  
+
+- Assisted teammates with **local environment setup**.  
+
+- Delivered **classwide overview** of requirements refinement.  
+
+- Conducted **UX review:** watched prior demo, created annotated screenshots, added new UI mockups & flow maps for upcoming features.  
+
+- Simplified **BNS → bullet points → PMP Scope of Work** section.  
+
+---
+
+## Weekly Narrative Report – *Mitchell Lord*  
+
+### Work Completed  
+
+- Authored **SRS sections**: *Introduction, Purpose, Scope*.  
+
+- Created **JSON schema for requirements** + **Python validator** for schema compliance.  
+
+- Authored **PMP sections**: *Budget Estimate, Monitoring & Reporting*.  
+
+- Reviewed/edited: *PMP Scope of Work*, *SRS Overall Description*.  
+
+- Maintained **project schedule (MS Project)** for Milestone 1 with:  
+
+  - Gantt Chart  
+
+  - WBS  
+
+  - Cost Report  
+
+  - Team Burndown  
+
+  - Variance charts  
+
+- Collected **team status reports**, designed **formal template** for ongoing use.  
+
+- Assisted PL with:  
+
+  - Tracking team needs  
+
+  - Creating task assignments  
+
+  - Proposing solutions for team issues  
+
+  - Setting up meetings in Outlook/Teams  
+
+  - Liaising with unavailable members  
+
+  - Researching tech stack options  
+
+  - Creating **crosswalk of 5 prior SRS docs → Team A BNS**  
+
+### Milestones & Deliverables  
+
+- Ahead of schedule on **M1 tasks**.  
+
+- Began preparing **M2 tasking** (in MS Project + dev environment setup).  
+
+### Issues & Risks  
+
+- **Issue:** Difficulties running legacy CareConnect code in dev environment.  
+
+- **Risk:** Tight timeline aligning **SRS & PMP** prior to Milestone 1.  
+
+- **Risk:** Potential misalignment of technical vs. project-level constraints.  
+
+- **Hours Logged:** 10.5 (includes client/team meetings).  
+---
+## 3. Challenges & Risks  
+
+- **Ambitious scope**: Need to balance advanced features vs. 12-week timeline.  
+
+- **Technical ramp-up**: Learning curve with Flutter/Dart + AWS.  
+
+- **Variance in hours**: Actuals slightly above plan (manageable for now).  
+
+- **API dependencies**: Wearables/smart devices may limit MVP delivery.  
+
+**Mitigation:** Apply MoSCoW prioritization, monitor RAID log, document risks early.  
+
+---
+
+## 4. Next Week’s Focus (Week 3)  
+
+- Freeze **requirements baseline** after client/faculty feedback.  
+
+- Complete **UI/UX wireframes** for:  
+
+  - Patient & caregiver dashboards  
+
+  - Telemedicine Notes  
+
+  - Calendar Assistant  
+
+- Draft **Technical Design Document (TDD)** → SRS → implementable cloud-native architecture.  
+
+- Expand **data dictionary & API endpoints** (users, patients, care tasks, billing, health logs, analytics).  
+
+- Continue **hours/cost tracking** → publish consolidated Week 3 labor report.  
+---
+
+## 5. Reflection & Alignment  
+
+- Reinforced importance of balancing **vision vs. practicality**.  
+
+- Deliverables are **clear, traceable, professional** → aligned to rubric for clarity + technical soundness.  
+
+- Artifacts (PMP, SRS, Master Tracker) are consistent and client-aligned.  
+
+- Early adoption of **RAID logs, RTM, cost tracking** → exceeding baseline expectations.  
+
+- Applied lessons from prior cohorts: early **scope reconciliation** + embedded **privacy/security controls**.  
+
+**Overall:** Team A is **ahead of pace** for Milestone 1.  
+
+---
+
+## Closing Thought  
+
+This week felt like the project came alive:  
+
+- The **PMP gave us structure**  
+
+- The **SRS gave us voice**  
+
+- The **client conversations gave us clarity**  
+
+Challenges remain, but we are now working from a solid foundation. The team is energized and committed to building *CareConnect* into something that makes a real difference.  
+
+---
 
 
 
