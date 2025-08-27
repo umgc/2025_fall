@@ -1,35 +1,26 @@
 Weekly Narrative Report – Team A
 
-Week of [MM/DD/YYYY]
+Week of [08/27/1995]
 
 Summary of Work Completed
-List features/issues closed with references to GitHub issues/PRs.
-
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
-
-Highlight what was merged into main vs. still in feature branches.
+Team C has completed 3 subtask on the project plan document which was sections 7, 8 and 9. 
+Team C also contributed to the SRS document by completing sections 5-7. 
 
 Milestones & Deliverables
-State if you are on track, ahead, or behind milestone deadlines.
-
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
+Milestone 1- Team C is on track, we will be submitting our work by Aug 27 for the merge with other care connect temas. 
 
 Metrics Snapshot (Optional)
-GitHub activity metrics (commits, PRs merged, issues closed).
+No comment for we havent worked with the code yet. 
 
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
 
 Issues / Blockers
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+NO issue or blockers to report this week.
 
 Next Week’s Plan
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+Goal next week for team c is to have a small training for Git hub and to bring the code into our repo so we can test it out. 
 
 Cross-Team Coordination
 Any collaboration or help needed from other teams.
+No collobaration needed from another team just trying to finalize the care connect SRS and project plan.
 
-Example: “Need Team B to expose new endpoints for integration testing.”
+
