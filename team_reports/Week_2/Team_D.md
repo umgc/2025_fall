@@ -1,35 +1,55 @@
-Weekly Narrative Report – Team A
+# Weekly Narrative Report – Team D  
+**Week of 08/20/2025**
 
-Week of [MM/DD/YYYY]
+---
 
-Summary of Work Completed
-List features/issues closed with references to GitHub issues/PRs.
+## 1. Summary of Work Completed
+- Met with product owner (Roy, Professor, Alireza ) to finalize requirements.  
+- Drafted initial **Software Requirements Specification (SRS)**.  
+- Held working sessions on:
+  - Screen mockups and modeling  
+  - Compliance considerations  
+  - EVV architecture alignment  
+- Updated SRS with assigned sections.  
+- Updated **Project Management Plan (PMP)** with matrix-driven assignments and formatting adjustments.  
+- Submitted consolidated document for initial review.  
 
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
+---
 
-Highlight what was merged into main vs. still in feature branches.
+## 2. Milestones & Deliverables
+- **Milestone 1** – On track.  
+  - Group content merged into the final document.  
+  - Applying final touches in coordination with other teams.  
 
-Milestones & Deliverables
-State if you are on track, ahead, or behind milestone deadlines.
+---
 
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
+## 3. Metrics Snapshot
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Planned Value (PV) | $2,025 |  |
+| Earned Value (EV) | $2,025 | On schedule |
+| Actual Cost (AC) | $2,652.50 | Higher than planned |
+| Schedule Variance (SV) | $0 | On schedule |
+| Cost Variance (CV) | −$627.50 | Over budget |
+| Schedule Performance Index (SPI) | 1.00 | On track |
+| Cost Performance Index (CPI) | 0.76 | Needs cost control |
 
-Metrics Snapshot (Optional)
-GitHub activity metrics (commits, PRs merged, issues closed).
+---
 
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
+## 4. Issues / Blockers
+- None reported this week.  
 
-Issues / Blockers
-Note technical or process blockers (dependencies on other teams, tool issues).
+---
 
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+## 5. Next Week’s Plan
+- Complete **rough draft** of PMP and SRS by **Saturday, Aug 23**.  
+- Submit PMP and SRS for review to PM and Mentors by **Wednesday, Aug 27**.  
+- Prepare for **Milestone 1 document submission and presentation**.  
+- Begin drafting **Technical Design Document (TDD)**.  
+- Develop initial **Database Schema & Data Models**.  
+- Start drafting **Software Test Plan**.  
 
-Next Week’s Plan
-Concrete goals tied to GitHub issues/PRs.
+---
 
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
-
-Cross-Team Coordination
-Any collaboration or help needed from other teams.
-
-Example: “Need Team B to expose new endpoints for integration testing.”
+## 6. Cross-Team Coordination
+- Collaboration required across all teams to assemble the **final versions of PMP and SRS**.  
