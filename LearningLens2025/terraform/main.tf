@@ -85,3 +85,33 @@ resource "aws_security_group" "moodle_security_group" {
     cidr_blocks = ["0.0.0.0/0"]  # Allow all outbound traffic
   }
 }
+
+resource "aws_amplify_app" "edulenseweb" {
+  name = "EduLenseApp"
+  repository = "https://github.com/umgc/2025_fall/tree/team_e"
+  build_spec = <<-EOT
+    version: 1
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - echo "Installing Flutter SDK"
+            - git clone https://github.com/flutter/flutter.git -b stable --depth 1
+            - export PATH="$PATH:$(pwd)/flutter/bin"
+            - flutter config --no-analytics
+            - flutter doctor
+            - echo "Installing dependencies"
+            -flutter pub get
+        build:
+          commands:
+            - echo "Building Flutter web application"
+            - flutter build web
+    artifacts:
+      baseDirectory: /build/web
+      files:
+        - '**/*'
+    cache:
+      paths:
+        - flutter/.pub-cache
+  EOT
+}
