@@ -86,9 +86,16 @@ resource "aws_security_group" "moodle_security_group" {
   }
 }
 
+variable "github_token" {
+  type = string
+}
+
 resource "aws_amplify_app" "edulenseweb" {
   name = "EduLenseApp"
-  repository = "https://github.com/umgc/2025_fall/tree/team_e"
+  repository = "https://github.com/rappleb1/2025_fall/"
+  access_token = var.github_token
+  enable_branch_auto_build = true
+
   build_spec = <<-EOT
     version: 1
     frontend:
@@ -101,17 +108,31 @@ resource "aws_amplify_app" "edulenseweb" {
             - flutter config --no-analytics
             - flutter doctor
             - echo "Installing dependencies"
-            -flutter pub get
+            - cd LearningLens2025/teamA/
+            - flutter pub get
+            - flutter create . --platforms web
         build:
           commands:
             - echo "Building Flutter web application"
+            - echo $ENV_FILE > .env
             - flutter build web
-    artifacts:
-      baseDirectory: /build/web
-      files:
-        - '**/*'
+      artifacts:
+        baseDirectory: LearningLens2025/teamA/build/web
+        files:
+          - '**/*'
     cache:
       paths:
         - flutter/.pub-cache
   EOT
+
+  environment_variables = {
+    ENV_FILE = file("../teamA/.env")
+  }
+}
+
+resource "aws_amplify_branch" "master" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = "team_e"
+
+  stage = "PRODUCTION"
 }
