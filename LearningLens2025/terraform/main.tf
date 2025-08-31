@@ -114,13 +114,26 @@ resource "aws_amplify_app" "edulenseweb" {
         build:
           commands:
             - echo "Building Flutter web application"
-            - echo $ENV_FILE > .env
-            - ls
+            - echo "$ENV_FILE" > .env
+            - export ENV_FILE=
             - flutter build web
       artifacts:
-        baseDirectory: LearningLens2025/teamA/build/web
+        baseDirectory: LearningLens2025/teamA/build/web/
         files:
           - '**/*'
+          - '.env'
+          - 'assets/.env'
+    test:
+      phases:
+        test:
+          commands:
+            - echo "Exporting Artifacts"
+      artifacts:
+        baseDirectory: LearningLens2025/teamA/build/web/
+        files:
+          - '**/*'
+          - '.env'
+          - 'assets/.env'
     cache:
       paths:
         - flutter/.pub-cache
