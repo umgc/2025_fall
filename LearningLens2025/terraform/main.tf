@@ -115,6 +115,7 @@ resource "aws_amplify_app" "edulenseweb" {
           commands:
             - echo "Building Flutter web application"
             - echo $ENV_FILE > .env
+            - ls
             - flutter build web
       artifacts:
         baseDirectory: LearningLens2025/teamA/build/web
