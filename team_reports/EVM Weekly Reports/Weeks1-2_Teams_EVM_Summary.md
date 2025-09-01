@@ -2,7 +2,7 @@
 # Overall Summary – Weeks 1 & 2
 
 ## Overall Trends
-- **Milestone 1 (Project Plan and SRS) was completed on schedule in Week 2.**
+- **Milestone 1 (Project Plan and SRS) was completed on schedule Aug 30th, 2025.**
 - **Cost and schedule health** (CPI & SPI) are all **green** (>1.0) for every team in both weeks.
 - Incremental performance in Week 2 shows progress building as teams move toward future milestones.
 
