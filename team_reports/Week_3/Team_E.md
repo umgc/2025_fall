@@ -1,96 +1,58 @@
-# [Project Name] – [Team Name]
+# Learning Lens - Team E
 
 **Weekly Narrative Report (Week [X])**
 
-**Period:** [Start Date]–[End Date]
+**Period:** Aug 27th - Sept 3rd
 
-**Prepared by:** [Team Name] (Lead: *[Lead Name]*)
+**Prepared by:** Team E (Lead: *William Freeman*)
 
 ---
 
 ## 1. Executive Summary
-[Provide a high-level overview of the week's progress, key deliverables completed, and the overall project health. Mention how this week's work moves the project toward its next major milestone.]
-
+Received customer approval for, and delivered SRS and PMP documents. Started work on TDD and STP.
 *   **Key Deliverables Completed:**
-    *   Deliverable 1 (Version)
-    *   Deliverable 2 (Version)
-*   **Overall Status:** [e.g., On Track, Ahead of Schedule, At Risk]
-*   **This week was pivotal for...** [e.g., finalizing plans, beginning development, securing client feedback].
+    *   Project Plan v1.5
+    *   SRS v4.0.0
+*   **Overall Status:** On Track
+*   **This week was pivotal for:** Beginning development of SRS and PMP.
 
 ---
 
 ## 2. Key Accomplishments
-[Detail the major tasks completed this week. Use bullet points for readability. Group related accomplishments under sub-headers.]
 
-### [Deliverable or Area Name 1] – [Status, e.g., Finalized, Drafted] ([Date])
-*   Accomplishment 1
-*   Accomplishment 2
-*   Accomplishment 3
-
-### [Deliverable or Area Name 2] – [Status] ([Date])
-*   Accomplishment 1
-*   Accomplishment 2
-
-### Administrative & Tracking
-*   [e.g., Labor hours tracked and analyzed, burn rate established, RAID log updated.]
-
----
-
-## Weekly Narrative Report – *[Individual Name]*
-*[Optional: Include individual contributions for key team members or leads.]*
-
-### Work Completed
-*   Authored/Created/Developed: [List specific items]
-*   Reviewed/Edited: [List specific items]
-*   Maintained: [e.g., project schedule, risk log]
-*   Assisted with: [List supporting tasks]
-
-### Milestones & Deliverables
-*   Status regarding current milestone tasks: [e.g., On track, ahead of schedule]
-*   Preparations for next milestone: [e.g., Began tasking for M2]
-
-### Issues & Risks (Individual)
-*   **Issue:** [Specific problem encountered]
-*   **Risk:** [Potential future challenge]
-*   **Hours Logged:** [Number] (includes [meetings/activities])
+### TDD – Ongoing
+Completed conversion of previous TDD to an editable format. Currently adding/updating sections where required.
+### STP – Ongoing
+Completed conversion of previous STP to an editable format. Currently adding/updating sections where required.
 
 ---
 
 ## 3. Challenges & Risks
-[List the overarching project-level challenges and risks identified during the week. Be specific and propose mitigation strategies.]
-
-*   **Challenge/Risk 1:** [Description of the challenge or risk and its potential impact].
-    *   **Mitigation:** [Planned or ongoing action to address it].
-*   **Challenge/Risk 2:** [Description].
-    *   **Mitigation:** [Action].
-*   **Challenge/Risk 3:** [e.g., Variance in planned vs. actual hours, technical dependencies].
-    *   **Mitigation:** [Action].
+*   **Challenge/Risk 1:** Possible implementation of features from Summer 2025's project.
+    *   **Mitigation:** Discuss which features to prioritize with our client.
+*   **Challenge/Risk 2:** Possible need to push features to backlog.
+    *   **Mitigation:** Discuss which features to prioritize with our client.
+*   **Challenge/Risk 3:** AWS resource costs.
+    *   **Mitigation:** Use free tier resources only.
 
 ---
 
-## 4. Next Week’s Focus (Week [X+1])
-[Outline the plan for the upcoming week. This sets expectations and keeps the team aligned.]
-
-*   Priority 1: [e.g., Finalize requirements baseline after feedback]
-*   Priority 2: [e.g., Complete UI/UX wireframes for X feature]
-*   Priority 3: [e.g., Draft Technical Design Document (TDD)]
-*   Priority 4: [e.g., Continue hours/cost tracking and reporting]
+## 4. Next Week’s Focus (Week 4)
+*   Priority 1: Finalize TDD
+*   Priority 2: Finalize STP
+*   Priority 3: Revise PMP
+*   Priority 4: Revise SRS
 
 ---
 
 ## 5. Reflection & Alignment
-[Add a qualitative assessment of the project's direction, team health, and alignment with goals. This is a place for strategic thinking.]
-
 *   Reinforced the importance of [e.g., balancing vision vs. practicality, clear communication].
 *   Deliverables are [e.g., clear, traceable, and professionally presented].
 *   Artifacts are consistent and aligned with client/stakeholder expectations.
 *   The team is [e.g., energized, collaborative, focused] and committed to the project's success.
 
-**Overall:** The project is **[e.g., ahead of pace, on track, at risk]** for the next milestone.
 
 ---
 
 ## Closing Thought
-[End with a brief, motivating summary that captures the week's essence and looks forward.]
-
-This week felt like [e.g., the project came alive, we turned a corner, we built a solid foundation]. Challenges remain, but we are prepared to meet them.
+Overall, this project is on track to deliver expected deliverables.
