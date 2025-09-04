@@ -1,96 +1,70 @@
-# [Project Name] – [Team Name]
+# CareConnect - Team B
 
-**Weekly Narrative Report (Week [X])**
+**Weekly Narrative Report (Week 3)**
 
-**Period:** [Start Date]–[End Date]
+**Period:** Aug. 27 - Sept. 3
 
-**Prepared by:** [Team Name] (Lead: *[Lead Name]*)
+**Prepared by:** Sukhmeet Khalar (Team B)
 
 ---
 
 ## 1. Executive Summary
-[Provide a high-level overview of the week's progress, key deliverables completed, and the overall project health. Mention how this week's work moves the project toward its next major milestone.]
+This week marked a significant milestone completion with the successful delivery and presentation of our foundational project documents. The team demonstrated strong execution in finalizing the Project Management Plan (PMP) and Software Requirements Specification (SRS).
 
 *   **Key Deliverables Completed:**
-    *   Deliverable 1 (Version)
-    *   Deliverable 2 (Version)
-*   **Overall Status:** [e.g., On Track, Ahead of Schedule, At Risk]
-*   **This week was pivotal for...** [e.g., finalizing plans, beginning development, securing client feedback].
+    *   Project Management Plan (PMP) - Final Version
+    *   Software Requirements Specification (SRS) - Final Version
+*   **Overall Status:** On Track
+*   **This week was pivotal for** completeing Mileston 1 and establishing a plan of attach for Milestone 2 dilverables.
 
 ---
 
 ## 2. Key Accomplishments
-[Detail the major tasks completed this week. Use bullet points for readability. Group related accomplishments under sub-headers.]
+The team successfully completed our first major milestone while laying groundwork for upcoming technical deliverables.
 
-### [Deliverable or Area Name 1] – [Status, e.g., Finalized, Drafted] ([Date])
-*   Accomplishment 1
-*   Accomplishment 2
-*   Accomplishment 3
+### Milestone 1 Deliverables – Finalized (Milestone 1 Due Date)
+*   Completed and delivered Project Management Plan (PMP) with comprehensive project scope, timeline, and resource allocation
+*   Finalized Software Requirements Specification (SRS) with detailed functional and non-functional requirements
+*   Successfully presented milestone 1 deliverables to all project teams, Product Owner, client stakeholders, and course professor
 
-### [Deliverable or Area Name 2] – [Status] ([Date])
-*   Accomplishment 1
-*   Accomplishment 2
+### Technical Design & Testing Phase – Initiated
+*   Began development of Technical Design Document (TDD) using previous cohorts TDD as our starting point. 
+*   Started Software Test Plan (STP) development, outlining testing strategies and methodologies
+*   Conducted technical feasibility assessment through legacy system analysis
 
-### Administrative & Tracking
-*   [e.g., Labor hours tracked and analyzed, burn rate established, RAID log updated.]
-
----
-
-## Weekly Narrative Report – *[Individual Name]*
-*[Optional: Include individual contributions for key team members or leads.]*
-
-### Work Completed
-*   Authored/Created/Developed: [List specific items]
-*   Reviewed/Edited: [List specific items]
-*   Maintained: [e.g., project schedule, risk log]
-*   Assisted with: [List supporting tasks]
-
-### Milestones & Deliverables
-*   Status regarding current milestone tasks: [e.g., On track, ahead of schedule]
-*   Preparations for next milestone: [e.g., Began tasking for M2]
-
-### Issues & Risks (Individual)
-*   **Issue:** [Specific problem encountered]
-*   **Risk:** [Potential future challenge]
-*   **Hours Logged:** [Number] (includes [meetings/activities])
-
+### System Analysis & Research – In Progress
+*   Successfully built and deployed frontend components of previous cohort project on Chrome and Linux (GTK)
+*   Identified backend integration challenges with Spring Boot dependencies preventing application startup. Alireza pointed out a possible fix for getting backend up and running. A development emviornment is needed to mock all of the dependencies. 
+*   Documented technical lessons learned to inform current project architecture decisions
+*   
 ---
 
 ## 3. Challenges & Risks
-[List the overarching project-level challenges and risks identified during the week. Be specific and propose mitigation strategies.]
+Several technical and coordination challenges emerged this week that require proactive management.
 
-*   **Challenge/Risk 1:** [Description of the challenge or risk and its potential impact].
-    *   **Mitigation:** [Planned or ongoing action to address it].
-*   **Challenge/Risk 2:** [Description].
-    *   **Mitigation:** [Action].
-*   **Challenge/Risk 3:** [e.g., Variance in planned vs. actual hours, technical dependencies].
-    *   **Mitigation:** [Action].
+*   **Challenge/Risk 1:** Backend integration complexity identified through legacy system analysis, potentially impacting our technical approach.
+    *   **Mitigation:** Incorporate lessons learned into TDD architecture decisions.
+
+*   **Challenge/Risk 2:** Cross-team coordination requirements for TDD and STP development may create scheduling bottlenecks.
+    *   **Mitigation:** Attempting to establish working sessions for other team.
+
+*   **Challenge/Risk 3:** Requirements prioritization needs clarification to maintain project scope and timeline alignment.
+    *   **Mitigation:** Team is prioritizing requirements and deciding which requirements, if any need to be moved into the backlog.
 
 ---
 
-## 4. Next Week’s Focus (Week [X+1])
-[Outline the plan for the upcoming week. This sets expectations and keeps the team aligned.]
+## 4. Next Week's Focus (Week 5)
 
-*   Priority 1: [e.g., Finalize requirements baseline after feedback]
-*   Priority 2: [e.g., Complete UI/UX wireframes for X feature]
-*   Priority 3: [e.g., Draft Technical Design Document (TDD)]
-*   Priority 4: [e.g., Continue hours/cost tracking and reporting]
+*   Priority 1: Conduct requirements prioritization session and establish rationale for backlog items
+*   Priority 2: Continue Technical Design Document (TDD) development with cross-team collaboration sessions
+*   Priority 3: Continue Software Test Plan (STP) development, maintaining timeline for on-schedule completion
+*   Priority 4: Facilitate UI/UX mockup feedback sessions with all team members
+*   Priority 5: Coordinate working sessions with other teams to address cross-team requirements for TDD and STP
 
 ---
 
 ## 5. Reflection & Alignment
-[Add a qualitative assessment of the project's direction, team health, and alignment with goals. This is a place for strategic thinking.]
+This milestone completion demonstrates our team's ability to deliver quality documentation under deadline pressure while maintaining professional standards. The successful presentation to stakeholders reinforced our commitment to transparency and collaborative project management.
 
-*   Reinforced the importance of [e.g., balancing vision vs. practicality, clear communication].
-*   Deliverables are [e.g., clear, traceable, and professionally presented].
-*   Artifacts are consistent and aligned with client/stakeholder expectations.
-*   The team is [e.g., energized, collaborative, focused] and committed to the project's success.
+**Overall:** The project is **on track** for the next milestone, with solid foundations established for upcoming technical deliverables.
 
-**Overall:** The project is **[e.g., ahead of pace, on track, at risk]** for the next milestone.
-
----
-
-## Closing Thought
-[End with a brief, motivating summary that captures the week's essence and looks forward.]
-
-This week felt like [e.g., the project came alive, we turned a corner, we built a solid foundation]. Challenges remain, but we are prepared to meet them.
