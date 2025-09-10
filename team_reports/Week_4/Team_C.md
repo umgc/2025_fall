@@ -1,41 +1,55 @@
 Weekly Narrative Report – Team C
 
-Week of [MM/DD/YYYY]
+Week of 9/10/2025
 
 1. Summary of Work Completed
 
-List features/issues closed with references to GitHub issues/PRs.
+Functional Specifications (§5): Core features documented; updates aligned to current business needs; draft ready for review/merge.
 
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
+API Design (§6): Endpoint surfaces defined with request/response patterns; auth, errors, and versioning outlined; pending review.
 
-Highlight what was merged into main vs. still in feature branches.
+Data Models (§7): Entities/relationships identified; initial schemas and constraints drafted; indexes and auditing noted.
+
+UI/UX Design (§8): Key screens and primary flows outlined/wireframed; labeling/disclaimers captured; awaiting design review.
+
+Error Handling (NFR) (§10): Standardized error taxonomy and user-facing messaging drafted; fallback behaviors captured.
+
+Performance & Scalability (NFR) (§11): Throughput/latency targets drafted; queuing/caching and rate-limit strategies outlined.
+
+Known Issues (§14): Initial list compiled from analysis and integration risks.
+
+STP:
+
+§3.1 Tools & Environment: Test stack and environments identified; seed data approach drafted.
+
+§3.2 Testing Approach: Risk-based coverage plan across unit/integration/E2E/perf/security defined.
+
+§3.3 Pass/Fail Criteria: Quality gates and service targets written.
+
+§5 Test Suites: Baseline suites outlined; coverage goals noted.
+
+Status of changes: Majority drafted and pending review/merge into main.
 
 2. Milestones & Deliverables
 
-State if you are on track, ahead, or behind milestone deadlines.
+Overall: On track for Friday, September 12, 2025.
 
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
-
-3. Metrics Snapshot (Optional)
-
-GitHub activity metrics (commits, PRs merged, issues closed).
-
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
+This milestone targets: Reviewed/merged TDD sections (§§5,6,7,8,10,11,14) and STP sections (§§3.1–3.3, §5), with baseline tests and documentation complete.
 
 4. Issues / Blockers
 
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+Dependencies on other teams to help with the for UI/UX screen flows.
 
 5. Next Week’s Plan
 
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+To hold a github training and figure out how to leverage trello to move forward with Milestone 3. 
 
 6. Cross-Team Coordination
 
-Any collaboration or help needed from other teams.
+Business/Product: Confirm scope and any deltas from previous cohort artifacts.
 
-Example: “Need Team B to expose new endpoints for integration testing.”
+Design/Content: Finalize copy, accessibility notes, and UI states.
+
+Security/Compliance: Validate logging, data handling, and non-functional requirements.
+
+DevOps/QA: Ensure test environments are stable and test data is available for verification.
