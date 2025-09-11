@@ -3,18 +3,15 @@ Weekly Narrative Report – Team B
 Week of [MM/DD/YYYY]
 
 1. Summary of Work Completed
-
-List features/issues closed with references to GitHub issues/PRs.
-
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
-
-Highlight what was merged into main vs. still in feature branches.
+- Researched Jitsi, WebRTC, and other implementations for video and audio chatting. Brought the research to professor, and we decided to do webrtc with a maximum of 10 people allowed in a single call
+- Researched local LLMs for our features and potentially for other teams features
+- Team is nearly complete with TDD and STP for team B features
+- Went over the features with professor and Roy along side Team D
+- Yara has been continously updating and adding other team features to the mock up 
 
 2. Milestones & Deliverables
 
-State if you are on track, ahead, or behind milestone deadlines.
-
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
+Team is on track for Milestone 2
 
 3. Metrics Snapshot (Optional)
 
@@ -24,18 +21,12 @@ EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
 
 4. Issues / Blockers
 
-Note technical or process blockers (dependencies on other teams, tool issues).
-
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+No issues outside sharepoint pain points. 
 
 5. Next Week’s Plan
 
-Concrete goals tied to GitHub issues/PRs.
-
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+Present Milestone 2. Start on Milestone 3.
 
 6. Cross-Team Coordination
 
-Any collaboration or help needed from other teams.
-
-Example: “Need Team B to expose new endpoints for integration testing.”
+All the teams will need to collaborate on multiple aspects of the code base. We don't want to me duplicating code. 
