@@ -1,41 +1,64 @@
-Weekly Narrative Report – Team D
 
-Week of [MM/DD/YYYY]
+# Weekly Narrative Report – Team D
+ 
+**Period: [09/03/2025]–[09/09/2025]**
 
-1. Summary of Work Completed
+Prepared by: [CareConnect - Team D] (Lead: Sudarshan Neupane)
+---
 
-List features/issues closed with references to GitHub issues/PRs.
+## 1. Summary of Work Completed
 
-Example: “Completed front-end login screen (PR #24) and integrated with API (Issue #17).”
+* Milestone 1 review.
+* Redo of the mock screen based on Figma design.
+* Incorporated feedback from SRS and PMP.
+* Held group sessions to discuss:
 
-Highlight what was merged into main vs. still in feature branches.
+  * Updated screen mockups and modeling
+  * Local LLM, OCR options
+* Updated assigned sections of TDD and STP.
+* Ongoing research on AWS setup, LLM, EVV
 
-2. Milestones & Deliverables
+---
 
-State if you are on track, ahead, or behind milestone deadlines.
+## 2. Milestones & Deliverables
 
-Example: “Milestone 2 – API endpoints completed, awaiting unit tests.”
+* **Milestone 2** – On track.
 
-3. Metrics Snapshot (Optional)
+  * Working on merging content into consolidated documents.
 
-GitHub activity metrics (commits, PRs merged, issues closed).
+---
 
-EVM tie-in: Planned Value (PV), Earned Value (EV), Actual Cost (AC).
+## 3. Metrics Snapshot
 
-4. Issues / Blockers
+| Metric                           | Value | Notes                        |
+| -------------------------------- | ----- | ---------------------------- |
+| Planned Value (PV)               | 44    |                              |
+| Earned Value (EV)                | 44    | On schedule                  |
+| Actual Cost (AC)                 | 54    | Slightly higher than planned |
+| Schedule Variance (SV)           | 0     | On schedule                  |
+| Cost Variance (CV)               | −10   | Over budget                  |
+| Schedule Performance Index (SPI) | 1.00  | On track                     |
+| Cost Performance Index (CPI)     | 0.815 | Needs cost control           |
 
-Note technical or process blockers (dependencies on other teams, tool issues).
+---
 
-Example: “Waiting on Team C’s database schema update before testing can proceed.”
+## 4. Issues / Blockers
 
-5. Next Week’s Plan
+* No major issues reported this week.
 
-Concrete goals tied to GitHub issues/PRs.
+---
 
-Example: “Implement password reset workflow (Issue #32), write API integration tests (Issue #28).”
+## 5. Next Week’s Plan
 
-6. Cross-Team Coordination
+* Finalize TDD and STP submissions.
+* Conduct Milestone 2 review; update TDD and STP based on review feedback.
+* Begin Milestone 3 infrastructure setup.
+* Continue local LLM research.
 
-Any collaboration or help needed from other teams.
+---
 
-Example: “Need Team B to expose new endpoints for integration testing.”
+## 6. Cross-Team Coordination
+
+* Coordination required across all teams to assemble the **final versions of TDD and STP**.
+
+ 
