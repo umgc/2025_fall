@@ -147,9 +147,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
         return;
       }
 
-      if (userID == null) {
-        userID = '-';
-      }
+      userID ??= '-';
 
       FitbitCredentials fitbitCredentials = FitbitCredentials(
         userID: userID,
@@ -185,25 +183,23 @@ class _WearablesScreenState extends State<WearablesScreen> {
           )
       );
 
-      if (stepsData != null) {
-        List<dynamic> dataList = stepsData is List ? stepsData : [stepsData];
-        if (dataList.isNotEmpty) {
-          var latestData = dataList.last;
-          double finalValue = _extractFitbitValue(latestData);
-          DateTime dataDate = _extractFitbitDate(latestData);
+      List<dynamic> dataList = stepsData;
+      if (dataList.isNotEmpty) {
+        var latestData = dataList.last;
+        double finalValue = _extractFitbitValue(latestData);
+        DateTime dataDate = _extractFitbitDate(latestData);
 
-          setState(() {
-            latestHealthData['steps'] = HealthData(
-              type: 'Steps',
-              value: finalValue,
-              unit: 'steps',
-              date: dataDate,
-              source: 'Fitbit',
-            );
-          });
-        }
+        setState(() {
+          latestHealthData['steps'] = HealthData(
+            type: 'Steps',
+            value: finalValue,
+            unit: 'steps',
+            date: dataDate,
+            source: 'Fitbit',
+          );
+        });
       }
-    } catch (e) {
+        } catch (e) {
       _setDefaultValue('steps', 'Steps', 'steps', 'Fitbit');
     }
   }
@@ -223,25 +219,23 @@ class _WearablesScreenState extends State<WearablesScreen> {
           )
       );
 
-      if (caloriesData != null) {
-        List<dynamic> dataList = caloriesData is List ? caloriesData : [caloriesData];
-        if (dataList.isNotEmpty) {
-          var latestData = dataList.last;
-          double finalValue = _extractFitbitValue(latestData);
-          DateTime dataDate = _extractFitbitDate(latestData);
+      List<dynamic> dataList = caloriesData;
+      if (dataList.isNotEmpty) {
+        var latestData = dataList.last;
+        double finalValue = _extractFitbitValue(latestData);
+        DateTime dataDate = _extractFitbitDate(latestData);
 
-          setState(() {
-            latestHealthData['calories'] = HealthData(
-              type: 'Calories',
-              value: finalValue,
-              unit: 'cal',
-              date: dataDate,
-              source: 'Fitbit',
-            );
-          });
-        }
+        setState(() {
+          latestHealthData['calories'] = HealthData(
+            type: 'Calories',
+            value: finalValue,
+            unit: 'cal',
+            date: dataDate,
+            source: 'Fitbit',
+          );
+        });
       }
-    } catch (e) {
+        } catch (e) {
       _setDefaultValue('calories', 'Calories', 'cal', 'Fitbit');
     }
   }
@@ -883,7 +877,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
             ),
             const SizedBox(height: 12),
 
-            ...connectedDevices.map((device) => _buildDeviceCard(device)).toList(),
+            ...connectedDevices.map((device) => _buildDeviceCard(device)),
           ],
         ),
       ),

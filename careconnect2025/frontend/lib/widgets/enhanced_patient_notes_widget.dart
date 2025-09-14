@@ -1,12 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import '../services/enhanced_file_service.dart';
-import '../services/auth_token_manager.dart';
-import '../config/theme/app_theme.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html;
 import 'dart:typed_data';
+
+import 'package:care_connect_app/abstracts/file_handler.dart';
+import 'package:care_connect_app/factories/file_handler_factory.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+
+import '../config/theme/app_theme.dart';
+import '../services/enhanced_file_service.dart';
 
 class EnhancedPatientNotesWidget extends StatefulWidget {
   final int patientId;
@@ -33,6 +34,7 @@ class _EnhancedPatientNotesWidgetState
   bool _isUploading = false;
   bool _showingAll = false;
   final String _selectedCategory = 'MEDICAL_NOTE';
+  late final FileHandler _fileHandler;
 
   // Categories for notes
   final Map<String, String> _noteCategories = {
@@ -49,6 +51,7 @@ class _EnhancedPatientNotesWidgetState
   void initState() {
     super.initState();
     _loadPatientFiles();
+    _fileHandler = FileHandlerFactory.create();
   }
 
   @override
@@ -118,16 +121,14 @@ class _EnhancedPatientNotesWidgetState
       });
 
       try {
-        File fileToUpload;
-        if (kIsWeb) {
-          // Handle web file upload
-          final bytes = file.bytes!;
-          final tempDir = Directory.systemTemp;
-          fileToUpload = File('${tempDir.path}/${file.name}');
-          await fileToUpload.writeAsBytes(bytes);
-        } else {
-          fileToUpload = File(file.path!);
-        }
+        // Use platform handler to process file
+        final fileResult = await _fileHandler.processPickedFile(
+          file.path,
+          file.name,
+          file.bytes,
+        );
+
+        final fileToUpload = File(fileResult.filePath);
 
         final response = await EnhancedFileService.uploadFile(
           file: fileToUpload,
@@ -136,9 +137,18 @@ class _EnhancedPatientNotesWidgetState
           patientId: widget.patientId,
         );
 
+        // Clean up temporary file if needed
+        if (fileResult.isTemporary) {
+          try {
+            await fileToUpload.delete();
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+
         if (response != null) {
           _showSuccessSnackBar('File uploaded successfully');
-          await _loadPatientFiles(); // Reload files
+          await _loadPatientFiles();
         } else {
           _showErrorSnackBar('Failed to upload file');
         }
@@ -175,7 +185,7 @@ class _EnhancedPatientNotesWidgetState
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: selectedCategory,
+                initialValue: selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Category *',
                   border: OutlineInputBorder(),
@@ -271,24 +281,13 @@ class _EnhancedPatientNotesWidgetState
     try {
       final fileBytes = await EnhancedFileService.downloadFile(file.id);
       if (fileBytes != null) {
-        if (kIsWeb) {
-          // For web, create a download link
-          final blob = html.Blob([fileBytes], file.contentType);
-          final url = html.Url.createObjectUrlFromBlob(blob);
-          final anchor = html.document.createElement('a') as html.AnchorElement
-            ..href = url
-            ..style.display = 'none'
-            ..download = file.originalFilename;
-          html.document.body?.children.add(anchor);
-          anchor.click();
-          html.document.body?.children.remove(anchor);
-          html.Url.revokeObjectUrl(url);
-          _showSuccessSnackBar('File downloaded successfully');
-        } else {
-          // For mobile, save to downloads folder
-          // This would need platform-specific implementation
-          _showSuccessSnackBar('File downloaded successfully');
-        }
+        // Use platform handler for download
+        await _fileHandler.downloadFile(
+          file.originalFilename,
+          fileBytes,
+          file.contentType,
+        );
+        _showSuccessSnackBar('File downloaded successfully');
       } else {
         _showErrorSnackBar('Failed to download file');
       }
@@ -296,6 +295,8 @@ class _EnhancedPatientNotesWidgetState
       _showErrorSnackBar('Error downloading file: $e');
     }
   }
+
+
 
   void _previewFile(UserFileDTO file) {
     if (file.isPreviewable) {
@@ -342,60 +343,60 @@ class _EnhancedPatientNotesWidgetState
                     padding: const EdgeInsets.all(16),
                     child: file.isImage
                         ? FutureBuilder<Uint8List?>(
-                            future: EnhancedFileService.downloadFile(file.id),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-                              if (snapshot.hasData) {
-                                return Image.memory(
-                                  snapshot.data!,
-                                  fit: BoxFit.contain,
-                                );
-                              }
-                              return const Center(
-                                child: Text('Failed to load image'),
-                              );
-                            },
-                          )
+                      future: EnhancedFileService.downloadFile(file.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (snapshot.hasData) {
+                          return Image.memory(
+                            snapshot.data!,
+                            fit: BoxFit.contain,
+                          );
+                        }
+                        return const Center(
+                          child: Text('Failed to load image'),
+                        );
+                      },
+                    )
                         : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.description,
-                                  size: 64,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Document Preview',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'File: ${file.originalFilename}',
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Size: ${_formatFileSize(file.fileSize)}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => _downloadFile(file),
-                                  icon: const Icon(Icons.download),
-                                  label: const Text('Download to View'),
-                                ),
-                              ],
-                            ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.description,
+                            size: 64,
+                            color: Theme.of(context).primaryColor,
                           ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Document Preview',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'File: ${file.originalFilename}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Size: ${_formatFileSize(file.fileSize)}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _downloadFile(file),
+                            icon: const Icon(Icons.download),
+                            label: const Text('Download to View'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -480,7 +481,7 @@ class _EnhancedPatientNotesWidgetState
                 ),
               )
             else if (_displayedFiles.isEmpty)
-              // Empty state
+            // Empty state
               Center(
                 child: Column(
                   children: [
@@ -508,7 +509,7 @@ class _EnhancedPatientNotesWidgetState
                 ),
               )
             else
-              // Files list
+            // Files list
               Column(
                 children: [
                   ..._displayedFiles.map((file) => _buildFileItem(file)),

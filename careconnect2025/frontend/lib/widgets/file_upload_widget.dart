@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_token_manager.dart';
 import '../services/comprehensive_file_service.dart';
 import '../services/enhanced_file_service.dart';
 import '../providers/user_provider.dart';
@@ -148,7 +146,7 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         }
         return null;
       },
-      value: _selectedCategory,  // Starts as null!
+      initialValue: _selectedCategory,  // Starts as null!
       hint: const Text('Select Category'),  // This shows when value is null
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

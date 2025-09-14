@@ -45,9 +45,9 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> {
     try {
       final data = await ApiService.getInbox(_userId!);
       setState(() {
-        inbox = (data as List)
+        inbox = (data)
             .map((json) => ConversationPreviewDto.fromJson(json))
-            .toList();;
+            .toList();
         isLoading = false;
       });
     } catch (e) {

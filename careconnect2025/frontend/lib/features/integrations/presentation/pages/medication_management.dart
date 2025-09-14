@@ -286,7 +286,7 @@ class _MedicationManagementScreenState
                     ),
                   ),
                   style: AppTheme.primaryButtonStyle.copyWith(
-                    padding: MaterialStateProperty.all(
+                    padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -311,7 +311,7 @@ class _MedicationManagementScreenState
                     ),
                   ),
                   style: AppTheme.primaryButtonStyle.copyWith(
-                    padding: MaterialStateProperty.all(
+                    padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -336,7 +336,7 @@ class _MedicationManagementScreenState
                     ),
                   ),
                   style: AppTheme.primaryButtonStyle.copyWith(
-                    padding: MaterialStateProperty.all(
+                    padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -1804,9 +1804,9 @@ class BarcodeScannerScreen extends StatefulWidget {
   final Function(String) onCodeScanned;
 
   const BarcodeScannerScreen({
-    Key? key,
+    super.key,
     required this.onCodeScanned,
-  }) : super(key: key);
+  });
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();

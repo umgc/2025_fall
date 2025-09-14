@@ -1,13 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as path;
 import 'api_service.dart';
 import 'auth_token_manager.dart';
 import 'enhanced_file_service.dart';
@@ -84,7 +81,7 @@ class _FileCategoryDropdownState extends State<FileCategoryDropdown> {
           _selectedCategory = value;
         });
       },
-      value: _selectedCategory,
+      initialValue: _selectedCategory,
       decoration: const InputDecoration(labelText: 'Select Category'),
     );
   }

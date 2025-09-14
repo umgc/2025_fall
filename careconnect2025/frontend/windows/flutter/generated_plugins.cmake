@@ -3,7 +3,6 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  agora_rtc_engine
   app_links
   cloud_firestore
   desktop_webview_window
@@ -11,11 +10,10 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   firebase_core
   flutter_secure_storage_windows
-  flutter_webrtc
   geolocator_windows
-  iris_method_channel
   permission_handler_windows
   share_plus
+  speech_to_text_windows
   url_launcher_windows
   window_to_front
 )

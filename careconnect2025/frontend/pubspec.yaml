@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ^3.9.2
 
 # Performance optimization: Enable null safety and latest features
 
@@ -30,45 +30,48 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  file_picker: ^10.2.0
-  path: ^1.8.3
-  shared_preferences: ^2.2.2
-  dio: ^5.3.2
-  cookie_jar: ^4.0.6
-  dio_cookie_manager: ^3.0.0
-  confetti: ^0.7.0
-  url_launcher: ^6.1.12  # For OAuth redirects
-  crypto: ^3.0.3  # For generating state parameter
-  pointycastle: ^3.7.3  # For RSA key operations
-  app_links: ^6.3.2  # For handling deep links from OAuth callback (replaced uni_links)
+  file_picker: ^10.3.3
+  path: ^1.9.1
+  shared_preferences: ^2.5.3
+  dio: ^5.9.0
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.3.0
+  confetti: ^0.8.0
+  url_launcher: ^6.3.2  # For OAuth redirects
+  crypto: ^3.0.6  # For generating state parameter
+  pointycastle: ^4.0.0  # For RSA key operations
+  app_links: ^6.4.1  # For handling deep links from OAuth callback (replaced uni_links)
 
 # -- Astha - start
-  path_provider: ^2.1.2
+  path_provider: ^2.1.5
   mime: ^2.0.0
-  image_picker: ^1.0.7  # image upload
+  image_picker: ^1.2.0  # image upload
 
-  jitsi_meet_flutter_sdk: ^11.2.0
-  permission_handler: ^11.4.0 # permission for camera - downgraded for compatibility
+  jitsi_meet_flutter_sdk: ^11.4.0
+  permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
   
   intl: ^0.20.2 # data formatting
   camera: ^0.11.1 # emotion detector use
-  pdf: ^3.10.8 # PDF generation
+  pdf: ^3.11.3 # PDF generation
   # emotion detector use
 
-  google_ml_kit: ^0.20.0
-  firebase_core: ^3.14.0
-  cloud_firestore: ^5.6.9
-  firebase_messaging: ^15.1.5
-  firebase_auth: ^5.3.4
+  google_mlkit_face_detection: ^0.11.0
+  google_mlkit_text_recognition: ^0.13.1
+  google_mlkit_barcode_scanning: ^0.12.0
+  google_mlkit_image_labeling: ^0.12.0
+  firebase_core: ^4.1.0
+  cloud_firestore: ^6.0.1
+  firebase_messaging: ^16.0.1
+  firebase_auth: ^6.0.2
   
   # Hybrid Video Calling Solution
   # Agora for mobile platforms (iOS/Android) - Using only core engine to avoid namespace issues
   # Note: While included in pubspec, conditional imports prevent web loading
-  agora_rtc_engine: ^6.5.2
+#  agora_rtc_engine: ^6.5.2
   
-  # WebRTC for web platform (fallback for web compatibility)
-  flutter_webrtc: ^0.14.2  
-  socket_io_client: ^2.0.3+1  # For WebRTC signaling server
+  # WebRTC for web glatform (fallback for web compatibility)
+#  flutter_webrtc: ^1.2.0
+#  socket_io_client: ^3.1.2  # For WebRTC signaling server
   
   # Keep existing packages for other functionality
   
@@ -76,47 +79,46 @@ dependencies:
   # telephony: ^0.2.0+1  # For Android SMS - updated for namespace compatibility
   
   # Platform detection
-  platform: ^3.1.0
+  platform: ^3.1.6
 # my key storage
-  flutter_dotenv: ^5.0.2
+  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
-  sqflite: ^2.3.0
+  sqflite: ^2.4.2
 # -- Astha - start
 # ag
-  provider: ^6.1.2 
-  go_router: ^13.2.1 
-  flutter_stripe: ^9.5.0
-  geolocator: ^11.0.0
-  google_maps_flutter: ^2.6.0
-  fl_chart: ^0.66.0
+  provider: ^6.1.5+1
+  go_router: ^16.2.1 
+#  flutter_stripe: ^10.2.0
+  geolocator: ^14.0.2
+  google_maps_flutter: ^2.13.1
+  fl_chart: ^1.1.0
   
   # AI Voice Commands 
   # ag added as a fix
-  porcupine_flutter: ^3.0.2
-  speech_to_text: ^6.6.0
+  porcupine_flutter: ^3.0.5
+  speech_to_text: ^7.3.0
 
   # device integration
   fitbitter: ^2.0.6
-  health: ^13.1.1
-  mobile_scanner: ^3.5.6
-  share_plus: ^10.0.3
+  health: ^13.1.4
+  mobile_scanner: ^7.0.1
+  share_plus: ^12.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  http: ^1.4.0
+  http: ^1.5.0
   universal_html: ^2.2.4
   flutter_secure_storage: ^9.2.4
-  flutter_markdown: ^0.7.4+1
-  
-  # Flutter SDK 
+  # Flutter SDK
   flutter:
     sdk: flutter
 
+  web: ^1.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.4
+  mockito: ^5.5.1
   build_runner: ^2.4.9
   flutter_launcher_icons: ^0.14.1
 
@@ -125,7 +127,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.2
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

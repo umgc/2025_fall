@@ -4,7 +4,6 @@ import 'package:care_connect_app/config/env_constant.dart';
 import 'package:care_connect_app/features/social/presentation/pages/my_friend_screen.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
