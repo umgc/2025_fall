@@ -89,13 +89,16 @@ class Task {
   }
 
   bool isValid() {
-    return name.isNotEmpty && description.isNotEmpty && date != null;
+    return name.isNotEmpty && description.isNotEmpty;
   }
 }
 
 class FrequencyTask extends Task {
+  @override
   final String frequency; // e.g., 'daily', 'weekly', 'monthly'
+  @override
   final int interval; // e.g., every 2 days, every 3 weeks
+  @override
   final int? count; // Number of occurrences
 
   FrequencyTask({
@@ -137,6 +140,7 @@ class FrequencyTask extends Task {
 }
 
 class DayOfWeekTask extends Task {
+  @override
   final List<bool> daysOfWeek; // e.g., [true, false, true, false, true, false, false] for Mon, Wed, Fri
 
   DayOfWeekTask({

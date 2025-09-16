@@ -94,7 +94,7 @@ class _CustomTaskScreenState extends State<CustomTaskScreen> {
                           ),
                     ),
                     DropdownButtonFormField<String>(
-                      value: task.frequency,
+                      initialValue: task.frequency,
                       items: const [
                         DropdownMenuItem(value: 'DAILY', child: Text('Daily')),
                         DropdownMenuItem(value: 'WEEKLY', child: Text('Weekly')),
@@ -196,9 +196,7 @@ class _CustomTaskScreenState extends State<CustomTaskScreen> {
                       ),
                       child: ListTile(
                         title: Text(
-                          task.date != null
-                              ? '${task.date!.toLocal()}'.split(' ')[0]
-                              : 'No date selected',
+                          '${task.date.toLocal()}'.split(' ')[0],
                         ),
                         leading: const Icon(Icons.calendar_today, color: Colors.indigo, size: 40),
                         onTap: () async {

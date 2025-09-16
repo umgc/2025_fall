@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as _httpClient;
+import 'package:http/http.dart' as httpClient;
 
 import '../config/env_constant.dart';
 import 'package:http/http.dart' as http;
@@ -1154,7 +1154,7 @@ Future<http.Response> getUserFilesByCategory(int userId) async {
 
     final uri = Uri.parse('${ApiConstants.baseUrl}files/users/$userId/list');
 
-    return await _httpClient
+    return await httpClient
         .get(uri, headers: headers)
         .timeout(
           const Duration(seconds: 10),

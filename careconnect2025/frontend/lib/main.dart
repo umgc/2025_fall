@@ -12,7 +12,6 @@ import 'config/router/app_router.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
 import 'services/video_call_service.dart';
-import 'services/messaging_service.dart';
 import 'config/theme/app_theme.dart';
 import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
@@ -73,6 +72,8 @@ Future<void> main() async {
 
 /// Top-level error boundary widget for global error UI
 class CareConnectAppWithErrorBoundary extends StatefulWidget {
+  const CareConnectAppWithErrorBoundary({super.key});
+
   @override
   State<CareConnectAppWithErrorBoundary> createState() =>
       _CareConnectAppWithErrorBoundaryState();
@@ -133,7 +134,7 @@ Future<void> _initializeServicesInBackground(UserProvider userProvider) async {
   try {
     await _bootstrap();
     await userProvider.initializeUser();
-    await VideoCallService.initializeService();
+    // await VideoCallService.initializeService();
     await _handleAuthMigration();
 
     // Only establish the WebSocket connection at this stage

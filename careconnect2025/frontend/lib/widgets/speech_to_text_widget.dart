@@ -65,7 +65,9 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
   Future<void> _saveRecognizedText() async {
     if (_recognizedText
         .trim()
-        .isEmpty) return;
+        .isEmpty) {
+      return;
+    }
 
     final fileName = _fileNameController.text.trim();
     final fileBytes = Uint8List.fromList(_recognizedText.codeUnits);
@@ -123,7 +125,7 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
         }
         return null;
       },
-      value: _selectedCategory,
+      initialValue: _selectedCategory,
       // Starts as null!
       hint: const Text('Select Category'),
       // This shows when value is null
@@ -255,7 +257,7 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
               color: Theme
                   .of(context)
                   .colorScheme
-                  .surfaceVariant
+                  .surfaceContainerHighest
                   .withOpacity(0.1),
             ),
             child: Column(

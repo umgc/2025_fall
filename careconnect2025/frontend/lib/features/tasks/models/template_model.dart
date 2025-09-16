@@ -30,7 +30,7 @@ class Template {
     String? timeOfDayStr = (json['timeOfDay'] != null
         ? json['timeOfDay'] as String
         : null);
-    final timeParts = timeOfDayStr != null ? timeOfDayStr.split(':') : null;
+    final timeParts = timeOfDayStr?.split(':');
     TimeOfDay? recTime;
     if (timeParts != null && timeParts.length == 2) {
       recTime = TimeOfDay(
