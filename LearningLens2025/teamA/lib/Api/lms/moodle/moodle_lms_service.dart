@@ -1,20 +1,21 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
+import 'package:learninglens_app/beans/grade.dart';
 import 'package:learninglens_app/beans/lesson_plan.dart';
+import 'package:learninglens_app/beans/moodle_rubric.dart';
+import 'package:learninglens_app/beans/override.dart';
+import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/beans/quiz.dart';
-import 'package:learninglens_app/beans/override.dart';
-import 'package:learninglens_app/beans/assignment.dart';
-import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz_override';
 import 'package:learninglens_app/beans/quiz_type.dart';
-import 'package:learninglens_app/beans/submission_status.dart';
-import 'package:learninglens_app/beans/grade.dart';
 import 'package:learninglens_app/beans/submission.dart';
+import 'package:learninglens_app/beans/submission_status.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
-import 'package:learninglens_app/beans/moodle_rubric.dart';
 import 'package:learninglens_app/services/api_service.dart';
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
@@ -76,7 +77,8 @@ class MoodleLmsService implements LmsInterface {
     };
 
     // 1) Obtain the token by calling Moodle's login/token.php
-    final response = await ApiService().httpPost(Uri.parse('$baseURL/login/token.php'), body: body);
+    final response = await ApiService()
+        .httpPost(Uri.parse('$baseURL/login/token.php'), body: body);
 
     if (response.statusCode != 200) {
       throw HttpException(response.body);
@@ -120,6 +122,36 @@ class MoodleLmsService implements LmsInterface {
   @override
   bool isLoggedIn() {
     return _userToken != null;
+  }
+
+  @override
+  Future<UserRole> getUserRole(List<Course> moodleCourses) async {
+    for (var course in moodleCourses) {
+      final rolesResponse =
+          await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
+        'wstoken': _userToken,
+        'wsfunction': 'core_enrol_get_enrolled_users',
+        'courseid': course.id.toString(),
+        'moodlewsrestformat': 'json',
+      });
+
+      if (rolesResponse.statusCode != 200) {
+        throw Exception('Failed to load roles for course ${course.id}');
+      }
+
+      // If the user has roleid == 3 or 4, they are teacher-like roles
+      final users = jsonDecode(rolesResponse.body) as List<dynamic>;
+      final currUser = users.firstWhere(
+        (obj) => obj['username'].toString() == userName,
+      );
+
+      for (var role in currUser['roles']) {
+        if (role['roleid'] == 3 || role['roleid'] == 4) {
+          return UserRole.teacher;
+        }
+      }
+    }
+    return UserRole.student;
   }
 
   @override
@@ -1268,8 +1300,7 @@ class MoodleLmsService implements LmsInterface {
     return students;
   }
 
-
-  /// Fetches extended question stats (correct/incorrect/partial attempts) 
+  /// Fetches extended question stats (correct/incorrect/partial attempts)
   /// from the local_learninglens_get_question_stats_from_quiz service.
   Future<List<QuestionStatsType>> getQuestionStatsFromQuiz(int quizId) async {
     if (_userToken == null) {

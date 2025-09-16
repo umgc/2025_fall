@@ -1,24 +1,24 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:learninglens_app/beans/g_question_form_data.dart';
-import 'package:logger/logger.dart';
-import 'package:learninglens_app/beans/quiz_type.dart';
-import 'package:xml/xml.dart' as xml;
+
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+import 'package:learninglens_app/Api/lms/google_classroom/google_classroom_api.dart'; // Import the updated API
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
-import 'package:learninglens_app/beans/course.dart';
-import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/assignment.dart';
-import 'package:learninglens_app/beans/participant.dart';
-import 'package:learninglens_app/beans/submission_status.dart';
+import 'package:learninglens_app/beans/course.dart';
+import 'package:learninglens_app/beans/g_question_form_data.dart';
 import 'package:learninglens_app/beans/grade.dart';
-import 'package:learninglens_app/beans/submission.dart';
-import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/beans/moodle_rubric.dart';
+import 'package:learninglens_app/beans/participant.dart';
+import 'package:learninglens_app/beans/quiz.dart';
+import 'package:learninglens_app/beans/quiz_type.dart';
+import 'package:learninglens_app/beans/submission.dart';
+import 'package:learninglens_app/beans/submission_status.dart';
+import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
-import 'package:learninglens_app/Api/lms/google_classroom/google_classroom_api.dart'; // Import the updated API
+import 'package:xml/xml.dart' as xml;
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class GoogleLmsService extends LmsInterface {
@@ -70,6 +70,12 @@ class GoogleLmsService extends LmsInterface {
   // ****************************************************************************************
   // Auth / Login
   // ****************************************************************************************
+
+  @override
+  Future<UserRole> getUserRole(List<Course> courses) async {
+    // TODO implement
+    throw UnimplementedError();
+  }
 
   @override
   Future<void> login(String username, String password, String baseURL) {

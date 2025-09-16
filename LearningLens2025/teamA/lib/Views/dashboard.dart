@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
+import 'package:learninglens_app/Views/about_page.dart';
 import 'package:learninglens_app/Views/analytics_page.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
 import 'package:learninglens_app/Views/course_list.dart';
 import 'package:learninglens_app/Views/essays_view.dart';
-import 'package:learninglens_app/Views/about_page.dart';
 import 'package:learninglens_app/Views/g_lesson_plan.dart';
 import 'package:learninglens_app/Views/iep_page.dart';
 import 'package:learninglens_app/Views/lesson_plans.dart';
+import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
 class TeacherDashboard extends StatelessWidget {
@@ -79,6 +80,10 @@ class TeacherDashboard extends StatelessWidget {
     return LocalStorageService.canUserAccessApp();
   }
 
+  UserRole getUserRole() {
+    return LocalStorageService.getUserRole();
+  }
+
   String getClassroom() {
     return LocalStorageService.getClassroom();
   }
@@ -109,6 +114,38 @@ class TeacherDashboard extends StatelessWidget {
     double titleFontSize = screenWidth * 0.03;
     titleFontSize = titleFontSize.clamp(20.0, 32.0);
 
+    bool canAccessApp = canUserAccessApp(context);
+    if (!canAccessApp) {
+      return Center(
+           child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Please Sign In to Continue',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28, // Large text
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20), // Space between text and button
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => UserSettings()),
+                    );
+                  },
+                  child: const Text("Click to Sign In"),
+                ),
+              ],
+            ),
+        );
+    }
+
+    UserRole role = getUserRole();
+    String headerTxt = role == UserRole.teacher ? 'Teacher' : 'Student';
+    
     return SingleChildScrollView(
       child: Center(
         child: Padding(
@@ -117,7 +154,7 @@ class TeacherDashboard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Teacher ${getClassroom()} Dashboard',
+                '$headerTxt ${getClassroom()} Dashboard',
                 style: TextStyle(
                   fontSize: titleFontSize,
                   fontWeight: FontWeight.normal,
@@ -209,170 +246,119 @@ class TeacherDashboard extends StatelessWidget {
     baseButtonFontSize = baseButtonFontSize.clamp(10.0, 16.0); // Reduced max size
     baseDescriptionFontSize = baseDescriptionFontSize.clamp(10.0, 16.0); // Reduced max size
 
-    bool canAccessApp = canUserAccessApp(context);
+    UserRole role = getUserRole();
     bool isMoodleSelected = isMoodle();
 
     List<Map<String, dynamic>> buttonData = [
       {
         'title': 'Courses',
         'description': 'View available courses.',
-        'onPressed': !canAccessApp
-            ? null
-            : () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => CourseList())),
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CourseList()),
+            ),
         'color': Colors.blue,
       },
       {
         'title': 'Essays',
         'description': 'View or grade essays.',
-        'onPressed': !canAccessApp
-            ? null
-            : () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => EssaysView())),
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => EssaysView()),
+            ),
         'color': Colors.red,
       },
       {
         'title': 'IEP',
         'description': 'Manage Individualized Education Plans.',
-        'onPressed': !canAccessApp || !isMoodleSelected
-            ? null
-            : () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => IepPage())),
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => IepPage()),
+            ),
         'color': !isMoodleSelected ? Colors.grey : Colors.green,
       },
       {
         'title': 'Analytics',
         'description': 'View performance analytics.',
         'onPressed': () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => AnalyticsPage())),
+              context,
+              MaterialPageRoute(builder: (context) => AnalyticsPage()),
+            ),
         'color': !isMoodleSelected ? Colors.grey : Colors.cyan,
       },
       {
         'title': 'Lesson Plan',
         'description': 'Create and manage lesson plans.',
-        'onPressed': !canAccessApp
-            ? null
-            : () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => !isMoodleSelected
-                        ? GoogleLessonPlans()
-                        : LessonPlans(),
-                  ),
-                ),
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    !isMoodleSelected ? GoogleLessonPlans() : LessonPlans(),
+              ),
+            ),
         'color': Colors.purple,
       },
       {
         'title': 'Assessments',
         'description': 'Create or view assessments.',
-        'onPressed': !canAccessApp
-            ? null
-            : () => Navigator.push(
-                context, MaterialPageRoute(builder: (context) => AssessmentsView())),
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AssessmentsView()),
+            ),
         'color': Colors.orange,
       },
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(12.0), // Reduced from 16.0
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[0]['description'],
-                  buttonData[0]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[0]['onPressed'],
-                  buttonData[0]['color'],
-                ),
-              ),
-              const SizedBox(width: 12), // Reduced from 20
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[1]['description'],
-                  buttonData[1]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[1]['onPressed'],
-                  buttonData[1]['color'],
-                ),
-              ),
-            ],
+    if(role == UserRole.student){
+      buttonData = [
+        {
+          'title': 'Essay Assistant',
+          'description': 'Utilize AI to help complete essay assignments.',
+          'onPressed': null,
+          'color': Colors.blue,
+        },
+        {
+          'title': 'Roleplay Assignment',
+          'description': 'Complete AI-based roleplay assignments.',
+          'onPressed': null,
+          'color': Colors.red,
+        },
+        {
+          'title': 'Games',
+          'description': 'Participate in games assigned to you.',
+          'onPressed': null,
+          'color': Colors.green,
+        },
+        {
+          'title': 'Reflections',
+          'description': 'Reflect on your use of AI for your assignments.',
+          'onPressed': null,
+          'color': Colors.cyan,
+        },
+      ];
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
+      children: buttonData.map((data) =>
+        SizedBox(
+          width: constraints.maxWidth / 2 - 24, // mimic 2-column grid
+          child: _buildResponsiveColumn(
+            context,
+            data['description'],
+            data['title'],
+            baseDescriptionFontSize,
+            baseButtonSize,
+            baseButtonFontSize,
+            data['onPressed'],
+            data['color'],
           ),
-          const SizedBox(height: 12), // Reduced from 20
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[2]['description'],
-                  buttonData[2]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[2]['onPressed'],
-                  buttonData[2]['color'],
-                ),
-              ),
-              const SizedBox(width: 12), // Reduced from 20
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[3]['description'],
-                  buttonData[3]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[3]['onPressed'],
-                  buttonData[3]['color'],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12), // Reduced from 20
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[4]['description'],
-                  buttonData[4]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[4]['onPressed'],
-                  buttonData[4]['color'],
-                ),
-              ),
-              const SizedBox(width: 12), // Reduced from 20
-              Expanded(
-                child: _buildResponsiveColumn(
-                  context,
-                  buttonData[5]['description'],
-                  buttonData[5]['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  buttonData[5]['onPressed'],
-                  buttonData[5]['color'],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ).toList()
     );
-  }
+}
 
   Widget _buildResponsiveColumn(
     BuildContext context,
@@ -388,7 +374,6 @@ class TeacherDashboard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: buttonSize * 1.5,
           child: Text(
             description,
             textAlign: TextAlign.center,
