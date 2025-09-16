@@ -1,6 +1,7 @@
 package com.careconnect.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -10,6 +11,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = true)
 public class OpenAIService {
     
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
