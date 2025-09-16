@@ -28,7 +28,6 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>UISupportedInterfaceOrientations</key>
 	<key>NSCameraUsageDescription</key>
 	<string>The app needs access to your camera for video calls with patients and caregivers.</string>
 	<key>NSMicrophoneUsageDescription</key>
@@ -37,6 +36,7 @@
 	<string>Location access needed for emergency features and nearby services.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access needed to share images during conversations.</string>
+	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>

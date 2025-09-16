@@ -44,8 +44,9 @@ class WebFileHandler implements FileHandler {
       isTemporary: true,
     );
   }
+}
 
-  FileHandler _createPlatformHandler() {
-    return WebFileHandler();
-  }
+// Platform-specific implementation for web platform
+FileHandler _createPlatformHandler() {
+  return WebFileHandler();
 }

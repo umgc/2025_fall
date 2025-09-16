@@ -47,7 +47,8 @@ dependencies:
   mime: ^2.0.0
   image_picker: ^1.2.0  # image upload
 
-  jitsi_meet_flutter_sdk: ^11.4.0
+  # Temporarily disabled for faster builds
+  # jitsi_meet_flutter_sdk: ^11.4.0
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
   
   intl: ^0.20.2 # data formatting
@@ -55,14 +56,16 @@ dependencies:
   pdf: ^3.11.3 # PDF generation
   # emotion detector use
 
-  google_mlkit_face_detection: ^0.11.0
-  google_mlkit_text_recognition: ^0.13.1
-  google_mlkit_barcode_scanning: ^0.12.0
-  google_mlkit_image_labeling: ^0.12.0
-  firebase_core: ^4.1.0
-  cloud_firestore: ^6.0.1
-  firebase_messaging: ^16.0.1
-  firebase_auth: ^6.0.2
+  # Temporarily disabled due to iOS dependency conflicts
+  # google_mlkit_face_detection: ^0.11.0
+  # google_mlkit_text_recognition: ^0.13.1
+  # google_mlkit_barcode_scanning: ^0.12.0
+  # google_mlkit_image_labeling: ^0.12.0
+  # Temporarily disabled for faster builds
+  # firebase_core: ^4.1.0
+  # cloud_firestore: ^6.0.1
+  # firebase_messaging: ^16.0.1
+  # firebase_auth: ^6.0.2
   
   # Hybrid Video Calling Solution
   # Agora for mobile platforms (iOS/Android) - Using only core engine to avoid namespace issues
