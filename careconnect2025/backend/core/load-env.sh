@@ -14,10 +14,13 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# Load environment variables
-export $(grep -v '^#' .env | grep -v '^$' | xargs)
+# Load environment variables from .env file
+set -a  # Automatically export all variables
+source .env
+set +a  # Stop auto-exporting
 
 echo "Environment variables loaded successfully!"
+echo "Database: $JDBC_URI"
 
 # Verify critical variables are set
 required_vars=(

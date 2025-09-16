@@ -110,10 +110,9 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
-            <version>8.3.0</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws.serverless</groupId>
@@ -190,9 +189,10 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
         </dependency>
+        <!-- PostgreSQL Driver for development -->
         <dependency>
             <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-mysql</artifactId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
@@ -267,13 +267,21 @@
                     <plugin>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-maven-plugin</artifactId>
-                        <version>9.22.3</version>
+                        <version>10.20.1</version>
                         <configuration>
-                            <url>${env.FLYWAY_DB_URL}</url>
-                            <user>${env.FLYWAY_DB_USER}</user>
-                            <password>${env.FLYWAY_DB_PASSWORD}</password>
-                            <schemas>${env.FLYWAY_DB_SCHEMA}</schemas>
-                            <locations>classpath:db/migration</locations>
+                            <url>${env.JDBC_URI}</url>
+                            <user>${env.DB_USER}</user>
+                            <password>${env.DB_PASSWORD}</password>
+                            <schemas>
+                                <schema>public</schema>
+                            </schemas>
+                            <locations>
+                                <location>classpath:db/migration</location>
+                            </locations>
+                            <!-- Exclude H2 specific migrations -->
+                            <ignoreMigrationPatterns>
+                                <ignoreMigrationPattern>*:h2/**</ignoreMigrationPattern>
+                            </ignoreMigrationPatterns>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -380,5 +388,4 @@
             </build>
         </profile>
     </profiles>
-<!-- End of file: project closes above -->
- </project>
+</project>

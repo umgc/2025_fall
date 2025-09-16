@@ -37,8 +37,10 @@ Although, the following would be similar to most platforms an IDEs you want to u
 
 ## Prerequisite
 - Install Git you can follow this link.
-- Install MySQL Server and needed Driver.
+- Install Docker Desktop/Engine and Docker Compose (used for the local PostgreSQL database).
 - Clone the code (your branch if you are planning on make changes to the code).
+
+📌 Database setup: See the PostgreSQL Docker instructions here: [pg_docker/README.md](pg_docker/README.md)
 
 ## Quick Setup (Recommended)
 
@@ -54,7 +56,7 @@ nano .env  # or use your preferred editor
 ```
 
 **Required variables** (minimum to start the application):
-- `JDBC_URI` - Your MySQL connection string
+- `JDBC_URI` - Your PostgreSQL connection string
 - `DB_USER` - Your database username  
 - `DB_PASSWORD` - Your database password
 - `SECURITY_JWT_SECRET` - JWT secret key (256+ bits)
@@ -70,14 +72,38 @@ nano .env  # or use your preferred editor
 
 #### Linux/macOS
 ```bash
+chmod +x run-dev.sh
+./run-dev.sh
+```
+
+Alternative (manual):
+```bash
 chmod +x load-env.sh
-./load-env.sh mvn spring-boot:run
+./load-env.sh mvn spring-boot:run -Dspring.profiles.active=dev
 ```
 
 #### Windows
-```cmd
-load-env.bat mvn spring-boot:run
+- Option 1 (recommended): Use Git Bash and run the same commands as Linux/macOS:
+```bash
+chmod +x run-dev.sh
+./run-dev.sh
 ```
+- Option 2 (manual): Ensure Docker Desktop is running, database is up (see pg_docker), then run:
+```cmd
+mvn spring-boot:run -Dspring.profiles.active=dev
+```
+
+## Development profile flags (application-dev.properties)
+
+The development profile disables external services to simplify local runs. Key flags in `src/main/resources/application-dev.properties`:
+- `careconnect.database.use-aws-config=false` — Use local JDBC settings instead of AWS SSM/Secrets based config
+- `careconnect.aws.enabled=false` — Disable AWS integrations in dev
+- `careconnect.stripe.enabled=false` — Disable Stripe in dev
+- `careconnect.openai.enabled=false` — Disable OpenAI in dev
+- `careconnect.deepseek.enabled=false` — Disable DeepSeek in dev
+- `app.file.storage.use-s3=false` — Use local storage instead of S3
+
+For reference, the dev profile also sets PostgreSQL defaults and uses Flyway for migrations.
 
 ## Alternative Setup (IDE Configuration)
 
@@ -99,7 +125,7 @@ If you prefer to use your IDE's run configuration instead of the `.env` approach
 
         3. Add your variables in the `Environment Variables` field. The minimum required variables:
         ```
-        JDBC_URI=jdbc:mysql://localhost:3306/careconnect;DB_USER=root;DB_PASSWORD=<YOUR_PASSWORD>;SECURITY_JWT_SECRET=<YOUR_JWT_SECRET>;FIREBASE_PROJECT_ID=careconnectcapstone;FIREBASE_SENDER_ID=663999888931
+        JDBC_URI=jdbc:postgresql://localhost:5432/careconnect;DB_USER=postgres;DB_PASSWORD=<YOUR_PASSWORD>;SECURITY_JWT_SECRET=<YOUR_JWT_SECRET>;FIREBASE_PROJECT_ID=careconnectcapstone;FIREBASE_SENDER_ID=663999888931
         ```
         
         The format is simple `KEY=value;NEW_KEY=value` <br/>You can also use a file if you prefer or add the variable with the GUI. 

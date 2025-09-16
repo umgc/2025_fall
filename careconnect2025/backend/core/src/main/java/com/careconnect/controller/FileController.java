@@ -15,8 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -38,7 +38,6 @@ import com.careconnect.repository.PatientRepository;
 
 @RestController
 @RequestMapping("/v1/api/files")
-@RequiredArgsConstructor
 @Slf4j
 @Tag(name = "File Management", description = "File upload, download, and management endpoints supporting both S3 and database storage")
 @SecurityRequirement(name = "Bearer Authentication")
@@ -50,6 +49,21 @@ public class FileController {
     private final PatientRepository patientRepository;
     private final CaregiverService caregiverService;
     private final PatientService patientService;
+
+    @Autowired
+    public FileController(@Autowired(required = false) S3StorageService s3StorageService,
+                         FileManagementService fileManagementService,
+                         UserRepository userRepository,
+                         PatientRepository patientRepository,
+                         CaregiverService caregiverService,
+                         PatientService patientService) {
+        this.s3StorageService = s3StorageService;
+        this.fileManagementService = fileManagementService;
+        this.userRepository = userRepository;
+        this.patientRepository = patientRepository;
+        this.caregiverService = caregiverService;
+        this.patientService = patientService;
+    }
     
     @Value("${app.file.storage.use-s3:true}")
     private boolean useS3ForLegacyEndpoints;
