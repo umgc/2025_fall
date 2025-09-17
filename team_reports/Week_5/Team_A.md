@@ -11,6 +11,7 @@
 - Scoped **Calendar Assistant** MVP (assigned: Mitchell) and UI/UX task breakdown (owner: Mickey).
 - API design reviews + architecture alignment (owner: Matt).  
 - QA expanded STP sections and RTM links; spun up Postman collections (owner: Lidia).
+- Team A finalized local_SETUP.md and added backed/fronted.env.template files with helper script to esnure all teammates can run Calendar Assistant and Notetake features locallly for M3 testing. 
 
 > _Note:_ Tevin did not submit a narrative this week.
 
