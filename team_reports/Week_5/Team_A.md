@@ -33,11 +33,7 @@
 
 ---
 
-## 3) Metrics Snapshot (Optional)
-- Commits: _fill in from GitHub_  
-- PRs merged: _fill in from GitHub_  
-- Issues closed: _fill in from GitHub_  
-- **EVM:** PV _x_, EV _y_, AC _z_ → CPI = _EV/AC_, SPI = _EV/PV_
+## 3) Metrics Snapshot - none
 
 ---
 
