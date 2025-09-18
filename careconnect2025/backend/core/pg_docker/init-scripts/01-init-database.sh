@@ -8,8 +8,8 @@ echo "Initializing CareConnect database..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Create extensions if needed
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "vector";
 
-    -- Database is ready for Flyway migrations
     -- Migrations will be applied by the Spring Boot application
 EOSQL
 
