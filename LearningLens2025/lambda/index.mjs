@@ -41,10 +41,6 @@ export const handler = async (event, context) => {
       await buildDatabase(client);
       return "Database created successfully.";
     }
-    else if (command === "deleteDb") {
-      await deleteDatabase(client);
-      return "Database deleted successfully.";
-    }
   }
 };
 
