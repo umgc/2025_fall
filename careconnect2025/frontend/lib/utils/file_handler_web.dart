@@ -44,6 +44,7 @@ class WebFileHandler implements FileHandler {
       isTemporary: true,
     );
   }
+
 }
 
 // Platform-specific implementation for web platform

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'auth_token_manager.dart';
 import 'api_service.dart';
 
@@ -55,6 +55,8 @@ class MessagingService {
     try {
       final wsUrl = _getWebSocketUrl();
       print('Connecting to notification WebSocket: $wsUrl');
+      
+      // Add timeout and graceful failure for design demo
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       _isRegistered = false;
 
@@ -70,6 +72,7 @@ class MessagingService {
             print('WebSocket error stack: $stackTrace');
           }
           _isRegistered = false;
+          _channel = null; // Reset channel for potential retry
           // Do not rethrow, app should continue running
         },
         onDone: () {

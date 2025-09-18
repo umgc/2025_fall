@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/video_call_service.dart';
 import '../services/sms_service.dart';
 import '../services/messaging_service.dart';
-import '../widgets/real_video_call_widget.dart'; // Use REAL video call widget
 import '../config/theme/app_theme.dart';
 
 class CommunicationWidget extends StatefulWidget {
@@ -40,7 +38,7 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
     // try {
     //   await VideoCallService.initializeService();
     // } catch (e) {
-    //   print('Error initializing communication services: $e');
+    //   debugPrint('Error initializing communication services: $e');
     // }
 
     setState(() => _isInitializing = false);
@@ -48,7 +46,7 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
 
   Future<void> _startVideoCall() async {
     try {
-      final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
+      // final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
       // final callData = await VideoCallService.initiateCall(
       //   callId: callId,
       //   callerId: widget.currentUserId,
@@ -80,7 +78,7 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
 
   Future<void> _startAudioCall() async {
     try {
-      final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
+      // final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
       // final callData = await VideoCallService.initiateCall(
       //   callId: callId,
       //   callerId: widget.currentUserId,

@@ -75,11 +75,11 @@ class _HybridVideoCallWidgetState extends State<HybridVideoCallWidget> {
       await _videoCallService.initialize(
         userId: widget.userId,
         onRemoteStreamReceived: (stream) {
-          print('Remote stream received');
+          debugPrint('Remote stream received');
           // Handle remote stream if needed
         },
         onCallEnded: () {
-          print('Call ended');
+          debugPrint('Call ended');
           _logCallToBackend(wasAnswered: true);
           if (mounted) {
             Navigator.of(context).pop();
@@ -191,8 +191,6 @@ class _HybridVideoCallWidgetState extends State<HybridVideoCallWidget> {
   }
 
   Widget _buildBody() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     if (_isLoading) {
       return Center(
         child: Column(
@@ -283,7 +281,7 @@ class _HybridVideoCallWidgetState extends State<HybridVideoCallWidget> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.videoCallBackground.withOpacity(0.54),
+                color: AppTheme.videoCallBackground.withValues(alpha:0.54),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -364,11 +362,11 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
               decoration: BoxDecoration(
                 color: kIsWeb
                     ? (Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.successDarkTheme.withOpacity(0.1)
-                          : AppTheme.success.withOpacity(0.1))
+                          ? AppTheme.successDarkTheme.withValues(alpha:0.1)
+                          : AppTheme.success.withValues(alpha:0.1))
                     : (Theme.of(context).brightness == Brightness.dark
-                          ? AppTheme.primaryDarkTheme.withOpacity(0.1)
-                          : AppTheme.primary.withOpacity(0.1)),
+                          ? AppTheme.primaryDarkTheme.withValues(alpha:0.1)
+                          : AppTheme.primary.withValues(alpha:0.1)),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -536,7 +534,7 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.surface.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Column(

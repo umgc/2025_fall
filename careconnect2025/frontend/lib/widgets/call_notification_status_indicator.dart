@@ -19,8 +19,6 @@ class _CallNotificationStatusIndicatorState
     extends State<CallNotificationStatusIndicator> {
   @override
   Widget build(BuildContext context) {
-    final isConnected = CallNotificationService.isConnected;
-
     final theme = Theme.of(context);
     final colorOnline = theme.colorScheme.secondary;
     final colorConnecting = theme.colorScheme.tertiary;
@@ -35,9 +33,9 @@ class _CallNotificationStatusIndicatorState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: statusColor.withValues(alpha:0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

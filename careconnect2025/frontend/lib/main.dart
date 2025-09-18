@@ -8,16 +8,28 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'providers/user_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/app_state_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/navigation_provider.dart';
+import 'providers/notification_provider.dart';
 import 'config/router/app_router.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
 import 'services/video_call_service.dart';
 import 'config/theme/app_theme.dart';
+import 'config/theme/careconnect_theme.dart';
 import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
+import 'utils/performance_optimizer.dart';
+import 'screens/app_navigator.dart';
+import 'widgets/additional_features_menu.dart';
 
 Future<void> main() async {
+  // Fix zone mismatch by ensuring binding is initialized in the same zone
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize performance optimizations
+  PerformanceOptimizer.initialize();
 
   // Global error handling for Flutter errors
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -28,46 +40,45 @@ Future<void> main() async {
     );
   };
 
-  // Global error handling for unhandled Dart errors
-  runZonedGuarded(
-    () async {
-      // Performance optimization: Set preferred orientations
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+  // Performance optimization: Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
 
-      // Configure URL strategy for web to remove hash from URLs
-      usePathUrlStrategy();
+  // Configure URL strategy for web to remove hash from URLs
+  usePathUrlStrategy();
 
-      // Load environment quickly
-      await dotenv.load();
+  // Load environment quickly
+  await dotenv.load();
 
       // Create providers (don't initialize them yet)
       final userProvider = UserProvider();
       final themeProvider = ThemeProvider();
+      final appStateProvider = AppStateProvider();
+      final authProvider = AuthProvider();
+      final navigationProvider = NavigationProvider();
+      final notificationProvider = NotificationProvider();
 
-      // Start the app immediately, initialize services in background
+      // Initialize heavy services in background after app starts
+      _initializeServicesInBackground(userProvider, notificationProvider);
+
+      // Start the app immediately
       runApp(
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
+            ChangeNotifierProvider.value(value: appStateProvider),
+            ChangeNotifierProvider.value(value: authProvider),
+            ChangeNotifierProvider.value(value: navigationProvider),
+            ChangeNotifierProvider.value(value: notificationProvider),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),
       );
-
-      // Initialize heavy services in background after app starts
-      _initializeServicesInBackground(userProvider);
-    },
-    (error, stack) {
-      debugPrint('Uncaught error: $error\\n$stack');
-      // Optionally log to a remote server
-    },
-  );
 }
 
 /// Top-level error boundary widget for global error UI
@@ -125,32 +136,49 @@ class _CareConnectAppWithErrorBoundaryState
 
   @override
   Widget build(BuildContext context) {
-    return const CareConnectApp();
+    return MaterialApp(
+      title: 'CareConnect Healthcare App',
+      theme: CareConnectTheme.lightTheme,
+      darkTheme: CareConnectTheme.darkTheme,
+      themeMode: kIsWeb ? ThemeMode.light : ThemeMode.system, // Force light theme on web
+      home: const AppNavigator(),
+      debugShowCheckedModeBanner: false,
+    );
   }
 }
 
 // Background initialization to not block app startup
-Future<void> _initializeServicesInBackground(UserProvider userProvider) async {
+Future<void> _initializeServicesInBackground(UserProvider userProvider, NotificationProvider notificationProvider) async {
   try {
+    // Initialize services sequentially to avoid overwhelming the main thread
     await _bootstrap();
-    await userProvider.initializeUser();
-    // await VideoCallService.initializeService();
+    
+    // Add small delays between heavy operations
+        await Future.delayed(const Duration(milliseconds: 100));
+        await userProvider.initializeUser();
+        
+        await Future.delayed(const Duration(milliseconds: 100));
+        notificationProvider.initializeNotifications();
+    
+    await Future.delayed(const Duration(milliseconds: 100));
     await _handleAuthMigration();
 
-    // Only establish the WebSocket connection at this stage
+    // Only establish the WebSocket connection at this stage (optional for design demo)
+    await Future.delayed(const Duration(milliseconds: 200));
     try {
       await MessagingService.initialize();
-      print(
-        '✅ MessagingService WebSocket connection established (user not registered yet)',
-      );
+        debugPrint(
+          '✅ MessagingService WebSocket connection established (user not registered yet)',
+        );
     } catch (e) {
-      print('⚠️ MessagingService WebSocket connection failed: $e');
+      debugPrint('⚠️ MessagingService WebSocket connection failed (backend not running): $e');
+      debugPrint('ℹ️ App will continue running in offline mode for design demo');
       // Do not rethrow, app should continue running
     }
 
-    print('✅ Background services initialized');
+    debugPrint('✅ Background services initialized');
   } catch (e) {
-    print('⚠️ Some background services failed to initialize: $e');
+    debugPrint('⚠️ Some background services failed to initialize: $e');
   }
 }
 
@@ -158,7 +186,7 @@ Future<void> _handleAuthMigration() async {
   try {
     final migrationResult = await AuthMigrationHelper.migrateAuthData();
     if (!migrationResult.isSuccess && migrationResult.errorMessage != null) {
-      debugPrint('Auth migration warning: ${migrationResult.errorMessage}');
+        debugPrint('Auth migration warning: ${migrationResult.errorMessage}');
     }
   } catch (e) {
     debugPrint('Auth migration error: $e');
@@ -202,7 +230,7 @@ class _CareConnectAppState extends State<CareConnectApp> {
         _handleDeepLink(initialLink.toString());
       }
     } catch (e) {
-      print('Error getting initial link: $e');
+      debugPrint('Error getting initial link: $e');
     }
 
     // Listen for deep links while app is running
@@ -211,13 +239,13 @@ class _CareConnectAppState extends State<CareConnectApp> {
         _handleDeepLink(uri.toString());
       },
       onError: (err) {
-        print('Deep link error: $err');
+        debugPrint('Deep link error: $err');
       },
     );
   }
 
   void _handleDeepLink(String link) {
-    print('Received deep link: $link');
+    debugPrint('Received deep link: $link');
 
     // Parse the deep link to extract OAuth callback parameters
     final uri = Uri.parse(link);
@@ -226,7 +254,7 @@ class _CareConnectAppState extends State<CareConnectApp> {
     if (uri.scheme == 'careconnect' &&
         uri.host == 'oauth' &&
         uri.path == '/callback') {
-      print('OAuth callback detected: $link');
+      debugPrint('OAuth callback detected: $link');
       // The actual OAuth handling is done in AuthService.loginWithGoogle()
       // This is just for logging and potential additional processing
     }
@@ -248,9 +276,9 @@ class _CareConnectAppState extends State<CareConnectApp> {
       title: 'CareConnect',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.themeMode,
-      theme: AppTheme.lightTheme.copyWith(
+      theme: CareConnectTheme.lightTheme.copyWith(
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
+        textTheme: CareConnectTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -268,9 +296,9 @@ class _CareConnectAppState extends State<CareConnectApp> {
           ),
         ),
       ),
-      darkTheme: AppTheme.darkTheme.copyWith(
+      darkTheme: CareConnectTheme.darkTheme.copyWith(
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
+        textTheme: CareConnectTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),

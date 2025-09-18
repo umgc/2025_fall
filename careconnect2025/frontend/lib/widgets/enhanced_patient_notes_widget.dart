@@ -550,7 +550,7 @@ class _EnhancedPatientNotesWidgetState
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+          backgroundColor: Theme.of(context).primaryColor.withValues(alpha:0.1),
           child: Text(file.fileIcon, style: const TextStyle(fontSize: 20)),
         ),
         title: Text(

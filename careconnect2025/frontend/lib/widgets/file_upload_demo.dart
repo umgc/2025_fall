@@ -194,7 +194,7 @@ class _FileUploadDemoState extends State<FileUploadDemo> {
                               size: 48,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
+                              ).colorScheme.onSurface.withValues(alpha:0.5),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -270,7 +270,7 @@ class _FileUploadDemoState extends State<FileUploadDemo> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.7),
+                    ).colorScheme.onSurface.withValues(alpha:0.7),
                   ),
                 ),
               ],
@@ -303,7 +303,7 @@ class _FileUploadDemoState extends State<FileUploadDemo> {
         leading: CircleAvatar(
           backgroundColor: Theme.of(
             context,
-          ).colorScheme.primary.withOpacity(0.1),
+          ).colorScheme.primary.withValues(alpha:0.1),
           child: Text(file.fileIcon, style: const TextStyle(fontSize: 16)),
         ),
         title: Text(

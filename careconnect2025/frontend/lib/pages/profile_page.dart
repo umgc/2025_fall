@@ -188,11 +188,11 @@ class _ProfilePageState extends State<ProfilePage> {
         };
 
         // Mock save for now - replace with actual API call
-        print('Saving profile data: $profileData');
+        debugPrint('Saving profile data: $profileData');
 
         // Mock image upload
         if (_imageFile != null) {
-          print('Uploading profile picture: ${_imageFile!.path}');
+          debugPrint('Uploading profile picture: ${_imageFile!.path}');
         }
 
         setState(() {
@@ -397,7 +397,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             BoxShadow(
                               color: Theme.of(
                                 context,
-                              ).shadowColor.withOpacity(0.2),
+                              ).shadowColor.withValues(alpha:0.2),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),

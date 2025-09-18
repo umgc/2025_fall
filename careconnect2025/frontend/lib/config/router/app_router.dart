@@ -12,15 +12,17 @@ import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
+import 'package:care_connect_app/pages/design_showcase_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/welcome/presentation/pages/welcome_page.dart';
-import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/welcome/presentation/pages/new_welcome_screen.dart';
+import '../../features/auth/presentation/pages/new_login_screen.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
 import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
 import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
+import '../../features/dashboard/presentation/pages/new_patient_dashboard.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
@@ -59,21 +61,20 @@ void navigateToDashboard(BuildContext context, {String? role}) {
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(path: '/', builder: (_, __) => const WelcomePage()),
+    GoRoute(path: '/', builder: (context, state) => const NewWelcomeScreen()),
     GoRoute(
       path: '/login',
       builder: (context, state) {
-        final extra = state.extra;
-        String? userType;
-
-        if (extra != null &&
-            extra is Map<String, dynamic> &&
-            extra.containsKey('userType')) {
-          userType = extra['userType'];
-        }
-
-        return LoginPage(userType: userType);
+        return const NewLoginScreen();
       },
+    ),
+    GoRoute(
+      path: '/auth/login',
+      builder: (context, state) => const NewLoginScreen(),
+    ),
+    GoRoute(
+      path: '/auth/signup',
+      builder: (context, state) => const SignUpScreen(userType: 'caregiver'),
     ),
     GoRoute(
       path: '/signup',
@@ -94,7 +95,9 @@ final GoRouter appRouter = GoRouter(
 
         if (userRole == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
+            if (context.mounted) {
+              context.go('/login');
+            }
           });
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -103,7 +106,7 @@ final GoRouter appRouter = GoRouter(
 
         switch (userRole.toUpperCase()) {
           case 'PATIENT':
-            return const PatientDashboard();
+            return const NewPatientDashboard();
           case 'CAREGIVER':
           case 'FAMILY_LINK':
           case 'ADMIN':
@@ -111,7 +114,9 @@ final GoRouter appRouter = GoRouter(
           default:
           // Unknown role, redirect to login
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/login');
+              if (context.mounted) {
+                context.go('/login');
+              }
             });
             return const Scaffold(
               body: Center(
@@ -167,17 +172,17 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/register/caregiver',
-      builder: (_, __) => const SignUpScreen(userType: 'caregiver'),
+      builder: (context, state) => const SignUpScreen(userType: 'caregiver'),
     ),
     GoRoute(
       path: '/register/caregiver/payment',
-      builder: (_, __) => const CaregiverRegistrationFlowPage(),
+      builder: (context, state) => const CaregiverRegistrationFlowPage(),
     ),
     GoRoute(
       path: '/register/patient',
-      builder: (_, __) => const PatientRegistrationPage(),
+      builder: (context, state) => const PatientRegistrationPage(),
     ),
-    GoRoute(path: '/add-patient', builder: (_, __) => const AddPatientScreen()),
+    GoRoute(path: '/add-patient', builder: (context, state) => const AddPatientScreen()),
     GoRoute(
       path: '/social-feed',
       builder: (context, state) {
@@ -210,11 +215,11 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/reset-password',
-      builder: (_, __) => const ResetPasswordScreen(),
+      builder: (context, state) => const ResetPasswordScreen(),
     ),
     GoRoute(
       path: '/subscription',
-      builder: (_, __) => const SubscriptionManagementPage(),
+      builder: (context, state) => const SubscriptionManagementPage(),
     ),
     GoRoute(
       path: '/setup-password',
@@ -241,7 +246,7 @@ final GoRouter appRouter = GoRouter(
     // FIX: Remove duplicate, keep only one gamification route
     GoRoute(
       path: '/gamification',
-      builder: (_, __) => const GamificationScreen(),
+      builder: (context, state) => const GamificationScreen(),
     ),
     GoRoute(
       path: '/stripe-checkout',
@@ -295,15 +300,19 @@ final GoRouter appRouter = GoRouter(
 
           // Show error message but stay logged in
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Invalid patient ID')));
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Invalid patient ID')));
 
-            // Redirect to appropriate dashboard based on role
-            if (userRole != null) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
-              });
+              // Redirect to appropriate dashboard based on role
+              if (userRole != null) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted) {
+                    context.go('/dashboard?role=$userRole');
+                  }
+                });
+              }
             }
           });
 
@@ -333,15 +342,19 @@ final GoRouter appRouter = GoRouter(
 
           // Show error message but stay logged in
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invalid or missing patient ID')),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Invalid or missing patient ID')),
+              );
 
-            // Redirect to appropriate dashboard based on role
-            if (userRole != null) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
-              });
+              // Redirect to appropriate dashboard based on role
+              if (userRole != null) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted) {
+                    context.go('/dashboard?role=$userRole');
+                  }
+                });
+              }
             }
           });
 
@@ -388,17 +401,21 @@ final GoRouter appRouter = GoRouter(
 
           // Show error message but stay logged in
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Missing patient information for video call'),
-              ),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Missing patient information for video call'),
+                ),
+              );
 
-            // Redirect to appropriate dashboard based on role
-            if (userRole != null) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
-              });
+              // Redirect to appropriate dashboard based on role
+              if (userRole != null) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted) {
+                    context.go('/dashboard?role=$userRole');
+                  }
+                });
+              }
             }
           });
 
@@ -421,16 +438,20 @@ final GoRouter appRouter = GoRouter(
           final userRole = userProvider.user?.role;
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Invalid patient ID for video call'),
-              ),
-            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Invalid patient ID for video call'),
+                ),
+              );
 
-            if (userRole != null) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
-              });
+              if (userRole != null) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (context.mounted) {
+                    context.go('/dashboard?role=$userRole');
+                  }
+                });
+              }
             }
           });
 
@@ -451,38 +472,38 @@ final GoRouter appRouter = GoRouter(
         return JitsiMeetingScreen(roomName: roomName);
       },
     ),
-    GoRoute(path: '/wearables', builder: (_, __) => const WearablesScreen()),
+    GoRoute(path: '/wearables', builder: (context, state) => const WearablesScreen()),
     GoRoute(
       path: '/home-monitoring',
-      builder: (_, __) => const HomeMonitoringScreen(),
+      builder: (context, state) => const HomeMonitoringScreen(),
     ),
     GoRoute(
       path: '/smart-devices',
-      builder: (_, __) => const SmartDevicesScreen(),
+      builder: (context, state) => const SmartDevicesScreen(),
     ),
     GoRoute(
       path: '/medication',
-      builder: (_, __) => const MedicationManagementScreen(),
+      builder: (context, state) => const MedicationManagementScreen(),
     ),
     GoRoute(
       path: '/profile-settings',
-      builder: (_, __) => const ProfileSettingsPage(),
+      builder: (context, state) => const ProfileSettingsPage(),
     ),
-    GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
-    GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
+    GoRoute(path: '/profile', builder: (context, state) => const ProfilePage()),
+    GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),
     GoRoute(
       path: '/file-management',
-      builder: (_, __) => const FileManagementPage(),
+      builder: (context, state) => const FileManagementPage(),
     ),
     GoRoute(
       path: '/ai-configuration',
-      builder: (_, __) => const AIConfigurationPage(),
+      builder: (context, state) => const AIConfigurationPage(),
     ),
 
     // Video Call Test Route
     GoRoute(
       path: '/video-call-test',
-      builder: (_, __) => const VideoCallTestPage(),
+      builder: (context, state) => const VideoCallTestPage(),
     ),
 
     // Handle routes from legacy menus
@@ -556,6 +577,10 @@ final GoRouter appRouter = GoRouter(
         final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
       },
+    ),
+    GoRoute(
+      path: '/design-showcase',
+      builder: (context, state) => const DesignShowcasePage(),
     ),
   ],
 );

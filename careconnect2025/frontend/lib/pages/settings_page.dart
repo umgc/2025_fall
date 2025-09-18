@@ -134,7 +134,7 @@ class _SettingsPageState extends State<SettingsPage> {
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: Icon(
           Icons.chevron_right,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha:0.5),
         ),
         onTap: onTap,
       ),
@@ -329,7 +329,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       radius: 36,
                       backgroundColor: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha:0.1),
                       child:
                           (user != null &&
                               user.name != null &&

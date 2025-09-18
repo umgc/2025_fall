@@ -66,7 +66,7 @@ class _MessagingWidgetState extends State<MessagingWidget> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      print('Error loading messages: $e');
+      debugPrint('Error loading messages: $e');
     }
   }
 
@@ -114,7 +114,7 @@ class _MessagingWidgetState extends State<MessagingWidget> {
         ).showSnackBar(const SnackBar(content: Text('Failed to send message')));
       }
     } catch (e) {
-      print('Error sending message: $e');
+      debugPrint('Error sending message: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Error sending message')));
@@ -201,7 +201,7 @@ class _MessagingWidgetState extends State<MessagingWidget> {
               radius: 18,
               backgroundColor: Theme.of(
                 context,
-              ).colorScheme.primary.withOpacity(0.2),
+              ).colorScheme.primary.withValues(alpha:0.2),
               child: Text(
                 widget.recipientName.isNotEmpty
                     ? widget.recipientName[0].toUpperCase()

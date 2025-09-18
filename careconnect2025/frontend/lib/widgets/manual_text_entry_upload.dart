@@ -96,7 +96,7 @@ class _ManualTextEntryCardState extends State<ManualTextEntryCard> {
 
   Future<void> _uploadManualTextFileToWeb(String fileName, List<int> fileBytes) async {
     if (_selectedCategory == null || fileBytes.isEmpty || fileName.isEmpty) {
-      print('Selected category was null..');
+      debugPrint('Selected category was null..');
       return;
     }
 
@@ -117,15 +117,17 @@ class _ManualTextEntryCardState extends State<ManualTextEntryCard> {
         patientId: widget.patientId,
       );
 
-      if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'File uploaded successfully: ${response.fileName}',
+      if (response != null && mounted) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File uploaded successfully: ${response.fileName}',
+              ),
+              backgroundColor: AppTheme.success,
             ),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+          );
+        }
 
         // Reset form
         setState(() {
@@ -142,12 +144,14 @@ class _ManualTextEntryCardState extends State<ManualTextEntryCard> {
         throw Exception('Upload failed - no response received');
       }
     } catch (e, stacktrace) {
-      print('Upload Exception: $e');
-      print('Stacktrace: $stacktrace');
+      debugPrint('Upload Exception: $e');
+      debugPrint('Stacktrace: $stacktrace');
       final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
+      if (mounted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
+        );
+      }
 
       if (widget.onUploadError != null) {
         widget.onUploadError!(errorMessage);

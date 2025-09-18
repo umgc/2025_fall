@@ -41,10 +41,10 @@ class CallIntegrationHelper {
     final patientData = _extractPatientData(targetPatient);
     final caregiverData = _extractCaregiverData(currentUser);
 
-    print('🎥 Starting video call:');
-    print('   Caller: ${caregiverData['name']} (${caregiverData['email']})');
-    print('   Recipient: ${patientData['name']} (${patientData['email']})');
-    print('   Call ID: $callId');
+    debugPrint('🎥 Starting video call:');
+    debugPrint('   Caller: ${caregiverData['name']} (${caregiverData['email']})');
+    debugPrint('   Recipient: ${patientData['name']} (${patientData['email']})');
+    debugPrint('   Call ID: $callId');
 
     // Direct video call without WebSocket dependency
     Navigator.of(context).push(
@@ -83,10 +83,10 @@ class CallIntegrationHelper {
     final caregiverData = _extractCaregiverData(targetCaregiver);
     final patientData = _extractPatientData(currentUser);
 
-    print('🎥 Starting video call:');
-    print('   Caller: ${patientData['name']} (${patientData['email']})');
-    print('   Recipient: ${caregiverData['name']} (${caregiverData['email']})');
-    print('   Call ID: $callId');
+    debugPrint('🎥 Starting video call:');
+    debugPrint('   Caller: ${patientData['name']} (${patientData['email']})');
+    debugPrint('   Recipient: ${caregiverData['name']} (${caregiverData['email']})');
+    debugPrint('   Call ID: $callId');
 
     // Direct video call without WebSocket dependency
     Navigator.of(context).push(
@@ -121,10 +121,10 @@ class CallIntegrationHelper {
     final patientData = _extractPatientData(targetPatient);
     final caregiverData = _extractCaregiverData(currentUser);
 
-    print('📱 Sending SMS:');
-    print('   From: ${caregiverData['name']} (${caregiverData['phone']})');
-    print('   To: ${patientData['name']} (${patientData['phone']})');
-    print('   Message: $message');
+    debugPrint('📱 Sending SMS:');
+    debugPrint('   From: ${caregiverData['name']} (${caregiverData['phone']})');
+    debugPrint('   To: ${patientData['name']} (${patientData['phone']})');
+    debugPrint('   Message: $message');
 
     // Send via direct SMS service
     await _sendDirectSMS(phoneNumber: patientData['phone'], message: message);
@@ -139,10 +139,10 @@ class CallIntegrationHelper {
     final caregiverData = _extractCaregiverData(targetCaregiver);
     final patientData = _extractPatientData(currentUser);
 
-    print('📱 Sending SMS:');
-    print('   From: ${patientData['name']} (${patientData['phone']})');
-    print('   To: ${caregiverData['name']} (${caregiverData['phone']})');
-    print('   Message: $message');
+    debugPrint('📱 Sending SMS:');
+    debugPrint('   From: ${patientData['name']} (${patientData['phone']})');
+    debugPrint('   To: ${caregiverData['name']} (${caregiverData['phone']})');
+    debugPrint('   Message: $message');
 
     // Send via direct SMS service
     await _sendDirectSMS(phoneNumber: caregiverData['phone'], message: message);
@@ -394,9 +394,9 @@ class CallIntegrationHelper {
     final patientData = _extractPatientData(currentUser);
     final callId = 'sos-${DateTime.now().millisecondsSinceEpoch}';
 
-    print('🚨 SOS Emergency Alert Triggered:');
-    print('   Patient: ${patientData['name']} (${patientData['id']})');
-    print('   Call ID: $callId');
+    debugPrint('🚨 SOS Emergency Alert Triggered:');
+    debugPrint('   Patient: ${patientData['name']} (${patientData['id']})');
+    debugPrint('   Call ID: $callId');
 
     // Show loading indicator
     showDialog(
@@ -435,7 +435,7 @@ class CallIntegrationHelper {
         "isVideoCall": false, // Video call is optional, not primary
       };
 
-      print('📡 Sending SOS request to API: $sosRequest');
+      debugPrint('📡 Sending SOS request to API: $sosRequest');
 
       final response = await http.post(
         Uri.parse('http://localhost:8080/api/websocket/sos-call'),
@@ -449,7 +449,7 @@ class CallIntegrationHelper {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ SOS Emergency alert sent successfully');
+        debugPrint('✅ SOS Emergency alert sent successfully');
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -471,8 +471,8 @@ class CallIntegrationHelper {
           );
         }
       } else {
-        print('❌ Failed to send SOS alert. Status: ${response.statusCode}');
-        print('Response: ${response.body}');
+        debugPrint('❌ Failed to send SOS alert. Status: ${response.statusCode}');
+        debugPrint('Response: ${response.body}');
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -487,7 +487,7 @@ class CallIntegrationHelper {
         }
       }
     } catch (e) {
-      print('❌ Error sending SOS alert: $e');
+      debugPrint('❌ Error sending SOS alert: $e');
 
       // Close loading dialog if still open
       if (context.mounted) {
@@ -537,7 +537,7 @@ class CallIntegrationHelper {
       return 'Lat: ${position.latitude.toStringAsFixed(6)}, '
           'Lng: ${position.longitude.toStringAsFixed(6)}';
     } catch (e) {
-      print('❌ Error getting location: $e');
+      debugPrint('❌ Error getting location: $e');
       return 'Location unavailable - error: $e';
     }
   }
@@ -769,12 +769,12 @@ class CallIntegrationHelper {
 
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
-        print('✅ SMS launched successfully to $phoneNumber');
+        debugPrint('✅ SMS launched successfully to $phoneNumber');
       } else {
-        print('❌ Could not launch SMS to $phoneNumber');
+        debugPrint('❌ Could not launch SMS to $phoneNumber');
       }
     } catch (e) {
-      print('❌ Error sending SMS: $e');
+      debugPrint('❌ Error sending SMS: $e');
     }
   }
 }

@@ -2,11 +2,13 @@
 // This file provides a mock platformViewRegistry for web builds
 // to prevent compilation errors with Agora packages
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 // Mock platformViewRegistry for web builds
 class _MockPlatformViewRegistry {
   void registerViewFactory(String viewType, dynamic viewFactory) {
     // No-op for web - Agora won't actually work on web
-    print(
+    debugPrint(
       'Mock platformViewRegistry: Ignoring registerViewFactory for $viewType',
     );
   }

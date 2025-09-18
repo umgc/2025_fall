@@ -37,7 +37,7 @@ class FamilyMemberCard extends StatelessWidget {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: colorScheme.primary.withOpacity(0.1),
+          backgroundColor: colorScheme.primary.withValues(alpha:0.1),
           child: Text(
             firstName.isNotEmpty ? firstName[0].toUpperCase() : 'F',
             style: TextStyle(

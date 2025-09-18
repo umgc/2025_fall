@@ -235,7 +235,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(0.1),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.colorScheme.primaryContainer, width: 1),
       ),
@@ -247,7 +247,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
             child: Text(
               'Configure your AI assistant to provide personalized care support tailored to your needs.',
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.8),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -269,7 +269,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
           decoration: InputDecoration(
             labelText: 'Select AI Provider',
             labelStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -317,7 +317,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
           decoration: InputDecoration(
             labelText: 'Assistant Personality',
             labelStyle: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -432,11 +432,11 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
         decoration: InputDecoration(
           labelText: 'Max Response Length',
           labelStyle: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           helperText: 'Maximum number of tokens in responses',
           helperStyle: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -465,7 +465,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
         decoration: InputDecoration(
           labelText: 'Language',
           labelStyle: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -508,7 +508,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.05),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -566,7 +566,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
                   subtitle,
                   style: TextStyle(
                     fontSize: 14,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -616,7 +616,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
                       subtitle,
                       style: TextStyle(
                         fontSize: 14,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -628,7 +628,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.2),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -646,9 +646,9 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
           SliderTheme(
             data: SliderThemeData(
               activeTrackColor: theme.colorScheme.primary,
-              inactiveTrackColor: theme.colorScheme.outline.withOpacity(0.3),
+              inactiveTrackColor: theme.colorScheme.outline.withValues(alpha: 0.3),
               thumbColor: theme.colorScheme.primary,
-              overlayColor: theme.colorScheme.primary.withOpacity(0.2),
+              overlayColor: theme.colorScheme.primary.withValues(alpha: 0.2),
             ),
             child: Slider(
               value: value,

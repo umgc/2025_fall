@@ -177,7 +177,7 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
             ),
             borderRadius: BorderRadius.circular(8),
             color: _selectedFile != null
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha:0.1)
                 : Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
           child: InkWell(
@@ -316,7 +316,7 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         backgroundColor: Theme.of(context).disabledColor,
         foregroundColor: Theme.of(
           context,
-        ).colorScheme.onSurface.withOpacity(0.38),
+        ).colorScheme.onSurface.withValues(alpha:0.38),
       ),
       icon: _isUploading
           ? const SizedBox(
@@ -415,12 +415,14 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error selecting file: $e'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting file: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -452,14 +454,16 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
       );
 
       if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'File uploaded successfully: ${response.originalFilename}',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File uploaded successfully: ${response.originalFilename}',
+              ),
+              backgroundColor: AppTheme.success,
             ),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+          );
+        }
 
         // Reset form
         setState(() {
@@ -476,9 +480,11 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
       }
     } catch (e) {
       final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
+        );
+      }
 
       if (widget.onUploadError != null) {
         widget.onUploadError!(errorMessage);
@@ -524,14 +530,16 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
       );
 
       if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'File uploaded successfully: ${response.fileName}',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File uploaded successfully: ${response.fileName}',
+              ),
+              backgroundColor: AppTheme.success,
             ),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+          );
+        }
 
         // Reset form
         setState(() {
@@ -549,12 +557,14 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         throw Exception('Upload failed - no response received');
       }
     } catch (e, stacktrace) {
-      print('Upload Exception: $e');
-      print('Stacktrace: $stacktrace');
+      debugPrint('Upload Exception: $e');
+      debugPrint('Stacktrace: $stacktrace');
       final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
+        );
+      }
 
       if (widget.onUploadError != null) {
         widget.onUploadError!(errorMessage);

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter_webrtc/flutter_webrtc.dart';
-import '../services/video_call_service.dart';
 import '../config/theme/app_theme.dart';
 
 class VideoCallWidget extends StatefulWidget {
@@ -92,7 +91,7 @@ class _VideoCallWidgetState extends State<VideoCallWidget> {
   //       _callStartTime = DateTime.now();
   //     });
   //   } catch (e) {
-  //     print('Error joining call: $e');
+  //     debugPrint('Error joining call: $e');
   //     _endCall('Connection failed');
   //   }
   // }
@@ -105,7 +104,7 @@ class _VideoCallWidgetState extends State<VideoCallWidget> {
   //     await _releaseVideoResources();
   //     await VideoCallService.endCallStatic(widget.callId, widget.currentUserId);
   //   } catch (e) {
-  //     print('Error ending call: $e');
+  //     debugPrint('Error ending call: $e');
   //   }
   //   if (mounted) {
   //     Navigator.of(context).pop();
@@ -120,7 +119,7 @@ class _VideoCallWidgetState extends State<VideoCallWidget> {
   //     await _peerConnection?.close();
   //     _peerConnection = null;
   //   } catch (e) {
-  //     print('Error releasing video resources: $e');
+  //     debugPrint('Error releasing video resources: $e');
   //   }
   // }
   //
@@ -228,7 +227,7 @@ class _VideoCallWidgetState extends State<VideoCallWidget> {
   //               width: 120,
   //               height: 160,
   //               decoration: BoxDecoration(
-  //                 color: AppTheme.videoCallBackground.withOpacity(0.45),
+  //                 color: AppTheme.videoCallBackground.withValues(alpha:0.45),
   //                 borderRadius: BorderRadius.circular(12),
   //                 border: Border.all(color: AppTheme.videoCallText, width: 2),
   //               ),
@@ -249,8 +248,8 @@ class _VideoCallWidgetState extends State<VideoCallWidget> {
   //             width: double.infinity,
   //             height: double.infinity,
   //             color: Theme.of(context).brightness == Brightness.dark
-  //                 ? AppTheme.videoCallBackgroundDarkTheme.withOpacity(0.8)
-  //                 : AppTheme.videoCallBackground.withOpacity(0.5),
+  //                 ? AppTheme.videoCallBackgroundDarkTheme.withValues(alpha:0.8)
+  //                 : AppTheme.videoCallBackground.withValues(alpha:0.5),
   //             child: const Center(
   //               child: Column(
   //                 mainAxisAlignment: MainAxisAlignment.center,

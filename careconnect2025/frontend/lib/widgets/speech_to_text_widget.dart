@@ -74,9 +74,11 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
 
     await _uploadSpeechToTextFileToWeb(fileName, fileBytes);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Speech-to-text file saved')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech-to-text file saved')),
+      );
+    }
   }
 
   Widget _buildHeader() {
@@ -139,12 +141,14 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
 
   Future<void> _selectCategory() async {
     if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a file category first'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a file category first'),
+            backgroundColor: AppTheme.warning,
+          ),
+        );
+      }
       return;
     }
   }
@@ -172,14 +176,16 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
       );
 
       if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'File uploaded successfully: ${response.fileName}',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'File uploaded successfully: ${response.fileName}',
+              ),
+              backgroundColor: AppTheme.success,
             ),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+          );
+        }
 
         // Reset form
         setState(() {
@@ -197,12 +203,14 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
         throw Exception('Upload failed - no response received');
       }
     } catch (e, stacktrace) {
-      print('Upload Exception: $e');
-      print('Stacktrace: $stacktrace');
+      debugPrint('Upload Exception: $e');
+      debugPrint('Stacktrace: $stacktrace');
       final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
+        );
+      }
 
       if (widget.onUploadError != null) {
         widget.onUploadError!(errorMessage);
@@ -258,7 +266,7 @@ class _SpeechToTextCardState extends State<SpeechToTextCard> {
                   .of(context)
                   .colorScheme
                   .surfaceContainerHighest
-                  .withOpacity(0.1),
+                  .withValues(alpha:0.1),
             ),
             child: Column(
               children: [

@@ -31,35 +31,35 @@ class ColorUtils {
 
   // Helper methods for creating color variations
   static Color getSuccessWithOpacity(double opacity) =>
-      AppTheme.success.withOpacity(opacity);
+      AppTheme.success.withValues(alpha: opacity);
   static Color getSuccessLight() =>
       const Color(0xFFE8F5E9); // green.shade50 equivalent
   static Color getSuccessLighter() =>
       const Color(0xFFC8E6C9); // green.shade100 equivalent
 
   static Color getWarningWithOpacity(double opacity) =>
-      AppTheme.warning.withOpacity(opacity);
+      AppTheme.warning.withValues(alpha: opacity);
   static Color getWarningLight() =>
       const Color(0xFFFFF8E1); // amber.shade50 equivalent
   static Color getWarningLighter() =>
       const Color(0xFFFFECB3); // amber.shade100 equivalent
 
   static Color getErrorWithOpacity(double opacity) =>
-      AppTheme.error.withOpacity(opacity);
+      AppTheme.error.withValues(alpha: opacity);
   static Color getErrorLight() =>
       const Color(0xFFFFEBEE); // red.shade50 equivalent
   static Color getErrorLighter() =>
       const Color(0xFFFFCDD2); // red.shade100 equivalent
 
   static Color getInfoWithOpacity(double opacity) =>
-      AppTheme.info.withOpacity(opacity);
+      AppTheme.info.withValues(alpha: opacity);
   static Color getInfoLight() =>
       const Color(0xFFE3F2FD); // blue.shade50 equivalent
   static Color getInfoLighter() =>
       const Color(0xFFBBDEFB); // blue.shade100 equivalent
 
   static Color getPrimaryWithOpacity(double opacity) =>
-      AppTheme.primary.withOpacity(opacity);
+      AppTheme.primary.withValues(alpha: opacity);
   static Color getPrimaryLight() => AppTheme.primaryLight;
   static Color getPrimaryLighter() =>
       const Color(0xFFE3F2FD); // blue.shade50 equivalent
@@ -111,10 +111,10 @@ class ColorUtils {
   // Get shadow color based on platform
   static Color getShadowColor(BuildContext context) {
     if (ResponsiveUtils.isIOS) {
-      return Colors.black.withOpacity(0.1); // iOS uses lighter shadows
+      return Colors.black.withValues(alpha: 0.1); // iOS uses lighter shadows
     } else if (ResponsiveUtils.isAndroid) {
-      return Colors.black.withOpacity(0.2); // Android uses medium shadows
+      return Colors.black.withValues(alpha: 0.2); // Android uses medium shadows
     }
-    return Colors.black.withOpacity(0.15); // Web uses medium-light shadows
+    return Colors.black.withValues(alpha: 0.15); // Web uses medium-light shadows
   }
 }

@@ -64,7 +64,7 @@ class _FileManagementPageState extends State<FileManagementPage>
         _filteredFiles = files;
         _userId = user.id;
         _isLoading = false;
-        print(
+        debugPrint(
           'DEBUG: Category set as: $_selectedCategory, Files set as: $files',
         );
       });
@@ -242,7 +242,7 @@ class _FileManagementPageState extends State<FileManagementPage>
           Icon(
             Icons.folder_open,
             size: 80,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -250,7 +250,7 @@ class _FileManagementPageState extends State<FileManagementPage>
                 ? 'No files match your filters'
                 : 'No files uploaded yet',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
           ),
           const SizedBox(height: 8),
@@ -259,7 +259,7 @@ class _FileManagementPageState extends State<FileManagementPage>
                 ? 'Try adjusting your search or filter criteria'
                 : 'Start by uploading your first file using the Upload tab',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
             textAlign: TextAlign.center,
           ),
@@ -319,7 +319,7 @@ class _FileManagementPageState extends State<FileManagementPage>
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+          backgroundColor: theme.colorScheme.primary.withValues(alpha:0.1),
           child: Text(
             file.fileIcon,
             style:

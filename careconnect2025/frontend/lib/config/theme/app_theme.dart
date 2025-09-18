@@ -5,31 +5,56 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // Light Theme Colors
   // Main app colors
-  static const Color primaryDark = Color(0xFF14366E); // UX provided blue
-  static const Color primary = Color(0xFF14366E); // UX provided blue
-  static const Color primaryLight = Color(
-    0xFF325694,
-  ); // Lighter shade of UX blue
-  static const Color accent = Color(0xFF325694); // Lighter shade of UX blue
+  // CareConnect brand colors - Navy blue theme (updated to match target design)
+  static const Color careconnectNavy = Color(0xFF1E40AF); // Navy blue
+  static const Color careconnectBlue = Color(0xFF3B82F6); // Blue
+  static const Color careconnectLightBlue = Color(0xFF60A5FA); // Light blue
+  static const Color careconnectDarkBlue = Color(0xFF1E3A8A); // Dark blue
+  static const Color careconnectCharcoal = Color(0xFF374151); // Charcoal
+  static const Color careconnectDarkGray = Color(0xFF1F2937); // Dark gray
+
+  // Healthcare specific colors
+  static const Color healthcareBlue = Color(0xFF1E40AF);
+  static const Color healthcareGreen = Color(0xFF059669);
+  static const Color healthcareTeal = Color(0xFF0D9488);
+  static const Color healthcarePurple = Color(0xFF7C3AED);
+  static const Color healthcareOrange = Color(0xFFEA580C);
+  static const Color healthcareGray = Color(0xFF64748B);
+
+  // Primary theme colors
+  static const Color primaryColor = careconnectNavy;
+  static const Color primaryVariant = careconnectDarkBlue;
+  static const Color secondaryColor = healthcarePurple;
+  static const Color secondaryVariant = Color(0xFF6D28D9);
+
+  // Legacy colors for backward compatibility
+  static const Color primaryDark = careconnectNavy;
+  static const Color primary = careconnectNavy;
+  static const Color primaryLight = careconnectBlue;
+  static const Color accent = healthcarePurple;
 
   // Status colors
-  static const Color success = Color(0xFF43A047); // green.shade600
-  static const Color warning = Color(0xFFFFA000); // amber.shade700
-  static const Color error = Color(0xFFE53935); // red.shade600
-  static const Color info = Color(0xFF325694); // lighter shade of our UX blue
+  static const Color success = healthcareGreen;
+  static const Color warning = healthcareOrange;
+  static const Color error = Color(0xFFDC2626);
+  static const Color info = healthcareBlue;
 
   // Text colors
-  static const Color textPrimary = Color(0xFF212121); // grey.shade900
-  static const Color textSecondary = Color(0xFF757575); // grey.shade600
+  static const Color textPrimary = Color(0xFF1F2937);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textTertiary = Color(0xFF9CA3AF);
   static const Color textLight = Color(0xFFFFFFFF); // white
 
   // Background colors
-  static const Color backgroundPrimary = Color(0xFFFFFFFF); // white
-  static const Color backgroundSecondary = Color(0xFFF5F5F5); // grey.shade100
-  static const Color cardBackground = Color(0xFFFFFFFF); // white
+  static const Color backgroundColor = Color(0xFFF8FAFC);
+  static const Color surfaceColor = Color(0xFFFFFFFF);
+  static const Color backgroundPrimary = Color(0xFFFFFFFF); // white - legacy
+  static const Color backgroundSecondary = Color(0xFFF5F5F5); // grey.shade100 - legacy
+  static const Color cardBackground = Color(0xFFFFFFFF); // white - legacy
 
   // Border colors
-  static const Color borderColor = Color(0xFFE0E0E0); // grey.shade300
+  static const Color borderColor = Color(0xFFE5E7EB);
+  static const Color dividerColor = Color(0xFFF3F4F6);
 
   // Dark Theme Colors
   // Main app colors
@@ -195,7 +220,7 @@ class AppTheme {
     border: Border.all(color: borderColor),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withValues(alpha: 0.05),
         blurRadius: 4,
         offset: const Offset(0, 2),
       ),
@@ -280,7 +305,7 @@ class AppTheme {
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.disabled)) {
-            return textSecondary.withOpacity(0.3);
+            return textSecondary.withValues(alpha: 0.3);
           }
           return primary;
         }),
@@ -396,7 +421,7 @@ class AppTheme {
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith<Color>((states) {
           if (states.contains(WidgetState.disabled)) {
-            return textSecondaryDarkTheme.withOpacity(0.3);
+            return textSecondaryDarkTheme.withValues(alpha: 0.3);
           }
           return primaryDarkTheme;
         }),

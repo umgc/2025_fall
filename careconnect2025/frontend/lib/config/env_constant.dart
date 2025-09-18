@@ -71,7 +71,7 @@ String getBackendToken() {
 
   if (token == null || token.isEmpty || token == 'your_backend_token_here') {
     if (kDebugMode) {
-      print('⚠️ Backend token not configured. Some API calls may fail.');
+      debugPrint('⚠️ Backend token not configured. Some API calls may fail.');
       return '';
     }
     throw Exception(
@@ -80,7 +80,7 @@ String getBackendToken() {
   }
 
   if (kDebugMode) {
-    print('✅ Backend token loaded successfully');
+    debugPrint('✅ Backend token loaded successfully');
   }
   return token;
 }
@@ -92,7 +92,7 @@ String getJWTSecret() {
       secret.isEmpty ||
       secret == 'your_jwt_secret_key_here') {
     if (kDebugMode) {
-      print('⚠️ JWT secret not configured. Token validation may fail.');
+      debugPrint('⚠️ JWT secret not configured. Token validation may fail.');
       return '';
     }
     throw Exception(
@@ -108,7 +108,7 @@ String getJWTSecret() {
   }
 
   if (kDebugMode) {
-    print('✅ JWT secret loaded successfully');
+    debugPrint('✅ JWT secret loaded successfully');
   }
   return secret;
 }
@@ -130,7 +130,7 @@ String getOpenAIKey() {
 
   if (key == null || key.isEmpty || key == 'your_openai_api_key_here') {
     if (kDebugMode) {
-      print('⚠️ OpenAI API key not configured. AI features will be disabled.');
+      debugPrint('⚠️ OpenAI API key not configured. AI features will be disabled.');
       return '';
     }
     throw Exception(
@@ -146,7 +146,7 @@ String getOpenAIKey() {
   }
 
   if (kDebugMode) {
-    print('✅ OpenAI API key loaded successfully');
+    debugPrint('✅ OpenAI API key loaded successfully');
   }
   return key;
 }

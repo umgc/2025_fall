@@ -385,8 +385,8 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
         else if (_error != null)
           Card(
             color: Theme.of(context).brightness == Brightness.dark
-                ? AppTheme.errorDarkTheme.withOpacity(0.1)
-                : AppTheme.error.withOpacity(0.1),
+                ? AppTheme.errorDarkTheme.withValues(alpha: 0.1)
+                : AppTheme.error.withValues(alpha: 0.1),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -428,7 +428,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                     size: 64,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.4),
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -436,7 +436,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -447,7 +447,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -466,7 +466,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppTheme.primary.withOpacity(0.1),
+                    backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
                     child: Icon(
                       _getFileIcon(note.fileName),
                       color: AppTheme.primary,
@@ -494,7 +494,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                           fontSize: 12,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       Text(
@@ -503,7 +503,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                           fontSize: 12,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],

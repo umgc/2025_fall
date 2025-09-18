@@ -86,7 +86,7 @@ class _IncomingCallPopupState extends State<IncomingCallPopup>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha:0.3),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -154,7 +154,7 @@ class _IncomingCallPopupState extends State<IncomingCallPopup>
                                           (widget.isVideoCall
                                                   ? Colors.blue
                                                   : Colors.green)
-                                              .withOpacity(0.3),
+                                              .withValues(alpha:0.3),
                                       blurRadius: 20,
                                       spreadRadius: 5,
                                     ),
@@ -193,8 +193,8 @@ class _IncomingCallPopupState extends State<IncomingCallPopup>
                           ),
                           decoration: BoxDecoration(
                             color: widget.callerRole == 'PATIENT'
-                                ? Colors.blue.withOpacity(0.1)
-                                : Colors.purple.withOpacity(0.1),
+                                ? Colors.blue.withValues(alpha:0.1)
+                                : Colors.purple.withValues(alpha:0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -244,7 +244,7 @@ class _IncomingCallPopupState extends State<IncomingCallPopup>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withOpacity(0.3),
+                                    color: Colors.red.withValues(alpha:0.3),
                                     blurRadius: 10,
                                     spreadRadius: 2,
                                   ),
@@ -269,7 +269,7 @@ class _IncomingCallPopupState extends State<IncomingCallPopup>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.green.withOpacity(0.3),
+                                    color: Colors.green.withValues(alpha:0.3),
                                     blurRadius: 10,
                                     spreadRadius: 2,
                                   ),

@@ -139,7 +139,7 @@ class UserProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      print('❌ Token refresh failed in UserProvider: $e');
+      debugPrint('❌ Token refresh failed in UserProvider: $e');
       _user = null;
       notifyListeners();
       return false;

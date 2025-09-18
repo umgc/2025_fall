@@ -39,7 +39,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
   }
 
   Future<void> _requestPermissions() async {
-    print('🎥 Requesting camera and microphone permissions...');
+    debugPrint('🎥 Requesting camera and microphone permissions...');
 
     // Request permissions
     Map<Permission, PermissionStatus> permissions = await [
@@ -50,10 +50,10 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
     bool allGranted = permissions.values.every((status) => status.isGranted);
 
     if (allGranted) {
-      print('✅ Permissions granted, initializing Agora...');
+      debugPrint('✅ Permissions granted, initializing Agora...');
       await _initializeAgora();
     } else {
-      print('❌ Permissions denied');
+      debugPrint('❌ Permissions denied');
       setState(() {
         _callStatus = 'Permissions required for video call';
       });
@@ -62,9 +62,9 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
 
   Future<void> _initializeAgora() async {
     try {
-      print('🚀 Initializing Agora RTC Engine...');
-      print('📱 App ID: 6dd0e8e31625434e8dd185bcb075cd79');
-      print('🎬 Channel: ${widget.callId}');
+      debugPrint('🚀 Initializing Agora RTC Engine...');
+      debugPrint('📱 App ID: 6dd0e8e31625434e8dd185bcb075cd79');
+      debugPrint('🎬 Channel: ${widget.callId}');
 
       // // Create Agora RTC Engine
       // _engine = createAgoraRtcEngine();
@@ -76,7 +76,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
       // _engine.registerEventHandler(
       //   RtcEngineEventHandler(
       //     onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-      //       print('✅ Joined channel successfully');
+      //       debugPrint('✅ Joined channel successfully');
       //       setState(() {
       //         _localUserJoined = true;
       //         _callStatus = widget.isVideoCall
@@ -85,7 +85,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
       //       });
       //     },
       //     onUserJoined: (RtcConnection connection, int uid, int elapsed) {
-      //       print('👥 User joined: $uid');
+      //       debugPrint('👥 User joined: $uid');
       //       setState(() {
       //         _remoteUid = uid;
       //         _callStatus = '${widget.otherUserName} joined the call';
@@ -97,7 +97,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
       //           int uid,
       //           UserOfflineReasonType reason,
       //         ) {
-      //           print('👋 User left: $uid');
+      //           debugPrint('👋 User left: $uid');
       //           setState(() {
       //             _remoteUid = null;
       //             _callStatus = '${widget.otherUserName} left the call';
@@ -125,9 +125,9 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
         _callStatus = 'Connected to ${widget.callId}';
       });
 
-      print('✅ Agora RTC Engine initialized successfully!');
+      debugPrint('✅ Agora RTC Engine initialized successfully!');
     } catch (e) {
-      print('❌ Failed to initialize Agora: $e');
+      debugPrint('❌ Failed to initialize Agora: $e');
       setState(() {
         _callStatus = 'Failed to connect: $e';
       });

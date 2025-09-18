@@ -16,7 +16,7 @@ class WelcomePage extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withOpacity(0.5), width: 2),
+        side: BorderSide(color: color.withValues(alpha:0.5), width: 2),
       ),
       child: InkWell(
         onTap: onTap,

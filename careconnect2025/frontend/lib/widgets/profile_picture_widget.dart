@@ -52,7 +52,7 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
         await _loadImageBytes();
       }
     } catch (e) {
-      print('Error loading profile image: $e');
+      debugPrint('Error loading profile image: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -70,7 +70,7 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
           });
         }
       } catch (e) {
-        print('Error loading image bytes: $e');
+        debugPrint('Error loading image bytes: $e');
       }
     }
   }
@@ -305,7 +305,7 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
               shape: BoxShape.circle,
               color: Colors.grey[200],
               border: Border.all(
-                color: Theme.of(context).primaryColor.withOpacity(0.3),
+                color: Theme.of(context).primaryColor.withValues(alpha:0.3),
                 width: 2,
               ),
             ),
@@ -341,7 +341,7 @@ class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha:0.5),
                 ),
                 child: const Center(
                   child: CircularProgressIndicator(
@@ -416,9 +416,9 @@ class CompactProfilePicture extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: Theme.of(context).primaryColor.withValues(alpha:0.1),
         border: Border.all(
-          color: Theme.of(context).primaryColor.withOpacity(0.3),
+          color: Theme.of(context).primaryColor.withValues(alpha:0.3),
           width: 1,
         ),
       ),

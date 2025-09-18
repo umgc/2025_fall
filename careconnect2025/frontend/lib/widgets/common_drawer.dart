@@ -42,7 +42,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
         }
       }
     } catch (e) {
-      print('Error loading profile picture: $e');
+      debugPrint('Error loading profile picture: $e');
     }
   }
 
@@ -148,7 +148,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
                           color:
                               (Theme.of(context).appBarTheme.foregroundColor ??
                                       Theme.of(context).colorScheme.onPrimary)
-                                  .withOpacity(0.7),
+                                  .withValues(alpha:0.7),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -158,7 +158,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
                         color:
                             (Theme.of(context).appBarTheme.foregroundColor ??
                                     Theme.of(context).colorScheme.onPrimary)
-                                .withOpacity(0.7),
+                                .withValues(alpha:0.7),
                       ),
                       Text(
                         ' View Profile',
@@ -166,7 +166,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
                           color:
                               (Theme.of(context).appBarTheme.foregroundColor ??
                                       Theme.of(context).colorScheme.onPrimary)
-                                  .withOpacity(0.9),
+                                  .withValues(alpha:0.9),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -324,7 +324,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
         : (textColor ??
               theme.textTheme.bodyLarge?.color ??
               theme.colorScheme.onSurface);
-    final bgColor = isActive ? theme.primaryColor.withOpacity(0.1) : null;
+    final bgColor = isActive ? theme.primaryColor.withValues(alpha:0.1) : null;
 
     return ListTile(
       leading: Icon(
