@@ -37,7 +37,7 @@ public class User {
     private LocalDate lastLoginDate;
 
     @Column(name = "login_streak")
-    private Integer loginStreak;
+    private Integer loginStreak = 0;
 
     @Column(name = "leaderboard_opt_in", nullable = true)
     private Boolean leaderboardOptIn = true;
