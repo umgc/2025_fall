@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
@@ -18,6 +19,8 @@ void main() async{
   await dotenv.load();
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
+  await AILoggingSingleton().createDb(); // Ensures logging database exists
+  print(await AILoggingSingleton().getAllLogs()); // For testing
 
   runApp(
     MultiProvider(

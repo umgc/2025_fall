@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "5.92.0"
+      version = "6.13.0"
     }
   }
 }
@@ -166,10 +166,10 @@ resource "null_resource" "build_docker_java_image" {
     working_dir = "../docker/"
     command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
     environment = {
-      AWS_REGION = replace(data.aws_region.current.name, "-", "-")
-      AWS_REPO_URL = trimspace(aws_ecr_repository.edulense_program_grader_java.repository_url)
-      AWS_REG_ID = trimspace(aws_ecr_repository.edulense_program_grader_java.registry_id)
-      AWS_NAME = trimspace(aws_ecr_repository.edulense_program_grader_java.name)
+      AWS_REGION = data.aws_region.current.region
+      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_java.repository_url
+      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_java.registry_id
+      AWS_NAME = aws_ecr_repository.edulense_program_grader_java.name
       ENV_LANG = "java"
     }
   }
@@ -196,10 +196,10 @@ resource "null_resource" "build_docker_python_image" {
     working_dir = "../docker/"
     command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
     environment = {
-      AWS_REGION = replace(data.aws_region.current.name, "-", "-")
-      AWS_REPO_URL = trimspace(aws_ecr_repository.edulense_program_grader_python.repository_url)
-      AWS_REG_ID = trimspace(aws_ecr_repository.edulense_program_grader_python.registry_id)
-      AWS_NAME = trimspace(aws_ecr_repository.edulense_program_grader_python.name)
+      AWS_REGION = data.aws_region.current.region
+      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_python.repository_url
+      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_python.registry_id
+      AWS_NAME = aws_ecr_repository.edulense_program_grader_python.name
       ENV_LANG = "python"
     }
   }
@@ -226,11 +226,91 @@ resource "null_resource" "build_docker_c_image" {
     working_dir = "../docker/"
     command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
     environment = {
-      AWS_REGION = replace(data.aws_region.current.name, "-", "-")
-      AWS_REPO_URL = trimspace(aws_ecr_repository.edulense_program_grader_c.repository_url)
-      AWS_REG_ID = trimspace(aws_ecr_repository.edulense_program_grader_c.registry_id)
-      AWS_NAME = trimspace(aws_ecr_repository.edulense_program_grader_c.name)
+      AWS_REGION = data.aws_region.current.region
+      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_c.repository_url
+      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_c.registry_id
+      AWS_NAME = aws_ecr_repository.edulense_program_grader_c.name
       ENV_LANG = "c"
     }
+  }
+}
+
+resource "aws_dsql_cluster" "edulense" {
+  deletion_protection_enabled = true
+
+  tags = {
+    Name = "EduLenseAILoggingDatabase"
+  }
+}
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+    principals {
+      type = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "lambda_token" {
+  name = "lambda_token_getter"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+data "aws_iam_policy_document" "db_ro" {
+  statement {
+    effect    = "Allow"
+    actions   = ["dsql:DbConnectAdmin", "dsql:DbConnect"]
+    resources = [aws_dsql_cluster.edulense.arn]
+  }
+}
+
+resource "aws_iam_policy" "db_ro" {
+  name   = "db_admin"
+  policy = data.aws_iam_policy_document.db_ro.json
+}
+
+resource "aws_iam_role_policy_attachment" "db_lambda" {
+  role       = aws_iam_role.lambda_token.name
+  policy_arn = aws_iam_policy.db_ro.arn
+}
+
+resource "aws_iam_role_policy_attachment" "logging" {
+  role       = aws_iam_role.lambda_token.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+data "archive_file" "get_token" {
+  type = "zip"
+  source_dir = "../lambda"
+  excludes = ["../lambda/gettoken.zip"]
+  output_path = "../lambda/gettoken.zip"
+}
+
+resource "aws_lambda_function" "get_token" {
+  filename = data.archive_file.get_token.output_path
+  function_name = "get_db_token"
+  role = aws_iam_role.lambda_token.arn
+  handler = "index.handler"
+  source_code_hash = data.archive_file.get_token.output_base64sha256
+  runtime = "nodejs20.x"
+  timeout = "10"
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL = "info"
+      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "get_token_url" {
+  function_name = aws_lambda_function.get_token.function_name
+  authorization_type = "NONE"
+  cors {
+    allow_methods = ["GET", "POST"]
+    allow_origins = ["*"]
   }
 }
