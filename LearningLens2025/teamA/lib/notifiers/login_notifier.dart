@@ -22,8 +22,9 @@ class LoginNotifier with ChangeNotifier {
   String? _username;
   String? _password;
   String? _moodleUrl;
-  String? _clientID;  // for Google
-  String? _otherError;  // If you want any global error, or remove if not needed
+  String? _clientID; // for Google
+  String? _otherError; // If you want any global error, or remove if not needed
+  UserRole? _role;
 
   final LmsInterface _api = LmsFactory.getLmsService(); // Moodle API instance
 
@@ -31,7 +32,7 @@ class LoginNotifier with ChangeNotifier {
   String? get username => _username;
   String? get password => _password;
   String? get moodleUrl => _moodleUrl;
-
+  UserRole? get role => _role;
   // Constructor
   LoginNotifier() {
     _loadLoginState(); // Load any saved login state on creation
@@ -68,8 +69,8 @@ class LoginNotifier with ChangeNotifier {
     final grokKey = LocalStorageService.getGrokKey();
 
     return (openAIKey != null && openAIKey.isNotEmpty) ||
-           (perplexityKey != null && perplexityKey.isNotEmpty) ||
-           (grokKey != null && grokKey.isNotEmpty);
+        (perplexityKey != null && perplexityKey.isNotEmpty) ||
+        (grokKey != null && grokKey.isNotEmpty);
   }
 
   // ---------------------------------------
@@ -92,34 +93,41 @@ class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
   // Moodle: Sign-in
   // ---------------------------------------
-  Future<void> signInWithMoodle(String username, String password, String moodleUrl) async {
+  Future<void> signInWithMoodle(
+      String username, String password, String moodleUrl) async {
     try {
       await _api.login(username, password, moodleUrl);
 
-      if (_api.isLoggedIn()) {
-        // Make sure moodle user is a teacher. 
-        if (await _api.isUserTeacher(_api.courses!)) {
-          // User is a teacher
-          _moodleState.isLoggedIn = true;
-          _moodleState.errorMessage = null;   // Clear any old error
-          _username = username;
-          _password = password;
-          _moodleUrl = moodleUrl;
-
-          // Save to local storage
-          LocalStorageService.saveMoodleLoginState(_moodleState.isLoggedIn);
-          LocalStorageService.saveCredentials(username, password);
-          LocalStorageService.saveMoodleUrl(moodleUrl);
-        } else {
-          // user is not a teacher
-          _api.logout();
-          _moodleState.isLoggedIn = false;
-          _moodleState.errorMessage = "User is not a teacher";
-        }
-      } else {
+      if (!_api.isLoggedIn()) {
         // Logged in is false; set a custom error
         _moodleState.isLoggedIn = false;
         _moodleState.errorMessage = "Invalid username or password.";
+        notifyListeners();
+        return;
+      }
+      // Make sure moodle user is a teacher.
+      final UserRole role = await _api.getUserRole(_api.courses!);
+      print(role);
+
+      if (role == UserRole.teacher || role == UserRole.student) {
+        // User is a teacher or student
+        _moodleState.isLoggedIn = true;
+        _moodleState.errorMessage = null; // Clear any old error
+        _username = username;
+        _password = password;
+        _moodleUrl = moodleUrl;
+        _role = role;
+
+        // Save to local storage
+        LocalStorageService.saveMoodleLoginState(_moodleState.isLoggedIn);
+        LocalStorageService.saveCredentials(username, password);
+        LocalStorageService.saveMoodleUrl(moodleUrl);
+        LocalStorageService.saveUserRole(role);
+      } else {
+        // user is not a teacher or a student
+        _api.logout();
+        _moodleState.isLoggedIn = false;
+        _moodleState.errorMessage = "User does not have a valid role";
       }
 
       notifyListeners();
@@ -171,8 +179,7 @@ class LoginNotifier with ChangeNotifier {
         // Save to local storage
         LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
         LocalStorageService.saveGoogleAccessToken(
-          LmsFactory.getLmsServiceGoogle().getGoogleAccessToken()
-        );
+            LmsFactory.getLmsServiceGoogle().getGoogleAccessToken());
 
         notifyListeners();
       } else {
@@ -185,7 +192,7 @@ class LoginNotifier with ChangeNotifier {
       _googleState.isLoggedIn = false;
       _googleState.errorMessage = "Google login failed: ${e.toString()}";
       notifyListeners();
-      rethrow;  // Or remove if you don't want to rethrow
+      rethrow; // Or remove if you don't want to rethrow
     }
   }
 
@@ -225,8 +232,10 @@ class LoginNotifier with ChangeNotifier {
         if (response.statusCode == 200) {
           print('Classroom API Response: ${response.body}');
         } else {
-          print('Classroom API Error: ${response.statusCode} - ${response.body}');
-          throw Exception("Classroom API request failed: ${response.statusCode}");
+          print(
+              'Classroom API Error: ${response.statusCode} - ${response.body}');
+          throw Exception(
+              "Classroom API request failed: ${response.statusCode}");
         }
       } catch (e) {
         print('Error making Classroom API request: $e');

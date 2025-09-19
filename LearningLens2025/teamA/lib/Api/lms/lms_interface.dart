@@ -1,13 +1,15 @@
+import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
+import 'package:learninglens_app/beans/grade.dart';
+import 'package:learninglens_app/beans/moodle_rubric.dart';
+import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/quiz_type.dart';
-import 'package:learninglens_app/beans/assignment.dart';
-import 'package:learninglens_app/beans/participant.dart';
-import 'package:learninglens_app/beans/submission_status.dart';
-import 'package:learninglens_app/beans/grade.dart';
 import 'package:learninglens_app/beans/submission.dart';
+import 'package:learninglens_app/beans/submission_status.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
-import 'package:learninglens_app/beans/moodle_rubric.dart';
+
+enum UserRole { teacher, student }
 
 // Singleton interface class for API access.
 abstract class LmsInterface {
@@ -26,6 +28,7 @@ abstract class LmsInterface {
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
   bool isLoggedIn();
+  Future<UserRole> getUserRole(List<Course> moodleCourses);
   Future<bool> isUserTeacher(List<Course> moodleCourses);
   void logout();
   void resetLMSUserInfo();
@@ -47,8 +50,14 @@ abstract class LmsInterface {
 
   // Assignment methods
   Future<List<Assignment>> getEssays(int? courseID, {int? topicId});
-  Future<Map<String, dynamic>?> createAssignment(String courseid, String sectionid, String assignmentName, 
-                                                  String startdate, String enddate, String rubricJson, String description);
+  Future<Map<String, dynamic>?> createAssignment(
+      String courseid,
+      String sectionid,
+      String assignmentName,
+      String startdate,
+      String enddate,
+      String rubricJson,
+      String description);
   Future<int?> getContextId(int assignmentId, String courseId);
 
   // Submission and grading methods
@@ -62,5 +71,6 @@ abstract class LmsInterface {
 
   // Rubric methods
   Future<MoodleRubric?> getRubric(String assignmentid);
-  Future<List<Participant>> getQuizGradesForParticipants(String courseId, int quizId);
+  Future<List<Participant>> getQuizGradesForParticipants(
+      String courseId, int quizId);
 }
