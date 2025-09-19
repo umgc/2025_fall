@@ -68,4 +68,27 @@ void main() {
 
     expect(LocalStorageService.getOpenAIKey(), dotenv.env['openai_apikey'] ?? '');
   });
+
+  test('getMoodleUrl trims trailing /', () {
+    LocalStorageService.saveMoodleUrl("test/url/");
+
+    expect(LocalStorageService.getMoodleUrl(), 'test/url');
+  });
+
+  test('getAILoggingUrl defaults to dotenv if no stored credentials', () {
+    expect(LocalStorageService.getAILoggingUrl(), dotenv.env['AI_LOGGING_URL'] ?? '');
+  });
+
+  test('getAILoggingUrl trims trailing /', () {
+    LocalStorageService.saveAILoggingUrl("test/url/");
+
+    expect(LocalStorageService.getAILoggingUrl(), 'test/url');
+  });
+
+  test('clearAiLoggingUrl removes logging URL', () {
+    LocalStorageService.saveAILoggingUrl("testLoggingUrl");
+    LocalStorageService.clearCredentials();
+
+    expect(LocalStorageService.getAILoggingUrl(), dotenv.env['AI_LOGGING_URL'] ?? '');
+  });
 }
