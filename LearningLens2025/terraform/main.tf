@@ -289,6 +289,12 @@ data "archive_file" "get_token" {
   output_path = "../lambda/gettoken.zip"
 }
 
+data "archive_file" "zip_plugin" {
+  type = "zip"
+  source_dir = "../MoodlePlugin/learninglens"
+  output_path = "../MoodlePlugin/learninglens.zip"
+}
+
 resource "aws_lambda_function" "get_token" {
   filename = data.archive_file.get_token.output_path
   function_name = "get_db_token"
