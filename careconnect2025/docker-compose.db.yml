@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: careconnect
+      POSTGRES_PASSWORD: careconnect
+      POSTGRES_DB: careconnect
+    ports: ["55432:5432"]   # host:container (HOST 55432 now)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
