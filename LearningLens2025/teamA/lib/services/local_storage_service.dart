@@ -108,7 +108,11 @@ class LocalStorageService {
 
   /// Retrieves Moodle URL from storage or dotenv.
   static String getMoodleUrl() {
-    return _prefs.getString('moodleUrl') ?? dotenv.env['MOODLE_URL'] ?? '';
+    String url = _prefs.getString('moodleUrl') ?? dotenv.env['MOODLE_URL'] ?? '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
   }
 
   /// Clears Moodle URL.
@@ -241,6 +245,22 @@ class LocalStorageService {
   static void clearSelectedClassroom() {
     _prefs.remove('selectedClassroom');
   }
+
+  static saveAILoggingUrl(String url) {
+    _prefs.setString('AI_LOGGING_URL', url);
+  }
+
+  static String getAILoggingUrl() {
+    String url = _prefs.getString('AI_LOGGING_URL') ?? dotenv.env['AI_LOGGING_URL'] ?? '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
+  static void clearAILoggingUrl() {
+    _prefs.remove('AI_LOGGING_URL');
+  }  
 
   static hasLLMKey() {
     return getOpenAIKey().isNotEmpty ||

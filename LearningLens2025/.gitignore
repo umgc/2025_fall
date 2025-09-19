@@ -39,3 +39,5 @@ teama/macos/*
 teama/windows/*
 teama/assets/api-keys.json
 teama/android/
+
+terraform/terraformout.txt
