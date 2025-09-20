@@ -38,10 +38,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
   );
 
   // Map patientId -> patient name
-  //This will be more required once the endpoint provides needed information.
   Map<int, String> patientNames = {};
 
-  // Define task types and their colors, also requires endpoint for more use.
+  // Define task types and their colors
   final Map<String, Color> taskTypeColors = {
     'medication': Colors.red,
     'appointment': Colors.blue,
@@ -80,7 +79,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       //if caregiver then you see your patients events
       // --- PATIENT FLOW ---
       if (user.isPatient) {
-        final response = await ApiService.getPatientTasks(
+        final response = await ApiService.getPatientTasksV2(
           user.id,
         ).timeout(const Duration(seconds: 30));
         if (response.statusCode == 200) {
@@ -113,7 +112,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         final patientsResponse = await ApiService.getCaregiverPatients(user.id);
         if (patientsResponse.statusCode == 200) {
           final List patients = json.decode(patientsResponse.body);
-          //Need name information for assignements. This is to be refactored when endpoint is updated.
+          //Need name information for assignements
           for (var patient in patients) {
             final patientId = patient['patient']?['id'];
             final firstName = patient['patient']?['firstName'] ?? '';
@@ -129,7 +128,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
               continue;
             }
 
-            final taskResponse = await ApiService.getPatientTasks(
+            final taskResponse = await ApiService.getPatientTasksV2(
               patientId,
             ).timeout(const Duration(seconds: 30));
             if (taskResponse.statusCode == 200) {
@@ -268,15 +267,14 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
               // Task list with edit/remove buttons
               if (_selectedDay != null && tasks[_selectedDay] != null)
                 ...tasks[_selectedDay]!.map((task) {
-                  /* final assignedName = task.userId != null
+                  final assignedName = task.userId != null
                       ? patientNames[task.userId] ?? "Unknown Patient"
-                      : "Unassigned";*/
+                      : "Unassigned";
 
                   return ListTile(
                     leading: const Icon(Icons.task),
                     title: Text(
-                      //"$assignedName: ${task.name}", Will encoperate once endpoint is updated
-                      task.name,
+                      "$assignedName: ${task.name}",
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     trailing: Row(
@@ -304,7 +302,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
               const SizedBox(height: 16),
 
-              // Legend: needs refactoring based on update to taskType
+              // Legend
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Wrap(
@@ -337,7 +335,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
   }
 
-  /// Map task type to color, need clear taskType before logic returns anything but general color.
+  /// Map task type to color
   Color _getTaskColor(String type) {
     final key = type.toLowerCase();
     return taskTypeColors[key] ?? Colors.deepOrange;
@@ -349,7 +347,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     List<Widget> taskDots = [];
 
     final displayTasks = dayTasks.take(maxVisibleDots).toList();
-    for (var _ in displayTasks) {
+    for (var task in displayTasks) {
       taskDots.add(
         Container(
           width: 8,
@@ -357,8 +355,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            //TODO Need to figure out better system for checking colors if needed.
-            color: _getTaskColor("general"),
+            color: _getTaskColor(task.taskType ?? "general"),
           ),
         ),
       );
@@ -408,68 +405,122 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     TimeOfDay? selectedTime;
-    //Pop Up form for basic information to make a task
+    int? selectedPatientId;
+
+    // If caregiver, fetch patients for dropdown
+    List<Map<String, dynamic>> patients = [];
+    if (user.isCaregiver) {
+      final response = await ApiService.getCaregiverPatients(user.id);
+      if (response.statusCode == 200) {
+        patients = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    }
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) => Dialog(
-            //Padding and sizing set for control of viewable pop up space and to ensre
-            //form fields are not spawened  to top of each other.
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(labelText: "Task Title"),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: "Description"),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        selectedTime != null
-                            ? "Time: ${selectedTime!.format(context)}"
-                            : "Time: Not set",
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: "Task Title",
                       ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () async {
-                          final picked = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: "Description",
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Time picker
+                    Row(
+                      children: [
+                        Text(
+                          selectedTime != null
+                              ? "Time: ${selectedTime!.format(context)}"
+                              : "Time: Not set",
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                selectedTime = picked;
+                              });
+                            }
+                          },
+                          child: const Text("Pick Time"),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Caregiver: show dropdown
+                    if (user.isCaregiver)
+                      DropdownButtonFormField<int>(
+                        decoration: const InputDecoration(
+                          labelText: "Assign to Patient",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: patients.map((p) {
+                          final patient = p['patient'];
+                          return DropdownMenuItem<int>(
+                            value: patient['id'],
+                            child: Text(
+                              "${patient['firstName']} ${patient['lastName']}",
+                            ),
                           );
-                          if (picked != null) {
-                            setState(() {
-                              selectedTime = picked;
-                            });
-                          }
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            selectedPatientId = val;
+                          });
                         },
-                        child: const Text("Pick Time"),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("Cancel"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text("Save"),
-                      ),
-                    ],
-                  ),
-                ],
+                      )
+                    else
+                      Text("Assigned to: ${user.name}"),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (user.isCaregiver && selectedPatientId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please select a patient"),
+                                ),
+                              );
+                              return;
+                            }
+                            Navigator.pop(context, true);
+                          },
+                          child: const Text("Save"),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -479,7 +530,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     if (confirmed != true) return;
 
-    final patientId = user.id;
+    //Pick correct patientId
+    final patientId = user.isPatient ? user.id : selectedPatientId!;
 
     final newTaskJson = {
       'id': -1,
@@ -489,7 +541,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       'timeOfDay': selectedTime != null
           ? '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'
           : null,
-      //For now this is ignored until the endpoint is updated
       'userId': patientId,
     };
 
@@ -498,7 +549,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         patientId,
         jsonEncode(newTaskJson),
       );
-      //Add message sent if good response then make sure the class updates from DB
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _loadTasksFromDb();
         if (!mounted) return;
@@ -615,7 +665,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                         labelText: "Assign to Patient",
                         border: OutlineInputBorder(),
                       ),
-                      //This portion of the create menu is blocked by limitations of the endpoint for now.
                       initialValue: selectedPatientId,
                       items: patients.map((p) {
                         return DropdownMenuItem<int>(
@@ -678,7 +727,10 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
 
     try {
-      final response = await ApiService.editTask(task.id, updatedTask.toJson());
+      final response = await ApiService.editTaskV2(
+        task.id,
+        updatedTask.toJson(),
+      );
 
       //Edit message sent if good response then make sure the class updates from DB
       if (response.statusCode == 200) {
@@ -730,7 +782,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     if (confirmed != true) return;
 
     try {
-      final response = await ApiService.deleteTask(task.id);
+      final response = await ApiService.deleteTaskV2(task.id);
       //Removal message sent if good response then make sure the class updates from DB
       if (response.statusCode == 200 || response.statusCode == 204) {
         await _loadTasksFromDb();

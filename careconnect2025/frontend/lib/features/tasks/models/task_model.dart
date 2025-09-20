@@ -16,9 +16,11 @@ class Task {
   String? frequency; // e.g., 'daily', 'weekly', 'monthly'
   int? interval; // e.g., every 2 days, every 3 weeks
   int? count; // Number of occurrences
-  List<bool>? daysOfWeek; // e.g., [false, true, false, true, false, true, false] for Sun, Mon, Tue, Wed, Thu, Fri, Sat
+  List<bool>?
+  daysOfWeek; // e.g., [false, true, false, true, false, true, false] for Sun, Mon, Tue, Wed, Thu, Fri, Sat
 
-
+  //NEW FIELD for V2
+  final String? taskType;
 
   Task({
     required this.id,
@@ -33,8 +35,9 @@ class Task {
     this.interval,
     this.count,
     this.daysOfWeek,
+    this.taskType,
   });
-  
+
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
       id: json['id'] != null ? json['id'] as int : -1,
@@ -51,16 +54,17 @@ class Task {
                   : json['timeOfDay']['minute'],
             )
           : null,
-      userId: json['assignedTo'],
+      userId: json['patient']?['id'],
       isComplete: json['isComplete'] ?? false,
       frequency: json['frequency'],
       interval: json['taskInterval'],
       count: json['doCount'],
       daysOfWeek: json['daysOfWeek'] != null
           ? (json['daysOfWeek'] is String
-              ? List<bool>.from(jsonDecode(json['daysOfWeek']))
-              : List<bool>.from(json['daysOfWeek']))
-          : null
+                ? List<bool>.from(jsonDecode(json['daysOfWeek']))
+                : List<bool>.from(json['daysOfWeek']))
+          : null,
+      taskType: json['taskType'],
     );
   }
 
@@ -85,6 +89,7 @@ class Task {
       'doCount': count,
       'daysOfWeek': jsonEncode(daysOfWeek),
       'taskType': taskType,
+      'patientId': userId,
     };
   }
 

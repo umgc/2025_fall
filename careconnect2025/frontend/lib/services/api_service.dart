@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as httpClient;
-
-import '../config/env_constant.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:path/path.dart' as path;
-import 'auth_token_manager.dart';
 import 'dart:typed_data';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as httpClient;
+import 'package:path/path.dart' as path;
+
+import '../config/env_constant.dart';
+import 'auth_token_manager.dart';
+
 class ApiConstants {
+  //V1 endpoints
   static final String _host = getBackendBaseUrl();
   static final String auth = '$_host/v1/api/auth';
   static final String feed = '$_host/v1/api/feed';
@@ -25,6 +27,10 @@ class ApiConstants {
   static final String connectionRequests = '$_host/v1/api/connection-requests';
   static final String subscriptions = '$_host/v1/api/subscriptions';
   static final String tasks = '$_host/v1/api/tasks';
+
+  //V2 endpoints
+  static final String baseUrlV2 = '$_host/v2/api/';
+  static final String tasksV2 = '$_host/v2/api/tasks';
 
   // AI Services endpoints
   static final String aiChat = '$_host/v1/api/ai-chat';
@@ -1073,6 +1079,62 @@ class ApiService {
           Uri.parse('${ApiConstants.tasks}/patient/$patientId'),
           headers: headers,
           body: task,
+        )
+        .timeout(const Duration(seconds: 30));
+  }
+  // ========================
+  // TASK METHODS (V2)
+  // ========================
+
+  // Get patient tasks (v2)
+  static Future<http.Response> getPatientTasksV2(int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    return await _httpClient
+        .get(
+          Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
+          headers: headers,
+        )
+        .timeout(const Duration(seconds: 30));
+  }
+
+  // Delete a task by task ID (v2)
+  static Future<http.Response> deleteTaskV2(int taskId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    return await _httpClient
+        .delete(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
+        .timeout(const Duration(seconds: 30));
+  }
+
+  // Edit a task by task ID (v2)
+  static Future<http.Response> editTaskV2(
+    int taskId,
+    Map<String, dynamic> taskData,
+  ) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    return await _httpClient
+        .put(
+          Uri.parse('${ApiConstants.tasksV2}/$taskId'),
+          headers: headers,
+          body: jsonEncode(taskData),
+        )
+        .timeout(const Duration(seconds: 30));
+  }
+
+  // Create a task (v2)
+  static Future<http.Response> createTaskV2(
+    int patientId,
+    String taskJson,
+  ) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    return await _httpClient
+        .post(
+          Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
+          headers: headers,
+          body: taskJson,
         )
         .timeout(const Duration(seconds: 30));
   }
