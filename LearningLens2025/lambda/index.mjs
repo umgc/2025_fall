@@ -48,9 +48,9 @@ export const handler = async (event, context) => {
     try {
     await client`CREATE TABLE IF NOT EXISTS AI_LOGS (
       log_id UUID PRIMARY KEY,
-      student_id VARCHAR(20),
-      assignment_id VARCHAR(20),
-      course_id VARCHAR(20),
+      student_id int,
+      assignment_id int,
+      course_id int,
       prompt VARCHAR,
       response VARCHAR,
       reflection VARCHAR,
