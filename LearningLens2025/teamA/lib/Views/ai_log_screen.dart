@@ -17,12 +17,12 @@ class AiLogScreen extends StatefulWidget {
 }
 
 class _AiLogScreenState extends State<AiLogScreen> {
-  List<Course>? courses = [];
+  List<Course> courses = [];
   Course? selectedCourse;
-  List<Assignment>? assignments = [];
+  List<Assignment> assignments = [];
   Assignment? selectedAssignment;
-  List<Participant>? participants = [];
-  Participant? student;
+  List<Participant> participants = [];
+  Participant? selectedStudent;
 
   @override
   void initState() {
@@ -31,10 +31,16 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   Future<void> _loadCourses() async {
+    selectedCourse = null;
     try {
       var userCourses = LmsFactory.getLmsService().courses;
       setState(() {
-        courses = userCourses; // Update the state with fetched courses
+        if (userCourses != null) {
+          courses = userCourses; // Update the state with fetched courses
+        }
+        else {
+          courses = [];
+        }
       });
     } catch (e) {
       print("Error loading courses: $e");
@@ -42,17 +48,27 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   void _fetchAssignments() async {
-    List<Assignment>? assignments = selectedCourse?.essays;
+    selectedAssignment = null;
+    List<Assignment> assignments = [];
+    if (selectedCourse != null) {
+      if (selectedCourse!.essays != null) {
+        assignments = selectedCourse!.essays!;
+      }
+    }
     setState(() {
       this.assignments = assignments;
     });
   }
 
   void _fetchParticipants() async {
-    print(selectedCourse?.courseId);
-    print(selectedCourse?.id);
-    
-    List<Participant> participants = await LmsFactory.getLmsService().getCourseParticipants(selectedCourse?.id.toString() ?? "");
+    selectedStudent = null;
+    List<Participant> participants = [];
+    if (selectedCourse != null) {
+     participants = await LmsFactory.getLmsService().getCourseParticipants(selectedCourse!.id.toString());
+    }
+    else {
+      participants = [];
+    }
     setState(() {
       this.participants = participants;
     });
@@ -71,10 +87,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
 void _queryDatabase() async {
   // For now just test adding data, get data
   if (selectedCourse != null) {
-    if (selectedAssignment != null && student != null) {
-      print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, student!, "prompt", "response", LlmType.CHATGPT)));
+    if (selectedAssignment != null && selectedStudent != null) {
+      print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, selectedStudent!, "prompt", "response", LlmType.CHATGPT)));
     }
-    print(await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, student?.id, LocalStorageService.getSelectedClassroom().index));
+    print(await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, selectedStudent?.id, LocalStorageService.getSelectedClassroom().index));
   }
 }
 
@@ -108,22 +124,24 @@ void _queryDatabase() async {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                SizedBox(height: 10),
                 // Add New Lesson Plan Section
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            DropdownButtonFormField<Course>(
+                            Expanded(
+                            child: DropdownButtonFormField<Course>(
                               value: selectedCourse,
-                              items: courses?.map<DropdownMenuItem<Course>>((course) {
+                              items: courses.map<DropdownMenuItem<Course>>((course) {
                                     return DropdownMenuItem<Course>(
                                       value: course,
                                       child: Text(course.fullName),
                                     );
-                                  }).toList() ?? [],
+                                  }).toList(),
                               onChanged: (value) {
                                 setState(() {
                                   selectedCourse = value;
@@ -132,19 +150,19 @@ void _queryDatabase() async {
                                 });
                               },
                               decoration: InputDecoration(
-                                labelText: 'Course',
+                                labelText: 'Select Course',
                                 border: OutlineInputBorder(),
                               ),
-                            ),
-                            SizedBox(height: 10),
-                            DropdownButtonFormField<Assignment>(
+                            )),
+                            SizedBox(width: 10),
+                                                        Expanded(
+                            child: DropdownButtonFormField<Assignment>(
                               decoration: const InputDecoration(
                                 labelText: 'Select Assignment',
                                 border: OutlineInputBorder(),
                               ),
                               value: selectedAssignment,
-                              disabledHint: Text("Select Assignment"),
-                              items: assignments?.map<DropdownMenuItem<Assignment>>((assignment) {
+                              items: assignments.map<DropdownMenuItem<Assignment>>((assignment) {
                                     return DropdownMenuItem<Assignment>(
                                       value: assignment,
                                       child: Text(assignment.name),
@@ -155,16 +173,16 @@ void _queryDatabase() async {
                                   selectedAssignment = newValue;
                                 });
                               },
-                            ),
-                            SizedBox(height: 10),
-                            DropdownButtonFormField<Participant>(
+                            )),
+                            SizedBox(width: 10),
+                            Expanded(
+                            child: DropdownButtonFormField<Participant>(
                               decoration: const InputDecoration(
                                 labelText: 'Select Student',
                                 border: OutlineInputBorder(),
                               ),
-                              value: student,
-                              disabledHint: Text("Select Student"),
-                              items: participants?.map<DropdownMenuItem<Participant>>((participant) {
+                              value: selectedStudent,
+                              items: participants.map<DropdownMenuItem<Participant>>((participant) {
                                     return DropdownMenuItem<Participant>(
                                       value: participant,
                                       child: Text(participant.fullname),
@@ -172,10 +190,11 @@ void _queryDatabase() async {
                                   }).toList(),
                               onChanged: (newValue) {
                                 setState(() {
-                                  student = newValue;
+                                  selectedStudent = newValue;
                                 });
                               },
-                            ),
+                            )),
+                            SizedBox(width: 10),
                             ElevatedButton(
                               onPressed: _queryDatabase,
                               child: const Text('Filter'),
