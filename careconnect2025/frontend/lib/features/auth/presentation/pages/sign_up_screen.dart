@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
+import '../../../../config/theme/app_theme.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -225,61 +229,106 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Future<void> _submitPatientRegistration() async {
-    // TODO: Implement API call to register patient
-    // final patientData = {
-    //   'firstName': _firstNameController.text,
-    //   'lastName': _lastNameController.text,
-    //   'email': _emailController.text,
-    //   'password': _passwordController.text,
-    //   'phone': _phoneController.text,
-    //   'dob': _dobController.text,
-    //   'gender': _selectedGender?.toUpperCase(),
-    //   'address': {
-    //     'line1': _addressLine1Controller.text,
-    //     'line2': _addressLine2Controller.text,
-    //     'city': _cityController.text,
-    //     'state': _stateController.text,
-    //     'zip': _zipController.text,
-    //     'phone': _addressPhoneController.text,
-    //   },
-    // };
-    // Example: await apiService.registerPatient(patientData);
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+    const baseUrl = 'http://localhost:8080/v1/api';
+
+    // For now, use the basic auth registration endpoint
+    // In the future, this should be a dedicated patient registration endpoint
+    final registrationData = {
+      'name': '${_firstNameController.text} ${_lastNameController.text}',
+      'email': _emailController.text,
+      'password': _passwordController.text,
+      'role': 'PATIENT',
+      'verificationBaseUrl': 'http://localhost:50030',
+    };
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive',
+        'Origin': 'http://localhost:50030',   // TODO - update this to use .env
+        'Referer': 'http://localhost:50030/', // TODO - update to use .env
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+      },
+      body: json.encode(registrationData),
+    );
+
+    if (response.statusCode == 200) {
+      if (kDebugMode) {
+        debugPrint('✅ Patient registration successful: ${response.body}');
+      }
+    } else {
+      if (kDebugMode) {
+        debugPrint('❌ Patient registration failed: ${response.statusCode} - ${response.body}');
+      }
+      throw Exception('Registration failed: ${response.body}');
+    }
   }
 
   Future<void> _submitCaregiverRegistration() async {
-    // TODO: Implement API call to register caregiver
-    // final caregiverData = {
-    //   'firstName': _firstNameController.text,
-    //   'lastName': _lastNameController.text,
-    //   'email': _emailController.text,
-    //   'phone': _phoneController.text,
-    //   'dob': _dobController.text,
-    //   'gender': _selectedGender?.toUpperCase(),
-    //   'caregiverType': _selectedCaregiverType,
-    //   'address': {
-    //     'line1': _addressLine1Controller.text,
-    //     'line2': _addressLine2Controller.text,
-    //     'city': _cityController.text,
-    //     'state': _stateController.text,
-    //     'zip': _zipController.text,
-    //     'phone': _addressPhoneController.text,
-    //   },
-    //   'credentials': {
-    //     'email': _emailController.text,
-    //     'password': _passwordController.text,
-    //   },
-    // };
-    //
-    // if (_selectedCaregiverType == 'Professional') {
-    //   caregiverData['professional'] = {
-    //     'licenseNumber': _licenseNumberController.text,
-    //     'issuingState': _issuingStateController.text,
-    //     'yearsExperience': int.tryParse(_yearsExperienceController.text) ?? 0,
-    //   };
-    // }
-    // Example: await apiService.registerCaregiver(caregiverData);
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+    const baseUrl = 'http://localhost:8080/v1/api';
+
+    final caregiverData = {
+      'firstName': _firstNameController.text,
+      'lastName': _lastNameController.text,
+      'email': _emailController.text,
+      'phone': _phoneController.text,
+      'dob': _dobController.text,
+      'gender': _selectedGender?.toUpperCase(),
+      'caregiverType': _selectedCaregiverType,
+      'address': {
+        'line1': _addressLine1Controller.text,
+        'line2': _addressLine2Controller.text,
+        'city': _cityController.text,
+        'state': _stateController.text,
+        'zip': _zipController.text,
+        'phone': _addressPhoneController.text,
+      },
+      'credentials': {
+        'email': _emailController.text,
+        'password': _passwordController.text,
+      },
+    };
+
+    // Add professional info if it's a professional caregiver
+    if (_selectedCaregiverType == 'Professional') {
+      caregiverData['professional'] = {
+        'licenseNumber': _licenseNumberController.text,
+        'issuingState': _issuingStateController.text,
+        'yearsExperience': int.tryParse(_yearsExperienceController.text) ?? 0,
+      };
+    }
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/caregivers'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive',
+        'Origin': 'http://localhost:50030',  // TODO - update to use .env
+        'Referer': 'http://localhost:50030/', // TODO - update to use .env
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+      },
+      body: json.encode(caregiverData),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (kDebugMode) {
+        debugPrint('✅ Caregiver registration successful: ${response.body}');
+      }
+    } else {
+      if (kDebugMode) {
+        debugPrint('❌ Caregiver registration failed: ${response.statusCode} - ${response.body}');
+      }
+      throw Exception('Registration failed: ${response.body}');
+    }
   }
 
   Widget _buildStepContent() {
@@ -308,7 +357,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A365D),
+            color: AppTheme.primary,
           ),
         ),
 
@@ -329,7 +378,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppTheme.textPrimary,
           ),
         ),
 
@@ -372,7 +421,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         Icon(
                           _roles[role]!['icon'],
                           size: 20,
-                          color: const Color(0xFF6366F1),
+                          color: AppTheme.primary,
                         ),
                         const SizedBox(width: 12),
                         Column(
@@ -384,7 +433,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                             Text(
@@ -419,14 +468,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFEBF4FF),
+              color: AppTheme.backgroundSecondary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _roles[_selectedRole]!['description'],
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF1E40AF),
+                color: AppTheme.primary,
               ),
             ),
           ),
@@ -446,7 +495,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
+              color: AppTheme.primary,
             ),
           ),
           const SizedBox(height: 8),
@@ -562,7 +611,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
+              color: AppTheme.primary,
             ),
           ),
           const SizedBox(height: 8),
@@ -613,7 +662,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
+              color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -694,7 +743,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
+                color: AppTheme.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -763,7 +812,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
+              color: AppTheme.primary,
             ),
           ),
           const SizedBox(height: 8),
@@ -823,7 +872,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: AppTheme.backgroundSecondary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -834,7 +883,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -862,7 +911,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A365D),
+            color: AppTheme.primary,
           ),
         ),
         const SizedBox(height: 8),
@@ -906,7 +955,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             children: [
               const Icon(
                 Icons.info_outline,
-                color: Color(0xFF1E40AF),
+                color: AppTheme.primary,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -939,7 +988,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
+                color: AppTheme.textPrimary,
               ),
             ),
           ),
@@ -972,7 +1021,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -991,7 +1040,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: AppTheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
@@ -1014,7 +1063,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -1033,7 +1082,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: AppTheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             suffixIcon: const Icon(Icons.calendar_today, size: 20),
@@ -1071,7 +1120,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -1089,7 +1138,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: AppTheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
@@ -1122,7 +1171,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF374151),
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -1141,7 +1190,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+              borderSide: const BorderSide(color: AppTheme.primary),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             suffixIcon: IconButton(
@@ -1162,7 +1211,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppTheme.backgroundSecondary,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Center(
@@ -1185,7 +1234,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     width: isMobile ? 80 : 100,
                     height: isMobile ? 80 : 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
@@ -1196,29 +1245,41 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       ],
                     ),
                     child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: isMobile ? 20 : 24,
-                            height: isMobile ? 20 : 24,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF1A365D),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: isMobile ? 14 : 16,
-                            ),
-                          ),
-                          SizedBox(width: isMobile ? 2 : 4),
-                          Icon(
-                            Icons.monitor_heart,
-                            color: const Color(0xFF1A365D),
-                            size: isMobile ? 16 : 24,
-                          ),
-                        ],
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/CareConnectLogo.png',
+                          width: isMobile ? 70 : 90,
+                          height: isMobile ? 70 : 90,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback if PNG doesn't load
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: isMobile ? 20 : 24,
+                                  height: isMobile ? 20 : 24,
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: isMobile ? 14 : 16,
+                                  ),
+                                ),
+                                SizedBox(width: isMobile ? 2 : 4),
+                                Icon(
+                                  Icons.monitor_heart,
+                                  color: AppTheme.primary,
+                                  size: isMobile ? 16 : 24,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -1231,7 +1292,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A365D),
+                      color: AppTheme.primary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -1255,16 +1316,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                    decoration: AppTheme.cardDecoration.copyWith(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1278,7 +1331,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                             Text(
@@ -1329,7 +1382,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF374151),
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                           ],
@@ -1344,16 +1397,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                    decoration: AppTheme.cardDecoration.copyWith(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: _buildStepContent(),
                   ),
@@ -1370,7 +1415,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         icon: const Icon(Icons.arrow_back, size: 18),
                         label: Text(_currentStep > 0 ? 'Previous' : 'Back to Login'),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF6B7280),
+                          foregroundColor: AppTheme.textSecondary,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
                       ),
@@ -1379,7 +1424,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                       ElevatedButton.icon(
                         onPressed: _canProceed() ? (_isLastStep ? _submitRegistration : _nextStep) : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: AppTheme.primary,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

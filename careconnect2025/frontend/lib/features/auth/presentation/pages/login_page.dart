@@ -118,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppTheme.backgroundSecondary,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Center(
@@ -141,11 +141,11 @@ class _LoginPageState extends State<LoginPage> {
                     width: isMobile ? 160 : 180,
                     height: isMobile ? 160 : 180,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppTheme.cardBackground,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -168,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                                   width: isMobile ? 16 : 24,
                                   height: isMobile ? 16 : 24,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF1A365D),
+                                    color: AppTheme.primary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                                 SizedBox(width: isMobile ? 2 : 4),
                                 Icon(
                                   Icons.monitor_heart,
-                                  color: const Color(0xFF1A365D),
+                                  color: AppTheme.primary,
                                   size: isMobile ? 16 : 24,
                                 ),
                               ],
@@ -209,16 +209,8 @@ class _LoginPageState extends State<LoginPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                    decoration: AppTheme.cardDecoration.copyWith(
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +221,7 @@ class _LoginPageState extends State<LoginPage> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A365D),
+                            color: AppTheme.primary,
                           ),
                         ),
 
@@ -255,7 +247,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -282,7 +274,7 @@ class _LoginPageState extends State<LoginPage> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide: const BorderSide(
-                                    color: Color(0xFF6366F1),
+                                    color: AppTheme.primary,
                                     width: 2,
                                   ),
                                 ),
@@ -306,7 +298,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -334,7 +326,7 @@ class _LoginPageState extends State<LoginPage> {
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                   borderSide: const BorderSide(
-                                    color: Color(0xFF6366F1),
+                                    color: AppTheme.primary,
                                     width: 2,
                                   ),
                                 ),
@@ -371,7 +363,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: const Text(
                               'Forgot Password?',
                               style: TextStyle(
-                                color: Color(0xFF6366F1),
+                                color: AppTheme.primary,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -408,15 +400,7 @@ class _LoginPageState extends State<LoginPage> {
                           height: 48,
                           child: ElevatedButton(
                             onPressed: _busy ? null : _login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6366F1),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              disabledBackgroundColor: Colors.grey[300],
-                            ),
+                            style: AppTheme.primaryButtonStyle,
                             child: _busy
                                 ? const SizedBox(
                               width: 20,
@@ -470,7 +454,7 @@ class _LoginPageState extends State<LoginPage> {
                               child: const Text(
                                 'Create Account',
                                 style: TextStyle(
-                                  color: Color(0xFF374151),
+                                  color: AppTheme.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -522,7 +506,7 @@ class _LoginPageState extends State<LoginPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1),
+                          color: AppTheme.primary,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
