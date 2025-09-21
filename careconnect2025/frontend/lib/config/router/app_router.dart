@@ -8,6 +8,7 @@ import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.
 import 'package:care_connect_app/features/tasks/presentation/custom_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/pre_defined_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/tasks_screen.dart';
+import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
 import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
@@ -477,6 +478,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/ai-configuration',
       builder: (_, __) => const AIConfigurationPage(),
+    ),
+    GoRoute(
+      path: '/notetaker-configuration',
+      builder: (_, __) => const NotetakerConfigurationPage(),
     ),
 
     // Video Call Test Route
