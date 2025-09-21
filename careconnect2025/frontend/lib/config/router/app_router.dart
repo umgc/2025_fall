@@ -15,12 +15,12 @@ import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../screens/main_screen.dart';
+import '../../config/navigation/main_screen_config.dart';
 
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
-import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
-import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
@@ -40,7 +40,7 @@ import '../../providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on user role
-void navigateToDashboard(BuildContext context, {String? role}) {
+void navigateToDashboard(BuildContext context, {String? role, int? tabIndex}) {
   final userProvider = Provider.of<UserProvider>(context, listen: false);
   final userRole = role ?? userProvider.user?.role;
 
@@ -53,7 +53,33 @@ void navigateToDashboard(BuildContext context, {String? role}) {
     return;
   }
 
-  context.go('/dashboard?role=$userRole');
+  // Build the dashboard URL with optional tab parameter
+  String dashboardUrl = '/dashboard?role=$userRole';
+  if (tabIndex != null) {
+    // Convert tab index to tab name
+    String? tabName;
+    if (userRole.toUpperCase() == 'PATIENT') {
+      switch (tabIndex) {
+        case 0: tabName = 'home'; break;
+        case 1: tabName = 'health'; break;
+        case 2: tabName = 'messages'; break;
+        case 3: tabName = 'profile'; break;
+      }
+    } else {
+      switch (tabIndex) {
+        case 0: tabName = 'patients'; break;
+        case 1: tabName = 'tasks'; break;
+        case 2: tabName = 'analytics'; break;
+        case 3: tabName = 'messages'; break;
+        case 4: tabName = 'profile'; break;
+      }
+    }
+    if (tabName != null) {
+      dashboardUrl += '&tab=$tabName';
+    }
+  }
+
+  context.go(dashboardUrl);
 }
 
 final GoRouter appRouter = GoRouter(
@@ -86,10 +112,10 @@ final GoRouter appRouter = GoRouter(
       path: '/dashboard',
       builder: (context, state) {
         final urlRole = state.uri.queryParameters['role'];
+        final tabIndex = state.uri.queryParameters['tab'];
 
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final sessionRole = userProvider.user?.role;
-
         final userRole = urlRole ?? sessionRole;
 
         if (userRole == null) {
@@ -101,15 +127,59 @@ final GoRouter appRouter = GoRouter(
           );
         }
 
+        // Parse tab index if provided
+        int? initialTabIndex;
+        if (tabIndex != null) {
+          switch (tabIndex.toLowerCase()) {
+            case 'home':
+            case 'patients':
+              initialTabIndex = 0;
+              break;
+            case 'health':
+            case 'tasks':
+              initialTabIndex = 1;
+              break;
+            case 'analytics':
+              initialTabIndex = 2;
+              break;
+            case 'messages':
+              initialTabIndex = userRole.toUpperCase() == 'PATIENT' ? 2 : 3;
+              break;
+            case 'profile':
+              initialTabIndex = userRole.toUpperCase() == 'PATIENT' ? 3 : 4;
+              break;
+          }
+        }
+
+        // Create configuration based on role
+        MainScreenConfig config;
         switch (userRole.toUpperCase()) {
           case 'PATIENT':
-            return const PatientDashboard();
+            config = MainScreenConfig.forPatient(
+              patientId: userProvider.user?.patientId ?? userProvider.user?.id ?? 1,
+            );
+            break;
           case 'CAREGIVER':
+            config = MainScreenConfig.forCaregiver(
+              caregiverId: userProvider.user?.caregiverId ?? userProvider.user?.id ?? 1,
+              patientId: userProvider.user?.patientId,
+            );
+            break;
           case 'FAMILY_LINK':
+            config = MainScreenConfig.forFamilyMember(
+              patientId: userProvider.user?.patientId ?? 1,
+            );
+            break;
           case 'ADMIN':
-            return const CaregiverDashboard();
+            config = MainScreenConfig(
+              userRole: 'ADMIN',
+              showAppBar: true,
+              appBarTitle: 'Admin Dashboard',
+              primaryColor: Colors.red,
+            );
+            break;
           default:
-          // Unknown role, redirect to login
+            // Unknown role, redirect to login
             WidgetsBinding.instance.addPostFrameCallback((_) {
               context.go('/login');
             });
@@ -119,6 +189,11 @@ final GoRouter appRouter = GoRouter(
               ),
             );
         }
+
+        return MainScreen(
+          config: config,
+          initialTabIndex: initialTabIndex,
+        );
       },
     ),
     GoRoute(
@@ -126,7 +201,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final userIdStr = state.uri.queryParameters['userId'];
         final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
-        return PatientDashboard(userId: userId); // Pass userId if provided
+
+        // Redirect to new MainScreen with patient configuration
+        final config = MainScreenConfig.forPatient(
+          patientId: userId ?? 1,
+        );
+
+        return MainScreen(config: config);
       },
     ),
 
@@ -136,7 +217,6 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final caregiverIdStr = state.uri.queryParameters['caregiverId'];
         final patientIdStr = state.uri.queryParameters['patientId'];
-        final userRole = state.uri.queryParameters['userRole'] ?? 'CAREGIVER';
 
         final caregiverId = caregiverIdStr != null
             ? int.tryParse(caregiverIdStr)
@@ -145,11 +225,13 @@ final GoRouter appRouter = GoRouter(
             ? int.tryParse(patientIdStr)
             : null;
 
-        return CaregiverDashboard(
-          userRole: userRole,
-          patientId: patientId,
+        // Redirect to new MainScreen with caregiver configuration
+        final config = MainScreenConfig.forCaregiver(
           caregiverId: caregiverId ?? 1,
+          patientId: patientId,
         );
+
+        return MainScreen(config: config);
       },
     ),
     // Add a redirect route for authenticated users going to root
@@ -492,19 +574,27 @@ final GoRouter appRouter = GoRouter(
       redirect: (context, state) {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final userRole = userProvider.user?.role;
-        return '/dashboard?role=$userRole';
+        // Redirect to tasks tab for caregivers, home for patients
+        if (userRole?.toUpperCase() == 'CAREGIVER') {
+          return '/dashboard?role=$userRole&tab=tasks';
+        }
+        return '/dashboard?role=$userRole&tab=home';
       },
     ),
     GoRoute(
       path: '/chatandcalls',
       redirect: (context, state) {
-        return '/dashboard?tab=calls';
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final userRole = userProvider.user?.role;
+        return '/dashboard?role=$userRole&tab=messages';
       },
     ),
     GoRoute(
       path: '/aiassistant',
       redirect: (context, state) {
-        return '/dashboard?tab=ai';
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final userRole = userProvider.user?.role;
+        return '/dashboard?role=$userRole&tab=home';
       },
     ),
     GoRoute(
@@ -516,7 +606,9 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/sos',
       redirect: (context, state) {
-        return '/dashboard?tab=emergency';
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final userRole = userProvider.user?.role;
+        return '/dashboard?role=$userRole&tab=home';
       },
     ),
     GoRoute(
