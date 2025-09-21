@@ -3,8 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
-import '../services/ai_cls'
-    'config_service.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class NotetakerConfigurationPage extends StatefulWidget {
   const NotetakerConfigurationPage({super.key});
@@ -26,6 +25,8 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           _buildPIISection(theme),
           const SizedBox(height: 24),
           _buildKeywordSection(theme),
+          const SizedBox(height: 24),
+          _buildVoiceSampleSection(theme)
         ],
       ),
     );
@@ -123,9 +124,44 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     return rowList;
   }
 
-  PatientAIConfigDTO? _currentConfig;
+  Future<void> _startListening() async {
+    bool available = await _speech.initialize();
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _recognizedText = result.recognizedWords;
+          });
+        },
+      );
+    }
+  }
+
+  void _stopListening() {
+    _speech.stop();
+    setState(() => _isListening = false);
+  }
+
+  Future<void> _saveRecognizedText() async {
+    if (_recognizedText
+        .trim()
+        .isEmpty) {
+      return;
+    }
+
+    print(_recognizedText);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Voice was saved')),
+    );
+  }
+
   bool _isLoading = true;
   bool _isSaving = false;
+  String _recognizedText = '';
+  bool _isListening = false;
+  late stt.SpeechToText _speech = stt.SpeechToText();
   List<String> _PIIList = ['Hello', 'World', 'Dart', 'Flutter'];
   late List<Widget> _PIIWidgetList = piiToCard(_PIIList);
   Map<String, String> keyword_Event = {
@@ -137,29 +173,6 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
   final TextEditingController _keywordController = TextEditingController();
   final TextEditingController _PIIController = TextEditingController();
   String? _selectedDropdownValue;
-  bool _voiceEnabled = true;
-  bool _emotionalSupport = true;
-  bool _medicationReminders = true;
-  bool _emergencyDetection = true;
-  bool _contextMemoryEnabled = true;
-  bool _medicalContextEnabled = true;
-  int _maxTokens = 1000;
-  double _temperature = 0.7;
-  String _language = 'en';
-
-  final List<String> _providers = [
-    'DEFAULT',
-    'DEEPSEEK',
-    'OPENAI',
-    'MEDICAL_SPECIALIST',
-  ];
-  final List<String> _personalities = [
-    'PROFESSIONAL',
-    'FRIENDLY',
-    'EMPATHETIC',
-    'DIRECT',
-    'ENCOURAGING',
-  ];
 
   @override
   void initState() {
@@ -169,27 +182,27 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
 
   Future<void> _loadConfiguration() async {
     try {
-      final config = await AIConfigService.getUserAIConfig(context);
-      if (config != null) {
-        setState(() {
-          _currentConfig = config;
-          _contextMemoryEnabled = config.contextMemoryEnabled;
-          _medicalContextEnabled = config.medicalContextEnabled;
-          _emergencyDetection = config.emergencyAlertsEnabled;
-          _maxTokens = config.maxTokensPerSession;
-          _temperature = config.temperature;
-          _language = config.language;
-
-          // Map enabled features to UI switches (ensure keys match backend DTO)
-          _voiceEnabled = config.enabledFeatures.contains('general_chat');
-          _emotionalSupport = config.enabledFeatures.contains(
-            'mental_health_support',
-          );
-          _medicationReminders = config.enabledFeatures.contains(
-            'medication_reminders',
-          );
-        });
-      }
+      //
+      //}final config = await AIConfigService.getUserAIConfig(context);
+    // if (config != null) {
+    //   setState(() {
+    //     _currentConfig = config;
+    //     _contextMemoryEnabled = config.contextMemoryEnabled;
+    //     _medicalContextEnabled = config.medicalContextEnabled;
+    //     _emergencyDetection = config.emergencyAlertsEnabled;
+    //     _maxTokens = config.maxTokensPerSession;
+    //     _temperature = config.temperature;
+    //     _language = config.language;
+    //
+    //     // Map enabled features to UI switches (ensure keys match backend DTO)
+    //     _voiceEnabled = config.enabledFeatures.contains('general_chat');
+    //     _emotionalSupport = config.enabledFeatures.contains(
+    //       'mental_health_support',
+    //     );
+    //     _medicationReminders = config.enabledFeatures.contains(
+    //       'medication_reminders',
+    //     );
+    //   });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,10 +229,6 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
 
       // Build enabled features list from current UI state (use backend keys)
       List<String> enabledFeatures = [];
-      if (_voiceEnabled) enabledFeatures.add('general_chat');
-      if (_emotionalSupport) enabledFeatures.add('mental_health_support');
-      if (_medicationReminders) enabledFeatures.add('medication_reminders');
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -252,7 +261,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Configure your Notetaker assistant to recognize PII, trigger words, etc.',
+              'Configure your Notetaker assistant to recognize PII, trigger words, etc and upload voice samples for speaker recognition.',
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withOpacity(0.8),
                 fontSize: 14,
@@ -272,7 +281,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       Icons.person, // Changed from Icons.psychology for better compatibility
       [
         SizedBox(
-            height: 300,
+            height: 250,
             child: ListView.builder(
               itemCount: _PIIWidgetList.length,
               itemBuilder: (context, index) {
@@ -335,7 +344,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       Icons.android, // Changed from Icons.smart_toy for better compatibility
       [
         SizedBox(
-          height: 300,
+          height: 250,
           child: LayoutBuilder(builder: (context, constraints) {
             double spacing = constraints.maxWidth/3;
             return SingleChildScrollView(
@@ -423,6 +432,65 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
             style: TextButton.styleFrom(
               foregroundColor: Colors.blue,
             )
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVoiceSampleSection(ThemeData theme) {
+    return _buildSection(
+      theme,
+      'Upload Voice Sample',
+      Icons.android, // Changed from Icons.smart_toy for better compatibility
+      [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme
+                  .of(context)
+                  .dividerColor,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            color: Theme
+                .of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withOpacity(0.1),
+          ),
+          child: Column(
+            children: [
+              Text(
+                _recognizedText.isNotEmpty
+                    ? 'Recognized Text:\n$_recognizedText'
+                    : 'Tap the button below to start voice recognition and read the following message: \n' +
+                    'The dog fetches the ball',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  if (_isListening) {
+                    _stopListening();
+                  } else {
+                    _startListening();
+                  }
+                },
+                child: Text(
+                    _isListening ? 'Stop Listening' : 'Start Listening'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _recognizedText.isNotEmpty
+                    ? _saveRecognizedText
+                    : null,
+                child: const Text('Save Voice'),
+              ),
+            ],
+          ),
         ),
       ],
     );
