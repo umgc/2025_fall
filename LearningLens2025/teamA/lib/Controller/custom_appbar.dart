@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/experimental/assistant/textbased_function_caller_view.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
+import 'package:learninglens_app/Views/ai_log_screen.dart';
 import 'package:learninglens_app/Views/dashboard.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/Views/chat_screen.dart';
@@ -71,6 +72,19 @@ class _CustomAppBarState extends State<CustomAppBar> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ChatScreen()
+                  )
+                );
+              },
+            ),
+          ),
+          Flexible(
+            child: IconButton(
+              icon: Icon(Icons.fact_check),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AiLogScreen()
                   )
                 );
               },

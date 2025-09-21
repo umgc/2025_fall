@@ -2,7 +2,7 @@ import 'package:learninglens_app/beans/learning_lens_interface.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
 
 class Assignment implements LearningLensInterface {
-  final int? id;
+  final int id;
   final String name;
   final String description;
   final DateTime? dueDate;
@@ -16,7 +16,7 @@ class Assignment implements LearningLensInterface {
   final List<SubmissionWithGrade>? submissionsWithGrades;
 
   Assignment({
-    this.id,
+    required this.id,
     required this.name,
     required this.description,
     this.dueDate,
@@ -30,7 +30,7 @@ class Assignment implements LearningLensInterface {
   });
 
   Assignment.empty()
-      : id = null,
+      : id = 0,
         name = '',
         description = '',
         dueDate = null,

@@ -32,14 +32,22 @@ export const handler = async (event, context) => {
   console.log(command);
 
   if (method === "GET") {
-    if (command === "getAllLogs") {
-      return await getAllLogs(client);
+    if (command === "getLogs") {
+      const courseId = parseInt(event["queryStringParameters"]["courseId"]);
+      const assignmentId = parseInt(event["queryStringParameters"]["assignmentId"]);
+      const studentId = parseInt(event["queryStringParameters"]["studentId"]);
+      return await getAllLogs(client, courseId, assignmentId, studentId);
     }
   }
-  else if (method === "POST") {
+  if (method === "POST") {
     if (command === "createDb") {
       await buildDatabase(client);
       return "Database created successfully.";
+    }
+    if (command === "addLog") {
+      console.log(event);
+      await addLog(client, event["body"]);
+      return "Added log successfully";
     }
   }
 };
@@ -65,12 +73,38 @@ export const handler = async (event, context) => {
     }
 };
 
-  async function getAllLogs(client) {
+  async function getAllLogs(client, courseId, assignmentId, studentId) {
     try {
-      return await client`SELECT * FROM AI_LOGS;`;
+      return await client`SELECT * FROM AI_LOGS WHERE
+      course_id = ${courseId} AND
+      (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
+      (${studentId} = -1  OR student_id = ${studentId});`;
     }
     catch (error) {
       console.error("Failed to get logs ", error);
+      throw error;
+    }
+  };
+
+    async function addLog(client, body) {
+    try {
+      let log = JSON.parse(body);
+      return await client`
+      INSERT INTO AI_LOGS VALUES (
+      gen_random_uuid(),
+      ${log.studentId},
+      ${log.assignmentId},
+      ${log.courseId},
+      ${log.prompt},
+      ${log.response},
+      ${log.reflection},
+      ${log.model},
+      ${log.lms},
+      current_timestamp
+      );`;
+    }
+    catch (error) {
+      console.error("Failed to add log ", error);
       throw error;
     }
   };
