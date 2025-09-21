@@ -36,7 +36,8 @@ export const handler = async (event, context) => {
       const courseId = parseInt(event["queryStringParameters"]["courseId"]);
       const assignmentId = parseInt(event["queryStringParameters"]["assignmentId"]);
       const studentId = parseInt(event["queryStringParameters"]["studentId"]);
-      return await getAllLogs(client, courseId, assignmentId, studentId);
+      const lms = parseInt(event["queryStringParameters"]["lmsType"]);
+      return await getAllLogs(client, courseId, assignmentId, studentId, lms);
     }
   }
   if (method === "POST") {
@@ -56,9 +57,9 @@ export const handler = async (event, context) => {
     try {
     await client`CREATE TABLE IF NOT EXISTS AI_LOGS (
       log_id UUID PRIMARY KEY,
-      student_id int,
-      assignment_id int,
-      course_id int,
+      student_id BIGINT,
+      assignment_id BIGINT,
+      course_id BIGINT,
       prompt VARCHAR,
       response VARCHAR,
       reflection VARCHAR,
@@ -73,10 +74,11 @@ export const handler = async (event, context) => {
     }
 };
 
-  async function getAllLogs(client, courseId, assignmentId, studentId) {
+  async function getAllLogs(client, courseId, assignmentId, studentId, lms) {
     try {
       return await client`SELECT * FROM AI_LOGS WHERE
       course_id = ${courseId} AND
+      lms_service = ${lms} AND
       (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
       (${studentId} = -1  OR student_id = ${studentId});`;
     }

@@ -9,6 +9,7 @@ import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
 
 class AiLogScreen extends StatefulWidget {
   @override
@@ -73,7 +74,7 @@ void _queryDatabase() async {
     if (selectedAssignment != null && student != null) {
       print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, student!, "prompt", "response", LlmType.CHATGPT)));
     }
-    print(await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, student?.id));
+    print(await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, student?.id, LocalStorageService.getSelectedClassroom().index));
   }
 }
 

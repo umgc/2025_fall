@@ -20,6 +20,7 @@ void main() async{
   await dotenv.load();
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
+  await AILoggingSingleton().createDb();
 
   runApp(
     MultiProvider(

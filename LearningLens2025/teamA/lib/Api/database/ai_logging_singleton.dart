@@ -26,19 +26,20 @@ class AILoggingSingleton {
     print(response.body);
   }
 
-  Future<List<AiLog>> getLogs(int courseId, int? assignmentId, int? studentId) async {
+  Future<List<AiLog>> getLogs(int courseId, int? assignmentId, int? studentId, int lmsType) async {
     List<AiLog> list = List.empty(growable: true);
     int assignmentIdParam = assignmentId ?? -1;
     int studentIdParam = studentId ?? -1;
-    final url = Uri.parse("${LocalStorageService.getAILoggingUrl()}/?command=getLogs&courseId=$courseId&assignmentId=$assignmentIdParam&studentId=$studentIdParam");
+    final url = Uri.parse("${LocalStorageService.getAILoggingUrl()}/?command=getLogs&courseId=$courseId&assignmentId=$assignmentIdParam&studentId=$studentIdParam&lmsType=$lmsType");
     final response = await http.get(url);
     final postResponse = response.body;
     JSArray d = jsonDecode(postResponse);
     List l = d.toDart;
     for (Map m in l) {
-      Course c = LmsFactory.getLmsService().courses!.firstWhere((c) => c.id == m["course_id"]);
-      Assignment a = c.essays!.firstWhere((a) => a.id == m["assignment_id"]);
-      Participant p = (await LmsFactory.getLmsService().getCourseParticipants(courseId.toString())).firstWhere((p) => p.id == m["student_id"]);
+      print(m["course_id"].runtimeType);
+      Course c = LmsFactory.getLmsService().courses!.firstWhere((c) => c.id == int.parse(m["course_id"]));
+      Assignment a = c.essays!.firstWhere((a) => a.id == int.parse(m["assignment_id"]));
+      Participant p = (await LmsFactory.getLmsService().getCourseParticipants(courseId.toString())).firstWhere((p) => p.id == int.parse(m["student_id"]));
       list.add(AiLog(c, a, p, m["prompt"], m["response"], LlmType.values.elementAt(m["ai_model"]), m["reflection"], LmsType.values.elementAt(m["lms_service"]), DateTime.parse(m["time"])));
     }
     list.forEach(print);
