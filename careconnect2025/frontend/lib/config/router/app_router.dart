@@ -79,7 +79,7 @@ final GoRouter appRouter = GoRouter(
       path: '/signup',
       builder: (context, state) {
         // We're now using a single caregiver sign up screen
-        return const SignUpScreen(userType: 'caregiver');
+        return const RegistrationPage();
       },
     ),
     GoRoute(
@@ -167,12 +167,13 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/register/caregiver',
-      builder: (_, __) => const SignUpScreen(userType: 'caregiver'),
+      builder: (_, __) => const RegistrationPage(),
     ),
-    GoRoute(
-      path: '/register/caregiver/payment',
-      builder: (_, __) => const CaregiverRegistrationFlowPage(),
-    ),
+    // TODO - Update Subscription page
+    // GoRoute(
+    //   path: '/register/caregiver/payment',
+    //   builder: (_, __) => const CaregiverRegistrationFlowPage(),
+    // ),
     GoRoute(
       path: '/register/patient',
       builder: (_, __) => const PatientRegistrationPage(),
