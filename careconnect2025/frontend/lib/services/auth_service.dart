@@ -6,12 +6,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:app_links/app_links.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../config/env_constant.dart';
 import 'api_service.dart';
 import 'oauth_service.dart';
 import '../providers/user_provider.dart';
 import 'messaging_service.dart';
 import 'auth_token_manager.dart';
+import 'user_role_storage_service.dart';
 
 class ApiConstants {
   static final String _host = getBackendBaseUrl();
@@ -26,6 +28,21 @@ class AuthService {
   // Stream for listening to deep links (OAuth callbacks)
   static StreamSubscription<Uri>? _linkSubscription;
   static late AppLinks _appLinks;
+
+  // Singleton instance for the new UserRoleStorageService integration
+  static AuthService? _instance;
+
+  static AuthService get instance {
+    _instance ??= AuthService._internal();
+    return _instance!;
+  }
+
+  AuthService._internal();
+
+  /// Initialize the auth service and storage
+  static Future<void> initialize() async {
+    await UserRoleStorageService.instance.initialize();
+  }
 
   // ✅ Handle OAuth callback from deep link
   static Future<void> handleOAuthCallback(String code, String state) async {
@@ -102,6 +119,9 @@ class AuthService {
               // Update last activity time to track session freshness
               await AuthTokenManager.updateLastActivity();
 
+              // Store user data in UserRoleStorageService for navigation
+              await _storeUserDataFromSession(userSession);
+
               print('✅ Google OAuth login successful: JWT token force-updated');
 
               // Create and return the user session
@@ -145,10 +165,8 @@ class AuthService {
   // ✅ LOGIN - Updated to return UserSession and handle JWT
   static Future<UserSession> login(
     String email,
-    String password, {
-    required String role,
-  }) async {
-    final response = await ApiService.login(email, password, role: role);
+    String password) async {
+    final response = await ApiService.login(email, password);
     final data = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
@@ -163,6 +181,9 @@ class AuthService {
 
       // Update last activity time to track session freshness
       await AuthTokenManager.updateLastActivity();
+
+      // Store user data in UserRoleStorageService for navigation
+      await _storeUserDataFromSession(userSession);
 
       // Register user to WebSocket for notifications
       try {
@@ -448,6 +469,9 @@ class AuthService {
     // Clear all auth data using the new token manager
     await AuthTokenManager.clearAuthData();
 
+    // Clear user data from UserRoleStorageService
+    await UserRoleStorageService.instance.clearUserData();
+
     if (response.statusCode == 200) {
       print("✅ Logout successful");
     } else {
@@ -476,6 +500,9 @@ class AuthService {
 
       // Update last activity time to track session freshness
       await AuthTokenManager.updateLastActivity();
+
+      // Store user data in UserRoleStorageService for navigation
+      await _storeUserDataFromSession(userSession);
 
       print('✅ OAuth callback processed: JWT token force-updated');
 
@@ -515,18 +542,23 @@ class AuthService {
         // Update last activity time
         await AuthTokenManager.updateLastActivity();
 
+        // Update user data in UserRoleStorageService
+        await _storeUserDataFromSession(userSession);
+
         print('✅ JWT token force-refreshed successfully');
         return userSession;
       } else {
         print('❌ Token refresh failed: ${response.statusCode}');
         // If refresh fails, clear auth data to force re-login
         await AuthTokenManager.clearAuthData();
+        await UserRoleStorageService.instance.clearUserData();
         return null;
       }
     } catch (e) {
       print('❌ Error during token refresh: $e');
       // Clear auth data on error to force re-login
       await AuthTokenManager.clearAuthData();
+      await UserRoleStorageService.instance.clearUserData();
       return null;
     }
   }
@@ -546,6 +578,61 @@ class AuthService {
       return false;
     }
     return true;
+  }
+
+  // ✅ NEW METHODS FOR UserRoleStorageService INTEGRATION
+
+  /// Store user data from UserSession to UserRoleStorageService
+  static Future<void> _storeUserDataFromSession(UserSession userSession) async {
+    try {
+      await UserRoleStorageService.instance.setUserData(
+        role: userSession.role,
+        userId: userSession.id,
+        patientId: userSession.patientId,
+        caregiverId: userSession.caregiverId,
+      );
+
+      if (kDebugMode) {
+        print('✅ User data stored in UserRoleStorageService: Role=${userSession.role}, UserID=${userSession.id}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error storing user data in UserRoleStorageService: $e');
+      }
+    }
+  }
+
+  /// Get current user data from UserRoleStorageService
+  static Future<UserData?> getCurrentUserData() async {
+    return await UserRoleStorageService.instance.getUserData();
+  }
+
+  /// Check if user is authenticated using UserRoleStorageService
+  static Future<bool> isUserAuthenticated() async {
+    return await UserRoleStorageService.instance.isLoggedIn();
+  }
+
+  /// Get user role from storage
+  static Future<String?> getUserRole() async {
+    return await UserRoleStorageService.instance.getUserRole();
+  }
+
+  /// Update user role in storage
+  static Future<void> updateUserRole(String newRole) async {
+    await UserRoleStorageService.instance.updateUserRole(newRole);
+
+    if (kDebugMode) {
+      print('✅ User role updated in UserRoleStorageService: $newRole');
+    }
+  }
+
+  /// Update patient ID in storage (useful for caregiver switching patients)
+  static Future<void> updatePatientId(int? patientId) async {
+    await UserRoleStorageService.instance.updatePatientId(patientId);
+
+    if (kDebugMode) {
+      print('✅ Patient ID updated in UserRoleStorageService: $patientId');
+    }
   }
 
   // static Future<String> setupPassword({

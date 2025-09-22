@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import '../screens/main_screen.dart';
 import '../config/navigation/main_screen_config.dart';
 import '../config/navigation/bottom_nav_config.dart';
+import '../config/navigation/navigation_helper.dart';
+import '../services/auth_service.dart';
 
 /// This file demonstrates various ways to use the configurable MainScreen component.
+/// Updated to use the new UserRoleStorageService for persistent role storage
+/// across web (localStorage) and mobile (native storage) platforms.
 
 class MainScreenUsageExamples {
 
@@ -143,24 +147,49 @@ class MainScreenUsageExamples {
     return MainScreen(config: config);
   }
 
-  /// Example 7: Navigation helper usage
-  static void navigateToMainScreenExample(BuildContext context) {
-    // Method 1: Using the extension with basic parameters
-    context.navigateToMainScreen(
-      tabIndex: 1,
-      role: 'PATIENT',
-      patientId: 123,
-    );
+  /// Example 7: Navigation helper usage with stored user data
+  static Future<void> navigateToMainScreenExample(BuildContext context) async {
+    // Method 1: Navigate to a specific tab using stored user data
+    await NavigationHelper.navigateToMainScreen(context, tabIndex: 1);
 
-    // Method 2: Using the extension with a full configuration
-    final config = MainScreenConfig(
-      userRole: 'CAREGIVER',
-      caregiverId: 456,
-      primaryColor: Colors.teal,
-      showAppBar: true,
-    );
+    // Method 2: Navigate to a specific tab by name
+    if (context.mounted) {
+      await NavigationHelper.navigateToTab(context, 'messages');
+    }
 
-    context.navigateToMainScreenWithConfig(config, tabIndex: 2);
+    // Method 3: Check if user is authenticated before navigation
+    final isAuthenticated = await NavigationHelper.isAuthenticated();
+    if (isAuthenticated && context.mounted) {
+      await NavigationHelper.navigateToMainScreen(context);
+    } else if (context.mounted) {
+      // Redirect to login if not authenticated
+      await NavigationHelper.logout(context);
+    }
+  }
+
+  /// Example 8: Authentication flow example
+  static Future<void> authenticationExample() async {
+    // Login using the static AuthService methods
+    try {
+      await AuthService.login(
+        'email@example.com',
+        'password'
+      );
+
+      // Check current user data from storage
+      final userData = await AuthService.getCurrentUserData();
+      if (userData != null) {
+        debugPrint('Current user: ${userData.toString()}');
+      }
+
+      // Update patient ID (useful for caregiver switching patients)
+      await AuthService.updatePatientId(789);
+
+      // Logout
+      await AuthService.logout();
+    } catch (e) {
+      debugPrint('Authentication error: $e');
+    }
   }
 }
 

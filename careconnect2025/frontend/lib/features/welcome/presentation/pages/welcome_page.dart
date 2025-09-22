@@ -204,8 +204,10 @@ class _WelcomePageState extends State<WelcomePage> {
                 // Compliance badges at bottom
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildComplianceBadge('🔒 HIPAA Compliant', isMobile),
                       _buildComplianceBadge('♿ WCAG AA', isMobile),
@@ -222,25 +224,29 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   Widget _buildComplianceBadge(String text, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 8 : 12,
-        vertical: isMobile ? 6 : 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.3),
-          width: 1,
+    return Flexible(
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 6 : 8,
+          vertical: isMobile ? 4 : 6,
         ),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
-          fontSize: isMobile ? 12 : 14,
-          fontWeight: FontWeight.w500,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.9),
+            fontSize: isMobile ? 10 : 12,
+            fontWeight: FontWeight.w500,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ),
     );

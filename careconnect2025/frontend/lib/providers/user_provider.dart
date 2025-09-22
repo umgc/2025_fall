@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_token_manager.dart';
 import '../services/auth_service.dart';
+import '../services/user_role_storage_service.dart';
 
 class UserSession {
   final int id;
@@ -63,6 +64,9 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Initialize UserRoleStorageService
+      await UserRoleStorageService.instance.initialize();
+
       // Use new JWT authentication system to restore session
       final userSession = await AuthTokenManager.restoreSession();
       if (userSession != null) {
@@ -76,12 +80,17 @@ class UserProvider extends ChangeNotifier {
         if (isStale) {
           // Session is stale, clear it and force re-login
           await AuthTokenManager.clearAuthData();
+          await UserRoleStorageService.instance.clearUserData();
           _user = null;
+        } else {
+          // Sync user data with UserRoleStorageService
+          await _syncUserDataToStorage();
         }
       }
     } catch (e) {
       // If there's an error, clear any stored auth data
       await AuthTokenManager.clearAuthData();
+      await UserRoleStorageService.instance.clearUserData();
       _user = null;
     }
 
@@ -93,12 +102,15 @@ class UserProvider extends ChangeNotifier {
     _user = user;
     // Update activity when user is set (e.g., after login)
     AuthTokenManager.updateLastActivity();
+    // Sync user data to storage
+    _syncUserDataToStorage();
     notifyListeners();
   }
 
   Future<void> clearUser() async {
     _user = null;
     await AuthTokenManager.clearAuthData();
+    await UserRoleStorageService.instance.clearUserData();
     notifyListeners();
   }
 
@@ -116,6 +128,7 @@ class UserProvider extends ChangeNotifier {
     final isValid = await AuthTokenManager.validateCurrentSession();
     if (!isValid) {
       _user = null;
+      await UserRoleStorageService.instance.clearUserData();
       notifyListeners();
     }
     return isValid;
@@ -135,14 +148,71 @@ class UserProvider extends ChangeNotifier {
       } else {
         // Refresh failed, clear user
         _user = null;
+        await UserRoleStorageService.instance.clearUserData();
         notifyListeners();
         return false;
       }
     } catch (e) {
       print('❌ Token refresh failed in UserProvider: $e');
       _user = null;
+      await UserRoleStorageService.instance.clearUserData();
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Sync current user data to UserRoleStorageService
+  Future<void> _syncUserDataToStorage() async {
+    if (_user != null) {
+      try {
+        await UserRoleStorageService.instance.setUserData(
+          role: _user!.role,
+          userId: _user!.id,
+          patientId: _user!.patientId,
+          caregiverId: _user!.caregiverId,
+        );
+      } catch (e) {
+        print('❌ Error syncing user data to storage: $e');
+      }
+    }
+  }
+
+  /// Get user data from storage (useful for navigation)
+  Future<UserData?> getUserDataFromStorage() async {
+    return await UserRoleStorageService.instance.getUserData();
+  }
+
+  /// Update user role in both provider and storage
+  Future<void> updateUserRole(String newRole) async {
+    if (_user != null) {
+      _user = UserSession(
+        id: _user!.id,
+        email: _user!.email,
+        role: newRole,
+        token: _user!.token,
+        patientId: _user!.patientId,
+        caregiverId: _user!.caregiverId,
+        name: _user!.name,
+      );
+      await UserRoleStorageService.instance.updateUserRole(newRole);
+      notifyListeners();
+    }
+  }
+
+  /// Update patient ID in both provider and storage
+  Future<void> updatePatientId(int? patientId) async {
+    if (_user != null) {
+      _user = UserSession(
+        id: _user!.id,
+        email: _user!.email,
+        role: _user!.role,
+        token: _user!.token,
+        patientId: patientId,
+        caregiverId: _user!.caregiverId,
+        name: _user!.name,
+      );
+      await UserRoleStorageService.instance.updatePatientId(patientId);
+      notifyListeners();
     }
   }
 

@@ -28,8 +28,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
     try {
       final user = await AuthService.login(
         _emailController.text.trim(),
-        _passwordController.text,
-        role: 'caregiver',
+        _passwordController.text
       );
 
       if (user.role.toUpperCase() == 'CAREGIVER') {

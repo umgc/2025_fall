@@ -1,0 +1,220 @@
+import 'package:flutter/material.dart';
+
+class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget {
+  final String userName;
+  final String? timezone;
+  final String? profileImageUrl;
+  const DashboardAppHeader({
+    super.key,
+    required this.userName,
+    this.timezone,
+    this.profileImageUrl = "",
+  });
+
+  @override
+  Size get preferredSize {
+    // Calculate the height based on content
+    return const Size.fromHeight(210); // This will be overridden
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+
+    final DateTime time = DateTime.now();
+    final String timeZone = time.timeZoneName;
+    // Helper function to ensure two-digit formatting
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+
+    // Format the datetime manually
+    String formattedTime = '${twoDigits(time.month)}/${twoDigits(time.day)}/${time.year} ${twoDigits(time.hour)}:${twoDigits(time.minute)}';
+
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      toolbarHeight: preferredSize.height,
+      flexibleSpace: Container(
+        height: preferredSize.height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(25),
+            bottomRight: Radius.circular(25),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row with logo and icons
+                SizedBox(
+                  height: 50,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Logo section
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade700,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.local_hospital,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "CARECONNECT",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Right icons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                print("Settings tapped");
+                              },
+                              icon: Icon(
+                                Icons.settings_outlined,
+                                color: Colors.grey.shade600,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                print("Logout tapped");
+                              },
+                              icon: Icon(
+                                Icons.logout,
+                                color: Colors.grey.shade600,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // Profile and welcome section
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Profile avatar with online indicator
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 25,
+                          backgroundImage: profileImageUrl!.isNotEmpty
+                              ? NetworkImage(profileImageUrl!)
+                              : null,
+                          backgroundColor: Colors.grey.shade300,
+                          child: profileImageUrl!.isEmpty
+                              ? Icon(
+                            Icons.person,
+                            size: 30,
+                            color: Colors.grey.shade600,
+                          )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 2,
+                          right: 2,
+                          child: Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(width: 15),
+
+                    // Welcome text section
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Welcome back",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            "$formattedTime $timeZone",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "How are you feeling today?",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

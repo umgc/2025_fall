@@ -44,21 +44,11 @@ class _LoginPageState extends State<LoginPage> {
       final extra = GoRouter.of(
         context,
       ).routerDelegate.currentConfiguration.extra;
-      String role = 'patient'; // Default
-
-      if (widget.userType != null) {
-        role = widget.userType!;
-      } else if (extra != null &&
-          extra is Map<String, dynamic> &&
-          extra.containsKey('userType')) {
-        role = extra['userType'];
-      }
 
       // Use enhanced authentication service with role validation
       final authResult = await EnhancedAuthService.loginWithRoleValidation(
         email: _email.text.trim(),
         password: _pwd.text,
-        expectedRole: role,
       );
 
       if (authResult.isSuccess) {
