@@ -52,8 +52,8 @@ public class TaskServiceV2 {
                 .timeOfDay(task.getTimeOfDay())
                 .isCompleted(task.isCompleted())
                 .frequency(task.getFrequency())
-                .taskInterval(task.getInterval())
-                .doCount(task.getCount())
+                .taskInterval(task.getInterval() != null ? task.getInterval() : 0)
+                .doCount(task.getCount() != null ? task.getCount() : 0)
                 .daysOfWeek(task.getDaysOfWeek())
                 .taskType(task.getTaskType())
                 .patient(patient)
@@ -92,6 +92,14 @@ public class TaskServiceV2 {
         existingTask.setTaskInterval(task.getInterval());
         existingTask.setDoCount(task.getCount());
         existingTask.setDaysOfWeek(task.getDaysOfWeek());
+
+        // Only overwrite recurrence fields if they’re provided
+        if (task.getInterval() != null) {
+            existingTask.setTaskInterval(task.getInterval());
+        }
+        if (task.getCount() != null) {
+            existingTask.setDoCount(task.getCount());
+        }
 
         // Save the updated task
         return taskRepository.save(existingTask);

@@ -31,10 +31,10 @@ public class TaskDtoV2 {
     private String frequency;
 
     @Nullable
-    private int interval;
+    private Integer interval;
 
     @Nullable
-    private int count;
+    private Integer count;
 
     @Nullable
     private String daysOfWeek;

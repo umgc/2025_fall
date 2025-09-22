@@ -1139,6 +1139,14 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
+  // Get a single task by ID (v2)
+  static Future<http.Response> getTaskByIdV2(int taskId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    return await _httpClient
+        .get(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
+        .timeout(const Duration(seconds: 30));
+  }
+
   static Future<Map<String, dynamic>?> getEnhancedPatientProfile(
     int patientId,
   ) async {
