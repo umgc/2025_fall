@@ -44,8 +44,6 @@ class Task {
               : List<bool>.from(json['daysOfWeek']))
         : null;
 
-    print("📅 Parsed daysOfWeek for ${json['name']}: $parsedDays");
-
     return Task(
       id: json['id'] != null ? json['id'] as int : -1,
       name: json['name'],
@@ -72,13 +70,6 @@ class Task {
   }
 
   Map<String, dynamic> toJson() {
-    String resolvedTaskType = taskType ?? "custom"; // Default task type
-    if (daysOfWeek != null && daysOfWeek!.contains(true)) {
-      resolvedTaskType = "dayOfWeek";
-    } else if (frequency != null && interval != null) {
-      resolvedTaskType = "frequency";
-    }
-
     return {
       'name': name,
       'description': description,
@@ -92,7 +83,7 @@ class Task {
       'interval': interval,
       'count': count,
       'daysOfWeek': daysOfWeek != null ? jsonEncode(daysOfWeek) : null,
-      'taskType': resolvedTaskType,
+      'taskType': taskType ?? "general",
       'patientId': userId,
     };
   }
@@ -102,9 +93,6 @@ class Task {
   }
 
   List<Task> expandOccurrences() {
-    print(
-      "🔍 expandOccurrences -> freq=$frequency interval=$interval count=$count",
-    );
     // If not recurring, return the single task
     if (frequency == null) {
       return [this];

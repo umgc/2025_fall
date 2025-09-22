@@ -90,6 +90,11 @@ class TaskUtils {
     }
     return grouped;
   }
+
+  /// Normalize a date to local midnight (drops hours/minutes/seconds).
+  static DateTime normalizeDate(DateTime d) {
+    return DateTime(d.year, d.month, d.day);
+  }
 }
 
 // =============================
@@ -109,12 +114,18 @@ class RecurrenceUtils {
     int? dayOfMonth,
   }) {
     String? frequency;
-    String? taskType;
     int? intervalToSend = interval;
     int? countToSend = count;
 
+    // Preserve original task type safely
+    final normalizedTaskType = baseTask.taskType?.toLowerCase();
+
     // Default effective start date
-    DateTime effectiveDate = startDate ?? baseTask.date;
+    DateTime effectiveDate = (startDate ?? baseTask.date).toLocal();
+    // Normalize end date if provided
+    DateTime? normalizedEndDate = endDate != null
+        ? TaskUtils.normalizeDate(endDate)
+        : null;
 
     if (isRecurring == true && recurrenceType != null) {
       switch (recurrenceType.toLowerCase()) {
@@ -124,13 +135,14 @@ class RecurrenceUtils {
               ? 1
               : intervalToSend;
 
-          if (endDate != null) {
-            final daysBetween = endDate.difference(effectiveDate).inDays;
+          if (normalizedEndDate != null) {
+            final daysBetween = normalizedEndDate
+                .difference(effectiveDate)
+                .inDays;
             countToSend = (daysBetween ~/ intervalToSend) + 1;
           } else {
             countToSend ??= 30; // fallback: 30 days if no end date
           }
-          taskType = "frequency";
           break;
 
         case "weekly":
@@ -139,21 +151,18 @@ class RecurrenceUtils {
               ? 1
               : intervalToSend;
 
-          if (endDate != null) {
+          if (normalizedEndDate != null) {
             final totalWeeks =
-                (endDate.difference(effectiveDate).inDays ~/ 7) + 1;
+                (normalizedEndDate.difference(effectiveDate).inDays ~/ 7) + 1;
 
             if (daysOfWeek != null && daysOfWeek.any((d) => d)) {
               final selectedDays = daysOfWeek.where((d) => d).length;
               countToSend = totalWeeks * selectedDays;
-              taskType = "dayOfWeek";
             } else {
               countToSend = totalWeeks;
-              taskType = "frequency";
             }
           } else {
             countToSend ??= 4; // default 4 weeks if no end date
-            taskType = "frequency";
           }
           break;
 
@@ -176,16 +185,14 @@ class RecurrenceUtils {
             );
           }
 
-          if (endDate != null) {
+          if (normalizedEndDate != null) {
             final months =
-                (endDate.year - effectiveDate.year) * 12 +
-                (endDate.month - effectiveDate.month);
+                (normalizedEndDate.year - effectiveDate.year) * 12 +
+                (normalizedEndDate.month - effectiveDate.month);
             countToSend = (months ~/ intervalToSend) + 1;
           } else {
             countToSend ??= 12; // default: 12 months
           }
-
-          taskType = "frequency";
           break;
 
         case "yearly":
@@ -194,26 +201,66 @@ class RecurrenceUtils {
               ? 1
               : intervalToSend;
 
-          if (endDate != null) {
-            final years = endDate.year - effectiveDate.year;
+          if (normalizedEndDate != null) {
+            final years = normalizedEndDate.year - effectiveDate.year;
             countToSend = (years ~/ intervalToSend) + 1;
           } else {
             countToSend ??= 5; // default: 5 years
           }
-
-          taskType = "frequency";
           break;
       }
     }
-
     return baseTask.copyWith(
       date: effectiveDate,
       frequency: frequency,
       interval: intervalToSend,
       count: countToSend,
       daysOfWeek: daysOfWeek,
-      taskType: taskType,
     );
+  }
+}
+
+// =============================
+// TaskTypeUtils.dart
+// =============================
+///Moving task Types into utility class for use across code base
+class TaskTypeUtils {
+  static final Map<String, Color> taskTypeColors = {
+    'medication': Colors.red,
+    'appointment': Colors.blue,
+    'exercise': Colors.green,
+    'general': Colors.deepOrange,
+    'lab': Colors.purple,
+    'pharmacy': Colors.teal,
+  };
+
+  /// Map used to change icon used for certain types of task
+  static final Map<String, IconData> taskTypeIcons = {
+    'medication': Icons.medication,
+    'appointment': Icons.event,
+    'exercise': Icons.fitness_center,
+    'general': Icons.task,
+    'lab': Icons.science,
+    'pharmacy': Icons.local_pharmacy,
+  };
+
+  /// Get a color safely with fallback
+  static Color getColor(String? type) {
+    if (type == null) return Colors.deepOrange;
+    return taskTypeColors[type.toLowerCase()] ?? Colors.deepOrange;
+  }
+
+  /// Get icon safely
+  static IconData getIcon(String? type) {
+    if (type == null) return taskTypeIcons['general']!;
+    return taskTypeIcons[type.toLowerCase()] ?? taskTypeIcons['general']!;
+  }
+
+  /// Get an alphabetized list of task type keys
+  static List<String> getSortedTypes() {
+    final keys = taskTypeColors.keys.toList();
+    keys.sort();
+    return keys;
   }
 }
 
@@ -239,22 +286,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     hashCode: (date) => date.day * 1000000 + date.month * 10000 + date.year,
   );
   Map<int, String> patientNames = {};
-
-  final Map<String, Color> taskTypeColors = {
-    'medication': Colors.red,
-    'appointment': Colors.blue,
-    'exercise': Colors.green,
-    'general': Colors.deepOrange,
-    'lab': Colors.purple,
-    'pharmacy': Colors.teal,
-    'medical': Colors.cyan,
-  };
-
-  /// Map task type to color
-  Color _getTaskColor(String type) {
-    final key = type.toLowerCase();
-    return taskTypeColors[key] ?? Colors.deepOrange;
-  }
 
   /// Build a small colored dot + label for the legend
   Widget _buildLegendDot(Color color, String label) {
@@ -285,7 +316,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _getTaskColor(task.taskType ?? "general"),
+            color: TaskTypeUtils.getColor(task.taskType ?? "general"),
           ),
         ),
       if (dayTasks.length > maxVisibleDots)
@@ -389,7 +420,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
           try {
             final baseTask = Task.fromJson(map);
-            baseTask.date = baseTask.date.toLocal();
+            baseTask.date = TaskUtils.normalizeDate(baseTask.date.toLocal());
 
             // Expand recurrences
             final expanded = baseTask.expandOccurrences();
@@ -479,8 +510,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 padding: const EdgeInsets.all(8.0),
                 child: Wrap(
                   spacing: 16,
-                  children: taskTypeColors.entries
-                      .map((e) => _buildLegendDot(e.value, e.key))
+                  children: TaskTypeUtils.taskTypeColors.entries
+                      .map(
+                        (e) => _buildLegendDot(
+                          e.value,
+                          e.key[0].toUpperCase() + e.key.substring(1),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -513,8 +549,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
                         return ListTile(
                           leading: Icon(
-                            Icons.task,
-                            color: _getTaskColor(task.taskType ?? "general"),
+                            TaskTypeUtils.getIcon(task.taskType),
+                            color: TaskTypeUtils.getColor(task.taskType),
                           ),
                           title: Text(
                             task.name,
@@ -594,6 +630,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         isCaregiver: user.isCaregiver,
         patients: patients,
         defaultPatientId: user.isPatient ? user.id : null,
+        initialDate: _selectedDay,
       ),
     );
 
@@ -635,6 +672,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       final freshResponse = await ApiService.getTaskByIdV2(task.id);
       if (freshResponse.statusCode == 200) {
         task = Task.fromJson(jsonDecode(freshResponse.body));
+        task = task.copyWith(
+          date: TaskUtils.normalizeDate(task.date.toLocal()),
+        );
       }
     } catch (e) {
       debugPrint("Error refreshing task ${task.id}: $e");
@@ -658,6 +698,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         isCaregiver: user.isCaregiver,
         patients: patients,
         defaultPatientId: user.isPatient ? user.id : task.userId,
+        initialDate: _selectedDay,
       ),
     );
 
@@ -665,7 +706,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     //normalize recurrence
     final newTask = RecurrenceUtils.buildTask(baseTask: editedTask);
-
     try {
       final response = await ApiService.editTaskV2(
         newTask.id,
@@ -755,6 +795,7 @@ class TaskFormDialog extends StatefulWidget {
   final bool isCaregiver;
   final List<Map<String, dynamic>> patients;
   final int? defaultPatientId;
+  final DateTime? initialDate;
 
   const TaskFormDialog({
     super.key,
@@ -762,6 +803,7 @@ class TaskFormDialog extends StatefulWidget {
     required this.isCaregiver,
     required this.patients,
     this.defaultPatientId,
+    this.initialDate,
   });
 
   @override
@@ -773,6 +815,9 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   late TextEditingController descriptionController;
   TimeOfDay? selectedTime;
   int? selectedPatientId;
+  String? selectedTaskType;
+  // Pull task types directly here
+  late final List<String> taskTypes = TaskTypeUtils.getSortedTypes();
 
   // Recurrence state
   bool isRecurring = false;
@@ -794,7 +839,17 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     descriptionController = TextEditingController(text: t?.description ?? '');
     selectedTime = t?.timeOfDay;
     selectedPatientId = widget.defaultPatientId ?? t?.userId;
-
+    //If editing and taskType is valid, keep it
+    if (t != null &&
+        t.taskType != null &&
+        taskTypes.contains(t.taskType!.toLowerCase())) {
+      selectedTaskType = t.taskType!.toLowerCase();
+    } else {
+      // Otherwise default to "general"
+      selectedTaskType = taskTypes.contains("general")
+          ? "general"
+          : taskTypes.first;
+    }
     // ensure Save button re-checks when text changes
     titleController.addListener(() => setState(() {}));
 
@@ -839,11 +894,11 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         }
       }
     } else {
-      startDate = DateTime.now();
+      // Use initialDate from the calendar if passed, otherwise fallback to now
+      startDate = TaskUtils.normalizeDate(widget.initialDate ?? DateTime.now());
     }
   }
 
-  //TODO This needs to be implemented better based off of setting Task Type
   String? _inferRecurrenceTypeFromTask(Task t) {
     if (t.daysOfWeek?.any((d) => d) ?? false) return "Weekly";
     switch (t.frequency?.toLowerCase()) {
@@ -894,26 +949,54 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Title
-            TextField(
+            TextFormField(
               controller: titleController,
               decoration: const InputDecoration(
                 labelText: "Task Title",
                 border: OutlineInputBorder(),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
               ),
             ),
             const SizedBox(height: 12),
 
             // Description
-            TextField(
+            TextFormField(
               controller: descriptionController,
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: "Description",
                 border: OutlineInputBorder(),
+                floatingLabelBehavior: FloatingLabelBehavior.always,
               ),
             ),
             const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: "Task Type",
+                border: OutlineInputBorder(),
+              ),
+              initialValue:
+                  selectedTaskType != null &&
+                      ![
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly",
+                      ].contains(selectedTaskType!.toLowerCase())
+                  ? selectedTaskType
+                  : null,
+              items: taskTypes
+                  .map(
+                    (type) => DropdownMenuItem(
+                      value: type,
+                      child: Text(type[0].toUpperCase() + type.substring(1)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (val) => setState(() => selectedTaskType = val),
+            ),
 
+            const SizedBox(height: 16),
             // Time picker
             Row(
               children: [
@@ -945,6 +1028,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 decoration: const InputDecoration(
                   labelText: "Assign to Patient",
                   border: OutlineInputBorder(),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                 ),
                 initialValue: selectedPatientId,
                 items: widget.patients.map((p) {
@@ -1017,7 +1101,11 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     interval: interval,
                     count: count,
                     daysOfWeek: daysOfWeek,
-                    taskType: widget.initialTask?.taskType,
+                    taskType:
+                        (selectedTaskType ??
+                                widget.initialTask?.taskType ??
+                                "general")
+                            .toLowerCase(),
                   );
 
                   final finalTask = RecurrenceUtils.buildTask(
@@ -1103,8 +1191,14 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
     daysOfWeek = widget.initialDaysOfWeek ?? List.filled(7, false);
     interval = widget.initialInterval;
     count = widget.initialCount;
-    startDate = widget.initialStartDate;
-    endDate = widget.initialEndDate;
+    //Normalize incoming dates
+    startDate = widget.initialStartDate != null
+        ? TaskUtils.normalizeDate(widget.initialStartDate!)
+        : null;
+
+    endDate = widget.initialEndDate != null
+        ? TaskUtils.normalizeDate(widget.initialEndDate!)
+        : null;
     dayOfMonth = widget.initialDayOfMonth;
   }
 
@@ -1147,7 +1241,11 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
           const SizedBox(height: 8),
           // Recurrence type dropdown
           DropdownButtonFormField<String>(
-            decoration: const InputDecoration(labelText: "Recurrence Type"),
+            decoration: const InputDecoration(
+              labelText: "Recurrence Type",
+              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+            ),
             initialValue: recurrenceType,
             items: [
               "Daily",
@@ -1269,7 +1367,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
                     lastDate: DateTime(DateTime.now().year + 5),
                   );
                   if (picked != null) {
-                    setState(() => startDate = picked);
+                    setState(() => startDate = TaskUtils.normalizeDate(picked));
                     widget.onChanged(
                       isRecurring: isRecurring,
                       recurrenceType: recurrenceType,
@@ -1288,40 +1386,84 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
           ),
           const SizedBox(height: 12),
           // End date picker
-          Row(
-            children: [
-              Text(
-                endDate != null
-                    ? "Ends: ${endDate!.toLocal().toString().split(' ')[0]}"
-                    : "No end date set",
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: endDate ?? DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(DateTime.now().year + 5),
-                  );
-                  if (picked != null) {
-                    setState(() => endDate = picked);
-                    widget.onChanged(
-                      isRecurring: isRecurring,
-                      recurrenceType: recurrenceType,
-                      daysOfWeek: daysOfWeek,
-                      interval: interval,
-                      count: count,
-                      startDate: startDate,
-                      endDate: endDate,
-                      dayOfMonth: dayOfMonth,
+          if (recurrenceType != "Yearly") ...[
+            Row(
+              children: [
+                Text(
+                  endDate != null
+                      ? "Ends: ${endDate!.toLocal().toString().split(' ')[0]}"
+                      : "No end date set",
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: endDate ?? startDate ?? DateTime.now(),
+                      firstDate: startDate ?? DateTime.now(),
+                      lastDate: DateTime(DateTime.now().year + 5),
                     );
-                  }
-                },
-                child: const Text("Pick End Date"),
-              ),
-            ],
-          ),
+                    if (picked != null) {
+                      setState(() => endDate = TaskUtils.normalizeDate(picked));
+                      widget.onChanged(
+                        isRecurring: isRecurring,
+                        recurrenceType: recurrenceType,
+                        daysOfWeek: daysOfWeek,
+                        interval: interval,
+                        count: count,
+                        startDate: startDate,
+                        endDate: endDate,
+                        dayOfMonth: dayOfMonth,
+                      );
+                    }
+                  },
+                  child: const Text("Pick End Date"),
+                ),
+              ],
+            ),
+          ] else if (recurrenceType == "Yearly") ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text("Ends in Year:"),
+                const SizedBox(width: 12),
+                DropdownButton<int>(
+                  value: endDate?.year,
+                  hint: const Text("Select Year"),
+                  items: List.generate(10, (i) => DateTime.now().year + i)
+                      .map(
+                        (y) => DropdownMenuItem(
+                          value: y,
+                          child: Text(y.toString()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null && startDate != null) {
+                      setState(() {
+                        endDate = DateTime(
+                          val,
+                          startDate!.month,
+                          startDate!.day,
+                        );
+                        count = (val - startDate!.year) + 1; // auto-calc count
+                      });
+                      widget.onChanged(
+                        isRecurring: isRecurring,
+                        recurrenceType: recurrenceType,
+                        daysOfWeek: daysOfWeek,
+                        interval: interval,
+                        count: count,
+                        startDate: startDate,
+                        endDate: endDate,
+                        dayOfMonth: dayOfMonth,
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
 
           if (isMissingEndCondition)
             const Padding(
