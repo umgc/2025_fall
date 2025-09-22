@@ -1,5 +1,5 @@
 // =============================
-// CalendarAssistantScreen.dart
+// CalendarAssistantScreen
 // =============================
 
 import 'dart:collection';
@@ -14,6 +14,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+// =============================
+// TaskCopyWith
+// =============================
 extension TaskCopyWith on Task {
   Task copyWith({
     int? id,
@@ -89,6 +92,9 @@ class TaskUtils {
   }
 }
 
+// =============================
+// RecurrenceUtils
+// =============================
 /// Utilities for building recurring tasks consistently
 class RecurrenceUtils {
   static Task buildTask({
@@ -174,7 +180,7 @@ class RecurrenceUtils {
             final months =
                 (endDate.year - effectiveDate.year) * 12 +
                 (endDate.month - effectiveDate.month);
-            countToSend = (months ~/ intervalToSend!) + 1;
+            countToSend = (months ~/ intervalToSend) + 1;
           } else {
             countToSend ??= 12; // default: 12 months
           }
@@ -317,7 +323,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     _loadTasksFromDb();
   }
 
+  ///This function is used across the assistant to query task information from the DB
   Future<void> _loadTasksFromDb() async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       error = null;
@@ -365,6 +373,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     }
   }
 
+  /// Using V2 of endpoint, fetch the need task information
   Future<List<Task>> _fetchTasksForPatient(int patientId) async {
     final tasks = <Task>[];
 
@@ -401,6 +410,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     return tasks;
   }
 
+  /// Build fucntion to actual make the Calendar Assistant
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -410,7 +420,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     return Scaffold(
       drawer: const CommonDrawer(currentRoute: '/calendar'),
       appBar: AppBarHelper.createAppBar(
@@ -465,7 +474,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               // Legend
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -477,14 +485,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
               // Task list for selected day
               if (_selectedDay != null && tasks[_selectedDay] != null)
                 Builder(
                   builder: (_) {
                     final dayTasks = [...tasks[_selectedDay]!];
 
-                    // ✅ Sort chronologically by timeOfDay
+                    //Sort chronologically by timeOfDay
                     dayTasks.sort((a, b) {
                       if (a.timeOfDay != null && b.timeOfDay != null) {
                         final aMinutes =
@@ -567,10 +574,10 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
   }
 
+  /// This fucntion is used to add a task to the CareConnect system
   Future<void> _addTask() async {
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user == null) return;
-
     // Preload patients if caregiver
     List<Map<String, dynamic>> patients = [];
     if (user.isCaregiver) {
@@ -579,8 +586,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         patients = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
     }
-
     // Show dialog
+    if (!mounted) return;
     final draftTask = await showDialog<Task>(
       context: context,
       builder: (_) => TaskFormDialog(
@@ -591,15 +598,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
 
     if (draftTask == null) return;
-
     final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
-
     try {
       final response = await ApiService.createTaskV2(
         newTask.userId!,
         jsonEncode(newTask.toJson()),
       );
-
+      if (!mounted) return;
       if (response.statusCode == 200) {
         await _loadTasksFromDb();
         if (!mounted) return;
@@ -620,6 +625,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     }
   }
 
+  /// This function is to edit tasks in the CareConnect system displayed by the Calendar Assistant
   Future<void> _editTask(Task task) async {
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user == null) return;
@@ -631,7 +637,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         task = Task.fromJson(jsonDecode(freshResponse.body));
       }
     } catch (e) {
-      debugPrint("⚠️ Error refreshing task ${task.id}: $e");
+      debugPrint("Error refreshing task ${task.id}: $e");
     }
 
     // Preload patients if caregiver
@@ -644,6 +650,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     }
 
     // Show edit form
+    if (!mounted) return;
     final editedTask = await showDialog<Task>(
       context: context,
       builder: (_) => TaskFormDialog(
@@ -656,7 +663,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     if (editedTask == null) return;
 
-    // ✅ Use RecurrenceUtils to normalize recurrence
+    //normalize recurrence
     final newTask = RecurrenceUtils.buildTask(baseTask: editedTask);
 
     try {
@@ -669,13 +676,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         await _loadTasksFromDb();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Task updated successfully")),
+          const SnackBar(content: Text("Task updated successfully")),
         );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("⚠️ Failed to update task: ${response.statusCode}"),
+            content: Text("Failed to update task: ${response.statusCode}"),
           ),
         );
       }
@@ -683,10 +690,11 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("❌ Error updating task: $e")));
+      ).showSnackBar(SnackBar(content: Text("Error updating task: $e")));
     }
   }
 
+  /// This function is to remove tasks in the CareConnect system displayed by the Calendar Assistant
   Future<void> _removeTask(Task task) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -740,7 +748,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 // =============================
 // TaskFormDialog.dart
 // =============================
-
+/// Since Add and Edit use the same form for tasks that logic is broken up here into two forms one being the TaskFormDialog and the other being the RecurrenceForm.
+/// This allows functionality of the forms to be chared across the code.
 class TaskFormDialog extends StatefulWidget {
   final Task? initialTask;
   final bool isCaregiver;
@@ -834,6 +843,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     }
   }
 
+  //TODO This needs to be implemented better based off of setting Task Type
   String? _inferRecurrenceTypeFromTask(Task t) {
     if (t.daysOfWeek?.any((d) => d) ?? false) return "Weekly";
     switch (t.frequency?.toLowerCase()) {
@@ -850,7 +860,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     }
   }
 
-  /// validation logic
+  /// validation logic of the form's save button
   bool get canSave {
     // Must have a name
     if (titleController.text.trim().isEmpty) return false;
@@ -858,14 +868,12 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     if (isRecurring) {
       // Must have a recurrence type
       if (recurrenceType == null || recurrenceType!.isEmpty) return false;
-
       // Weekly: require at least one day
       if (recurrenceType!.toLowerCase() == "weekly") {
         if (daysOfWeek == null || !daysOfWeek!.any((d) => d)) {
           return false;
         }
       }
-
       // Must have an end condition (endDate or count)
       if ((endDate == null || endDate!.isBefore(startDate ?? DateTime.now())) &&
           (count == null || count! <= 0)) {
@@ -876,6 +884,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     return true;
   }
 
+  ///Building the task form based on Add or Edit function
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -929,6 +938,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
             ),
             const SizedBox(height: 12),
 
+            /// If caregiver then allow assignment to patient. If patient always assigned to themseleves.
             // Caregiver dropdown
             if (widget.isCaregiver)
               DropdownButtonFormField<int>(
@@ -936,7 +946,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                   labelText: "Assign to Patient",
                   border: OutlineInputBorder(),
                 ),
-                value: selectedPatientId,
+                initialValue: selectedPatientId,
                 items: widget.patients.map((p) {
                   return DropdownMenuItem<int>(
                     value: p['patient']?['id'],
@@ -1024,7 +1034,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
 
                   Navigator.pop(context, finalTask);
                 }
-              : null, // ✅ disabled if invalid
+              : null, //disabled if invalid
           child: const Text("Save"),
         ),
       ],
@@ -1035,6 +1045,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
 // =============================
 // RecurrenceForm Widget
 // =============================
+///This widget allows mutiple places in the code to use the reoccurnce form portion, and ressue its functionality needed specifically for reoccurences.
 class RecurrenceForm extends StatefulWidget {
   final void Function({
     bool? isRecurring,
@@ -1097,7 +1108,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
     dayOfMonth = widget.initialDayOfMonth;
   }
 
-  // --- validation flags for inline error messages ---
+  //validation flags for inline error messages
   bool get isMissingType =>
       isRecurring && (recurrenceType == null || recurrenceType!.isEmpty);
 
@@ -1137,7 +1148,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
           // Recurrence type dropdown
           DropdownButtonFormField<String>(
             decoration: const InputDecoration(labelText: "Recurrence Type"),
-            value: recurrenceType,
+            initialValue: recurrenceType,
             items: [
               "Daily",
               "Weekly",
@@ -1162,7 +1173,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
             const Padding(
               padding: EdgeInsets.only(top: 4.0),
               child: Text(
-                "⚠ Please select a recurrence type",
+                "Please select a recurrence type",
                 style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
@@ -1198,7 +1209,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
               const Padding(
                 padding: EdgeInsets.only(top: 4.0),
                 child: Text(
-                  "⚠ Please select at least one day of the week",
+                  "Please select at least one day of the week",
                   style: TextStyle(color: Colors.red, fontSize: 12),
                 ),
               ),
@@ -1239,9 +1250,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
               ],
             ),
           ],
-
           const SizedBox(height: 16),
-
           // Start date picker
           Row(
             children: [
@@ -1277,9 +1286,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           // End date picker
           Row(
             children: [
@@ -1320,7 +1327,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
             const Padding(
               padding: EdgeInsets.only(top: 4.0),
               child: Text(
-                "⚠ Please provide an end date of the series",
+                "Please provide an end date of the series",
                 style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
