@@ -280,12 +280,40 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
   String? error;
   late DateTime _focusedDay;
   DateTime? _selectedDay;
+  bool _filtersExpanded = false;
+  Set<String> _selectedTypes = {};
+  Set<int> _selectedPatients = {};
+  Map<int, String> patientNames = {};
+
+  Map<DateTime, List<Task>> _filteredTasks = {};
 
   Map<DateTime, List<Task>> tasks = LinkedHashMap(
     equals: isSameDay,
     hashCode: (date) => date.day * 1000000 + date.month * 10000 + date.year,
   );
-  Map<int, String> patientNames = {};
+  void _applyFilters() {
+    setState(() {
+      _filteredTasks = {};
+      tasks.forEach((day, dayTasks) {
+        final keepers = dayTasks.where((task) {
+          if (_selectedTypes.isNotEmpty &&
+              !_selectedTypes.contains(task.taskType ?? "general")) {
+            return false;
+          }
+          if (_selectedPatients.isNotEmpty &&
+              (task.userId == null ||
+                  !_selectedPatients.contains(task.userId))) {
+            return false;
+          }
+          return true;
+        }).toList();
+
+        if (keepers.isNotEmpty) {
+          _filteredTasks[day] = keepers;
+        }
+      });
+    });
+  }
 
   /// Build a small colored dot + label for the legend
   Widget _buildLegendDot(Color color, String label) {
@@ -394,6 +422,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
       setState(() {
         tasks = TaskUtils.groupTasksByDate(allTasks);
+        _filteredTasks = Map.from(tasks); // initialize filters with everything
         isLoading = false;
       });
     } catch (e) {
@@ -451,6 +480,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
     return Scaffold(
       drawer: const CommonDrawer(currentRoute: '/calendar'),
       appBar: AppBarHelper.createAppBar(
@@ -471,6 +501,172 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // Filters + Today button
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Collapsible Filter Panel
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.only(right: 12),
+                        child: Card(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      "Filters",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      _filtersExpanded
+                                          ? Icons.expand_more
+                                          : Icons.chevron_right,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _filtersExpanded = !_filtersExpanded;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              if (_filtersExpanded) ...[
+                                const Divider(),
+                                // Filter by Type
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0,
+                                  ),
+                                  child: Wrap(
+                                    spacing: 8,
+                                    runSpacing: 4,
+                                    children: TaskTypeUtils.getSortedTypes()
+                                        .map((type) {
+                                          return FilterChip(
+                                            label: Text(
+                                              type[0].toUpperCase() +
+                                                  type.substring(1),
+                                            ),
+                                            selected: _selectedTypes.contains(
+                                              type,
+                                            ),
+                                            onSelected: (selected) {
+                                              setState(() {
+                                                if (selected) {
+                                                  _selectedTypes.add(type);
+                                                } else {
+                                                  _selectedTypes.remove(type);
+                                                }
+                                              });
+                                              _applyFilters();
+                                            },
+                                          );
+                                        })
+                                        .toList(),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // Filter by Patient (only if caregiver)
+                                if (Provider.of<UserProvider>(
+                                      context,
+                                      listen: false,
+                                    ).user?.isCaregiver ??
+                                    false)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text("Patients"),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 4,
+                                          children: patientNames.entries.map((
+                                            entry,
+                                          ) {
+                                            return FilterChip(
+                                              label: Text(entry.value),
+                                              selected: _selectedPatients
+                                                  .contains(entry.key),
+                                              onSelected: (selected) {
+                                                setState(() {
+                                                  if (selected) {
+                                                    _selectedPatients.add(
+                                                      entry.key,
+                                                    );
+                                                  } else {
+                                                    _selectedPatients.remove(
+                                                      entry.key,
+                                                    );
+                                                  }
+                                                });
+                                                _applyFilters();
+                                              },
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                const SizedBox(height: 12),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    icon: const Icon(Icons.clear),
+                                    label: const Text("Clear Filters"),
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedTypes.clear();
+                                        _selectedPatients.clear();
+                                      });
+                                      _applyFilters();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Today Button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.today),
+                      label: const Text("Today"),
+                      onPressed: () {
+                        setState(() {
+                          _focusedDay = DateTime.now();
+                          _selectedDay = DateTime.now();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
               // Calendar
               TableCalendar<Task>(
                 firstDay: DateTime.utc(2020, 1, 1),
@@ -478,7 +674,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 focusedDay: _focusedDay,
                 selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                 eventLoader: (day) =>
-                    tasks[DateTime(day.year, day.month, day.day)] ?? [],
+                    _filteredTasks[DateTime(day.year, day.month, day.day)] ??
+                    [],
                 onDaySelected: (selectedDay, focusedDay) {
                   setState(() {
                     _selectedDay = selectedDay;
@@ -491,20 +688,24 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 calendarStyle: const CalendarStyle(markersMaxCount: 0),
                 calendarBuilders: CalendarBuilders(
                   defaultBuilder: (context, day, focusedDay) {
-                    final dayTasks = tasks[day] ?? [];
+                    final normalized = TaskUtils.normalizeDate(day);
+                    final dayTasks = _filteredTasks[normalized] ?? [];
                     return _buildDayCell(day, dayTasks, Colors.grey);
                   },
                   todayBuilder: (context, day, focusedDay) {
-                    final dayTasks = tasks[day] ?? [];
+                    final normalized = TaskUtils.normalizeDate(day);
+                    final dayTasks = _filteredTasks[normalized] ?? [];
                     return _buildDayCell(day, dayTasks, Colors.blue);
                   },
                   selectedBuilder: (context, day, focusedDay) {
-                    final dayTasks = tasks[day] ?? [];
+                    final normalized = TaskUtils.normalizeDate(day);
+                    final dayTasks = _filteredTasks[normalized] ?? [];
                     return _buildDayCell(day, dayTasks, Colors.green);
                   },
                 ),
               ),
               const SizedBox(height: 16),
+
               // Legend
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -521,13 +722,22 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
               // Task list for selected day
-              if (_selectedDay != null && tasks[_selectedDay] != null)
+              if (_selectedDay != null) ...[
                 Builder(
                   builder: (_) {
-                    final dayTasks = [...tasks[_selectedDay]!];
+                    final normalized = TaskUtils.normalizeDate(_selectedDay!);
+                    final dayTasks = [...?_filteredTasks[normalized] ?? []];
 
-                    //Sort chronologically by timeOfDay
+                    if (dayTasks.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text("No tasks for this day"),
+                      );
+                    }
+
+                    // Sort chronologically by timeOfDay
                     dayTasks.sort((a, b) {
                       if (a.timeOfDay != null && b.timeOfDay != null) {
                         final aMinutes =
@@ -597,12 +807,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                       }).toList(),
                     );
                   },
-                )
-              else
+                ),
+              ] else ...[
                 const Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Text("Select a day to view tasks"),
                 ),
+              ],
             ],
           ),
         ),
