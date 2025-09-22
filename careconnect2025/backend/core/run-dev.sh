@@ -114,6 +114,7 @@ echo "----------------------------------------"
 
 echo "Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
+export CARECONNECT_DATABASE_USE_AWS_CONFIG=false
 ./mvnw spring-boot:run -Dspring.profiles.active=dev
 
 echo "Application stopped."
