@@ -115,6 +115,7 @@ echo "----------------------------------------"
 echo "Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
 export CARECONNECT_DATABASE_USE_AWS_CONFIG=false
+export JAVA_TOOL_OPTIONS='-Dspring.mvc.log-request-details=true -Dlogging.level.org.hibernate.type.descriptor.sql=TRACE -Dlogging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE -Dlogging.level.org.springframework.web=DEBUG'
 ./mvnw spring-boot:run -Dspring.profiles.active=dev
 
 echo "Application stopped."
