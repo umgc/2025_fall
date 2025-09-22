@@ -129,21 +129,17 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         throw Exception('Unknown user role: $userRole');
       }
 
-      if (profileData != null) {
-        final parsedData = await _parseResponse(profileData);
-        setState(() {
-          if (_isCaregiver) {
-            _userProfile = CaregiverProfile.fromJson(parsedData);
-            _populateCaregiverFields();
-          } else {
-            _userProfile = PatientProfile.fromJson(parsedData);
-            _populatePatientFields();
-          }
-        });
-      } else {
-        throw Exception('Failed to load profile data');
-      }
-    } catch (e) {
+      final parsedData = await _parseResponse(profileData);
+      setState(() {
+        if (_isCaregiver) {
+          _userProfile = CaregiverProfile.fromJson(parsedData);
+          _populateCaregiverFields();
+        } else {
+          _userProfile = PatientProfile.fromJson(parsedData);
+          _populatePatientFields();
+        }
+      });
+        } catch (e) {
       setState(() {
         _error = 'Failed to load profile: $e';
       });

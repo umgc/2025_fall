@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 // import 'package:flutter_webrtc/flutter_webrtc.dart';
-import '../services/video_call_service.dart';
 import '../config/theme/app_theme.dart';
 
 class VideoCallWidget extends StatefulWidget {
@@ -28,10 +27,10 @@ class VideoCallWidget extends StatefulWidget {
 }
 
 class _VideoCallWidgetState extends State<VideoCallWidget> {
-  bool _isMicOn = true;
-  bool _isCameraOn = true;
-  bool _isCallConnected = false;
-  bool _isCallEnded = false;
+  final bool _isMicOn = true;
+  final bool _isCameraOn = true;
+  final bool _isCallConnected = false;
+  final bool _isCallEnded = false;
   DateTime? _callStartTime;
 
   // final RTCVideoRenderer _localRenderer = RTCVideoRenderer();

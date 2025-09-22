@@ -142,16 +142,11 @@ class _WearablesScreenState extends State<WearablesScreen> {
       String? accessToken = await _secureStorage.read(key: 'fitbit_access_token');
       String? userID = await _secureStorage.read(key: 'fitbit_user_id');
 
-      if (accessToken == null) {
-        _setDefaultFitbitData();
-        return;
-      }
-
       userID ??= '-';
 
       FitbitCredentials fitbitCredentials = FitbitCredentials(
         userID: userID,
-        fitbitAccessToken: accessToken,
+        fitbitAccessToken: accessToken ?? 'placeholder_token',
         fitbitRefreshToken: '',
       );
 
