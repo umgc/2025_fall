@@ -5,6 +5,7 @@ import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
+import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
@@ -19,8 +20,7 @@ void main() async{
   await dotenv.load();
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
-  await AILoggingSingleton().createDb(); // Ensures logging database exists
-  print(await AILoggingSingleton().getAllLogs()); // For testing
+  await AILoggingSingleton().createDb();
 
   runApp(
     MultiProvider(

@@ -318,5 +318,6 @@ resource "aws_lambda_function_url" "get_token_url" {
   cors {
     allow_methods = ["GET", "POST"]
     allow_origins = ["*"]
+    allow_headers = ["content-type"]
   }
 }
