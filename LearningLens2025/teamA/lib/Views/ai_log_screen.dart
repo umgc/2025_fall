@@ -28,6 +28,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   AiLogSource logSource = AiLogSource();
   int sortIndex = 0;
   bool sortAsc = true;
+  String message = 'Select filters and press Filter to view AI logs.';
+  bool isError = false;
 
   @override
   void initState() {
@@ -100,19 +102,29 @@ void _queryDatabase() async {
       print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, selectedStudent!, longText, longText, LlmType.CHATGPT)));
     }
     List<AiLog> newLogs = [];
+    setState(() {
+        logs = [];
+        message = 'Loading logs...';
+        isError = false;
+        sortIndex = 0;
+        sortAsc = true;
+        logSource.setData(logs, sortIndex, sortAsc);
+    });
     try {
       newLogs = await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, selectedStudent?.id, LocalStorageService.getSelectedClassroom().index);
-
-    } catch(e) {
-      newLogs = [];
-    }
-
-    setState(() {
-      logs = newLogs;
-      sortIndex = 0;
-      sortAsc = true;
-      logSource.setData(logs, sortIndex, sortAsc);
+       setState(() {
+        if (newLogs.isEmpty) {
+          message = 'No logs found for the selected filters.';
+        }
+        logs = newLogs;
+        logSource.setData(logs, sortIndex, sortAsc);
     });
+    } catch(e) {
+      setState(() {
+        isError = true;
+        message = 'Error retrieving logs: $e';
+      });
+    }
   }
 }
 
@@ -206,7 +218,7 @@ void sort(int col, bool ascending) {
                             )),
                             SizedBox(width: 10),
                             ElevatedButton(
-                              onPressed: _queryDatabase,
+                              onPressed: (selectedCourse == null && selectedAssignment == null && selectedStudent == null) ? null : _queryDatabase,
                               child: const Text('Filter'),
                             )
                           ]
@@ -215,7 +227,7 @@ void sort(int col, bool ascending) {
                   ],
                   ),
                 SizedBox(height: 20),
-                
+               Visibility(visible: logSource.sortedData.isNotEmpty, child:
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.vertical,
@@ -234,10 +246,11 @@ void sort(int col, bool ascending) {
                     DataColumn(label: Text('Timestamp'), onSort: sort),
                   ],
                   source: logSource,
-                )),
-                ])),
+                ))],),
                 )
-              ],
+                  ,
+                )),
+                Visibility(visible: logSource.sortedData.isEmpty, child: Expanded(child: Align(child: Text(textAlign: TextAlign.center, style: isError ? TextStyle(color: Colors.red) : null, message))))],
             )
         );
   }
