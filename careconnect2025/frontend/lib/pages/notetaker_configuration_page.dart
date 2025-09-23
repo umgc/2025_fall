@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/notetaker_config_service.dart';
 import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -23,6 +24,8 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoCard(theme),
+          const SizedBox(height: 24),
+          _buildToggleSection(theme),
           const SizedBox(height: 24),
           _buildPIISection(theme),
           const SizedBox(height: 24),
@@ -126,6 +129,30 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     return rowList;
   }
 
+  Widget _buildToggleCard(
+      BuildContext context, {
+        required String name,
+        required bool value,
+        required Function(bool) onChanged,
+      }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        title: Text(
+          name,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+        ),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
   Future<void> _startListening() async {
     if(await recorder.hasPermission()) {
       setState(() {
@@ -156,17 +183,18 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
-  final AudioRecorder recorder = AudioRecorder();
-  String? voiceSamplePath;
+  PatientNotetakerConfigDTO? _currentConfig;
   bool _isLoading = true;
   bool _isSaving = false;
+
+  final AudioRecorder recorder = AudioRecorder();
+  String? voiceSamplePath;
   bool _isListening = false;
-  List<String> _PIIList = ['Hello', 'World', 'Dart', 'Flutter'];
+  bool _isEnabled = true;
+  bool _permitCaregiverAccess = false;
+  List<String>_PIIList = [];
   late List<Widget> _PIIWidgetList = piiToCard(_PIIList);
-  Map<String, String> keyword_Event = {
-    'keyword1': 'event1',
-    'keyword2': 'event2'
-  };
+  Map<String, String> keyword_Event = {};
 
     // Form controllers
   final TextEditingController _keywordController = TextEditingController();
@@ -181,32 +209,24 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
 
   Future<void> _loadConfiguration() async {
     try {
-      //
-      //}final config = await AIConfigService.getUserAIConfig(context);
-    // if (config != null) {
-    //   setState(() {
-    //     _currentConfig = config;
-    //     _contextMemoryEnabled = config.contextMemoryEnabled;
-    //     _medicalContextEnabled = config.medicalContextEnabled;
-    //     _emergencyDetection = config.emergencyAlertsEnabled;
-    //     _maxTokens = config.maxTokensPerSession;
-    //     _temperature = config.temperature;
-    //     _language = config.language;
-    //
-    //     // Map enabled features to UI switches (ensure keys match backend DTO)
-    //     _voiceEnabled = config.enabledFeatures.contains('general_chat');
-    //     _emotionalSupport = config.enabledFeatures.contains(
-    //       'mental_health_support',
-    //     );
-    //     _medicationReminders = config.enabledFeatures.contains(
-    //       'medication_reminders',
-    //     );
-    //   });
+      final config = await NotetakerConfigService.getUserNotetakerConfig(context);
+      if (config != null) {
+        setState(() {
+          _currentConfig = config;
+          _isEnabled = config.isEnabled;
+          _permitCaregiverAccess = config.permitCaregiverAccess;
+          _PIIList = config.triggerKeywords.where((trigger)=> trigger.keyword.contains("PII_"))
+              .map((trigger)=> trigger.keyword.replaceAll("PII_", "")).toList();
+          config.triggerKeywords.where((trigger)=> !trigger.keyword.contains("PII_")).forEach((trigger)=>
+              keyword_Event[trigger.keyword] = trigger.event_type
+          );
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load AI configuration: $e'),
+            content: Text('Failed to load Notetaker configuration: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -225,9 +245,35 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
       if (user == null) throw Exception('User not found');
+      List<PatientNotetakerKeyword> keywordList = [];
+      _PIIList.forEach((pii)=>keywordList.add(PatientNotetakerKeyword(keyword:'PII_$pii', event_type: 'ALERT')));
+      keyword_Event.forEach((keyword,event)=>keywordList.add(PatientNotetakerKeyword(keyword:keyword, event_type: event)));
+      final config = PatientNotetakerConfigDTO(
+        id: _currentConfig?.id,
+        patientId: user.id, // keep for compatibility, not used in logic
+        isEnabled: _isEnabled,
+        permitCaregiverAccess: _permitCaregiverAccess,
+        triggerKeywords: keywordList,
+      );
+      // Use AIConfigService to update config
+      final savedConfig = await NotetakerConfigService.saveUserNotetakerConfig(
+        config,
+        userId: user.id,
+      );
 
-      // Build enabled features list from current UI state (use backend keys)
-      List<String> enabledFeatures = [];
+      if (savedConfig != null) {
+        setState(() => _currentConfig = savedConfig);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Notetaker configuration saved successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to save configuration');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -243,8 +289,6 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       }
     }
   }
-
-  // ...existing code...
 
   Widget _buildInfoCard(ThemeData theme) {
     return Container(
@@ -273,11 +317,28 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
+  Widget _buildToggleSection(ThemeData theme) {
+    return _buildSection(
+        theme,
+        'Enable Usage/Access',
+        Icons.person, // Changed from Icons.psychology for better compatibility
+        [
+          _buildToggleCard(context, name: 'Enable Notetaker Assistant', value: _isEnabled, onChanged: (value)=>{setState(() {
+            _isEnabled = !_isEnabled;
+          })}),
+          SizedBox(height: 16),
+          _buildToggleCard(context, name: 'Enable Caregiver Access', value: _permitCaregiverAccess, onChanged: (value)=>{setState(() {
+            _permitCaregiverAccess = !_permitCaregiverAccess;
+          })})
+        ]
+    );
+  }
+
   Widget _buildPIISection(ThemeData theme) {
     return _buildSection(
       theme,
-      'Personality',
-      Icons.person, // Changed from Icons.psychology for better compatibility
+      'PII terms',
+      Icons.warning,
       [
         SizedBox(
             height: 250,
@@ -289,6 +350,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
             )),
         TextButton.icon(
             onPressed: () {
+              _PIIController.clear();
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
@@ -340,7 +402,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     return _buildSection(
       theme,
       'Keywords',
-      Icons.android, // Changed from Icons.smart_toy for better compatibility
+      Icons.key,
       [
         SizedBox(
           height: 250,
@@ -363,6 +425,8 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         SizedBox(height: 16,),
         TextButton.icon(
             onPressed: () {
+              _keywordController.clear();
+              _selectedDropdownValue = null;
               showDialog(
                 context: context,
                 builder: (BuildContext context) {
@@ -390,7 +454,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                             child: DropdownButtonFormField<String>(
                               value: _selectedDropdownValue,
                               decoration: InputDecoration(labelText: 'Select an option'),
-                              items: ['Option 1', 'Option 2', 'Option 3']
+                              items: ['ALERT', 'TASK']
                                   .map((option) => DropdownMenuItem(
                                 value: option,
                                 child: Text(option),
@@ -440,7 +504,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     return _buildSection(
       theme,
       'Upload Voice Sample',
-      Icons.android, // Changed from Icons.smart_toy for better compatibility
+      Icons.voice_chat,
       [
         Container(
           width: double.infinity,
