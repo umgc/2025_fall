@@ -5,14 +5,13 @@ import com.careconnect.service.MedicalDataAnonymizer.AnonymizationLevel;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
-import com.careconnect.dto.UploadedFileDTO;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatRequest {
+public class AIChatRequest {
     
     @NotBlank(message = "Message content is required")
     @Size(max = 5000, message = "Message content cannot exceed 5000 characters")

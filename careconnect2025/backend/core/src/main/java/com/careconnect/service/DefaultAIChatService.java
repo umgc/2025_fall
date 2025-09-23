@@ -1,15 +1,13 @@
 package com.careconnect.service;
 
-import com.careconnect.dto.ChatRequest;
-import com.careconnect.dto.ChatResponse;
-import com.careconnect.dto.ChatConversationSummary;
-import com.careconnect.dto.ChatMessageSummary;
+import com.careconnect.dto.AIChatRequest;
+import com.careconnect.dto.AIChatResponse;
+import com.careconnect.dto.AIChatConversationSummary;
+import com.careconnect.dto.AIChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
-import lombok.Builder;
 import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,7 +87,7 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Get or create conversation
-    private ChatConversation getOrCreateConversation(ChatRequest request, UserAIConfig aiConfig) {
+    private ChatConversation getOrCreateConversation(AIChatRequest request, UserAIConfig aiConfig) {
         if (request.getConversationId() != null) {
             Optional<ChatConversation> existing = chatConversationRepository.findByConversationIdAndIsActiveTrue(request.getConversationId());
             if (existing.isPresent()) {
@@ -191,7 +189,7 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Determine model
-    private String determineModel(ChatRequest request, UserAIConfig aiConfig) {
+    private String determineModel(AIChatRequest request, UserAIConfig aiConfig) {
         if (request.getPreferredModel() != null) {
             return request.getPreferredModel();
         }
@@ -214,7 +212,7 @@ public class DefaultAIChatService implements AIChatService {
 
     // Helper: Save and build response
     @Transactional
-    private ChatResponse saveAndBuildResponse(ChatProcessingResult result) {
+    private AIChatResponse saveAndBuildResponse(ChatProcessingResult result) {
         ChatProcessingContext context = result.context;
         Integer tokensUsed = result.tokensUsed != null ? result.tokensUsed : 0;
         ChatMessage userMessage = ChatMessage.builder()
@@ -241,7 +239,7 @@ public class DefaultAIChatService implements AIChatService {
         context.conversation.setAiProviderUsed(context.aiConfig.getPreferredAiProvider());
         context.conversation.setAiModelUsed(context.model);
         chatConversationRepository.save(context.conversation);
-        ChatResponse resp = new ChatResponse();
+        AIChatResponse resp = new AIChatResponse();
         resp.setConversationId(context.conversation.getConversationId());
         resp.setMessage(userMessage.getContent());
         resp.setAiResponse(result.aiResponse);
@@ -281,8 +279,8 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Build error response
-    private ChatResponse buildErrorResponse(ChatRequest request, String errorMessage) {
-        ChatResponse resp = new ChatResponse();
+    private AIChatResponse buildErrorResponse(AIChatRequest request, String errorMessage) {
+        AIChatResponse resp = new AIChatResponse();
         resp.setConversationId(request.getConversationId());
         resp.setMessage(request.getMessage());
         resp.setSuccess(false);
@@ -293,7 +291,7 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Get patient conversations
-    public List<ChatConversationSummary> getPatientConversations(Long patientId) {
+    public List<AIChatConversationSummary> getPatientConversations(Long patientId) {
         List<ChatConversation> conversations = chatConversationRepository
                 .findByPatientIdAndIsActiveTrueOrderByUpdatedAtDesc(patientId);
         return conversations.stream()
@@ -302,7 +300,7 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Get conversation messages
-    public List<ChatMessageSummary> getConversationMessages(String conversationId) {
+    public List<AIChatMessageSummary> getConversationMessages(String conversationId) {
         ChatConversation conversation = chatConversationRepository
                 .findByConversationIdAndIsActiveTrue(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
@@ -324,9 +322,9 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Convert to conversation summary
-    private ChatConversationSummary convertToConversationSummary(ChatConversation conversation) {
+    private AIChatConversationSummary convertToConversationSummary(ChatConversation conversation) {
         int messageCount = chatMessageRepository.countByConversation(conversation);
-        ChatConversationSummary summary = new ChatConversationSummary();
+        AIChatConversationSummary summary = new AIChatConversationSummary();
         summary.setConversationId(conversation.getConversationId());
         summary.setTitle(conversation.getTitle());
         summary.setChatType(conversation.getChatType());
@@ -341,8 +339,8 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     // Helper: Convert to message summary
-    private ChatMessageSummary convertToMessageSummary(ChatMessage message) {
-        ChatMessageSummary summary = new ChatMessageSummary();
+    private AIChatMessageSummary convertToMessageSummary(ChatMessage message) {
+        AIChatMessageSummary summary = new AIChatMessageSummary();
         summary.setMessageId(message.getId());
         summary.setMessageType(message.getMessageType());
         summary.setContent(message.getContent());
@@ -398,7 +396,7 @@ public class DefaultAIChatService implements AIChatService {
     }
 
     @Transactional
-    public ChatResponse processChat(ChatRequest request) {
+    public AIChatResponse processChat(AIChatRequest request) {
         // Always use LangChain4j chatModel for all chat requests
         if (request.getConversationId() != null && request.getConversationId().trim().isEmpty()) {
             request.setConversationId(null);
@@ -428,7 +426,7 @@ public class DefaultAIChatService implements AIChatService {
 
             // System prompt
             String systemPrompt = null;
-            if (request instanceof com.careconnect.dto.ChatRequest) {
+            if (request instanceof AIChatRequest) {
                 try {
                     java.lang.reflect.Method m = request.getClass().getMethod("getSystemPrompt");
                     Object val = m.invoke(request);
@@ -456,7 +454,7 @@ public class DefaultAIChatService implements AIChatService {
             // Build and return ChatResponse
             int totalMessages = chatMessageRepository.countByConversation(conversation);
             Integer totalTokens = chatMessageRepository.sumTokensUsedByConversation(conversation);
-            ChatResponse resp = new ChatResponse();
+            AIChatResponse resp = new AIChatResponse();
             resp.setConversationId(conversation.getConversationId());
             resp.setMessage(request.getMessage());
             resp.setAiResponse(aiResponse);
