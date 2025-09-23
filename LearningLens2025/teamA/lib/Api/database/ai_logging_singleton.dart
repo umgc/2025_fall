@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:js_interop';
 
 import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
@@ -33,9 +32,8 @@ class AILoggingSingleton {
     final url = Uri.parse("${LocalStorageService.getAILoggingUrl()}/?command=getLogs&courseId=$courseId&assignmentId=$assignmentIdParam&studentId=$studentIdParam&lmsType=$lmsType");
     final response = await http.get(url);
     final postResponse = response.body;
-    JSArray d = jsonDecode(postResponse);
-    List l = d.toDart;
-    for (Map m in l) {
+    final d = jsonDecode(postResponse);
+    for (Map m in d) {
       print(m["course_id"].runtimeType);
       Course c = LmsFactory.getLmsService().courses!.firstWhere((c) => c.id == int.parse(m["course_id"]));
       Assignment a = c.essays!.firstWhere((a) => a.id == int.parse(m["assignment_id"]));
