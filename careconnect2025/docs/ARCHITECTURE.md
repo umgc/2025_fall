@@ -1,0 +1,11 @@
+# CareConnect – Architecture (Team A, M3 W5–W6)
+- Frontend: **Flutter** app (iOS/Android/Web).
+- Backend: **Spring Boot** *(or)* **Node/Express** (depending on imported module).
+- DB: **Postgres** in dev (Docker).
+- Team A feature surface this milestone:
+  - Auth & RBAC (baseline security)
+  - Sensitive-data (PII) detection + mask/block
+  - Text→ASL prototype (+ fallback)
+  - Notetaker triggers → Calendar proposal (AI-derived tag)
+  - Calendar accepts manual + AI-derived entries
+- Docs here link to runnable demos for grading.
