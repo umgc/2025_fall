@@ -1,1 +1,0 @@
-{"original":"Email a@b.com, phone 202-555-0199, SSN 123-45-6789","sanitized":"Email [email], phone [phone], SSN [ssn]"}
