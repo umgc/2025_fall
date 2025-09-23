@@ -1,6 +1,6 @@
 HTTP/1.1 200 
 Content-Type: application/json
 Transfer-Encoding: chunked
-Date: Tue, 23 Sep 2025 16:46:14 GMT
+Date: Tue, 23 Sep 2025 16:47:34 GMT
 
-[]
+[{"id":"1","user":"patient","text":"doctor follow-up tomorrow","createdAt":"2025-09-23T16:46:15.044100413Z"}]
