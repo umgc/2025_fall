@@ -1,8 +1,9 @@
+import 'dart:async';
+
 class AslService {
-  /// Stub that simulates rendering. Replace with real pipeline later.
+  // MVP stub: emulate a "render" pipeline that returns a mock asset path
   static Future<String> render(String text) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    if (text.trim().isEmpty) return 'Nothing to render';
-    return 'asl://rendered/${text.trim().replaceAll(' ', '_').toLowerCase()}';
+    return "assets/asl/clips/placeholder.mp4"; // replace when real engine is wired
   }
 }
