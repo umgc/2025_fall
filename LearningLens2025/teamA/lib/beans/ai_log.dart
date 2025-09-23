@@ -16,11 +16,12 @@ class AiLog {
   final String response;
   final String reflection;
   final LlmType model;
+  final String uuid;
   LmsType lms = LocalStorageService.getSelectedClassroom();
   DateTime created = DateTime.timestamp();
 
   // Simple constructor. Feedback param is optional.
-  AiLog(this.course, this.assignment, this.student, this.prompt, this.response, this.model, [this.reflection = "", LmsType? lms, DateTime? created]) {
+  AiLog(this.course, this.assignment, this.student, this.prompt, this.response, this.model, [this.uuid = "", this.reflection = "", LmsType? lms, DateTime? created]) {
     if (lms != null) {
       this.lms = lms;
     }
@@ -42,6 +43,29 @@ class AiLog {
       'model' : model.index,
       'lms' : lms.index
     };
+  }
+
+  Comparable getValueForColumn(int column) {
+    switch (column) {
+      case 0:
+        return student.fullname;
+      case 1:
+        return assignment.name;
+      case 2:
+        return course.fullName;
+      case 3:
+        return prompt;
+      case 4:
+        return response;
+      case 5: 
+        return reflection;
+      case 6:
+        return model.displayName;
+      case 7:
+        return created;
+      default:
+        return "";
+    }
   }
 
   @override

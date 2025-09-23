@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
@@ -23,6 +24,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
   Assignment? selectedAssignment;
   List<Participant> participants = [];
   Participant? selectedStudent;
+  List<AiLog> logs = [];
+  AiLogSource logSource = AiLogSource();
+  int sortIndex = 0;
+  bool sortAsc = true;
 
   @override
   void initState() {
@@ -87,26 +92,37 @@ class _AiLogScreenState extends State<AiLogScreen> {
 void _queryDatabase() async {
   // For now just test adding data, get data
   if (selectedCourse != null) {
+    final String longText =
+    """
+    This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. 
+    """;
     if (selectedAssignment != null && selectedStudent != null) {
-      print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, selectedStudent!, "prompt", "response", LlmType.CHATGPT)));
+      print(await AILoggingSingleton().addLog(AiLog(selectedCourse!, selectedAssignment!, selectedStudent!, longText, longText, LlmType.CHATGPT)));
     }
-    print(await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, selectedStudent?.id, LocalStorageService.getSelectedClassroom().index));
+    List<AiLog> newLogs = [];
+    try {
+      newLogs = await AILoggingSingleton().getLogs(selectedCourse!.id, selectedAssignment?.id, selectedStudent?.id, LocalStorageService.getSelectedClassroom().index);
+
+    } catch(e) {
+      newLogs = [];
+    }
+
+    setState(() {
+      logs = newLogs;
+      sortIndex = 0;
+      sortAsc = true;
+      logSource.setData(logs, sortIndex, sortAsc);
+    });
   }
 }
 
-
-  String _convertTextToHtml(String text) {
-    return "<p>${text.replaceAll('\n\n', '</p><p>').replaceAll('\n', '<br>')}</p>";
-  }
-
-  String _stripHtmlTags(String htmlText) {
-    return htmlText
-        .replaceAll(RegExp(r'<p[^>]*>'), '\n\n')
-        .replaceAll(RegExp(r'</p>'), '')
-        .replaceAll(RegExp(r'<br\s*/?>'), '\n')
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .trim();
-  }
+void sort(int col, bool ascending) {
+  setState(() {
+    sortIndex = col;
+    sortAsc = ascending;
+    logSource.setData(logs, sortIndex, sortAsc);
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +220,22 @@ void _queryDatabase() async {
                       )
                   ],
                   ),
-                
+                SizedBox(height: 20),
+                PaginatedDataTable(
+                  sortColumnIndex: sortIndex,
+                  sortAscending: sortAsc,
+                  columns: [
+                    DataColumn(label: Text('Student'), onSort: sort),
+                    DataColumn(label: Text('Assignment'), onSort: sort),
+                    DataColumn(label: Text('Course'), onSort: sort),
+                    DataColumn(label: Text('Prompt'), onSort: sort),
+                    DataColumn(label: Text('Response'), onSort: sort),
+                    DataColumn(label: Text('Reflection'), onSort: sort),
+                    DataColumn(label: Text('Selected LLM'), onSort: sort),
+                    DataColumn(label: Text('Timestamp'), onSort: sort),
+                  ],
+                  source: logSource,
+                ),
               ],
             );
           },
@@ -212,4 +243,42 @@ void _queryDatabase() async {
       ),
     );
   }
+}
+
+class AiLogSource extends DataTableSource {
+  @override
+  int get rowCount => sortedData.length;
+  late List<AiLog> sortedData = [];
+  void setData(List<AiLog> data, int sortCol, bool sortAscending) {
+    sortedData = data.toList()..sort((AiLog a, AiLog b) {
+      final Comparable cellA = a.getValueForColumn(sortCol);
+      final Comparable cellB = b.getValueForColumn(sortCol);
+      return (sortAscending ? 1 : -1) * cellA.compareTo(cellB);
+    });
+    notifyListeners();
+  }
+
+  DataCell cellFor(int row, int column) {
+    return DataCell(Text(sortedData[row].getValueForColumn(column).toString(), maxLines: 10, softWrap: true, textAlign: TextAlign.left,));
+  }
+
+  @override
+  DataRow? getRow(int index) {
+    return DataRow(key: ObjectKey(sortedData[index].uuid), cells: <DataCell>[
+      cellFor(index, 0),
+cellFor(index, 1),
+cellFor(index, 2),
+cellFor(index, 3),
+cellFor(index, 4),
+cellFor(index, 5),
+cellFor(index, 6),
+cellFor(index, 7),
+    ]);
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get selectedRowCount => 0;
 }

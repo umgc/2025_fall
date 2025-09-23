@@ -40,7 +40,7 @@ class AILoggingSingleton {
       Course c = LmsFactory.getLmsService().courses!.firstWhere((c) => c.id == int.parse(m["course_id"]));
       Assignment a = c.essays!.firstWhere((a) => a.id == int.parse(m["assignment_id"]));
       Participant p = (await LmsFactory.getLmsService().getCourseParticipants(courseId.toString())).firstWhere((p) => p.id == int.parse(m["student_id"]));
-      list.add(AiLog(c, a, p, m["prompt"], m["response"], LlmType.values.elementAt(m["ai_model"]), m["reflection"], LmsType.values.elementAt(m["lms_service"]), DateTime.parse(m["time"])));
+      list.add(AiLog(c, a, p, m["prompt"], m["response"], LlmType.values.elementAt(m["ai_model"]), m["log_id"], m["reflection"], LmsType.values.elementAt(m["lms_service"]), DateTime.parse(m["time"])));
     }
     list.forEach(print);
     return list;
