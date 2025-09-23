@@ -118,6 +118,10 @@ dependencies:
     sdk: flutter
 
   web: ^1.1.0
+  #speech to text, voice recognition, and diarization
+  sherpa_onnx: ^1.12.14
+  #for recording audio samples for speaker recognition
+  record: ^6.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

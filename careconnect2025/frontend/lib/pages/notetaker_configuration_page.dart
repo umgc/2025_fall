@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:record/record.dart';
 
 class NotetakerConfigurationPage extends StatefulWidget {
   const NotetakerConfigurationPage({super.key});
@@ -125,51 +127,48 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
   }
 
   Future<void> _startListening() async {
-    bool available = await _speech.initialize();
-    if (available) {
-      setState(() => _isListening = true);
-      _speech.listen(
-        onResult: (result) {
-          setState(() {
-            _recognizedText = result.recognizedWords;
-          });
-        },
-      );
+    if(await recorder.hasPermission()) {
+      setState(() {
+        _isListening = true;
+        voiceSamplePath = null;
+      });
+      final File file = await File('../../assets/voice_samples/audio_sample.webm').create(recursive: true);
+      print(file.path);
+      await recorder.start(const RecordConfig(encoder: AudioEncoder.pcm16bits), path: file.path);
     }
   }
 
-  void _stopListening() {
-    _speech.stop();
-    setState(() => _isListening = false);
+  void _stopListening() async{
+    String? filePath = await recorder.stop();
+    if(filePath != null) {
+      setState(() {
+        _isListening = false;
+        voiceSamplePath = filePath;
+      });
+    }
   }
 
-  Future<void> _saveRecognizedText() async {
-    if (_recognizedText
-        .trim()
-        .isEmpty) {
-      return;
-    }
-
-    print(_recognizedText);
+  Future<void> _saveAudioSample() async {
+    //need to fill in
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Voice was saved')),
     );
   }
 
+  final AudioRecorder recorder = AudioRecorder();
+  String? voiceSamplePath;
   bool _isLoading = true;
   bool _isSaving = false;
-  String _recognizedText = '';
   bool _isListening = false;
-  late stt.SpeechToText _speech = stt.SpeechToText();
   List<String> _PIIList = ['Hello', 'World', 'Dart', 'Flutter'];
   late List<Widget> _PIIWidgetList = piiToCard(_PIIList);
   Map<String, String> keyword_Event = {
     'keyword1': 'event1',
     'keyword2': 'event2'
   };
-  
-  // Form controllers
+
+    // Form controllers
   final TextEditingController _keywordController = TextEditingController();
   final TextEditingController _PIIController = TextEditingController();
   String? _selectedDropdownValue;
@@ -462,10 +461,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
           child: Column(
             children: [
-              Text(
-                _recognizedText.isNotEmpty
-                    ? 'Recognized Text:\n$_recognizedText'
-                    : 'Tap the button below to start voice recognition and read the following message: \n' +
+              Text('Tap the button below to start voice recognition and read the following message: \n' +
                     'The dog fetches the ball',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 14),
@@ -484,9 +480,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
               ),
               const SizedBox(height: 8),
               ElevatedButton(
-                onPressed: _recognizedText.isNotEmpty
-                    ? _saveRecognizedText
-                    : null,
+                onPressed: _saveAudioSample,
                 child: const Text('Save Voice'),
               ),
             ],
