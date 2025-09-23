@@ -151,6 +151,26 @@ resource "aws_amplify_branch" "master" {
   stage = "PRODUCTION"
 }
 
+resource "aws_amplify_webhook" "deploy" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = aws_amplify_branch.master.branch_name
+  description = "deployapp"
+}
+
+data "http" "deploy" {
+  url = aws_amplify_webhook.deploy.url
+
+  method = "POST"
+
+  request_headers = {
+    Accept = "application/json"
+  }
+}
+
+output "response" {
+  value = data.http.deploy.response_body
+}
+
 data "aws_region" "current" {}
 
 resource "aws_ecr_repository" "edulense_program_grader_java" {
