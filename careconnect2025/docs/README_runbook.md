@@ -15,3 +15,6 @@ GET /notes[?q=term]
 POST /triggers/propose {text}
 POST /pii/sanitize {text}
 Notes are in-memory for demo.
+
+## Prereqs
+- Java 17 (OpenJDK 17). Verify with `java -version`. If not installed, install `openjdk-17-jdk` and set `JAVA_HOME`.
