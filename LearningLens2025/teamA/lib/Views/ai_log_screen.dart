@@ -131,13 +131,7 @@ void sort(int col, bool ascending) {
           title: 'View AI Log',
           onRefresh: _loadCourses, // Refresh courses when the app bar is refreshed
           userprofileurl: LmsFactory.getLmsService().profileImage ?? ''),
-      body: SingleChildScrollView(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            bool isNarrowScreen = constraints.maxWidth <= 805; // Breakpoint for narrow screens
-            bool isMediumScreen = constraints.maxWidth > 805 && constraints.maxWidth <= 1170; // Breakpoint for medium screens
-
-            return Column(
+      body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 10),
@@ -221,27 +215,31 @@ void sort(int col, bool ascending) {
                   ],
                   ),
                 SizedBox(height: 20),
-                PaginatedDataTable(
+                
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                child: Row(children: [Expanded(child: PaginatedDataTable(
                   sortColumnIndex: sortIndex,
                   sortAscending: sortAsc,
+                  dataRowMaxHeight: double.infinity,
                   columns: [
-                    DataColumn(label: Text('Student'), onSort: sort),
-                    DataColumn(label: Text('Assignment'), onSort: sort),
-                    DataColumn(label: Text('Course'), onSort: sort),
-                    DataColumn(label: Text('Prompt'), onSort: sort),
-                    DataColumn(label: Text('Response'), onSort: sort),
-                    DataColumn(label: Text('Reflection'), onSort: sort),
-                    DataColumn(label: Text('Selected LLM'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(150), label: Text('Student'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(150), label: Text('Assignment'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(150), label: Text('Course'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(225), label: Text('Prompt'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(225),label: Text('Response'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(225), label: Text('Reflection'), onSort: sort),
+                    DataColumn(columnWidth: FixedColumnWidth(150), label: Text('LLM'), onSort: sort),
                     DataColumn(label: Text('Timestamp'), onSort: sort),
                   ],
                   source: logSource,
-                ),
+                )),
+                ])),
+                )
               ],
-            );
-          },
-        ),
-      ),
-    );
+            )
+        );
   }
 }
 
@@ -259,7 +257,7 @@ class AiLogSource extends DataTableSource {
   }
 
   DataCell cellFor(int row, int column) {
-    return DataCell(Text(sortedData[row].getValueForColumn(column).toString(), maxLines: 10, softWrap: true, textAlign: TextAlign.left,));
+    return DataCell(Text(sortedData[row].getValueForColumn(column).toString(), softWrap: true, textAlign: TextAlign.start,));
   }
 
   @override
