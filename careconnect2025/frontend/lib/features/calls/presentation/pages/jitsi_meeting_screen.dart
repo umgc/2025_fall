@@ -1,6 +1,7 @@
 // jitsi_meeting_screen.dart
 import 'package:flutter/material.dart';
-import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
+// Temporarily disabled for faster builds
+// import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 
 class JitsiMeetingScreen extends StatefulWidget {
   final String roomName;
@@ -11,15 +12,19 @@ class JitsiMeetingScreen extends StatefulWidget {
 }
 
 class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> {
-  final JitsiMeet _jitsiMeet = JitsiMeet();
+  // Temporarily disabled for faster builds
+  // final JitsiMeet _jitsiMeet = JitsiMeet();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _joinMeeting());
+    // Temporarily disabled for faster builds
+    // WidgetsBinding.instance.addPostFrameCallback((_) => _joinMeeting());
   }
 
   Future<void> _joinMeeting() async {
+    // Temporarily disabled for faster builds
+    /*
     var options = JitsiMeetConferenceOptions(
       room: widget.roomName,
       serverURL: "https://meet.jit.si",
@@ -30,6 +35,7 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> {
     );
 
     await _jitsiMeet.join(options);
+    */
   }
 
   @override
@@ -40,7 +46,11 @@ class _JitsiMeetingScreenState extends State<JitsiMeetingScreen> {
         backgroundColor: Colors.blue.shade900,
       ),
       body: const Center(
-        child: CircularProgressIndicator(),
+        child: Text(
+          'Jitsi Meeting functionality temporarily disabled for faster builds',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 18),
+        ),
       ),
     );
   }

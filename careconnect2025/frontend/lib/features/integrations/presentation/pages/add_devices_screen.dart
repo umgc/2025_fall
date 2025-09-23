@@ -871,7 +871,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     ); // Return true to indicate a device was added
                   },
                   style: AppTheme.primaryButtonStyle.copyWith(
-                    padding: MaterialStateProperty.all(
+                    padding: WidgetStateProperty.all(
                       const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -917,7 +917,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         child: ElevatedButton(
           onPressed: _getButtonAction(),
           style: AppTheme.primaryButtonStyle.copyWith(
-            padding: MaterialStateProperty.all(
+            padding: WidgetStateProperty.all(
               const EdgeInsets.symmetric(vertical: 16),
             ),
           ),
@@ -1010,7 +1010,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             'Failed to get access token or userID - one or both are empty',
           );
         }
-      } else {;
+      } else {
         throw Exception('Authorization was cancelled or failed');
       }
     } catch (e) {

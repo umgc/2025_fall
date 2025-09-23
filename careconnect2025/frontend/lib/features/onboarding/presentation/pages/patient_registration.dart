@@ -551,7 +551,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedGender,
+            initialValue: _selectedGender,
             decoration: AppTheme.inputDecoration('Gender *').copyWith(
               prefixIcon: const Icon(Icons.person),
               errorText:

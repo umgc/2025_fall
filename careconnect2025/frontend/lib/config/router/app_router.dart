@@ -30,7 +30,6 @@ import '../../features/auth/presentation/pages/password_reset_page.dart';
 import '../../features/auth/presentation/pages/reset_password_screen.dart'; // ADD THIS IMPORT
 import '../../features/payments/models/package_model.dart';
 import '../../features/social/presentation/pages/main_feed_screen.dart';
-import '../../features/gamification/presentation/pages/caregiver_gamification_landingpage.dart';
 import '../../features/gamification/presentation/pages/gamification_screen.dart';
 import '../../features/payments/presentation/pages/stripe_checkout_page.dart';
 import '../../features/analytics/analytics_page.dart';

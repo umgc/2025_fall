@@ -8,7 +8,6 @@ import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/features/dashboard/models/patient_model.dart';
 import 'package:care_connect_app/features/analytics/models/dashboard_analytics_model.dart';
-import 'package:care_connect_app/widgets/responsive_container.dart';
 import 'package:care_connect_app/widgets/enhanced_patient_notes_widget.dart';
 import 'package:care_connect_app/widgets/patient_tasks_widget.dart';
 

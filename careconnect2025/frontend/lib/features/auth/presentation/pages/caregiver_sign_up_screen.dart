@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
-import 'package:care_connect_app/providers/user_provider.dart';
-import 'package:care_connect_app/services/api_service.dart';
 
 class CaregiverRegistrationData {
   static String? _email;
@@ -447,7 +444,7 @@ class _CaregiverSignUpScreenState extends State<CaregiverSignUpScreen> {
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<String>(
-                            value: _selectedGender,
+                            initialValue: _selectedGender,
                             decoration: AppTheme.inputDecoration(
                               'Gender',
                               hint: 'Select your gender',

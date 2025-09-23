@@ -150,7 +150,7 @@ class _PatientNotesWidgetState extends State<PatientNotesWidget> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Note Type',
                     border: OutlineInputBorder(),

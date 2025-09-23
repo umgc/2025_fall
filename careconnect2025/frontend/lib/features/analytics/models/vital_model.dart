@@ -22,7 +22,7 @@ class Vital {
   });
 
   factory Vital.fromJson(Map<String, dynamic> json) {
-    double _safeDouble(dynamic value, [double defaultValue = 0.0]) {
+    double safeDouble(dynamic value, [double defaultValue = 0.0]) {
       if (value == null) return defaultValue;
       if (value is num) return value.toDouble();
       if (value is String) {
@@ -32,7 +32,7 @@ class Vital {
       return defaultValue;
     }
 
-    int _safeInt(dynamic value, [int defaultValue = 0]) {
+    int safeInt(dynamic value, [int defaultValue = 0]) {
       if (value == null) return defaultValue;
       if (value is int) return value;
       if (value is num) return value.toInt();
@@ -43,7 +43,7 @@ class Vital {
       return defaultValue;
     }
 
-    DateTime _safeDate(dynamic value) {
+    DateTime safeDate(dynamic value) {
       if (value == null) return DateTime.now();
       if (value is DateTime) return value;
       if (value is String) {
@@ -57,15 +57,15 @@ class Vital {
     }
 
     return Vital(
-      patientId: _safeInt(json['patientId'] ?? json['id']),
-      timestamp: _safeDate(json['timestamp']),
-      heartRate: _safeDouble(json['heartRate'], 0.0),
-      spo2: _safeDouble(json['spo2'], 0.0),
-      systolic: _safeInt(json['systolic'], 0),
-      diastolic: _safeInt(json['diastolic'], 0),
-      weight: _safeDouble(json['weight'], 0.0),
-      moodValue: json['moodValue'] == null ? null : _safeInt(json['moodValue']),
-      painValue: json['painValue'] == null ? null : _safeInt(json['painValue']),
+      patientId: safeInt(json['patientId'] ?? json['id']),
+      timestamp: safeDate(json['timestamp']),
+      heartRate: safeDouble(json['heartRate'], 0.0),
+      spo2: safeDouble(json['spo2'], 0.0),
+      systolic: safeInt(json['systolic'], 0),
+      diastolic: safeInt(json['diastolic'], 0),
+      weight: safeDouble(json['weight'], 0.0),
+      moodValue: json['moodValue'] == null ? null : safeInt(json['moodValue']),
+      painValue: json['painValue'] == null ? null : safeInt(json['painValue']),
     );
   }
 }

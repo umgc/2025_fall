@@ -22,11 +22,35 @@ care_connect_app/
 
 Please install the following before starting:
 
-* [Flutter SDK](https://docs.flutter.dev/get-started/install)
-* [Java JDK 17+](https://adoptopenjdk.net/) (for Spring Boot)
-* [PostgreSQL](https://www.postgresql.org/download/)
-* Git
-* Code editor (e.g., VS Code, Android Studio, IntelliJ IDEA)
+### Required for All Platforms
+* [Flutter SDK](https://docs.flutter.dev/get-started/install) (version 3.8.1 or higher)
+* [Git](https://git-scm.com/downloads)
+* Code editor (VS Code with Flutter extension, Android Studio, or IntelliJ IDEA)
+
+### Platform-Specific Requirements
+
+#### For iOS Development (macOS only)
+* [Xcode](https://developer.apple.com/xcode/) (latest stable version)
+* iOS Simulator (included with Xcode)
+* Apple Developer Account (for device deployment)
+
+#### For Android Development
+* [Android Studio](https://developer.android.com/studio) or Android SDK
+* Android SDK (API level 21 or higher)
+* Android emulator or physical device
+
+#### For Web Development
+* [Chrome](https://www.google.com/chrome/) (for testing)
+* Web server (development server included with Flutter)
+
+#### For Desktop Development
+* **Windows**: Visual Studio Build Tools or Visual Studio Community
+* **macOS**: Xcode command line tools
+* **Linux**: Build essentials, GTK development libraries
+
+#### For Backend Integration
+* [Java JDK 17+](https://adoptium.net/temurin/releases/?version=17)
+* [MySQL 8.0+](https://dev.mysql.com/downloads/mysql/) (not PostgreSQL)
 
 ---
 
@@ -61,16 +85,67 @@ cd summer2025
     
 
 
-  2. ### Run the app
+  2. ### Platform Setup & Run
 
-
+      #### Quick Setup (All Platforms)
       ```bash
       cd careconnect2025/frontend     # Navigate into the frontend folder
       flutter pub get                 # Install Flutter dependencies
-      flutter run                     # Launch the app
+      flutter doctor                  # Check for issues
+      flutter devices                 # List available devices
+      flutter run                     # Launch the app (auto-selects device)
       ```
 
-      > Make sure your emulator or physical device is connected and running before launching the app.
+      #### Platform-Specific Commands
+
+      **Web Development:**
+      ```bash
+      flutter run -d chrome                    # Run in Chrome browser
+      flutter run -d chrome --web-port=3000   # Specify port
+      flutter build web                       # Build for production
+      ```
+
+      **Android Development:**
+      ```bash
+      flutter emulators                        # List available emulators
+      flutter emulators --launch <emulator>   # Start specific emulator
+      flutter run -d android                  # Run on Android device/emulator
+      flutter build apk                       # Build APK
+      flutter build appbundle                 # Build App Bundle for Play Store
+      ```
+
+      **iOS Development (macOS only):**
+      ```bash
+      open -a Simulator                       # Open iOS Simulator
+      flutter run -d ios                      # Run on iOS simulator/device
+      flutter build ios                       # Build for iOS
+      ```
+
+      **Desktop Development:**
+      ```bash
+      # Enable desktop support (one-time setup)
+      flutter config --enable-windows-desktop  # Windows
+      flutter config --enable-macos-desktop    # macOS
+      flutter config --enable-linux-desktop    # Linux
+
+      # Run on desktop
+      flutter run -d windows                  # Windows
+      flutter run -d macos                    # macOS
+      flutter run -d linux                    # Linux
+
+      # Build desktop apps
+      flutter build windows                   # Windows executable
+      flutter build macos                     # macOS app bundle
+      flutter build linux                     # Linux executable
+      ```
+
+      **Development Tips:**
+      ```bash
+      flutter run --hot                       # Enable hot reload
+      flutter run --debug                     # Debug mode
+      flutter run --profile                   # Profile mode
+      flutter run --release                   # Release mode
+      ```
 
 
   ---

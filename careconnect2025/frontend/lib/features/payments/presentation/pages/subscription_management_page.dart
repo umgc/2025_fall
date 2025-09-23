@@ -10,7 +10,7 @@ import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import '../../models/subscription_model.dart';
 import '../../models/package_model.dart';
-import '../pages/stripe_checkout_page.dart';
+// import '../pages/stripe_checkout_page.dart';
 
 class SubscriptionManagementPage extends StatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -534,13 +534,14 @@ class _SubscriptionManagementPageState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => StripeCheckoutPage(
-          package: package,
-          userId: userId,
-          stripeCustomerId: customerId,
-          fromPortal:
-              true, // Indicate this is coming from subscription management page
-        ),
+        builder: (_) => Text("place holder"),
+        // builder: (_) => StripeCheckoutPage(
+        //   package: package,
+        //   userId: userId,
+        //   stripeCustomerId: customerId,
+        //   fromPortal:
+        //       true, // Indicate this is coming from subscription management page
+        // ),
       ),
     ).then((_) {
       // Refresh data when returning from checkout

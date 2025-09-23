@@ -35,7 +35,7 @@ class _MainFeedScreenState extends State<MainFeedScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.userId == 0 || widget.userId == null) {
+    if (widget.userId == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid user ID. Please re-login.')),
