@@ -72,18 +72,30 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    final navItem = _navItems[index];
 
-    if (_config.enablePageAnimation) {
-      _pageController.animateToPage(
-        index,
-        duration: _config.animationDuration,
-        curve: _config.animationCurve,
-      );
-    } else {
-      _pageController.jumpToPage(index);
+    // Check if onPress callback exists and call it
+    if (navItem.onPress != null) {
+      navItem.onPress!(context, (context) => Container());
+      // Don't change screen if only onPress is present
+      return;
+    }
+
+    // Only change screen if there's an actual screen to navigate to
+    if (navItem.screen != null) {
+      setState(() {
+        _selectedIndex = index;
+      });
+
+      if (_config.enablePageAnimation) {
+        _pageController.animateToPage(
+          index,
+          duration: _config.animationDuration,
+          curve: _config.animationCurve,
+        );
+      } else {
+        _pageController.jumpToPage(index);
+      }
     }
   }
 
@@ -120,6 +132,8 @@ class _MainScreenState extends State<MainScreen> {
             onPageChanged: _onPageChanged,
             itemCount: _navItems.length,
             itemBuilder: (context, index) {
+              final navItem = _navItems[index];
+
               return _navItems[index].screen;
             },
           ),
@@ -134,7 +148,7 @@ class _MainScreenState extends State<MainScreen> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),

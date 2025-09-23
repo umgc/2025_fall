@@ -1,3 +1,4 @@
+import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 
 class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -37,7 +38,7 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
       flexibleSpace: Container(
         height: preferredSize.height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(25),
             bottomRight: Radius.circular(25),
@@ -103,26 +104,16 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             height: 40,
                             child: IconButton(
                               padding: EdgeInsets.zero,
-                              onPressed: () {
-                                print("Settings tapped");
+                              onPressed:() {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SettingsPage(),
+                                  ),
+                                );
                               },
                               icon: Icon(
                                 Icons.settings_outlined,
-                                color: Colors.grey.shade600,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              onPressed: () {
-                                print("Logout tapped");
-                              },
-                              icon: Icon(
-                                Icons.logout,
                                 color: Colors.grey.shade600,
                                 size: 22,
                               ),

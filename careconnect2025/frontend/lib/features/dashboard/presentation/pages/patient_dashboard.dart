@@ -103,33 +103,35 @@ class _PatientDashboardState extends State<PatientDashboard> {
         return;
       }
 
+      // TODO - this needs to be updated to fetch patient data with updated
+      //        backend logic
       // Fetch patient details
-      final authHeaders = await ApiService.getAuthHeaders();
-      final patientRes = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}patients/$id'),
-        headers: authHeaders,
-      );
-
-      if (patientRes.statusCode == 200) {
-        patient = json.decode(patientRes.body);
-      } else {
-        throw Exception('Failed to load patient details');
-      }
-
-      // Fetch caregivers
-      final caregiversRes = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}patients/$id/caregivers'),
-        headers: authHeaders,
-      );
-
-      if (caregiversRes.statusCode == 200) {
-        caregivers = List<Map<String, dynamic>>.from(
-          json.decode(caregiversRes.body),
-        );
-      }
-
-      // Load family members
-      await _loadFamilyMembers();
+      // final authHeaders = await ApiService.getAuthHeaders();
+      // final patientRes = await http.get(
+      //   Uri.parse('${ApiConstants.baseUrl}patients/$id'),
+      //   headers: authHeaders,
+      // );
+      //
+      // if (patientRes.statusCode == 200) {
+      //   patient = json.decode(patientRes.body);
+      // } else {
+      //   throw Exception('Failed to load patient details');
+      // }
+      //
+      // // Fetch caregivers
+      // final caregiversRes = await http.get(
+      //   Uri.parse('${ApiConstants.baseUrl}patients/$id/caregivers'),
+      //   headers: authHeaders,
+      // );
+      //
+      // if (caregiversRes.statusCode == 200) {
+      //   caregivers = List<Map<String, dynamic>>.from(
+      //     json.decode(caregiversRes.body),
+      //   );
+      // }
+      //
+      // // Load family members
+      // await _loadFamilyMembers();
 
       // Check for alerts
       _checkForAlerts();
@@ -416,17 +418,17 @@ class _PatientDashboardState extends State<PatientDashboard> {
     final isTablet = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: DashboardAppHeader(userName: "John"), 
       floatingActionButton: FloatingActionButton(
-        backgroundColor: theme.colorScheme.primary,
+        backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
         onPressed: () {
           final double sheetHeight = MediaQuery.of(context).size.height * 0.75;
           showModalBottomSheet(
             isScrollControlled: true,
             context: context,
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
@@ -624,11 +626,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Theme.of(context).shadowColor.withOpacity(0.1),
                         spreadRadius: 1,
                         blurRadius: 5,
                         offset: const Offset(0, 2),
@@ -753,25 +755,29 @@ class _PatientDashboardState extends State<PatientDashboard> {
     required String label,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final primaryColorLight = theme.primaryColorLight;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.blue.shade50,
+          color: primaryColorLight.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.blue.shade200),
+          border: Border.all(color: primaryColor.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: Colors.blue.shade700),
+            Icon(icon, size: 20, color: primaryColor),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: Colors.blue.shade700,
+                color: primaryColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -827,8 +833,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade900,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: const Text('Send'),
             ),

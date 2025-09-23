@@ -354,7 +354,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: borderColorDarkTheme),
+          borderSide: const BorderSide(color: borderColorDarkTheme)
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
