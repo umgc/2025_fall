@@ -27,3 +27,7 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Ignore local backup folders
+careconnect2025/backend_backup_*/
+careconnect2025/frontend_backup_*/
