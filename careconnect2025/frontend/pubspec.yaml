@@ -118,6 +118,10 @@ dependencies:
     sdk: flutter
 
   web: ^1.1.0
+
+  #The following is needed as the calendar for the Calendar Assisstant feature
+  table_calendar: ^3.2.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
