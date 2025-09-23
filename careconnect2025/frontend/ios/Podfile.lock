@@ -62,7 +62,7 @@ PODS:
   - GoogleMaps (9.4.0):
     - GoogleMaps/Maps (= 9.4.0)
   - GoogleMaps/Maps (9.4.0)
-  - health (13.1.4):
+  - health (13.2.0):
     - Flutter
   - image_picker_ios (0.0.1):
     - Flutter
@@ -186,7 +186,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   app_links: 3dbc685f76b1693c66a6d9dd1e9ab6f73d97dc0a
-  camera_avfoundation: be3be85408cd4126f250386828e9b1dfa40ab436
+  camera_avfoundation: 5675ca25298b6f81fa0a325188e7df62cc217741
   CwlCatchException: 7acc161b299a6de7f0a46a6ed741eae2c8b4d75a
   CwlCatchExceptionSupport: 54ccab8d8c78907b57f99717fb19d4cc3bce02dc
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
@@ -201,7 +201,7 @@ SPEC CHECKSUMS:
   Google-Maps-iOS-Utils: 0a484b05ed21d88c9f9ebbacb007956edd508a96
   google_maps_flutter_ios: 0291eb2aa252298a769b04d075e4a9d747ff7264
   GoogleMaps: 0608099d4870cac8754bdba9b6953db543432438
-  health: 32d2fbc7f26f9a2388d1a514ce168adbfa5bda65
+  health: b9d24db6428057ea8aa69518bfccec584fdfbe1e
   image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
   ios-voice-processor: 6b5ca08962f39e434fe39dca0f483d923a3b1b97
   mobile_scanner: 9157936403f5a0644ca3779a38ff8404c5434a93
