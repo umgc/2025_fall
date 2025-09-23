@@ -6,7 +6,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 0.0.1+1
 
 environment:
-  sdk: ^3.1.1
+  sdk: ^3.3.0
 
 dependencies:
   flutter:
@@ -33,6 +33,11 @@ dependencies:
   excel: ^2.0.0
   printing: ^5.10.1
   web: ^1.1.1
+  code_uml: ^1.0.2
+  dhttpd: ^4.1.0
+  postgres: ^3.5.6
+  fl_chart: ^1.1.0
+  js: ^0.7.2
 
 dependency_overrides:
   flutter_secure_storage_web: ^2.0.0

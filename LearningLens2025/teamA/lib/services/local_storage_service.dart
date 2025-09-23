@@ -1,7 +1,8 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
+import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// This class manages local storage operations using SharedPreferences and dotenv.
 /// TODO:
@@ -71,7 +72,7 @@ class LocalStorageService {
     _prefs.remove('isLoggedIntoMoodle');
   }
 
-    /// Saves login state.
+  /// Saves login state.
   static void saveGoogleLoginState(bool isLoggedIn) {
     _prefs.setBool('isLoggedIntoGoogle', isLoggedIn);
   }
@@ -91,9 +92,27 @@ class LocalStorageService {
     _prefs.setString('moodleUrl', moodleUrl);
   }
 
+  /// Saves current user role
+  static void saveUserRole(UserRole role) {
+    _prefs.setString('role', role.toString());
+  }
+
+  /// Gets current user role.
+  static UserRole getUserRole() {
+    if (_prefs.getString('role') == 'UserRole.teacher') {
+      return UserRole.teacher;
+    }
+
+    return UserRole.student;
+  }
+
   /// Retrieves Moodle URL from storage or dotenv.
   static String getMoodleUrl() {
-    return _prefs.getString('moodleUrl') ?? dotenv.env['MOODLE_URL'] ?? '';
+    String url = _prefs.getString('moodleUrl') ?? dotenv.env['MOODLE_URL'] ?? '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
   }
 
   /// Clears Moodle URL.
@@ -152,7 +171,9 @@ class LocalStorageService {
 
   /// Retrieves Perplexity API key from storage or dotenv.
   static String getPerplexityKey() {
-    return _prefs.getString('perplexityKey') ?? dotenv.env['perplexity_apikey'] ?? '';
+    return _prefs.getString('perplexityKey') ??
+        dotenv.env['perplexity_apikey'] ??
+        '';
   }
 
   static bool hasPerplexityKey() {
@@ -184,7 +205,9 @@ class LocalStorageService {
   }
 
   static String getGoogleClientId() {
-    return _prefs.getString('GOOGLE_CLIENT_ID') ?? dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
+    return _prefs.getString('GOOGLE_CLIENT_ID') ??
+        dotenv.env['GOOGLE_CLIENT_ID'] ??
+        '';
   }
 
   static void saveGoogleClientId(String clientId) {
@@ -205,7 +228,8 @@ class LocalStorageService {
 
   static clearGoogleAccessToken() {
     _prefs.remove('GOOGLE_ACCESS_TOKEN');
-  }  
+  }
+
   // Save LmsType as an INTEGER
   static void saveSelectedClassroom(LmsType type) {
     _prefs.setInt('selectedClassroom', type.index);
@@ -222,30 +246,53 @@ class LocalStorageService {
     _prefs.remove('selectedClassroom');
   }
 
+  static saveAILoggingUrl(String url) {
+    _prefs.setString('AI_LOGGING_URL', url);
+  }
+
+  static String getAILoggingUrl() {
+    String url = _prefs.getString('AI_LOGGING_URL') ?? dotenv.env['AI_LOGGING_URL'] ?? '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
+  static void clearAILoggingUrl() {
+    _prefs.remove('AI_LOGGING_URL');
+  }  
+
   static hasLLMKey() {
-    return getOpenAIKey().isNotEmpty || getGrokKey().isNotEmpty || getPerplexityKey().isNotEmpty;
+    return getOpenAIKey().isNotEmpty ||
+        getGrokKey().isNotEmpty ||
+        getPerplexityKey().isNotEmpty;
   }
 
   static bool userHasLlmKey(LlmType llm) {
     if (llm == LlmType.CHATGPT) {
-        return LocalStorageService.hasOpenAIKey();
-      } else if (llm == LlmType.GROK) {
-        return LocalStorageService.hasGrokKey();
-      } else if (llm == LlmType.PERPLEXITY) {
-        return LocalStorageService.hasPerplexityKey();
-      } 
-    
+      return LocalStorageService.hasOpenAIKey();
+    } else if (llm == LlmType.GROK) {
+      return LocalStorageService.hasGrokKey();
+    } else if (llm == LlmType.PERPLEXITY) {
+      return LocalStorageService.hasPerplexityKey();
+    }
+
     return false;
   }
 
   static bool canUserAccessApp() {
-    bool isLoggedIntoGoogleClassroom = LocalStorageService.isLoggedIntoGoogle() && LocalStorageService.hasLLMKey();
-    bool isLoggedIntoMoodle = LocalStorageService.isLoggedIntoMoodle() && LocalStorageService.hasLLMKey();
+    bool isLoggedIntoGoogleClassroom =
+        LocalStorageService.isLoggedIntoGoogle() &&
+            LocalStorageService.hasLLMKey();
+    bool isLoggedIntoMoodle = LocalStorageService.isLoggedIntoMoodle() &&
+        LocalStorageService.hasLLMKey();
     return isMoodle() ? isLoggedIntoMoodle : isLoggedIntoGoogleClassroom;
   }
 
   static String getClassroom() {
-    return LocalStorageService.getSelectedClassroom() == LmsType.MOODLE ? 'Moodle' : 'Google';
+    return LocalStorageService.getSelectedClassroom() == LmsType.MOODLE
+        ? 'Moodle'
+        : 'Google';
   }
 
   static bool isMoodle() {

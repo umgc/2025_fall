@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/experimental/assistant/textbased_function_caller_view.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/Views/ai_log_screen.dart';
 import 'package:learninglens_app/Views/dashboard.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/Views/chat_screen.dart';
@@ -30,6 +32,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
   @override
   Widget build(BuildContext context) {
     final bool canAccessApp = canUserAccessApp(context);
+    final bool isTeacher = canAccessApp && LocalStorageService.getUserRole() == UserRole.teacher;
 
     return AppBar(
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -38,7 +41,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
         textAlign: TextAlign.center,
       ),
       centerTitle: true,
-      leadingWidth: 120,
+      leadingWidth: 200,
       leading: Row(
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -76,6 +79,20 @@ class _CustomAppBarState extends State<CustomAppBar> {
               },
             ),
           ),
+            Flexible(
+            child: Visibility(visible: isTeacher, maintainSize: true, maintainAnimation: true, maintainState: true, child: IconButton(
+              icon: Icon(Icons.fact_check),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AiLogScreen()
+                  )
+                );
+              },
+            ),
+          ),
+        ),
         ],
       ),
       actions: <Widget>[
