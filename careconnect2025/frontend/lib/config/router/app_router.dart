@@ -1,3 +1,5 @@
+import 'package:care_connect_app/features/integrations/presentation/pages/add_alexa_device.dart';
+
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
@@ -556,6 +558,10 @@ final GoRouter appRouter = GoRouter(
         final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
       },
+    ),
+    GoRoute(
+      path: '/addAlexa',
+      builder: (_, __) => const AddAlexaDeviceScreen(),
     ),
   ],
 );

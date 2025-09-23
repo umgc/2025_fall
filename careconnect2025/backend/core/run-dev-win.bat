@@ -139,8 +139,24 @@ echo ----------------------------------------
 echo 🌟 Starting Spring Boot application...
 set SPRING_PROFILES_ACTIVE=dev
 
+@REM The following lines are used to build a temporary forward-facing url
+@REM for Alexa skill to call. Should be replaced when we have a constant domain avaliable
+echo Setting Port
+set "APP_PORT=8080"
+echo Calling ngrok script
+call scripts\start_ngrok.bat %APP_PORT%
+if exist ".public_url" (
+  set /p NGURL=<".public_url"
+  echo ✅ Public URL: %NGURL%
+)
+
 REM Use Maven wrapper for Windows
 call mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
 
+
+REM when the app stops, kill ngrok
+call scripts\stop_ngrok.bat
 echo 🛑 Application stopped.
 pause
+
+
