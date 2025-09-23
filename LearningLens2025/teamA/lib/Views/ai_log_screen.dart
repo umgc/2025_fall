@@ -25,15 +25,18 @@ class _AiLogScreenState extends State<AiLogScreen> {
   List<Participant> participants = [];
   Participant? selectedStudent;
   List<AiLog> logs = [];
-  AiLogSource logSource = AiLogSource();
+  late _AiLogSource logSource;
   int sortIndex = 0;
   bool sortAsc = true;
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
 
+  int? selected = null;
+
   @override
   void initState() {
     super.initState();
+    logSource = _AiLogSource(this);
     _loadCourses(); // Load courses when the widget initializes
   }
 
@@ -136,6 +139,12 @@ void sort(int col, bool ascending) {
   });
 }
 
+void selectionChanged(int? index) {
+  setState(() {
+    selected = index;
+    logSource.setSelected(selected);
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -232,6 +241,7 @@ void sort(int col, bool ascending) {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.vertical,
                 child: Row(children: [Expanded(child: PaginatedDataTable(
+                  showCheckboxColumn: false,
                   sortColumnIndex: sortIndex,
                   sortAscending: sortAsc,
                   dataRowMaxHeight: double.infinity,
@@ -256,10 +266,15 @@ void sort(int col, bool ascending) {
   }
 }
 
-class AiLogSource extends DataTableSource {
+class _AiLogSource extends DataTableSource {
   @override
   int get rowCount => sortedData.length;
+  _AiLogScreenState parentState;
   late List<AiLog> sortedData = [];
+  _AiLogSource(this.parentState);
+  void setSelected(int? selected) {
+    notifyListeners();
+  }
   void setData(List<AiLog> data, int sortCol, bool sortAscending) {
     sortedData = data.toList()..sort((AiLog a, AiLog b) {
       final Comparable cellA = a.getValueForColumn(sortCol);
@@ -270,14 +285,16 @@ class AiLogSource extends DataTableSource {
   }
 
   DataCell cellFor(int row, int column) {
-    return DataCell(Text(sortedData[row].getValueForColumn(column).toString(), softWrap: true, textAlign: TextAlign.start,));
+    return DataCell(Text(sortedData[row].getValueForColumn(column).toString(), softWrap: true, textAlign: TextAlign.start, maxLines: row == parentState.selected ? null : 3, overflow: row == parentState.selected ? null : TextOverflow.ellipsis,));
   }
 
   @override
   DataRow? getRow(int index) {
-    return DataRow(key: ObjectKey(sortedData[index].uuid), cells: <DataCell>[
+    return DataRow(onSelectChanged: (value) => {
+      parentState.selectionChanged(index)
+    }, selected: index == parentState.selected, key: ObjectKey(sortedData[index].uuid), cells: <DataCell>[
       cellFor(index, 0),
-cellFor(index, 1),
+cellFor(index, 1,),
 cellFor(index, 2),
 cellFor(index, 3),
 cellFor(index, 4),
@@ -291,5 +308,8 @@ cellFor(index, 7),
   bool get isRowCountApproximate => false;
 
   @override
-  int get selectedRowCount => 0;
+  int get selectedRowCount {
+    return parentState.selected != null ? 1 : 0;
+  }
+
 }
