@@ -50,8 +50,8 @@ echo Database has been reset successfully!
 echo You can now run your Spring Boot application with the dev profile:
 echo   mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
 echo.
-echo JPA will auto-create schema when application starts:
-echo   mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
+echo Or run Flyway migrations manually:
+echo   mvnw.cmd flyway:migrate -Dspring.profiles.active=dev
 echo.
 echo PgAdmin is available at: http://localhost:5050
 echo   Email: pgadmin4@pgadmin.org

@@ -1,12 +1,12 @@
 @echo off
 REM ================================
-REM CareConnect Database Migration Script (JPA)
+REM CareConnect Flyway Migration Script
 REM ================================
 
 setlocal enabledelayedexpansion
 
-echo CareConnect Database Migration (JPA-based)...
-echo =============================================
+echo Running CareConnect Flyway Migrations...
+echo =======================================
 
 REM Get the directory where this script is located
 set "SCRIPT_DIR=%~dp0"
@@ -42,13 +42,13 @@ goto wait_loop
 :postgres_ready
 echo PostgreSQL is ready!
 
-REM JPA will handle schema creation automatically
-echo JPA will handle database schema creation automatically when the application starts.
-echo No manual migrations needed - schema is managed by JPA/Hibernate.
+REM Run Flyway migrations
+echo Running Flyway migrations...
+mvnw.cmd flyway:migrate -Dflyway.url=jdbc:postgresql://localhost:5432/careconnect -Dflyway.user=postgres -Dflyway.password=changeme -Dflyway.locations=filesystem:src/main/resources/db/migration
 
 echo.
-echo Database is ready for JPA schema creation!
-echo Start your Spring Boot application to auto-create the schema:
+echo Migrations completed successfully!
+echo You can now run your Spring Boot application:
 echo   mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
 
 endlocal
