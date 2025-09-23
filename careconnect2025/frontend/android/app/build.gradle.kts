@@ -1,0 +1,77 @@
+plugins {
+    id("com.android.application")
+    id("kotlin-android")
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+android {
+    namespace = "com.example.care_connect_app"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
+    defaultConfig {
+        applicationId = "com.example.care_connect_app"
+        minSdk = 26
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    packagingOptions {
+        // Only keep WebRTC native library conflicts (these work)
+        pickFirst("**/libjingle_peerconnection_so.so")
+        pickFirst("**/libc++_shared.so")
+        pickFirst("**/libwebrtc.so")
+
+        // Standard metadata exclusions
+        exclude("META-INF/DEPENDENCIES")
+        exclude("META-INF/LICENSE")
+        exclude("META-INF/LICENSE.txt")
+        exclude("META-INF/NOTICE")
+        exclude("META-INF/NOTICE.txt")
+    }
+}
+
+// ===============================
+// MINIMAL RESOLUTION - FIREBASE BOM + WEBRTC ONLY
+// ===============================
+configurations.all {
+    resolutionStrategy {
+        // Only force WebRTC - let packages handle React Native naturally
+        force("org.jitsi:webrtc:124.0.0")
+    }
+
+    // Only exclude firebase-iid from ML Kit
+    exclude(group = "com.google.firebase", module = "firebase-iid")
+}
+
+dependencies {
+    // Firebase BOM - manages all Firebase Android SDK versions
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+
+    // Firebase dependencies - versions managed by BOM
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-common")
+}
+
+flutter {
+    source = "../.."
+}

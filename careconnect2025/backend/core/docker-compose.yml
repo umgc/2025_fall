@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    command: --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} 
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  flyway:
+    image: flyway/flyway:11
+    depends_on:
+      - db
+    env_file:
+      - .env
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql:ro
+    command: -connectRetries=60 -outOfOrder=true -validateOnMigrate=false migrate
+
+  backend:
+    build: .
+    image: careconnect-backend:local
+    depends_on:
+      - db
+      - flyway
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      JDBC_URI: ${JDBC_URI}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_SENDER_ID: ${FIREBASE_SENDER_ID}
+      FLYWAY_URL: ${FLYWAY_URL}
+      FLYWAY_USER: ${FLYWAY_USER}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD}
+      STRIPE_API_KEY:
+      STRIPE_SECRET_KEY:
+      STRIPE_WEBHOOK_SIGNING_SECRET:
+      SENDGRID_API_KEY: key-placeholder
+      OPENAI_API_KEY: key-placeholder
+      GOOGLE_CLIENT_ID: client-id-placeholder
+      GOOGLE_CLIENT_SECRET: client-secret-placeholder
+    volumes:
+      - ./firebase-service-account.json:/app/src/main/resources/firebase-service-account.json:ro
+    restart: unless-stopped
+
+  frontend: 
+    build: ../../frontend
+    image: careconnect-frontend:local
+    ports: 
+      - "3000:3000"
+    env_file: 
+      - .env
+    environment:
+      CC_BASE_URL_WEB: http://localhost:8080
+      CC_BASE_URL_ANDROID: http://10.0.2.2:8080
+      CC_BASE_URL_OTHER: http://localhost:8080
+      OPENAI_API_KEY: key-placeholder
+      DEEPSEEK_API_KEY: key-placeholder
+      deepSeek_url: https://api.deepseek.com/v1/chat/completions
+      JWT_SECRET: ${SECURITY_JWT_SECRET}
+      CC_BACKEND_TOKEN: your_backend_token_here
+      restart: unless-stopped
+
+volumes:
+  db_data: {}
