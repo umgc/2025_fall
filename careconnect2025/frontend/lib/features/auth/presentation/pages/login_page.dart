@@ -6,8 +6,6 @@ import '../../../../widgets/role_mismatch_dialog.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
-import '../../../../utils/responsive_utils.dart';
 
 class LoginPage extends StatefulWidget {
   final String? userType;
@@ -22,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _pwd = TextEditingController();
   bool _busy = false;
-  bool _googleSignInBusy = false;
+  final bool _googleSignInBusy = false;
   String? _error;
   bool _showPassword = false;
 

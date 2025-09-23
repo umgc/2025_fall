@@ -5,10 +5,7 @@ import 'package:care_connect_app/widgets/recent_checkin_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:care_connect_app/widgets/common_drawer.dart';
-import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
@@ -17,10 +14,8 @@ import '../../../../widgets/ai_chat_improved.dart';
 import '../../../../widgets/current_mood_widget.dart';
 import '../../../../widgets/offline_notification_widget.dart';
 import '../../../../widgets/primary_care_provider_widget.dart';
-import '../../../../widgets/responsive_container.dart';
 import 'package:care_connect_app/services/communication_service.dart';
 import 'package:care_connect_app/services/call_notification_service.dart';
-import '../../../../widgets/call_notification_status_indicator.dart';
 import '../../../../utils/call_integration_helper.dart';
 
 // Import new components
@@ -515,7 +510,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                     dismissedAlertIds.add(alert.hashCode.toString());
                                   });
                                 },
-                              )).toList(),
+                              )),
 
                               // Current Mood
                               CurrentMoodWidget(
@@ -583,7 +578,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                         dismissedAlertIds.add(alert.hashCode.toString());
                       });
                     },
-                  )).toList(),
+                  )),
 
                   // Current Mood Widget
                   CurrentMoodWidget(

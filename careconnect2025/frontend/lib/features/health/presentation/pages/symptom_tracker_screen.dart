@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 
 class SymptomTrackerScreen extends StatefulWidget {
   const SymptomTrackerScreen({super.key});

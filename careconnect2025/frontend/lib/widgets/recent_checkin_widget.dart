@@ -88,7 +88,7 @@ class RecentCheckInsWidget extends StatelessWidget {
                 ),
               ],
             ),
-          )).toList(),
+          )),
         ],
       ),
     );

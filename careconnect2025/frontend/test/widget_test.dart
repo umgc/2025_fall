@@ -14,7 +14,6 @@ import 'package:care_connect_app/providers/user_provider.dart';
 // Feature imports
 import 'package:care_connect_app/features/welcome/presentation/pages/welcome_page.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/login_page.dart';
-import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/password_reset_page.dart';
 import 'package:care_connect_app/features/dashboard/presentation/pages/caregiver_dashboard.dart';
 import 'package:care_connect_app/features/dashboard/presentation/pages/patient_dashboard.dart';
