@@ -1,11 +1,13 @@
 package com.careconnect.model;
 
-import com.careconnect.util.TriggerKeywordsConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 
 @Entity
@@ -28,13 +30,12 @@ public class PatientNotetakerConfig {
     @Column(name = "permit_caregiver_access", nullable = false)
     private Boolean permitCaregiverAccess;
     
-    @Convert(converter = TriggerKeywordsConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "trigger_keywords", nullable = true, columnDefinition = "jsonb")
     private List<PatientNotetakerKeyword> triggerKeywords;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
 }
 
 

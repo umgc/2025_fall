@@ -2,7 +2,6 @@ package com.careconnect.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import jakarta.persistence.Embeddable;
 import lombok.*;
 
 
@@ -11,7 +10,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Embeddable
 public class PatientNotetakerKeyword {
     
     @JsonProperty("keyword")
@@ -22,10 +20,7 @@ public class PatientNotetakerKeyword {
    
     public enum EventType {
         ALERT,
-        REMINDER,
-        APPOINTMENT,
-        MEDICATION,
-        OTHER
+        TASK
     }
 }
 
