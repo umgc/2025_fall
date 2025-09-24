@@ -1,26 +1,24 @@
 # CareConnect Mock API Server
 
-A Node.js mock server that simulates the CareConnect backend APIs for frontend development and testing.
+A Dart-based mock server that simulates the CareConnect backend APIs for frontend development and testing.
 
 ## Quick Start
 
 1. **Install dependencies:**
    ```bash
    cd mock-server
-   npm install
+   dart pub get
    ```
 
 2. **Start the server:**
    ```bash
-   npm start
-   # or for development with auto-reload:
-   npm run dev
+   dart run server.dart
    ```
 
 3. **Update your Flutter app:**
    - Update your `.env` file to point to the mock server:
    ```
-   BACKEND_BASE_URL=http://localhost:8080
+   BACKEND_BASE_URL=http://localhost:9090
    ```
 
 ## Demo Credentials
