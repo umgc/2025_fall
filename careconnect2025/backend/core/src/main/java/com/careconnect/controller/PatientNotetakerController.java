@@ -1,6 +1,5 @@
 package com.careconnect.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Patient Notetaker", description = "Endpoints for managing data for Medical Notetaker")
 @RequiredArgsConstructor
 public class PatientNotetakerController {
-    
     private final PatientNotetakerService patientNotetakerService;
 
     @GetMapping("/{patientId}/config")
@@ -60,6 +58,7 @@ public class PatientNotetakerController {
             updatedConfig = patientNotetakerService.createOrUpdatePatientNotetakerConfig(patientId, configDTO);
         }
         catch (AppException ex) {
+            ex.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
         return ResponseEntity.ok(updatedConfig);
