@@ -34,8 +34,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   Participant? selectedStudent;
   List<AiLog> logs = [];
   late _AiLogSource logSource;
-  int sortIndex = 0;
-  bool sortAsc = true;
+  int sortIndex = 7;
+  bool sortAsc = false;
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
 
@@ -123,8 +123,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
         logs = [];
         message = 'Loading logs...';
         isError = false;
-        sortIndex = 0;
-        sortAsc = true;
+        sortIndex = 7;
+        sortAsc = false;
         logSource.setData(logs, sortIndex, sortAsc);
       });
       try {
