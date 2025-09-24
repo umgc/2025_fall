@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'package:record/record.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:http/http.dart' as http;
 
 class NotetakerConfigurationPage extends StatefulWidget {
   const NotetakerConfigurationPage({super.key});
@@ -18,23 +21,52 @@ class NotetakerConfigurationPage extends StatefulWidget {
 class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage> {
   Widget _buildConfigForm() {
     final theme = Theme.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildInfoCard(theme),
-          const SizedBox(height: 24),
-          _buildToggleSection(theme),
-          const SizedBox(height: 24),
-          _buildPIISection(theme),
-          const SizedBox(height: 24),
-          _buildKeywordSection(theme),
-          const SizedBox(height: 24),
-          _buildVoiceSampleSection(theme)
-        ],
-      ),
-    );
+    List<Widget> childWidgets = [];
+    final successText = 'Configure your Notetaker assistant to recognize PII, trigger words, etc and upload voice samples for speaker recognition.';
+    final failureText = 'Configuration options cannot be displayed because either you have no patients or their was an error fetching them.';
+    if(_isPatient) {
+      childWidgets = [
+        _buildInfoCard(theme, successText),
+        const SizedBox(height: 24),
+        _buildToggleSection(theme),
+        const SizedBox(height: 24),
+        _buildPIISection(theme),
+        const SizedBox(height: 24),
+        _buildKeywordSection(theme),
+        const SizedBox(height: 24),
+        _buildVoiceSampleSection(theme)
+      ];
+    } else if(_patientList.isEmpty) {
+      childWidgets = [
+        _buildInfoCard(theme, failureText),
+      ];
+    } else if(_selectedPatientId == null) {
+      childWidgets = [
+        _buildInfoCard(theme, failureText),
+        const SizedBox(height: 24),
+        _buildPatientSection(theme),
+      ];
+    } else {
+      childWidgets = [
+        _buildInfoCard(theme, successText),
+        const SizedBox(height: 24),
+        _buildPatientSection(theme),
+        const SizedBox(height: 24),
+        _buildPIISection(theme),
+        const SizedBox(height: 24),
+        _buildKeywordSection(theme),
+        const SizedBox(height: 24),
+        _buildVoiceSampleSection(theme)
+      ];
+    }
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: childWidgets
+        ),
+      );
   }
 
   @override
@@ -186,9 +218,12 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
   PatientNotetakerConfigDTO? _currentConfig;
   bool _isLoading = true;
   bool _isSaving = false;
-
+  UserSession? _user;
   final AudioRecorder recorder = AudioRecorder();
+  List<Map<String, String>> _patientList = [];
+  String? _selectedPatientId;
   String? voiceSamplePath;
+  bool _isPatient = false;
   bool _isListening = false;
   bool _isEnabled = true;
   bool _permitCaregiverAccess = false;
@@ -207,9 +242,9 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     _loadConfiguration();
   }
 
-  Future<void> _loadConfiguration() async {
+  Future<void> _fetchConfig(int patientId) async {
     try {
-      final config = await NotetakerConfigService.getUserNotetakerConfig(context);
+      final config = await NotetakerConfigService.getUserNotetakerConfig(patientId, context);
       if (config != null) {
         setState(() {
           _currentConfig = config;
@@ -217,9 +252,11 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           _permitCaregiverAccess = config.permitCaregiverAccess;
           _PIIList = config.triggerKeywords.where((trigger)=> trigger.keyword.contains("PII_"))
               .map((trigger)=> trigger.keyword.replaceAll("PII_", "")).toList();
+          keyword_Event = {};
           config.triggerKeywords.where((trigger)=> !trigger.keyword.contains("PII_")).forEach((trigger)=>
-              keyword_Event[trigger.keyword] = trigger.event_type
+          keyword_Event[trigger.keyword] = trigger.event_type
           );
+          _PIIWidgetList = piiToCard(_PIIList);
         });
       }
     } catch (e) {
@@ -238,27 +275,62 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     }
   }
 
-  Future<void> _saveConfiguration() async {
-    setState(() => _isSaving = true);
-
+  Future<void> _loadConfiguration() async {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final user = userProvider.user;
-      if (user == null) throw Exception('User not found');
+      setState(() {
+        _user = userProvider.user;
+        if (_user == null) throw Exception('User not found');
+        final userRole = _user!.role;
+        _isPatient = userRole.toUpperCase() == 'PATIENT';
+      });
+      if(!_isPatient && _user!.caregiverId != null) {
+        http.Response patientResponse = await ApiService.getCaregiverPatients(_user!.caregiverId!);
+        setState(() {
+          _patientList = (jsonDecode(patientResponse.body) as List<dynamic>).map((patientWLink)=> {
+            'id': patientWLink['patient']['id'].toString(),
+            'name': '${patientWLink['patient']['firstName']} ${patientWLink['patient']['lastName']}'
+          }).toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load user profile: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+
+    if(_isPatient) {
+      _fetchConfig(_user!.patientId!);
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveConfiguration() async {
+    setState(() => _isSaving = true);
+    try {
+      if (_user == null) throw Exception('User not found');
       List<PatientNotetakerKeyword> keywordList = [];
       _PIIList.forEach((pii)=>keywordList.add(PatientNotetakerKeyword(keyword:'PII_$pii', event_type: 'ALERT')));
       keyword_Event.forEach((keyword,event)=>keywordList.add(PatientNotetakerKeyword(keyword:keyword, event_type: event)));
       final config = PatientNotetakerConfigDTO(
         id: _currentConfig?.id,
-        patientId: user.id, // keep for compatibility, not used in logic
+        patientId: _isPatient ? _user!.patientId! : int.parse(_selectedPatientId ?? '-1'),
         isEnabled: _isEnabled,
         permitCaregiverAccess: _permitCaregiverAccess,
         triggerKeywords: keywordList,
       );
-      // Use AIConfigService to update config
+      // Use NotetakerConfigService to update config
       final savedConfig = await NotetakerConfigService.saveUserNotetakerConfig(
         config,
-        userId: user.id,
+        userId: _user!.id,
       );
 
       if (savedConfig != null) {
@@ -290,7 +362,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     }
   }
 
-  Widget _buildInfoCard(ThemeData theme) {
+  Widget _buildInfoCard(ThemeData theme, String text) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -304,7 +376,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Configure your Notetaker assistant to recognize PII, trigger words, etc and upload voice samples for speaker recognition.',
+              text,
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withOpacity(0.8),
                 fontSize: 14,
@@ -314,6 +386,37 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPatientSection(ThemeData theme) {
+    return _buildSection(
+        theme,
+        'Select patient',
+        Icons.person, // Changed from Icons.psychology for better compatibility
+        [
+          DropdownButtonFormField<String>(
+            value: _selectedPatientId,
+            decoration: InputDecoration(labelText: 'Select an option'),
+            items: _patientList
+                .map((patient) => DropdownMenuItem(
+              value: patient['id'],
+              child: Text(patient['name']!),
+            )).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedPatientId = value!;
+              });
+              _fetchConfig(int.parse(_selectedPatientId!));
+            },
+            validator: (value) {
+              if (value == null) {
+                return 'Please select an option';
+              }
+              return null;
+            },
+          ),
+        ]
     );
   }
 
@@ -525,28 +628,37 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
           child: Column(
             children: [
-              Text('Tap the button below to start voice recognition and read the following message: \n' +
-                    'The dog fetches the ball',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14),
+              Icon(Icons.construction, color: theme.colorScheme.primary, size: 48),
+              const SizedBox(width: 12),
+              Text(
+                'Under Construction',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  if (_isListening) {
-                    _stopListening();
-                  } else {
-                    _startListening();
-                  }
-                },
-                child: Text(
-                    _isListening ? 'Stop Listening' : 'Start Listening'),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _saveAudioSample,
-                child: const Text('Save Voice'),
-              ),
+              // Text('Tap the button below to start voice recognition and read the following message: \n' +
+              //       'The dog fetches the ball',
+              //   textAlign: TextAlign.center,
+              //   style: const TextStyle(fontSize: 14),
+              // ),
+              // const SizedBox(height: 16),
+              // ElevatedButton(
+              //   onPressed: () {
+              //     if (_isListening) {
+              //       _stopListening();
+              //     } else {
+              //       _startListening();
+              //     }
+              //   },
+              //   child: Text(
+              //       _isListening ? 'Stop Listening' : 'Start Listening'),
+              // ),
+              // const SizedBox(height: 8),
+              // ElevatedButton(
+              //   onPressed: _saveAudioSample,
+              //   child: const Text('Save Voice'),
+              // ),
             ],
           ),
         ),

@@ -108,7 +108,7 @@ class NotetakerConfigService {
       };
 
       final response = await http.put(
-        Uri.parse('$baseUrl/${userId.toString()}/config'),
+        Uri.parse('$baseUrl/${config.patientId}/config'),
         headers: authHeaders,
         body: jsonEncode(requestBody),
       );
@@ -127,27 +127,21 @@ class NotetakerConfigService {
 
   /// Get Notetaker configuration for the logged-in user
   /// Usage: NotetakerConfigService.getUserAIConfig(context)
-  static Future<PatientNotetakerConfigDTO?> getUserNotetakerConfig(context) async {
+  static Future<PatientNotetakerConfigDTO?> getUserNotetakerConfig(int patientId, context) async {
     try {
       final authHeaders = await ApiService.getAuthHeaders();
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final userId = userProvider.user?.id;
-      if (userId == null) {
-        print('❌ No logged-in user found for notetaker config fetch.');
-        return null;
-      }
       final uri = Uri.parse(
-        '$baseUrl/${userId.toString()}/config',
+        '$baseUrl/${patientId.toString()}/config',
       );
-      print('❌ Getting Notetaker config for userId $userId from: $uri');
+      print('❌ Getting Notetaker config for patientId $patientId from: $uri');
       final response = await http.get(uri, headers: authHeaders);
       print('❌ Notetaker config response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return PatientNotetakerConfigDTO.fromJson(data);
       } else if (response.statusCode == 404) {
-        print('❌ No Notetaker config found for userId $userId, using default');
-        return _getDefaultConfig(userId);
+        print('❌ No Notetaker config found for patientId $patientId, using default');
+        return _getDefaultConfig(patientId);
       } else {
         print('❌ Failed to get Notetaker config: ${response.statusCode}');
         return null;

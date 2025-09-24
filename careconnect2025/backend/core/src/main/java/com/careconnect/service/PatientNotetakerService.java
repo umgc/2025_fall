@@ -45,13 +45,13 @@ public class PatientNotetakerService {
     }
 
     public PatientNotetakerConfigDTO getNotetakerConfigByPatientId(Long patientId) {
-        // validatePatientId(patientId);
+        validatePatientId(patientId);
         return new PatientNotetakerConfigDTO(patientNotetakerConfigRepository.findByPatientId(patientId));
     }
 
     @Transactional
     public PatientNotetakerConfigDTO createOrUpdatePatientNotetakerConfig(Long patientId, PatientNotetakerConfigDTO configDTO) {
-        // validatePatientId(patientId);
+        validatePatientId(patientId);
         if(configDTO == null) {
             throw new IllegalArgumentException("Configuration data is required.");
         }
