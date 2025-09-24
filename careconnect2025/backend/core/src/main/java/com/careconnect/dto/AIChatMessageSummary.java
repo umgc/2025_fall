@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatMessageSummary {
+public class AIChatMessageSummary {
     
     private Long messageId;
     private ChatMessage.MessageType messageType;

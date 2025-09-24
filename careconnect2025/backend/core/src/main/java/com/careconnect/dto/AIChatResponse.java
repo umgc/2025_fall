@@ -9,7 +9,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChatResponse {
+public class AIChatResponse {
     
     private String conversationId;
     private String message;
