@@ -1,4 +1,4 @@
-Weekly Narrative Report – Team #
+Weekly Narrative Report – Team A
 
 Week of
 
