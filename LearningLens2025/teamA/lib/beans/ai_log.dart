@@ -48,4 +48,50 @@ class AiLog {
   String toString() {
     return toJson().toString();
   }
+
+    Comparable getValueForColumn(int column) {
+    switch (column) {
+      case 0:
+        return student.fullname;
+      case 1:
+        return assignment.name;
+      case 2:
+        return course.fullName;
+      case 3:
+        return prompt;
+      case 4:
+        return response;
+      case 5:
+        return reflection;
+      case 6:
+        return model.displayName;
+      case 7:
+        return created;
+      default:
+        return "";
+    }
+  }
+
+    static String getHeaderForColumn(int column) {
+    switch (column) {
+      case 0:
+        return "Student";
+      case 1:
+        return "Assignment";
+      case 2:
+        return "Course";
+      case 3:
+        return "Prompt";
+      case 4:
+        return "Response";
+      case 5:
+        return "Reflection";
+      case 6:
+        return "AI Model";
+      case 7:
+        return "Created";
+      default:
+        return "";
+    }
+  }
 }
