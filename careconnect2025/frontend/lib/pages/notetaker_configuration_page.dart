@@ -42,7 +42,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       ];
     } else if(_selectedPatientId == null) {
       childWidgets = [
-        _buildInfoCard(theme, failureText),
+        _buildInfoCard(theme, successText),
         const SizedBox(height: 24),
         _buildPatientSection(theme),
       ];
