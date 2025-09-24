@@ -1,7 +1,7 @@
+import 'package:care_connect_app/features/dashboard/patient_dashboard/pages/patient_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
-import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/profile/presentation/pages/profile_settings_page.dart';
 import '../../features/social/presentation/pages/chat_inbox_screen.dart';
 

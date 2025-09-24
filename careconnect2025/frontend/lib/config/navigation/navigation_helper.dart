@@ -65,27 +65,31 @@ class NavigationHelper {
   static Future<MainScreenConfig?> getMainScreenConfig() async {
     final userData = await UserRoleStorageService.instance.getUserData();
 
-    if (userData == null || !userData.isLoggedIn) {
+    if (userData == null || !userData.isLoggedIn || userData.userId <= 0) {
       return null;
     }
 
     switch (userData.role.toUpperCase()) {
       case 'PATIENT':
         return MainScreenConfig.forPatient(
-          patientId: userData.patientId ?? userData.userId,
+          userId: userData.userId,
+          patientId: userData.patientId,
         );
       case 'CAREGIVER':
         return MainScreenConfig.forCaregiver(
-          caregiverId: userData.caregiverId ?? userData.userId,
+          userId: userData.userId,
+          caregiverId: userData.caregiverId,
           patientId: userData.patientId,
         );
       case 'FAMILY_LINK':
         return MainScreenConfig.forFamilyMember(
-          patientId: userData.patientId ?? userData.userId,
+          userId: userData.userId,
+          patientId: userData.patientId,
         );
       case 'ADMIN':
         return MainScreenConfig(
           userRole: 'ADMIN',
+          userId: userData.userId,
           showAppBar: true,
           appBarTitle: 'Admin Dashboard',
           primaryColor: Colors.red,

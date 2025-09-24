@@ -1,6 +1,7 @@
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 
+/// Dashboard App header
 class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String userName;
   final String? timezone;

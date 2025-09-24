@@ -1,6 +1,6 @@
-// widgets/current_mood_widget.dart
 import 'package:flutter/material.dart';
 
+/// Current Mood Widget
 class CurrentMoodWidget extends StatelessWidget {
   final int moodScore;
   final String moodLabel;
@@ -15,6 +15,7 @@ class CurrentMoodWidget extends StatelessWidget {
     this.date,
   });
 
+  /// Gets the mood emoji based on the mood score
   String _getMoodEmoji(int score) {
     if (score >= 8) return '😊';
     if (score >= 6) return '🙂';

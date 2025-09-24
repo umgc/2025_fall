@@ -1,6 +1,7 @@
 // Comprehensive Flutter widget tests for CareConnect app
 // This test suite covers all major components under lib/
 
+import 'package:care_connect_app/features/dashboard/patient_dashboard/pages/patient_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +17,6 @@ import 'package:care_connect_app/features/welcome/presentation/pages/welcome_pag
 import 'package:care_connect_app/features/auth/presentation/pages/login_page.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/password_reset_page.dart';
 import 'package:care_connect_app/features/dashboard/presentation/pages/caregiver_dashboard.dart';
-import 'package:care_connect_app/features/dashboard/presentation/pages/patient_dashboard.dart';
 import 'package:care_connect_app/features/dashboard/presentation/pages/patient_status_page.dart';
 import 'package:care_connect_app/features/analytics/analytics_page.dart';
 import 'package:care_connect_app/features/payments/presentation/pages/select_package_page.dart';

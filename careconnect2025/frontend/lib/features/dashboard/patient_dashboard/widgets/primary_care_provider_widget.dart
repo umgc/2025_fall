@@ -1,6 +1,6 @@
-// widgets/primary_care_provider_widget.dart
 import 'package:flutter/material.dart';
 
+/// Primary Care Provider Widget
 class PrimaryCareProviderWidget extends StatelessWidget {
   final String providerName;
   final String specialty;
@@ -170,12 +170,14 @@ class PrimaryCareProviderWidget extends StatelessWidget {
     );
   }
 
+  /// Formats the appointment date into a more readable format
   String _formatAppointmentDate(DateTime date) {
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
+  /// Formats the appointment time into a more readable format
   String _formatAppointmentTime(DateTime time) {
     final hour = time.hour > 12 ? time.hour - 12 : time.hour;
     final amPm = time.hour >= 12 ? 'PM' : 'AM';

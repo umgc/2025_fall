@@ -1,6 +1,6 @@
-// widgets/recent_checkins_widget.dart
 import 'package:flutter/material.dart';
 
+/// CheckIn Model
 class CheckIn {
   final DateTime date;
   final String status;
@@ -13,6 +13,7 @@ class CheckIn {
   });
 }
 
+/// Recent CheckIns Widget
 class RecentCheckInsWidget extends StatelessWidget {
   final List<CheckIn> checkIns;
 
@@ -94,6 +95,7 @@ class RecentCheckInsWidget extends StatelessWidget {
     );
   }
 
+  /// Formats the date into a more readable format
   String _formatDate(DateTime date) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

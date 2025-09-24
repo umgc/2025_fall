@@ -14,10 +14,20 @@ class NavigationMigrationHelper {
     int? tabIndex,
   }) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final id = patientId ?? userProvider.user?.patientId ?? userProvider.user?.id ?? 1;
+    final user = userProvider.user;
+
+    if (user == null || user.id <= 0) {
+      // Redirect to login if no valid user
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
+    final userId = user.id;
+    final pId = patientId ?? user.patientId;
 
     final config = MainScreenConfig.forPatient(
-      patientId: id,
+      userId: userId,
+      patientId: pId,
     );
 
     context.navigateToMainScreenWithConfig(config, tabIndex: tabIndex);
@@ -31,9 +41,19 @@ class NavigationMigrationHelper {
     int? tabIndex,
   }) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final cId = caregiverId ?? userProvider.user?.caregiverId ?? userProvider.user?.id ?? 1;
+    final user = userProvider.user;
+
+    if (user == null || user.id <= 0) {
+      // Redirect to login if no valid user
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
+    final userId = user.id;
+    final cId = caregiverId ?? user.caregiverId;
 
     final config = MainScreenConfig.forCaregiver(
+      userId: userId,
       caregiverId: cId,
       patientId: patientId,
     );
@@ -101,12 +121,11 @@ class NavigationMigrationHelper {
 
     if (tabIndex != null) {
       context.navigateToMainScreen(
-        role: role,
         tabIndex: tabIndex,
       );
     } else {
       // Fallback to home tab
-      context.navigateToMainScreen(role: role, tabIndex: 0);
+      context.navigateToMainScreen(tabIndex: 0);
     }
   }
 
@@ -164,7 +183,7 @@ class NavigationMigrationHelper {
     }
 
     // Default navigation based on role
-    context.navigateToMainScreen(role: userRole);
+    context.navigateToMainScreen();
   }
 
   /// Helper to check if a route should be migrated

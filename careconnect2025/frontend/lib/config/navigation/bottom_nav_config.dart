@@ -3,8 +3,19 @@ import 'package:care_connect_app/features/health/presentation/pages/symptom_trac
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
-import '../../screens/placeholder_screens.dart';
 
+/// This is the individual bottom nav bar buttons
+/// @param label - The label of the button
+/// @param icon - The icon of the button
+/// @param activeIcon - The active icon of the button
+/// @param routeName - The route name of the button
+/// @param screen - The optional screen of the button (which is rendered when clicked on
+/// the button)
+/// @param onPress - The optional function to be called when the button is
+/// pressed.
+/// @param requiresPatientId - Whether the button requires a patient ID to be
+/// set
+///
 class BottomNavItem {
   final String label;
   final IconData icon;
@@ -28,7 +39,14 @@ class BottomNavItem {
        );
 }
 
+/// The bottom nav bar config for each role. To add a new role create a method
+/// and build a list of BottomNavItem objects.
 class BottomNavConfig {
+
+  /// Get Patient Bottom Nav bar items:
+  /// Home, Symptoms, Health, Symptoms, Messages, More
+  /// The More will open up a bottom drawer modal which will show additional
+  /// features
   static List<BottomNavItem> getPatientNavItems() {
     return [
       BottomNavItem(
@@ -37,6 +55,13 @@ class BottomNavConfig {
         activeIcon: Icons.home,
         routeName: 'home',
         screen: const PatientHomeTab(),
+      ),
+      BottomNavItem(
+        label: 'Symptoms',
+        icon: Icons.medical_information_outlined,
+        activeIcon: Icons.medical_information,
+        routeName: 'symptoms',
+        screen: const SymptomTrackerScreen(),
       ),
       BottomNavItem(
         label: 'Health',
@@ -84,32 +109,6 @@ class BottomNavConfig {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SymptomTrackerScreen(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const <Widget>[
-                              ListTile(
-                                leading: Icon(Icons.healing, color: Colors.blue),
-                                title: Text('Symptom Tracker'),
-                                subtitle: Text(
-                                  'Track and Manage Symptoms',
-                                ),
-                                trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Card(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
                                 builder: (context) => const SosScreen(),
                               ),
                             );
@@ -145,6 +144,8 @@ class BottomNavConfig {
     ];
   }
 
+  /// Build Caregiver Bottom Nav bar items:
+  /// Home, Tasks, Analytics, Messages, Profile
   static List<BottomNavItem> getCaregiverNavItems() {
     return [
       BottomNavItem(
@@ -185,6 +186,8 @@ class BottomNavConfig {
     ];
   }
 
+  /// Get nav items for a given role
+  /// @param role - The role of the user
   static List<BottomNavItem> getNavItemsForRole(String role) {
     switch (role.toUpperCase()) {
       case 'PATIENT':

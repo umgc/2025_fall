@@ -89,7 +89,7 @@ final GoRouter appRouter = GoRouter(
             }
 
             final userData = snapshot.data;
-            if (userData == null || !userData.isLoggedIn) {
+            if (userData == null || !userData.isLoggedIn || userData.userId <= 0) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 context.go('/login');
               });
@@ -113,23 +113,27 @@ final GoRouter appRouter = GoRouter(
             switch (userData.role.toUpperCase()) {
               case 'PATIENT':
                 config = MainScreenConfig.forPatient(
-                  patientId: userData.patientId ?? userData.userId,
+                  userId: userData.userId,
+                  patientId: userData.patientId,
                 );
                 break;
               case 'CAREGIVER':
                 config = MainScreenConfig.forCaregiver(
-                  caregiverId: userData.caregiverId ?? userData.userId,
+                  userId: userData.userId,
+                  caregiverId: userData.caregiverId,
                   patientId: userData.patientId,
                 );
                 break;
               case 'FAMILY_LINK':
                 config = MainScreenConfig.forFamilyMember(
-                  patientId: userData.patientId ?? userData.userId,
+                  userId: userData.userId,
+                  patientId: userData.patientId,
                 );
                 break;
               case 'ADMIN':
                 config = MainScreenConfig(
                   userRole: 'ADMIN',
+                  userId: userData.userId,
                   showAppBar: true,
                   appBarTitle: 'Admin Dashboard',
                   primaryColor: Colors.red,
@@ -161,9 +165,29 @@ final GoRouter appRouter = GoRouter(
         final userIdStr = state.uri.queryParameters['userId'];
         final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
 
+        // Check if userId is valid
+        if (userId == null || userId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid user ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         // Redirect to new MainScreen with patient configuration
         final config = MainScreenConfig.forPatient(
-          patientId: userId ?? 1,
+          userId: userId,
+          patientId: userId,
         );
 
         return MainScreen(config: config);
@@ -179,14 +203,34 @@ final GoRouter appRouter = GoRouter(
 
         final caregiverId = caregiverIdStr != null
             ? int.tryParse(caregiverIdStr)
-            : 1;
+            : null;
         final patientId = patientIdStr != null
             ? int.tryParse(patientIdStr)
             : null;
 
+        // Check if caregiverId is valid
+        if (caregiverId == null || caregiverId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid caregiver ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         // Redirect to new MainScreen with caregiver configuration
         final config = MainScreenConfig.forCaregiver(
-          caregiverId: caregiverId ?? 1,
+          userId: caregiverId,
+          caregiverId: caregiverId,
           patientId: patientId,
         );
 

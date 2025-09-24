@@ -3,6 +3,7 @@ import 'bottom_nav_config.dart';
 
 class MainScreenConfig {
   final String userRole;
+  final int userId;
   final int? patientId;
   final int? caregiverId;
   final List<BottomNavItem>? customNavItems;
@@ -17,6 +18,7 @@ class MainScreenConfig {
 
   const MainScreenConfig({
     required this.userRole,
+    required this.userId,
     this.patientId,
     this.caregiverId,
     this.customNavItems,
@@ -36,6 +38,7 @@ class MainScreenConfig {
 
   MainScreenConfig copyWith({
     String? userRole,
+    int? userId,
     int? patientId,
     int? caregiverId,
     List<BottomNavItem>? customNavItems,
@@ -50,6 +53,7 @@ class MainScreenConfig {
   }) {
     return MainScreenConfig(
       userRole: userRole ?? this.userRole,
+      userId: userId ?? this.userId,
       patientId: patientId ?? this.patientId,
       caregiverId: caregiverId ?? this.caregiverId,
       customNavItems: customNavItems ?? this.customNavItems,
@@ -65,12 +69,14 @@ class MainScreenConfig {
   }
 
   static MainScreenConfig forPatient({
-    required int patientId,
+    required int userId,
+    int? patientId,
     List<BottomNavItem>? customNavItems,
     Color? primaryColor,
   }) {
     return MainScreenConfig(
       userRole: 'PATIENT',
+      userId: userId,
       patientId: patientId,
       customNavItems: customNavItems,
       primaryColor: primaryColor,
@@ -78,13 +84,15 @@ class MainScreenConfig {
   }
 
   static MainScreenConfig forCaregiver({
-    required int caregiverId,
+    required int userId,
+    int? caregiverId,
     int? patientId,
     List<BottomNavItem>? customNavItems,
     Color? primaryColor,
   }) {
     return MainScreenConfig(
       userRole: 'CAREGIVER',
+      userId: userId,
       caregiverId: caregiverId,
       patientId: patientId,
       customNavItems: customNavItems,
@@ -93,12 +101,14 @@ class MainScreenConfig {
   }
 
   static MainScreenConfig forFamilyMember({
-    required int patientId,
+    required int userId,
+    int? patientId,
     List<BottomNavItem>? customNavItems,
     Color? primaryColor,
   }) {
     return MainScreenConfig(
       userRole: 'FAMILY_LINK',
+      userId: userId,
       patientId: patientId,
       customNavItems: customNavItems,
       primaryColor: primaryColor,

@@ -1,22 +1,24 @@
-import 'package:care_connect_app/widgets/alter_notification_widget.dart';
-import 'package:care_connect_app/widgets/dashboard_appheader_widget.dart';
-import 'package:care_connect_app/widgets/medication_reminder_widget.dart';
-import 'package:care_connect_app/widgets/recent_checkin_widget.dart';
+import 'dart:convert';
+
+import 'package:care_connect_app/config/theme/app_theme.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/alter_notification_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/current_mood_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/dashboard_appheader_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/medication_reminder_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/offline_notification_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/primary_care_provider_widget.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:care_connect_app/services/call_notification_service.dart';
+import 'package:care_connect_app/services/communication_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
-import 'package:care_connect_app/config/theme/app_theme.dart';
-import 'package:care_connect_app/providers/user_provider.dart';
-import 'package:care_connect_app/services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../widgets/ai_chat_improved.dart';
-import '../../../../widgets/current_mood_widget.dart';
-import '../../../../widgets/offline_notification_widget.dart';
-import '../../../../widgets/primary_care_provider_widget.dart';
-import 'package:care_connect_app/services/communication_service.dart';
-import 'package:care_connect_app/services/call_notification_service.dart';
-import '../../../../utils/call_integration_helper.dart';
+
+import '../../../../../utils/call_integration_helper.dart';
+import '../../../../../widgets/ai_chat_improved.dart';
 
 // Import new components
 

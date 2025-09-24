@@ -1,8 +1,9 @@
-// widgets/notifications/alert_notification.dart
 import 'package:flutter/material.dart';
 
+/// Alert Notification enum
 enum AlertType { important, reminder, success, info }
 
+/// Alert Notification Widget
 class AlertNotification extends StatelessWidget {
   final AlertType type;
   final String message;
@@ -15,6 +16,7 @@ class AlertNotification extends StatelessWidget {
     this.onDismiss,
   });
 
+  /// Gets the background color based on the alert type
   Color _getBackgroundColor() {
     switch (type) {
       case AlertType.important:
@@ -28,6 +30,7 @@ class AlertNotification extends StatelessWidget {
     }
   }
 
+  /// Gets the border color based on the alert type
   Color _getBorderColor() {
     switch (type) {
       case AlertType.important:
@@ -41,6 +44,7 @@ class AlertNotification extends StatelessWidget {
     }
   }
 
+  /// Gets the title based on the alert type
   String _getTitle() {
     switch (type) {
       case AlertType.important:
@@ -54,6 +58,7 @@ class AlertNotification extends StatelessWidget {
     }
   }
 
+  /// Gets the text color based on the alert type
   Color _getTextColor() {
     switch (type) {
       case AlertType.important:

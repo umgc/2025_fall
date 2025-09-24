@@ -1,6 +1,6 @@
-// widgets/notifications/offline_notification.dart
 import 'package:flutter/material.dart';
 
+/// Offline Notification Widget
 class OfflineNotification extends StatelessWidget {
   final DateTime? lastSynced;
 
@@ -9,6 +9,7 @@ class OfflineNotification extends StatelessWidget {
     this.lastSynced,
   });
 
+  /// Formats the time since the last sync
   String _getTimeSinceSync() {
     if (lastSynced == null) return 'Never synced';
 

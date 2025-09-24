@@ -1,6 +1,6 @@
-// widgets/medication_reminders_widget.dart
 import 'package:flutter/material.dart';
 
+/// Medication Reminder Model
 class MedicationReminder {
   final String medicationName;
   final DateTime scheduledTime;
@@ -13,6 +13,7 @@ class MedicationReminder {
   });
 }
 
+/// Medication Reminders Widget
 class MedicationRemindersWidget extends StatelessWidget {
   final MedicationReminder reminder;
   final VoidCallback? onMarkTaken;
@@ -136,6 +137,7 @@ class MedicationRemindersWidget extends StatelessWidget {
     );
   }
 
+  /// Formats the scheduled time into a more readable format
   String _formatScheduledTime(DateTime time) {
     final now = DateTime.now();
     final tomorrow = DateTime(now.year, now.month, now.day + 1);

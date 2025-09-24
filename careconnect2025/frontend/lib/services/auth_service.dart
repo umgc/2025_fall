@@ -44,7 +44,7 @@ class AuthService {
     await UserRoleStorageService.instance.initialize();
   }
 
-  // ✅ Handle OAuth callback from deep link
+  /// Handle OAuth callback from deep link
   static Future<void> handleOAuthCallback(String code, String state) async {
     try {
       // This method can be used for additional callback handling if needed
@@ -55,7 +55,7 @@ class AuthService {
     }
   }
 
-  // ✅ GOOGLE OAUTH2 LOGIN - Backend-first OAuth2 flow
+  /// GOOGLE OAUTH2 LOGIN - Backend-first OAuth2 flow
   static Future<UserSession> loginWithGoogle() async {
     try {
       // Initialize app links if not already done
@@ -122,7 +122,7 @@ class AuthService {
               // Store user data in UserRoleStorageService for navigation
               await _storeUserDataFromSession(userSession);
 
-              print('✅ Google OAuth login successful: JWT token force-updated');
+              print('Google OAuth login successful: JWT token force-updated');
 
               // Create and return the user session
               completer.complete(userSession);
@@ -162,7 +162,7 @@ class AuthService {
     }
   }
 
-  // ✅ LOGIN - Updated to return UserSession and handle JWT
+  /// LOGIN - Updated to return UserSession and handle JWT
   static Future<UserSession> login(
     String email,
     String password) async {
@@ -192,7 +192,7 @@ class AuthService {
         print('Warning: Failed to register user to WebSocket: $e');
       }
 
-      print('✅ Login successful: JWT token force-updated');
+      print('Login successful: JWT token force-updated');
 
       return userSession;
     } else {
@@ -224,14 +224,14 @@ class AuthService {
     final data = jsonDecode(response.body);
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      print("✅ Registration: $data");
+      print("Registration: $data");
       // If backend returns a string: just return it
       if (data is String) return data;
       // If backend returns JSON: extract a message
       return data['message'] ??
           'Registration successful! Please check your email to verify your account.';
     } else {
-      print("❌ Registration Error: $data");
+      print("Registration Error: $data");
       throw Exception(data['error'] ?? 'Registration failed');
     }
   }
@@ -265,7 +265,7 @@ class AuthService {
       'gender': (gender ?? "").toUpperCase(),
     };
 
-    print('🔍 Debug: Basic data added successfully');
+    print('Debug: Basic data added successfully');
 
     // Only add professional info if at least license number is provided
     if (licenseNumber != null && licenseNumber.isNotEmpty) {
@@ -275,7 +275,7 @@ class AuthService {
         'issuingState': issuingState ?? "VA",
         'yearsExperience': yearsExperience ?? 1,
       };
-      print('🔍 Debug: Professional info added successfully');
+      print('Debug: Professional info added successfully');
     }
 
     // Only add address if at least line1 is provided
@@ -289,29 +289,29 @@ class AuthService {
         'zip': zip ?? "00000",
         'phone': phone ?? "000-000-0000",
       };
-      print('🔍 Debug: Address info added successfully');
+      print('Debug: Address info added successfully');
     }
 
     // Always add credentials
     registrationData['credentials'] = {'email': email, 'password': password};
 
-    print('🔍 Debug: About to encode registration data...');
-    print('🔍 Registration data keys: ${registrationData.keys}');
+    print('Debug: About to encode registration data...');
+    print('Registration data keys: ${registrationData.keys}');
 
     try {
       final jsonString = jsonEncode(registrationData);
-      print('🚀 Registering caregiver with data: $jsonString');
+      print('Registering caregiver with data: $jsonString');
     } catch (jsonError) {
-      print('❌ JSON encoding failed: $jsonError');
+      print('JSON encoding failed: $jsonError');
       throw Exception('Data serialization error: $jsonError');
     }
 
     try {
-      print('🔍 Debug: About to make HTTP POST request...');
-      print('🔍 Debug: getBackendBaseUrl(): ${getBackendBaseUrl()}');
-      print('🔍 Debug: ApiConstants.caregivers: ${ApiConstants.caregivers}');
-      print('🔍 Debug: URL: ${ApiConstants.caregivers}');
-      print('🔍 Debug: Headers: $headers');
+      print('Debug: About to make HTTP POST request...');
+      print('Debug: getBackendBaseUrl(): ${getBackendBaseUrl()}');
+      print('Debug: ApiConstants.caregivers: ${ApiConstants.caregivers}');
+      print('Debug: URL: ${ApiConstants.caregivers}');
+      print('Debug: Headers: $headers');
 
       final response = await http.post(
         Uri.parse(ApiConstants.caregivers),
@@ -319,13 +319,13 @@ class AuthService {
         body: jsonEncode(registrationData),
       );
 
-      print('✅ Debug: HTTP request completed successfully');
-      print('📡 Response status: ${response.statusCode}');
-      print('📋 Response body: ${response.body}');
+      print('Debug: HTTP request completed successfully');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("✅ Caregiver Registration: $data");
+        print("Caregiver Registration: $data");
 
         // Extract user ID and stripeCustomerId from the nested user object
         String userId = '0';
@@ -334,12 +334,12 @@ class AuthService {
           final userObj = data['user'] as Map<String, dynamic>;
           userId = userObj['id']?.toString() ?? '0';
           stripeCustomerId = userObj['stripeCustomerId'] ?? '';
-          print("✅ Extracted User ID: $userId from nested user object");
+          print("Extracted User ID: $userId from nested user object");
           print(
-            "✅ Extracted Stripe Customer ID: $stripeCustomerId from nested user object",
+            "Extracted Stripe Customer ID: $stripeCustomerId from nested user object",
           );
         } else {
-          print("⚠️ Warning: User object not found in registration response");
+          print(" Warning: User object not found in registration response");
         }
 
         // Return both the success message and the user info
@@ -353,12 +353,12 @@ class AuthService {
       } else {
         final data = jsonDecode(response.body);
         print(
-          "❌ Caregiver Registration failed: ${response.statusCode} - ${response.body}",
+          "Caregiver Registration failed: ${response.statusCode} - ${response.body}",
         );
         throw Exception(data['error'] ?? 'Caregiver registration failed');
       }
     } catch (e) {
-      print('🚨 Exception during caregiver registration: $e');
+      print('Exception during caregiver registration: $e');
       rethrow;
     }
   }
@@ -375,10 +375,10 @@ class AuthService {
     final data = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
-      print("✅ Email verification: $data");
+      print("Email verification: $data");
       return data['message'] ?? 'Email verified successfully!';
     } else {
-      print("❌ Email verification error: $data");
+      print("Email verification error: $data");
       throw Exception(data['error'] ?? 'Email verification failed');
     }
   }
@@ -387,7 +387,7 @@ class AuthService {
     try {
       // Fix: Use ApiConstants.auth which includes the full path
       final fullUrl = '${ApiConstants.auth}/password/forgot';
-      print('🔍 Request password reset URL: $fullUrl');
+      print('Request password reset URL: $fullUrl');
 
       final response = await http.post(
         Uri.parse(fullUrl),
@@ -430,11 +430,11 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        print("✅ Password reset successful: $data");
+        print("Password reset successful: $data");
         return data['message'] ?? 'Password reset successfully!';
       } else {
         print(
-          "❌ Password reset error: ${response.statusCode} - ${response.body}",
+          "Password reset error: ${response.statusCode} - ${response.body}",
         );
         final errorMessage =
             data['error'] ?? data['message'] ?? 'Password reset failed';
@@ -453,7 +453,7 @@ class AuthService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print("❌ Password reset exception: $e");
+      print("Password reset exception: $e");
       rethrow;
     }
   }
@@ -473,13 +473,13 @@ class AuthService {
     await UserRoleStorageService.instance.clearUserData();
 
     if (response.statusCode == 200) {
-      print("✅ Logout successful");
+      print("Logout successful");
     } else {
       print("Logout failed: ${response.statusCode} - ${response.body}");
     }
   }
 
-  // ✅ PROCESS OAUTH CALLBACK - For web-based callbacks
+  /// PROCESS OAUTH CALLBACK - For web-based callbacks
   static Future<UserSession> processOAuthCallback({
     required String token,
     required String userDataString,
@@ -504,7 +504,7 @@ class AuthService {
       // Store user data in UserRoleStorageService for navigation
       await _storeUserDataFromSession(userSession);
 
-      print('✅ OAuth callback processed: JWT token force-updated');
+      print('OAuth callback processed: JWT token force-updated');
 
       // Create and return the user session
       return userSession;
@@ -513,12 +513,12 @@ class AuthService {
     }
   }
 
-  // ✅ FORCE REFRESH JWT TOKEN - For scenarios where token needs to be refreshed
+  /// FORCE REFRESH JWT TOKEN - For scenarios where token needs to be refreshed
   static Future<UserSession?> forceRefreshToken() async {
     try {
       final currentToken = await AuthTokenManager.getJwtToken();
       if (currentToken == null) {
-        print('❌ No existing token to refresh');
+        print('No existing token to refresh');
         return null;
       }
 
@@ -545,17 +545,17 @@ class AuthService {
         // Update user data in UserRoleStorageService
         await _storeUserDataFromSession(userSession);
 
-        print('✅ JWT token force-refreshed successfully');
+        print('JWT token force-refreshed successfully');
         return userSession;
       } else {
-        print('❌ Token refresh failed: ${response.statusCode}');
+        print('Token refresh failed: ${response.statusCode}');
         // If refresh fails, clear auth data to force re-login
         await AuthTokenManager.clearAuthData();
         await UserRoleStorageService.instance.clearUserData();
         return null;
       }
     } catch (e) {
-      print('❌ Error during token refresh: $e');
+      print('Error during token refresh: $e');
       // Clear auth data on error to force re-login
       await AuthTokenManager.clearAuthData();
       await UserRoleStorageService.instance.clearUserData();
@@ -563,7 +563,7 @@ class AuthService {
     }
   }
 
-  // ✅ UPDATE USER ACTIVITY - For tracking session activity
+  /// UPDATE USER ACTIVITY - For tracking session activity
   static Future<void> updateUserActivity() async {
     await AuthTokenManager.updateLastActivity();
   }
@@ -580,8 +580,6 @@ class AuthService {
     return true;
   }
 
-  // ✅ NEW METHODS FOR UserRoleStorageService INTEGRATION
-
   /// Store user data from UserSession to UserRoleStorageService
   static Future<void> _storeUserDataFromSession(UserSession userSession) async {
     try {
@@ -593,11 +591,11 @@ class AuthService {
       );
 
       if (kDebugMode) {
-        print('✅ User data stored in UserRoleStorageService: Role=${userSession.role}, UserID=${userSession.id}');
+        print('User data stored in UserRoleStorageService: Role=${userSession.role}, UserID=${userSession.id}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error storing user data in UserRoleStorageService: $e');
+        print('Error storing user data in UserRoleStorageService: $e');
       }
     }
   }
@@ -622,7 +620,7 @@ class AuthService {
     await UserRoleStorageService.instance.updateUserRole(newRole);
 
     if (kDebugMode) {
-      print('✅ User role updated in UserRoleStorageService: $newRole');
+      print('User role updated in UserRoleStorageService: $newRole');
     }
   }
 
@@ -631,41 +629,7 @@ class AuthService {
     await UserRoleStorageService.instance.updatePatientId(patientId);
 
     if (kDebugMode) {
-      print('✅ Patient ID updated in UserRoleStorageService: $patientId');
+      print('Patient ID updated in UserRoleStorageService: $patientId');
     }
   }
-
-  // static Future<String> setupPassword({
-  //   required String email,
-  //   required String resetToken,
-  //   required String newPassword,
-  // }) async {
-  //   try {
-  //     final fullUrl = '${ApiConstants.users}/reset-password';
-  //     final requestBody = {
-  //       'username': email,
-  //       'resetToken': resetToken,
-  //       'newPassword': newPassword,
-  //     };
-
-  //     final response = await http.post(
-  //       Uri.parse(fullUrl),
-  //       headers: {'Content-Type': 'application/json'},
-  //       body: jsonEncode(requestBody),
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       final responseData = jsonDecode(response.body);
-  //       return responseData['message'] ?? 'Password updated successfully';
-  //     } else {
-  //       final errorData = jsonDecode(response.body);
-  //       throw Exception(
-  //         errorData['message'] ??
-  //         errorData['error'] ??
-  //         'Failed to update password',
-  //       );
-  //     }
-  //   } catch (e)
-  //     throw Exception('Network error: ${e.toString()}');
-  //   }
 }
