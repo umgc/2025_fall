@@ -510,17 +510,20 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         SizedBox(
           height: 250,
           child: LayoutBuilder(builder: (context, constraints) {
-            double spacing = constraints.maxWidth/3;
             return SingleChildScrollView(
                 scrollDirection: Axis.vertical,
-                child: DataTable(
-                    columnSpacing: spacing,
-                    columns: [
-                      DataColumn(label: Text("Keyword")),
-                      DataColumn(label: Text("Event Type")),
-                      DataColumn(label: Text(""))
-                    ],
-                    rows: generateRows()
+                child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child:
+                      DataTable(
+                        columnSpacing: 16.0,
+                        columns: [
+                          DataColumn(label: Expanded(child: Text("Keyword"))),
+                          DataColumn(label: Expanded(child: Text("Event Type"))),
+                          DataColumn(label: Expanded(child: Text("")))
+                        ],
+                        rows: generateRows()
+                      )
                 )
             );
           })
