@@ -232,7 +232,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
 var excel = Excel.createExcel();
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['AI Logs'];
-    if (aiLogs.isNotEmpty) {
+    if (logSource.sortedData.isNotEmpty) {
       // Get headers dynamically from the first map.
       var studentHeaders = [
         AiLog.getHeaderForColumn(0),
@@ -246,7 +246,7 @@ var excel = Excel.createExcel();
       ];
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
-      for (var log in aiLogs) {
+      for (var log in logSource.sortedData) {
         studentSheet.appendRow(
             [
               log.getValueForColumn(0),
@@ -358,7 +358,7 @@ var excel = Excel.createExcel();
                       ),
                         Spacer(),
                             ElevatedButton(
-                              onPressed: aiLogs.isEmpty ? null : _exportLogs,
+                              onPressed: logSource.sortedData.isEmpty ? null : _exportLogs,
                               child: const Text('Export Logs'),
                             ),
                     ]))
