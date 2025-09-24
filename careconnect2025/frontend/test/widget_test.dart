@@ -28,7 +28,7 @@ import 'package:care_connect_app/features/social/presentation/pages/new_post_scr
 import 'package:care_connect_app/features/gamification/presentation/pages/gamification_screen.dart';
 import 'package:care_connect_app/features/gamification/presentation/pages/achievement_detail_screen.dart';
 import 'package:care_connect_app/features/health/presentation/pages/meal_tracking_screen.dart';
-import 'package:care_connect_app/features/health/presentation/pages/symptom_tracker_screen.dart';
+import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/settings_screen.dart';
 
 // Model imports
@@ -309,9 +309,9 @@ STRIPE_PUBLISHABLE_KEY=test_key
     testWidgets('SymptomTrackerScreen renders correctly', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: SymptomTrackerScreen()));
+      await tester.pumpWidget(const MaterialApp(home: SymptomsAllergiesPage()));
 
-      expect(find.byType(SymptomTrackerScreen), findsOneWidget);
+      expect(find.byType(SymptomsAllergiesPage), findsOneWidget);
       expect(find.byType(Scaffold), findsOneWidget);
     });
   });

@@ -1,4 +1,4 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/user_role_storage_service.dart';
@@ -121,20 +121,31 @@ class NavigationHelper {
   static String? _getTabNameFromIndex(String role, int tabIndex) {
     if (role.toUpperCase() == 'PATIENT') {
       switch (tabIndex) {
-        case 0: return 'home';
-        case 1: return 'health';
-        case 2: return 'messages';
-        case 3: return 'profile';
-        default: return null;
+        case 0:
+          return 'home';
+        case 1:
+          return 'health';
+        case 2:
+          return 'messages';
+        case 3:
+          return 'profile';
+        default:
+          return null;
       }
     } else {
       switch (tabIndex) {
-        case 0: return 'patients';
-        case 1: return 'tasks';
-        case 2: return 'analytics';
-        case 3: return 'messages';
-        case 4: return 'profile';
-        default: return null;
+        case 0:
+          return 'patients';
+        case 1:
+          return 'tasks';
+        case 2:
+          return 'analytics';
+        case 3:
+          return 'messages';
+        case 4:
+          return 'profile';
+        default:
+          return null;
       }
     }
   }
@@ -143,20 +154,31 @@ class NavigationHelper {
   static int? getTabIndexFromName(String role, String tabName) {
     if (role.toUpperCase() == 'PATIENT') {
       switch (tabName.toLowerCase()) {
-        case 'home': return 0;
-        case 'health': return 1;
-        case 'messages': return 2;
-        case 'profile': return 3;
-        default: return null;
+        case 'home':
+          return 0;
+        case 'health':
+          return 1;
+        case 'messages':
+          return 2;
+        case 'profile':
+          return 3;
+        default:
+          return null;
       }
     } else {
       switch (tabName.toLowerCase()) {
-        case 'patients': return 0;
-        case 'tasks': return 1;
-        case 'analytics': return 2;
-        case 'messages': return 3;
-        case 'profile': return 4;
-        default: return null;
+        case 'patients':
+          return 0;
+        case 'tasks':
+          return 1;
+        case 'analytics':
+          return 2;
+        case 'messages':
+          return 3;
+        case 'profile':
+          return 4;
+        default:
+          return null;
       }
     }
   }

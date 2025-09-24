@@ -6,7 +6,6 @@ import 'main_screen_config.dart';
 
 /// Helper class to migrate from old navigation patterns to new MainScreen
 class NavigationMigrationHelper {
-
   /// Migrate from old PatientDashboard navigation
   static void navigateToPatientDashboard(
     BuildContext context, {
@@ -25,10 +24,7 @@ class NavigationMigrationHelper {
     final userId = user.id;
     final pId = patientId ?? user.patientId;
 
-    final config = MainScreenConfig.forPatient(
-      userId: userId,
-      patientId: pId,
-    );
+    final config = MainScreenConfig.forPatient(userId: userId, patientId: pId);
 
     context.navigateToMainScreenWithConfig(config, tabIndex: tabIndex);
   }
@@ -120,9 +116,7 @@ class NavigationMigrationHelper {
     }
 
     if (tabIndex != null) {
-      context.navigateToMainScreen(
-        tabIndex: tabIndex,
-      );
+      context.navigateToMainScreen(tabIndex: tabIndex);
     } else {
       // Fallback to home tab
       context.navigateToMainScreen(tabIndex: 0);
@@ -215,11 +209,7 @@ class NavigationMigrationHelper {
         params = arguments;
       }
 
-      replaceDashboardNavigation(
-        context,
-        route: routeName,
-        parameters: params,
-      );
+      replaceDashboardNavigation(context, route: routeName, parameters: params);
     } else {
       // Use original navigation for non-migrated routes
       Navigator.pushNamed(context, routeName, arguments: arguments);
@@ -230,10 +220,7 @@ class NavigationMigrationHelper {
 /// Extension to add migration helpers to BuildContext
 extension NavigationMigration on BuildContext {
   /// Quick access to migration helpers
-  void migrateToMainScreen({
-    String? route,
-    Map<String, dynamic>? parameters,
-  }) {
+  void migrateToMainScreen({String? route, Map<String, dynamic>? parameters}) {
     NavigationMigrationHelper.replaceDashboardNavigation(
       this,
       route: route,
