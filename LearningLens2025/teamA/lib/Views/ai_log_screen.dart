@@ -31,7 +31,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
 
-  int? selected = null;
+  int? selected;
 
   @override
   void initState() {
@@ -141,8 +141,13 @@ void sort(int col, bool ascending) {
 
 void selectionChanged(int? index) {
   setState(() {
-    selected = index;
-    logSource.setSelected(selected);
+    if(index == selected) {
+      selected = null;
+    }
+    else {
+      selected = index;
+    }
+    logSource.selectedChanged();
   });
 }
   @override
@@ -245,6 +250,7 @@ void selectionChanged(int? index) {
                   sortColumnIndex: sortIndex,
                   sortAscending: sortAsc,
                   dataRowMaxHeight: double.infinity,
+                  
                   columns: [
                     DataColumn(columnWidth: FixedColumnWidth(150), label: Text('Student'), onSort: sort),
                     DataColumn(columnWidth: FixedColumnWidth(150), label: Text('Assignment'), onSort: sort),
@@ -272,7 +278,7 @@ class _AiLogSource extends DataTableSource {
   _AiLogScreenState parentState;
   late List<AiLog> sortedData = [];
   _AiLogSource(this.parentState);
-  void setSelected(int? selected) {
+  void selectedChanged() {
     notifyListeners();
   }
   void setData(List<AiLog> data, int sortCol, bool sortAscending) {
@@ -292,7 +298,16 @@ class _AiLogSource extends DataTableSource {
   DataRow? getRow(int index) {
     return DataRow(onSelectChanged: (value) => {
       parentState.selectionChanged(index)
-    }, selected: index == parentState.selected, key: ObjectKey(sortedData[index].uuid), cells: <DataCell>[
+    }, selected: index == parentState.selected,
+  color: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+    if (states.contains(WidgetState.selected)) {
+      return Theme.of(parentState.context).colorScheme.primary.withOpacity(0.15);
+    }
+    if (states.contains(WidgetState.hovered)) {
+      return Theme.of(parentState.context).colorScheme.primary.withOpacity(0.25);
+    }
+    return index % 2 == 0 ? Theme.of(parentState.context).colorScheme.primaryContainer.withOpacity(.55) : null;  // Use the default value.
+  }), key: ObjectKey(sortedData[index].uuid), cells: <DataCell>[
       cellFor(index, 0),
 cellFor(index, 1,),
 cellFor(index, 2),
