@@ -1,7 +1,5 @@
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
-import 'package:xml/xml.dart';
-import 'package:learninglens_app/beans/xml_consts.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
@@ -10,7 +8,8 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 // A AI log entry.
 class AiLog {
   final Assignment assignment; // Multiple choice text - required
-  final Course course; // Point value from 0 (incorrect) to 100 (correct) - required
+  final Course
+      course; // Point value from 0 (incorrect) to 100 (correct) - required
   final Participant student; // Feedback for the choice - optional
   final String prompt;
   final String response;
@@ -21,7 +20,9 @@ class AiLog {
   DateTime created = DateTime.timestamp();
 
   // Simple constructor. Feedback param is optional.
-  AiLog(this.course, this.assignment, this.student, this.prompt, this.response, this.model, [this.uuid = "", this.reflection = "", LmsType? lms, DateTime? created]) {
+  AiLog(this.course, this.assignment, this.student, this.prompt, this.response,
+      this.model,
+      [this.uuid = "", this.reflection = "", LmsType? lms, DateTime? created]) {
     if (lms != null) {
       this.lms = lms;
     }
@@ -37,11 +38,11 @@ class AiLog {
       'courseId': course.id,
       'assignmentId': assignment.id,
       'studentId': student.id,
-      'prompt' : prompt,
-      'response' : response,
-      'reflection' : reflection,
-      'model' : model.index,
-      'lms' : lms.index
+      'prompt': prompt,
+      'response': response,
+      'reflection': reflection,
+      'model': model.index,
+      'lms': lms.index
     };
   }
 
@@ -57,7 +58,7 @@ class AiLog {
         return prompt;
       case 4:
         return response;
-      case 5: 
+      case 5:
         return reflection;
       case 6:
         return model.displayName;
