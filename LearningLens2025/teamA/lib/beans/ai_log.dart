@@ -74,7 +74,7 @@ class AiLog {
     return toJson().toString();
   }
 
-    static String getHeaderForColumn(int column) {
+  static String getHeaderForColumn(int column) {
     switch (column) {
       case 0:
         return "Student";

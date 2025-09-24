@@ -169,7 +169,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   void _exportLogs() async {
-    String defaultName = '${selectedCourse?.fullName.replaceAll(" ", "")}_${selectedAssignment == null ? "AllAssignments" : selectedAssignment?.name.replaceAll(" ", "")}_${selectedStudent == null ? "AllStudents" : selectedStudent?.fullname}.xlsx';
+    String defaultName =
+        '${selectedCourse?.fullName.replaceAll(" ", "")}_${selectedAssignment == null ? "AllAssignments" : selectedAssignment?.name.replaceAll(" ", "")}_${selectedStudent == null ? "AllStudents" : selectedStudent?.fullname}.xlsx';
     if (kIsWeb) {
       // Build bytes.
       List<int> bytes = await _exportReportAsExcel();
@@ -184,24 +185,24 @@ class _AiLogScreenState extends State<AiLogScreen> {
       html.Url.revokeObjectUrl(url);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text('Report exported to Excel via browser download.')),
+            content: Text('Report exported to Excel via browser download.')),
       );
-    } else if (Platform.isAndroid || Platform.isIOS) { 
+    } else if (Platform.isAndroid || Platform.isIOS) {
       try {
         List<int> bytes = await _exportReportAsExcel();
         var dir = await getApplicationDocumentsDirectory();
-        File(path.join('${dir.path}/$defaultName'))..createSync(recursive: true)..writeAsBytes(bytes);
+        File(path.join('${dir.path}/$defaultName'))
+          ..createSync(recursive: true)
+          ..writeAsBytes(bytes);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Report saved to Excel at:\n$dir')),
         );
-        } catch (e) {
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save report: $e')),
         );
       }
-    }
-    else {
+    } else {
       final savePath = await _pickFileLocation(defaultName);
       if (savePath == null) return;
       try {
@@ -229,7 +230,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   Future<List<int>> _exportReportAsExcel() async {
-var excel = Excel.createExcel();
+    var excel = Excel.createExcel();
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['AI Logs'];
     if (logSource.sortedData.isNotEmpty) {
@@ -248,16 +249,16 @@ var excel = Excel.createExcel();
       // Append each student row by mapping the values to strings.
       for (var log in logSource.sortedData) {
         studentSheet.appendRow(
-            [
-              log.getValueForColumn(0),
-              log.getValueForColumn(1),
-              log.getValueForColumn(2),
-              log.getValueForColumn(3),
-              log.getValueForColumn(4),
-              log.getValueForColumn(5),
-              log.getValueForColumn(6),
-              log.getValueForColumn(7).toString(),
-            ],
+          [
+            log.getValueForColumn(0),
+            log.getValueForColumn(1),
+            log.getValueForColumn(2),
+            log.getValueForColumn(3),
+            log.getValueForColumn(4),
+            log.getValueForColumn(5),
+            log.getValueForColumn(6),
+            log.getValueForColumn(7).toString(),
+          ],
         );
       }
     }
@@ -356,11 +357,12 @@ var excel = Excel.createExcel();
                             : _queryDatabase,
                         child: const Text('Filter'),
                       ),
-                        Spacer(),
-                            ElevatedButton(
-                              onPressed: logSource.sortedData.isEmpty ? null : _exportLogs,
-                              child: const Text('Export Logs'),
-                            ),
+                      Spacer(),
+                      ElevatedButton(
+                        onPressed:
+                            logSource.sortedData.isEmpty ? null : _exportLogs,
+                        child: const Text('Export Logs'),
+                      ),
                     ]))
               ],
             ),
