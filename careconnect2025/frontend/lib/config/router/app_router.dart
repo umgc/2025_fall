@@ -1,10 +1,11 @@
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
-import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
+import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/tasks/presentation/custom_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/pre_defined_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/tasks_screen.dart';
@@ -13,32 +14,34 @@ import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
+import 'package:care_connect_app/pages/profile_page.dart';
+import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../../features/welcome/presentation/pages/welcome_page.dart';
+import '../../features/analytics/analytics_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
-import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
-import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
-import '../../features/onboarding/presentation/pages/patient_registration.dart';
-import '../../features/auth/presentation/pages/sign_up_screen.dart';
-import '../../features/payments/presentation/pages/select_package_page.dart';
-import '../../features/payments/presentation/pages/subscription_management_page.dart';
-import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
 import '../../features/auth/presentation/pages/password_reset_page.dart';
 import '../../features/auth/presentation/pages/reset_password_screen.dart'; // ADD THIS IMPORT
-import '../../features/payments/models/package_model.dart';
-import '../../features/social/presentation/pages/main_feed_screen.dart';
-import '../../features/gamification/presentation/pages/gamification_screen.dart';
-import '../../features/payments/presentation/pages/stripe_checkout_page.dart';
-import '../../features/analytics/analytics_page.dart';
-import '../../features/payments/presentation/pages/payment_success_page.dart';
-import '../../features/payments/presentation/pages/payment_cancel_page.dart';
+import '../../features/auth/presentation/pages/sign_up_screen.dart';
+import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
+import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
+import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
+import '../../features/gamification/presentation/pages/gamification_screen.dart';
+import '../../features/onboarding/presentation/pages/patient_registration.dart';
+import '../../features/payments/models/package_model.dart';
+import '../../features/payments/presentation/pages/payment_cancel_page.dart';
+import '../../features/payments/presentation/pages/payment_success_page.dart';
+import '../../features/payments/presentation/pages/select_package_page.dart';
+import '../../features/payments/presentation/pages/stripe_checkout_page.dart';
+import '../../features/payments/presentation/pages/subscription_management_page.dart';
+import '../../features/social/presentation/pages/main_feed_screen.dart';
+import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../providers/user_provider.dart';
-import 'package:provider/provider.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on user role
 void navigateToDashboard(BuildContext context, {String? role}) {
@@ -110,7 +113,7 @@ final GoRouter appRouter = GoRouter(
           case 'ADMIN':
             return const CaregiverDashboard();
           default:
-          // Unknown role, redirect to login
+            // Unknown role, redirect to login
             WidgetsBinding.instance.addPostFrameCallback((_) {
               context.go('/login');
             });
@@ -490,6 +493,12 @@ final GoRouter appRouter = GoRouter(
       builder: (_, __) => const VideoCallTestPage(),
     ),
 
+    //Adding Calendar Assistant route
+    GoRoute(
+      path: '/calendar',
+      builder: (_, __) => const CalendarAssistantScreen(),
+    ),
+
     // Handle routes from legacy menus
     GoRoute(
       path: '/taskscheduling',
@@ -528,8 +537,9 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-      // Return the Tasks widget with the patientId
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        // Return the Tasks widget with the patientId
         return TasksScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -538,7 +548,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return AssignTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -547,7 +558,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -558,8 +570,13 @@ final GoRouter appRouter = GoRouter(
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
         final templateIdStr = state.uri.queryParameters['templateId'];
         final templateId = int.tryParse(templateIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-        return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        return PreDefinedTaskScreen(
+          patientId: patientId,
+          templateId: templateId,
+          patientName: patientName,
+        );
       },
     ),
   ],
