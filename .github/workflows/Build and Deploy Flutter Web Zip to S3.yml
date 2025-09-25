@@ -1,0 +1,65 @@
+# This workflow builds a Flutter web project, zips the output, and uploads the
+# resulting artifact to an S3 bucket.
+
+name: Build and Deploy Flutter Web to S3
+
+# Triggers the workflow on pushes to the specified branch
+on:
+  push:
+    branches:
+      - develop_sn # Or your flutter development branch
+
+# Permissions required for AWS OIDC authentication and checking out the code
+permissions:
+  id-token: write # Required for assuming an IAM role via OIDC.
+  contents: read  # Required for actions/checkout to read the repository code.
+
+jobs:
+  build-and-deploy-flutter:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Check out your repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Flutter environment
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Specify the Flutter version your project uses for consistent builds
+          flutter-version: '${{ vars.FLUTTER_VERSION }}' 
+          channel: 'stable'
+          cache: true # Caches Flutter dependencies for faster builds
+
+      # Step 3: Get Flutter dependencies
+      - name: Get Flutter dependencies
+        # Set the working directory to where your pubspec.yaml is located
+        working-directory: ./careconnect2025/frontend
+        run: flutter pub get
+
+      # Step 4: Build the Flutter web application
+      - name: Build Flutter Web App
+        working-directory: ./careconnect2025/frontend
+        run: flutter build web
+
+      # Step 5: Package the web build output into a ZIP file
+      - name: Package web build into a ZIP
+        # This zips the contents of the 'build/web' directory
+        run: zip -r frontend-build.zip ./careconnect2025/frontend/build/web
+
+      # Step 6: Configure AWS credentials using OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Use the same secrets as your backend workflow
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 7: Upload the generated ZIP file to the specified S3 bucket and folder
+      - name: Upload artifact to S3
+        run: |
+          echo "Uploading frontend-build.zip to S3..."
+          # The S3 key will include the folder name and the filename
+          aws s3 cp frontend-build.zip s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.S3_FRONTEND_FOLDER_NAME }}/frontend-build.zip
+          echo "Upload complete."
