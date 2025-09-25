@@ -415,33 +415,35 @@ class _AiLogScreenState extends State<AiLogScreen> {
                           columns: [
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Student'),
+                                label: Text(AiLog.getHeaderForColumn(0)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Assignment'),
+                                label: Text(AiLog.getHeaderForColumn(1)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Course'),
+                                label: Text(AiLog.getHeaderForColumn(2)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Prompt'),
+                                label: Text(AiLog.getHeaderForColumn(3)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Response'),
+                                label: Text(AiLog.getHeaderForColumn(4)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Reflection'),
+                                label: Text(AiLog.getHeaderForColumn(5)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('LLM'),
+                                label: Text(AiLog.getHeaderForColumn(6)),
                                 onSort: sort),
-                            DataColumn(label: Text('Timestamp'), onSort: sort),
+                            DataColumn(
+                                label: Text(AiLog.getHeaderForColumn(7)),
+                                onSort: sort),
                           ],
                           source: logSource,
                         ))
