@@ -1,4 +1,4 @@
-p# This workflow builds a Spring Boot project and uploads the resulting ZIP artifact
+# This workflow builds a Spring Boot project and uploads the resulting ZIP artifact
 # to an S3 bucket for AWS Lambda..
 
 name: Build and Deploy Lambda ZIP to S3
