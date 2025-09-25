@@ -35,6 +35,7 @@ jobs:
 
       # Step 3: Build the project with Maven, creating the ZIP artifact
       - name: Build with Maven
+        working-directory: ./careconnect2025/backend/core
         run: mvn clean package -DskipTests
 
       # Step 4: Configure AWS credentials using OIDC and the role from your GitHub secret
