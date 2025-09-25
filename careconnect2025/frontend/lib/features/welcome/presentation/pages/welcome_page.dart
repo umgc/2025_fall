@@ -203,10 +203,9 @@ class _WelcomePageState extends State<WelcomePage> {
                 // Compliance badges at bottom
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     spacing: 8,
-                    runSpacing: 8,
                     children: [
                       _buildComplianceBadge('🔒 HIPAA Compliant', isMobile),
                       _buildComplianceBadge('♿ WCAG AA', isMobile),
