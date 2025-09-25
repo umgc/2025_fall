@@ -3,6 +3,10 @@ import 'package:care_connect_app/features/integrations/presentation/pages/medica
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/invoices/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/invoice_detail_page.dart';
+import 'package:care_connect_app/features/invoices/invoice_list_page.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/custom_task_screen.dart';
@@ -38,6 +42,7 @@ import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
 import '../../providers/user_provider.dart';
 import 'package:provider/provider.dart';
+import '../../features/invoices/upload_invoice_screen.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on user role
 void navigateToDashboard(BuildContext context, {String? role}) {
@@ -109,7 +114,7 @@ final GoRouter appRouter = GoRouter(
           case 'ADMIN':
             return const CaregiverDashboard();
           default:
-          // Unknown role, redirect to login
+            // Unknown role, redirect to login
             WidgetsBinding.instance.addPostFrameCallback((_) {
               context.go('/login');
             });
@@ -523,8 +528,9 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-      // Return the Tasks widget with the patientId
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        // Return the Tasks widget with the patientId
         return TasksScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -533,7 +539,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return AssignTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -542,7 +549,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -553,9 +561,57 @@ final GoRouter appRouter = GoRouter(
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
         final templateIdStr = state.uri.queryParameters['templateId'];
         final templateId = int.tryParse(templateIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-        return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        return PreDefinedTaskScreen(
+          patientId: patientId,
+          templateId: templateId,
+          patientName: patientName,
+        );
       },
+    ),
+    GoRoute(
+      path: '/invoice-assistant',
+      redirect: (context, state) {
+        // redirect only if the path is exactly /invoice-assistant
+        if (state.uri.toString() == '/invoice-assistant') {
+          return '/invoice-assistant/upload';
+        }
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: 'upload',
+          name: 'invoiceUpload',
+          builder: (context, state) => const UploadInvoiceScreen(),
+        ),
+        GoRoute(
+          path: 'list',
+          name: 'invoiceList',
+          builder: (context, state) => const InvoiceListPage(),
+          routes: [
+            GoRoute(
+              path: ':filter',
+              name: 'invoiceListFiltered',
+              builder: (context, state) =>
+                  InvoiceListPage(quickFilter: state.pathParameters['filter']),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'detail/:id',
+          name: 'invoiceDetail',
+          builder: (context, state) {
+            final invoice = state.extra as Invoice;
+            return InvoiceDetailPage(invoice: invoice);
+          },
+        ),
+        GoRoute(
+          path: 'dashboard',
+          name: 'invoiceDashboard',
+          builder: (context, state) => const InvoiceDashboardPage(),
+        ),
+      ],
     ),
   ],
 );

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/common_drawer.dart';
 import '../widgets/theme_toggle_switch.dart';
-import '../models/notification_settings.dart';
+import '../features/invoices/models/notification_settings.dart';
 import '../services/notification_settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
