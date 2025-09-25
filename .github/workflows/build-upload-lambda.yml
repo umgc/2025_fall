@@ -7,7 +7,7 @@ name: Build and Deploy Lambda ZIP to S3
 on:
   push:
     branches:
-      - main
+      - develop_sn
 
 # Permissions required for AWS OIDC authentication and checking out the code
 permissions:
@@ -59,6 +59,6 @@ jobs:
           
           # Upload the file to the 'cc_backend_builds' folder in your S3 bucket
           echo "Uploading $ARTIFACT_PATH to S3..."
-          aws s3 cp $ARTIFACT_PATH s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.S3_PREFIX }}/
+          aws s3 cp $ARTIFACT_PATH s3://${{ secrets.S3_BUCKET_NAME }}/cc_backend_builds/
           echo "Upload complete."
 
