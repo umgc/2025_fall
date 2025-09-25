@@ -1,83 +1,64 @@
-name: Build Lambda ZIP and upload to S3
+# This workflow builds a Spring Boot project and uploads the resulting ZIP artifact
+# to an S3 bucket for AWS Lambda.
 
+name: Build and Deploy Lambda ZIP to S3
+
+# Triggers the workflow on pushes to the 'main' branch
 on:
   push:
-    branches: [ "main" ]
-    tags:
-      - "v*.*.*"
-  workflow_dispatch:
+    branches:
+      - main
 
-env:
-  JAVA_VERSION: "17"
-  AWS_REGION: "us-east-1"
-  # need to find the correct folder name that step function is looking for. 
-  S3_PREFIX: "lambda/${{ github.repository }}/${{ github.ref_name }}/${{ github.sha }}"
+# Permissions required for AWS OIDC authentication and checking out the code
+permissions:
+  id-token: write # Required for assuming an IAM role via OIDC.
+  contents: read  # Required for actions/checkout to read the repository code.
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
+      # Step 1: Check out your repository code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Temurin JDK
+      # Step 2: Set up JDK using the repository variable and cache Maven dependencies
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
+          # Reads the JAVA_VERSION variable from your repo settings (Settings > Variables > Actions).
+          # It defaults to '17' if the variable is not found.
+          java-version: ${{ vars.JAVA_VERSION || '17' }}
+          distribution: 'temurin'
+          cache: 'maven' 
 
-      - name: Build with Maven (skip tests)
-        run: mvn -B -DskipTests package
+      # Step 3: Build the project with Maven, creating the ZIP artifact
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
 
-      - name: Locate built ZIP
-        id: zip
-        run: |
-          set -e
-          # If your ZIP has a known pattern, set it explicitly to avoid ambiguity, e.g.:
-          # ZIP_PATH="$(ls -1 target/my-fn-*.zip | head -n 1)"
-          ZIP_PATH="$(ls -1 target/*.zip | head -n 1)"
-          if [ -z "$ZIP_PATH" ]; then
-            echo "No ZIP found in target/. Ensure your build outputs a .zip there."
-            exit 1
-          fi
-          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
-          echo "zip_name=$(basename "$ZIP_PATH")" >> "$GITHUB_OUTPUT"
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: ${{ steps.zip.outputs.zip_path }}
-          if-no-files-found: error
-
-  upload-to-s3:
-    needs: build
-    runs-on: ubuntu-latest
-    if: |
-      github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-          path: dist
-
-      - name: Configure AWS credentials (OIDC)
+      # Step 4: Configure AWS credentials using OIDC and the role from your GitHub secret
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }} 
-      - name: Upload to S3 with original filename
-        env:
-          BUCKET: ${{ secrets.S3_BUCKET }}
-          PREFIX: ${{ env.S3_PREFIX }}
+          # Use the secrets you created in GitHub
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 5: Upload the generated ZIP file to the specified S3 bucket and folder
+      - name: Upload artifact to S3
         run: |
-          set -e
-          ZIP_PATH="$(ls -1 dist/*.zip | head -n 1)"
-          ZIP_NAME="$(basename "$ZIP_PATH")"
-          echo "Uploading $ZIP_NAME to s3://${BUCKET}/${PREFIX}/$ZIP_NAME"
-          aws s3 cp "$ZIP_PATH" "s3://${BUCKET}/${PREFIX}/$ZIP_NAME"
+          # Dynamically find the .zip file in the target directory
+          ARTIFACT_PATH=$(find target -name "*.zip" | head -n 1)
+          
+          # Check if the artifact was found
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Error: Build artifact (.zip file) not found in target directory."
+            exit 1
+          fi
+          
+          # Upload the file to the 'cc_backend_builds' folder in your S3 bucket
+          echo "Uploading $ARTIFACT_PATH to S3..."
+          aws s3 cp $ARTIFACT_PATH s3://${{ secrets.S3_BUCKET_NAME }}/cc_backend_builds/
+          echo "Upload complete."
+
