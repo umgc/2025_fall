@@ -1,8 +1,10 @@
+import 'package:care_connect_app/config/navigation/caregiver-more-features-bottom-drawer.dart';
+import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
-import 'more-features-bottom-drawer.dart';
+import 'patient-more-features-bottom-drawer.dart';
 
 /// This is the individual bottom nav bar buttons
 /// @param label - The label of the button
@@ -85,7 +87,7 @@ class BottomNavConfig {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return const MoreFeaturesBottomDrawerWidget();
+              return const PatientMoreFeaturesBottomDrawerWidget();
             },
           );
         },
@@ -98,11 +100,11 @@ class BottomNavConfig {
   static List<BottomNavItem> getCaregiverNavItems() {
     return [
       BottomNavItem(
-        label: 'Patients',
-        icon: Icons.people_outlined,
-        activeIcon: Icons.people,
-        routeName: 'patients',
-        screen: const CaregiverPatientsTab(),
+        label: 'Home',
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        routeName: 'home',
+        screen: const CaregiverDashboard(),
       ),
       BottomNavItem(
         label: 'Tasks',
@@ -126,11 +128,19 @@ class BottomNavConfig {
         screen: const CaregiverMessagesTab(),
       ),
       BottomNavItem(
-        label: 'Profile',
-        icon: Icons.person_outlined,
-        activeIcon: Icons.person,
+        label: 'More',
+        icon: Icons.more_horiz_outlined,
+        activeIcon: Icons.more,
         routeName: 'profile',
-        screen: const CaregiverProfileTab(),
+        onPress: (context, builder) {
+          showModalBottomSheet<void>(
+            context: context,
+            builder: (BuildContext context) {
+              return const CaregiverMoreFeaturesBottomDrawerWidget();
+            },
+          );
+        },
+
       ),
     ];
   }

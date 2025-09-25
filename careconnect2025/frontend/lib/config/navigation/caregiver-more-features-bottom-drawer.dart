@@ -3,41 +3,12 @@ import 'package:care_connect_app/features/health/medication-tracker/pages/medica
 import 'package:flutter/material.dart';
 
 /// Widget for the More bottom drawer navigation item
-class MoreFeaturesBottomDrawerWidget extends StatelessWidget {
-  const MoreFeaturesBottomDrawerWidget({super.key});
+class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
+  const CaregiverMoreFeaturesBottomDrawerWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<FeatureItem> features = [
-      FeatureItem(
-        icon: Icons.sos,
-        iconColor: Colors.red,
-        title: 'SOS',
-        subtitle: 'Informing Caregiver of emergency',
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SosScreen()),
-          );
-        },
-      ),
-      FeatureItem(
-        icon: Icons.medication,
-        iconColor: Colors.blue,
-        title: 'Medication Tracker',
-        subtitle: 'Track your medications and schedules',
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const MedicationsTrackerPage(),
-            ),
-          );
-        },
-      ),
-    ];
+    final List<FeatureItem> features = [];
 
     return SizedBox(
       height: 280,

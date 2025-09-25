@@ -7,10 +7,12 @@ class DashboardAppHeader extends StatelessWidget
   final String userName;
   final String? timezone;
   final String? profileImageUrl;
+  final String role;
 
   const DashboardAppHeader({
     super.key,
     required this.userName,
+    required this.role,
     this.timezone,
     this.profileImageUrl = "",
   });
@@ -201,7 +203,9 @@ class DashboardAppHeader extends StatelessWidget
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "How are you feeling today?",
+                            role == "PATIENT"
+                                ? "How are you feeling today?"
+                                : "Your patients' health summary",
                             style: TextStyle(
                               fontSize: 13,
                               color: theme.colorScheme.onSurface.withValues(

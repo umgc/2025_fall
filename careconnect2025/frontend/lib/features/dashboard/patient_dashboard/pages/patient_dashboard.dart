@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/alter_notification_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/current_mood_widget.dart';
-import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/dashboard_appheader_widget.dart';
+import 'package:care_connect_app/shared/widgets/dashboard_appheader_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/medication_reminder_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/offline_notification_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/primary_care_provider_widget.dart';
@@ -19,8 +19,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../utils/call_integration_helper.dart';
 import '../../../../../widgets/ai_chat_improved.dart';
-
-// Import new components
 
 class PatientDashboard extends StatefulWidget {
   final int? userId;
@@ -225,8 +223,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
       activeAlerts.add(
         AlertNotification(
           type: AlertType.important,
-          message:
-              'Mood score below normal range. Consider contacting your healthcare provider.',
+          message: 'Mood score below normal range. Consider contacting your healthcare provider.',
         ),
       );
     }
@@ -237,8 +234,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
       activeAlerts.add(
         AlertNotification(
           type: AlertType.reminder,
-          message:
-              'You have a missed medication dose. Please take it as soon as possible.',
+          message: 'You have a missed medication dose. Please take it as soon as possible.',
         ),
       );
     }
@@ -412,12 +408,15 @@ class _PatientDashboardState extends State<PatientDashboard> {
     final theme = Theme.of(context);
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
-
+    final String userName = user?.name as String;
     final isTablet = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: DashboardAppHeader(userName: user?.name ?? 'Error Loading User'),
+      appBar: DashboardAppHeader(
+        userName: userName,
+        role: user?.role as String,
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).primaryColor,
         child: Icon(

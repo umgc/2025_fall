@@ -2,6 +2,7 @@
 // This test suite covers all major components under lib/
 
 import 'package:care_connect_app/features/dashboard/patient_dashboard/pages/patient_dashboard.dart';
+import 'package:care_connect_app/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -42,7 +43,6 @@ import 'package:care_connect_app/services/session_manager.dart';
 import 'package:care_connect_app/services/gamification_service.dart';
 
 // Widget imports
-import 'package:care_connect_app/widgets/user_avatar.dart';
 
 void main() {
   // Set up test environment
