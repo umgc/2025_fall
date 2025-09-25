@@ -60,19 +60,23 @@ public class PatientNotetakerService {
         return new PatientNotetakerConfigDTO(patientNotetakerConfigRepository.save(existingConfig));
     }
 
-    public List<PatientNote> getAllNotesForPatient(Long patientId) {
+    public List<PatientNoteDTO> getAllNotesForPatient(Long patientId) {
         validatePatientId(patientId);
-        return patientNoteRepository.findByPatientId(patientId).orElse(new ArrayList<PatientNote>());
+         return patientNoteRepository.findByPatientId(patientId).orElse(new ArrayList<PatientNote>())
+            .stream()
+            .map(x -> new PatientNoteDTO(x))
+            .toList();
     }
 
-    public PatientNote getNoteById(Long patientId, Long noteId) {
+    public PatientNoteDTO getNoteById(Long patientId, Long noteId) {
         validatePatientId(patientId);
-        return patientNoteRepository.findById(noteId)
-            .orElseThrow(() -> new IllegalArgumentException("Note not found"));
+        PatientNoteDTO result = new PatientNoteDTO(patientNoteRepository.findById(noteId)
+            .orElseThrow(() -> new IllegalArgumentException("Note not found")));
+        return result;
     }
 
     @Transactional
-    public PatientNote createNoteForPatient(Long patientId, PatientNoteDTO noteDTO) {
+    public PatientNoteDTO createNoteForPatient(Long patientId, PatientNoteDTO noteDTO) {
         validatePatientId(patientId);
         if(noteDTO == null) {
             throw new IllegalArgumentException("Note data is required.");
@@ -81,11 +85,12 @@ public class PatientNotetakerService {
         newNote.setPatientId(patientId);
         newNote.setCreatedAt(LocalDateTime.now());
         newNote.setUpdatedAt(LocalDateTime.now());
-        return patientNoteRepository.save(newNote);
+        detectKeyWords(patientId, newNote.getNote());
+        return new PatientNoteDTO(patientNoteRepository.save(newNote));
     }
 
     @Transactional
-    public PatientNote updateNoteForPatient(Long patientId, Long noteId, PatientNoteDTO noteDTO) {
+    public PatientNoteDTO updateNoteForPatient(Long patientId, Long noteId, PatientNoteDTO noteDTO) {
         validatePatientId(patientId);
         if(noteDTO == null) {
             throw new IllegalArgumentException("Note data is required.");
@@ -94,7 +99,7 @@ public class PatientNotetakerService {
         existingNote.setPatientId(patientId);
         existingNote.setNote(noteDTO.getNote());
         existingNote.setUpdatedAt(LocalDateTime.now());
-        return patientNoteRepository.save(existingNote);
+        return new PatientNoteDTO(patientNoteRepository.save(existingNote));
     }
 
     @Transactional
