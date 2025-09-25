@@ -38,6 +38,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
   bool sortAsc = false;
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
+  bool isLoading = false;
 
   int? selected;
 
@@ -51,16 +52,16 @@ class _AiLogScreenState extends State<AiLogScreen> {
   Future<void> _loadCourses() async {
     selectedCourse = null;
     try {
-      var userCourses = LmsFactory.getLmsService().courses;
+      var userCourses = await LmsFactory.getLmsService().getUserCourses();
       setState(() {
-        if (userCourses != null) {
-          courses = userCourses; // Update the state with fetched courses
-        } else {
-          courses = [];
-        }
+        courses = userCourses; // Update the state with fetched courses
       });
     } catch (e) {
-      print("Error loading courses: $e");
+      setState(() {
+        isLoading = false;
+        isError = true;
+        message = 'Error loading courses: $e';
+      });
     }
   }
 
@@ -106,22 +107,24 @@ class _AiLogScreenState extends State<AiLogScreen> {
   void _queryDatabase() async {
     // For now just test adding data, get data
     if (selectedCourse != null) {
-      final String longText = """
-    This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. 
-    """;
+      final String testString = "This is a test string for a prompt.";
+      final String replyString = "This is a test string for a reply.";
+      final String reflectionString = "This is a test reflection.";
       if (selectedAssignment != null && selectedStudent != null) {
-        print(await AILoggingSingleton().addLog(AiLog(
+        await AILoggingSingleton().addLog(AiLog(
             selectedCourse!,
             selectedAssignment!,
             selectedStudent!,
-            longText,
-            longText,
-            LlmType.CHATGPT)));
+            testString,
+            replyString,
+            LlmType.CHATGPT,
+            reflectionString));
       }
       List<AiLog> newLogs = [];
       setState(() {
         logs = [];
-        message = 'Loading logs...';
+        isLoading = true;
+        message = 'Loading AI logs...';
         isError = false;
         sortIndex = 7;
         sortAsc = false;
@@ -129,11 +132,12 @@ class _AiLogScreenState extends State<AiLogScreen> {
       });
       try {
         newLogs = await AILoggingSingleton().getLogs(
-            selectedCourse!.id,
-            selectedAssignment?.id,
-            selectedStudent?.id,
+            selectedCourse!,
+            selectedAssignment,
+            selectedStudent,
             LocalStorageService.getSelectedClassroom().index);
         setState(() {
+          isLoading = false;
           if (newLogs.isEmpty) {
             message = 'No logs found for the selected filters.';
           }
@@ -142,6 +146,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
         });
       } catch (e) {
         setState(() {
+          isLoading = false;
           isError = true;
           message = 'Error retrieving logs: $e';
         });
@@ -286,14 +291,18 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                       Expanded(
-                          child: DropdownButtonFormField<Course>(
+                          child: DropdownButtonFormField<Course?>(
                         value: selectedCourse,
-                        items: courses.map<DropdownMenuItem<Course>>((course) {
-                          return DropdownMenuItem<Course>(
-                            value: course,
-                            child: Text(course.fullName),
-                          );
-                        }).toList(),
+                        items: List.empty(growable: true)
+                          ..add(DropdownMenuItem<Course?>(
+                              value: null, child: Text('Select Course')))
+                          ..addAll(
+                              courses.map<DropdownMenuItem<Course?>>((course) {
+                            return DropdownMenuItem<Course?>(
+                              value: course,
+                              child: Text(course.fullName),
+                            );
+                          })),
                         onChanged: (value) {
                           setState(() {
                             selectedCourse = value;
@@ -308,46 +317,69 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       )),
                       SizedBox(width: 10),
                       Expanded(
-                          child: DropdownButtonFormField<Assignment>(
-                        decoration: const InputDecoration(
-                          labelText: 'Select Assignment',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: selectedAssignment,
-                        items: assignments
-                            .map<DropdownMenuItem<Assignment>>((assignment) {
-                          return DropdownMenuItem<Assignment>(
-                            value: assignment,
-                            child: Text(assignment.name),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedAssignment = newValue;
-                          });
-                        },
-                      )),
+                          child: Opacity(
+                              opacity: selectedCourse == null ? .5 : 1,
+                              child: DropdownButtonFormField<Assignment?>(
+                                decoration: InputDecoration(
+                                    labelText: 'Select Assignment',
+                                    border: OutlineInputBorder(),
+                                    disabledBorder: null,
+                                    enabled: selectedCourse != null),
+                                value: selectedAssignment,
+                                items: selectedCourse == null
+                                    ? null
+                                    : List.empty(growable: true)
+                                  ?..add(DropdownMenuItem<Assignment?>(
+                                      value: null,
+                                      child: Text('Select Assignment')))
+                                  ..addAll(assignments
+                                      .map<DropdownMenuItem<Assignment?>>(
+                                          (assignment) {
+                                    return DropdownMenuItem<Assignment?>(
+                                      value: assignment,
+                                      child: Text(assignment.name),
+                                    );
+                                  })),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedAssignment = newValue;
+                                  });
+                                },
+                              ))),
                       SizedBox(width: 10),
                       Expanded(
-                          child: DropdownButtonFormField<Participant>(
-                        decoration: const InputDecoration(
-                          labelText: 'Select Student',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: selectedStudent,
-                        items: participants
-                            .map<DropdownMenuItem<Participant>>((participant) {
-                          return DropdownMenuItem<Participant>(
-                            value: participant,
-                            child: Text(participant.fullname),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedStudent = newValue;
-                          });
-                        },
-                      )),
+                          child: Opacity(
+                              opacity: selectedCourse == null ? .5 : 1,
+                              child: DropdownButtonFormField<Participant?>(
+                                decoration: InputDecoration(
+                                    labelText: 'Select Student',
+                                    border: OutlineInputBorder(),
+                                    disabledBorder: null,
+                                    enabled: selectedCourse != null),
+                                value: selectedStudent,
+                                dropdownColor: selectedCourse == null
+                                    ? Colors.grey.shade400
+                                    : null,
+                                items: selectedCourse == null
+                                    ? null
+                                    : List.empty(growable: true)
+                                  ?..add(DropdownMenuItem<Participant?>(
+                                      value: null,
+                                      child: Text('Select Student')))
+                                  ..addAll(participants
+                                      .map<DropdownMenuItem<Participant?>>(
+                                          (participant) {
+                                    return DropdownMenuItem<Participant?>(
+                                      value: participant,
+                                      child: Text(participant.fullname),
+                                    );
+                                  })),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedStudent = newValue;
+                                  });
+                                },
+                              ))),
                       SizedBox(width: 10),
                       ElevatedButton(
                         onPressed: (selectedCourse == null &&
@@ -417,6 +449,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
                     ),
                   ),
                 )),
+            Visibility(
+                visible: isLoading,
+                child: Align(child: CircularProgressIndicator())),
             Visibility(
                 visible: logSource.sortedData.isEmpty,
                 child: Expanded(

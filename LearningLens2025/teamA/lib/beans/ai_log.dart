@@ -22,7 +22,7 @@ class AiLog {
   // Simple constructor. Feedback param is optional.
   AiLog(this.course, this.assignment, this.student, this.prompt, this.response,
       this.model,
-      [this.uuid = "", this.reflection = "", LmsType? lms, DateTime? created]) {
+      [this.reflection = "", this.uuid = "", LmsType? lms, DateTime? created]) {
     if (lms != null) {
       this.lms = lms;
     }
