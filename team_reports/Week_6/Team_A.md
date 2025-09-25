@@ -65,7 +65,7 @@ _Assignee: Sadina (Project Lead)_
 - Reviewed and advised on multiple PRs. 
 - Provided scope/progress updates to leadership. 
 
-** Lidia Rocha **
+**Lidia Rocha**
 - Verified local environment setup with Java 17, Maven wrapper, Flutter SDK, and Chrome. 
 - Navigated to the Patient dashboard to confirm end-to-end authentication works. 
 - Learned that H2 resets user data on backend restart and noted re-registration steps for repeatability. 
@@ -82,9 +82,9 @@ _Assignee: Sadina (Project Lead)_
 
 ## 2. Milestones & Deliverables 
 
-- **Milestone 3 (Demo 1):** On track 
-  - Mitchell Lord: Calendar Assistant v1  
-  - Matthew & Mickey: Notetaker config + ingestion pipeline. 
+- **Milestone 3 (Demo 1):** On track: 
+  - Mitchell Lord: Calendar Assistant v1  
+  - Matthew & Mickey: Notetaker config + ingestion pipeline. 
 - All deliverables demo-ready; full integration pending. 
 - Team remains slightly staggered (not all narratives submitted), but overall milestone target met. 
 
@@ -124,9 +124,9 @@ _Assignee: Sadina (Project Lead)_
   - ASL pipeline: prepare early prototype for UI integration. 
 
 - **Mitchell** 
-  - Calendar Assistant: Integrate notifications with the Calendar. 
-- ** Matthew**
-  - Notetaker: Finalize voice-to-text with diarization. 
+  - Calendar Assistant: Integrate notifications with the Calendar. 
+- **Matthew**
+  - Notetaker: Finalize voice-to-text with diarization. 
 - **Mickey**
   - Voice Files: Saving of files and access tot he voice files from diarzation.
 ---
@@ -139,7 +139,7 @@ _Assignee: Sadina (Project Lead)_
 
 ---
 
-## Week 6 Timesheet (phasn09) 
+## Week 6 Timesheet (phasn09)/Sadina 
 
 - Verified Java 17 + Maven environment setup; resolved mismatches with Codespaces defaults. 
 - Built/runs `demo-slice` Spring Boot app (`mvn spring-boot:run`). 
