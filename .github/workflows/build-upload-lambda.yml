@@ -1,0 +1,132 @@
+name: Build Lambda ZIP and upload to S3
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: "17"
+  AWS_REGION: "us-east-1"
+  # S3 key prefix for the uploaded ZIP. Change to your preferred layout., todo: update this name
+  S3_PREFIX: "lambda/${{ github.repository }}/${{ github.ref_name }}/${{ github.sha }}"
+  # Set to "true" to enable the Lambda update job
+  ENABLE_LAMBDA_UPDATE: "false"
+  # Set this to your Lambda function name (or make it a repo variable)
+  LAMBDA_FUNCTION_NAME: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build with Maven (skip tests)
+        run: mvn -B -DskipTests package
+
+      - name: Locate built ZIP
+        id: zip
+        run: |
+          set -e
+          ZIP_PATH="$(ls -1 target/*.zip | head -n 1)"
+          if [ -z "$ZIP_PATH" ]; then
+            echo "No ZIP found in target/. Make sure your build outputs a .zip there."
+            exit 1
+          fi
+          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$(basename "$ZIP_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: ${{ steps.zip.outputs.zip_path }}
+          if-no-files-found: error
+
+  upload-to-s3:
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Upload to S3 with original filename
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+          PREFIX: ${{ env.S3_PREFIX }}
+        run: |
+          set -e
+          ZIP_PATH="$(ls -1 dist/*.zip | head -n 1)"
+          ZIP_NAME="$(basename "$ZIP_PATH")"
+          echo "Uploading $ZIP_NAME to s3://${BUCKET}/${PREFIX}/$ZIP_NAME"
+          aws s3 cp "$ZIP_PATH" "s3://${BUCKET}/${PREFIX}/$ZIP_NAME"
+          echo "s3_key=${PREFIX}/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+
+  update-lambda:
+    needs: upload-to-s3
+    runs-on: ubuntu-latest
+    if: >
+      env.ENABLE_LAMBDA_UPDATE == 'true' &&
+      env.LAMBDA_FUNCTION_NAME != '' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Compute S3 key
+        id: compute
+        env:
+          PREFIX: ${{ env.S3_PREFIX }}
+          BUCKET: ${{ secrets.S3_BUCKET }}
+        run: |
+          # We need the exact ZIP name uploaded in the previous job
+          # Fetch the manifest from S3 prefix and pick the most recent object under the prefix
+          # If you use a fixed name, you can skip this and hardcode the key.
+          set -e
+          KEY="$(aws s3 ls "s3://${BUCKET}/${PREFIX}/" | awk '{print $4}' | grep -E '\.zip$' | tail -n 1)"
+          if [ -z "$KEY" ]; then
+            echo "Could not find a zip in s3://${BUCKET}/${PREFIX}/"
+            exit 1
+          fi
+          echo "key=${PREFIX}/${KEY}" >> "$GITHUB_OUTPUT"
+
+      - name: Update Lambda from S3
+        env:
+          BUCKET: ${{ secrets.S3_BUCKET }}
+          FUNCTION_NAME: ${{ env.LAMBDA_FUNCTION_NAME }}
+        run: |
+          set -e
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --s3-bucket "$BUCKET" \
+            --s3-key "${{ steps.compute.outputs.key }}" \
+            --publish
