@@ -28,15 +28,16 @@ class MedicationRemindersWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -50,7 +51,7 @@ class MedicationRemindersWidget extends StatelessWidget {
             children: [
               Icon(
                 Icons.medication,
-                color: Colors.purple.shade600,
+                color: theme.colorScheme.secondary,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -59,7 +60,7 @@ class MedicationRemindersWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.purple.shade600,
+                  color: theme.colorScheme.secondary,
                 ),
               ),
             ],
@@ -69,14 +70,16 @@ class MedicationRemindersWidget extends StatelessWidget {
             _formatScheduledTime(reminder.scheduledTime),
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -94,7 +97,7 @@ class MedicationRemindersWidget extends StatelessWidget {
                   reminder.status,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -104,8 +107,8 @@ class MedicationRemindersWidget extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: onMarkTaken,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.teal,
-                          side: const BorderSide(color: Colors.teal),
+                          foregroundColor: theme.colorScheme.tertiary,
+                          side: BorderSide(color: theme.colorScheme.tertiary),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -118,8 +121,8 @@ class MedicationRemindersWidget extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: onMarkMissed,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
+                          foregroundColor: theme.colorScheme.error,
+                          side: BorderSide(color: theme.colorScheme.error),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),

@@ -2,10 +2,12 @@ import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 
 /// Dashboard App header
-class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget {
+class DashboardAppHeader extends StatelessWidget
+    implements PreferredSizeWidget {
   final String userName;
   final String? timezone;
   final String? profileImageUrl;
+
   const DashboardAppHeader({
     super.key,
     required this.userName,
@@ -19,17 +21,17 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
     return const Size.fromHeight(210); // This will be overridden
   }
 
-
   @override
   Widget build(BuildContext context) {
-
+    final theme = Theme.of(context);
     final DateTime time = DateTime.now();
     final String timeZone = time.timeZoneName;
     // Helper function to ensure two-digit formatting
     String twoDigits(int n) => n.toString().padLeft(2, '0');
 
     // Format the datetime manually
-    String formattedTime = '${twoDigits(time.month)}/${twoDigits(time.day)}/${time.year} ${twoDigits(time.hour)}:${twoDigits(time.minute)}';
+    String formattedTime =
+        '${twoDigits(time.month)}/${twoDigits(time.day)}/${time.year} ${twoDigits(time.hour)}:${twoDigits(time.minute)}';
 
     return AppBar(
       backgroundColor: Colors.transparent,
@@ -46,7 +48,7 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: theme.shadowColor.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: const Offset(0, 2),
@@ -74,12 +76,12 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                               width: 35,
                               height: 35,
                               decoration: BoxDecoration(
-                                color: Colors.blue.shade700,
+                                color: theme.colorScheme.primary,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.local_hospital,
-                                color: Colors.white,
+                                color: theme.colorScheme.onPrimary,
                                 size: 20,
                               ),
                             ),
@@ -89,7 +91,7 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade700,
+                                color: theme.colorScheme.primary,
                                 letterSpacing: 1.0,
                               ),
                             ),
@@ -105,7 +107,7 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             height: 40,
                             child: IconButton(
                               padding: EdgeInsets.zero,
-                              onPressed:() {
+                              onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -115,7 +117,9 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                               },
                               icon: Icon(
                                 Icons.settings_outlined,
-                                color: Colors.grey.shade600,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                                 size: 22,
                               ),
                             ),
@@ -140,13 +144,14 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                           backgroundImage: profileImageUrl!.isNotEmpty
                               ? NetworkImage(profileImageUrl!)
                               : null,
-                          backgroundColor: Colors.grey.shade300,
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
                           child: profileImageUrl!.isEmpty
                               ? Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.grey.shade600,
-                          )
+                                  Icons.person,
+                                  size: 30,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                )
                               : null,
                         ),
                         Positioned(
@@ -156,9 +161,12 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             width: 14,
                             height: 14,
                             decoration: BoxDecoration(
-                              color: Colors.green,
+                              color: theme.colorScheme.tertiary,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(
+                                color: theme.cardColor,
+                                width: 2,
+                              ),
                             ),
                           ),
                         ),
@@ -178,7 +186,7 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade700,
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -186,7 +194,9 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             "$formattedTime $timeZone",
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey.shade600,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -194,7 +204,9 @@ class DashboardAppHeader extends StatelessWidget implements PreferredSizeWidget 
                             "How are you feeling today?",
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey.shade600,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                         ],
