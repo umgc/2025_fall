@@ -4,32 +4,46 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import com.careconnect.dto.PatientNoteDTO;
 import com.careconnect.dto.PatientNotetakerConfigDTO;
+import com.careconnect.dto.TaskDto;
 import com.careconnect.model.PatientNote;
 import com.careconnect.model.PatientNotetakerConfig;
 import com.careconnect.model.PatientNotetakerKeyword;
+import com.careconnect.model.PatientNotetakerKeyword.EventType;
 import com.careconnect.repository.PatientNoteRepository;
 import com.careconnect.repository.PatientNotetakerConfigRepository;
+import com.careconnect.service.OpenAIService.OpenAIChatRequest;
+import com.careconnect.service.OpenAIService.OpenAIResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
+@Slf4j
 @Service
 public class PatientNotetakerService {
-    
+    private final TaskService taskService;
+    private final OpenAIService openAIService;
     private final PatientNoteRepository patientNoteRepository;
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
 
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
-        PatientService patientService
+        PatientService patientService,
+        OpenAIService openAIService,
+        TaskService taskService
         ) {
         this.patientNoteRepository = patientNoteRepository;
         this.patientNotetakerConfigRepository = patientNotetakerConfigRepository;
         this.patientService = patientService;
+        this.openAIService = openAIService;
+        this.taskService = taskService;
     }
 
     public PatientNotetakerConfigDTO getNotetakerConfigByPatientId(Long patientId) {
@@ -85,8 +99,9 @@ public class PatientNotetakerService {
         newNote.setPatientId(patientId);
         newNote.setCreatedAt(LocalDateTime.now());
         newNote.setUpdatedAt(LocalDateTime.now());
+        PatientNoteDTO result = new PatientNoteDTO(patientNoteRepository.save(newNote));
         detectKeyWords(patientId, newNote.getNote());
-        return new PatientNoteDTO(patientNoteRepository.save(newNote));
+        return result;
     }
 
     @Transactional
@@ -113,21 +128,84 @@ public class PatientNotetakerService {
         }
     }
     
+    @Async
     private List<String> detectKeyWords(Long patientId, String fileData) {
         List<PatientNotetakerKeyword> keywords = patientNotetakerConfigRepository.findByPatientId(patientId).getTriggerKeywords();
         List<String> foundKeywords = new ArrayList<>();
+
         //TODO add defaults and parse those out as well.
+
         for(PatientNotetakerKeyword keyword : keywords) {
             if(fileData.contains(keyword.getKeyword())) {
+                String truncatedMessage = fileData.substring(
+                    Math.min(fileData.indexOf(keyword.getKeyword()) - 100, 0),
+                    Math.min(fileData.indexOf(keyword.getKeyword()) + 100, fileData.length())
+                );
                 foundKeywords.add(keyword.getKeyword());
-                triggerEventForKeywords(keyword);
+                System.out.println("Keyword detected: " + keyword.getKeyword());
+                triggerEventForKeywords(patientId, keyword, truncatedMessage);
             }
         }
         return foundKeywords;
     }
 
-    private void triggerEventForKeywords(PatientNotetakerKeyword keywords) {
-        //TODO implement event trigger
+    @Async
+    private void triggerEventForKeywords(Long patientId, PatientNotetakerKeyword keyword, String truncatedMessage) {
+        if (keyword.getEventType() == EventType.ALERT) {
+            // TODO notification to caregiver when implemented
+            return;
+        } else if (keyword.getEventType() == EventType.TASK) {
+
+            String prompt = "Given the following keyword '" + keyword.getKeyword()
+                    + "', generate a json object with the following properties: "
+                    + "name (string), "
+                    + "date (string) , "
+                    + "days_of_week (array of booleans for each day of the week), "
+                    + "description (string), "
+                    + "do_count (int), "
+                    + "frequency (string), "
+                    + "task_type (string, one of the following: medication, appointment, exercise, general, lab, pharmacy),"
+                    + "time_of_day (localdatetime as a string)"
+                    + ". The json should be in the following format: {\"date\":\"YYYY-MM-DD\", \"days_of_week\":[true, false, false, false, false, false, false], \"description\":\"description text\", \"do_count\":1, \"frequency\":\"once\", \"task_type\":\"general\", \"time_of_day\":\"hr:min:sec\"}. "
+                    + "Use the following text to derive these properties as they relate to the keyword: '"
+                    + truncatedMessage
+                    + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object.";
+            System.out.println("Sending openAI request...");
+            OpenAIChatRequest request = new OpenAIChatRequest(
+                    "gpt-3.5-turbo",
+                    java.util.Collections.singletonList(new OpenAIService.Message("system", prompt)),
+                    0.2,
+                    256);
+
+            OpenAIResponse response = openAIService.sendChatRequest(request);
+
+            String aiContent = null;
+            if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()
+                    && response.getChoices().get(0).getMessage() != null) {
+                aiContent = response.getChoices().get(0).getMessage().getContent();
+            } else {
+                aiContent = "";
+            }
+            TaskDto aiTask = mapJson(aiContent, TaskDto.class);
+            if (aiTask == null || aiTask.getName() == null || aiTask.getTaskType() == null
+                    || aiTask.getDescription() == null || aiTask.getDate() == null) {
+                log.error("Invalid AI Task generated for keyword '{}': {}", keyword.getKeyword(), aiTask);
+                return;
+            }
+            log.info("OpenAI response for keyword '{}': {}", keyword.getKeyword(), response);
+            log.info("Created Task from AI: {}", aiTask);
+            aiTask.setDescription("AI GENERATED TASK: " + aiTask.getDescription());
+            taskService.createTask(patientId, aiTask);
+        }
     }
 
+    private <T> T mapJson(String json, Class<T> object) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            return objectMapper.readValue(json, object);
+        } catch (JsonProcessingException e) {
+            log.error("Error mapping JSON to object: {}", e.getMessage());
+            return null;
+        }
+    }
 }
