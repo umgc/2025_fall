@@ -6,33 +6,27 @@ class CheckIn {
   final String status;
   final String emoji;
 
-  CheckIn({
-    required this.date,
-    required this.status,
-    required this.emoji,
-  });
+  CheckIn({required this.date, required this.status, required this.emoji});
 }
 
 /// Recent CheckIns Widget
 class RecentCheckInsWidget extends StatelessWidget {
   final List<CheckIn> checkIns;
 
-  const RecentCheckInsWidget({
-    super.key,
-    required this.checkIns,
-  });
+  const RecentCheckInsWidget({super.key, required this.checkIns});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -46,7 +40,7 @@ class RecentCheckInsWidget extends StatelessWidget {
             children: [
               Icon(
                 Icons.show_chart,
-                color: Colors.teal.shade600,
+                color: theme.colorScheme.tertiary,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -55,41 +49,40 @@ class RecentCheckInsWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.teal.shade600,
+                  color: theme.colorScheme.tertiary,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          ...checkIns.take(3).map((checkIn) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Text(
-                  checkIn.emoji,
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  _formatDate(checkIn.date),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.teal.shade600,
+          ...checkIns
+              .take(3)
+              .map(
+                (checkIn) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Text(checkIn.emoji, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 16),
+                      Text(
+                        _formatDate(checkIn.date),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          checkIn.status,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    checkIn.status,
-                    style: const TextStyle(
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )),
+              ),
         ],
       ),
     );
@@ -97,8 +90,20 @@ class RecentCheckInsWidget extends StatelessWidget {
 
   /// Formats the date into a more readable format
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 }

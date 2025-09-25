@@ -17,30 +17,32 @@ class AlertNotification extends StatelessWidget {
   });
 
   /// Gets the background color based on the alert type
-  Color _getBackgroundColor() {
+  Color _getBackgroundColor(BuildContext context) {
+    final theme = Theme.of(context);
     switch (type) {
       case AlertType.important:
-        return Colors.red.shade50;
+        return theme.colorScheme.errorContainer;
       case AlertType.reminder:
-        return Colors.orange.shade50;
+        return theme.colorScheme.secondaryContainer;
       case AlertType.success:
-        return Colors.green.shade50;
+        return theme.colorScheme.surfaceContainerHighest;
       case AlertType.info:
-        return Colors.blue.shade50;
+        return theme.colorScheme.primaryContainer;
     }
   }
 
   /// Gets the border color based on the alert type
-  Color _getBorderColor() {
+  Color _getBorderColor(BuildContext context) {
+    final theme = Theme.of(context);
     switch (type) {
       case AlertType.important:
-        return Colors.red.shade200;
+        return theme.colorScheme.error.withValues(alpha: 0.3);
       case AlertType.reminder:
-        return Colors.orange.shade200;
+        return theme.colorScheme.secondary.withValues(alpha: 0.3);
       case AlertType.success:
-        return Colors.green.shade200;
+        return theme.colorScheme.outline.withValues(alpha: 0.3);
       case AlertType.info:
-        return Colors.blue.shade200;
+        return theme.colorScheme.primary.withValues(alpha: 0.3);
     }
   }
 
@@ -59,16 +61,17 @@ class AlertNotification extends StatelessWidget {
   }
 
   /// Gets the text color based on the alert type
-  Color _getTextColor() {
+  Color _getTextColor(BuildContext context) {
+    final theme = Theme.of(context);
     switch (type) {
       case AlertType.important:
-        return Colors.red.shade900;
+        return theme.colorScheme.onErrorContainer;
       case AlertType.reminder:
-        return Colors.orange.shade900;
+        return theme.colorScheme.onSecondaryContainer;
       case AlertType.success:
-        return Colors.green.shade900;
+        return theme.colorScheme.onSurfaceVariant;
       case AlertType.info:
-        return Colors.blue.shade900;
+        return theme.colorScheme.onPrimaryContainer;
     }
   }
 
@@ -78,10 +81,10 @@ class AlertNotification extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _getBackgroundColor(),
+        color: _getBackgroundColor(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _getBorderColor(),
+          color: _getBorderColor(context),
           width: 1,
         ),
       ),
@@ -89,7 +92,7 @@ class AlertNotification extends StatelessWidget {
         children: [
           Icon(
             Icons.warning_amber_rounded,
-            color: _getTextColor(),
+            color: _getTextColor(context),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -100,7 +103,7 @@ class AlertNotification extends StatelessWidget {
                   TextSpan(
                     text: '${_getTitle()} ',
                     style: TextStyle(
-                      color: _getTextColor(),
+                      color: _getTextColor(context),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -108,7 +111,7 @@ class AlertNotification extends StatelessWidget {
                   TextSpan(
                     text: message,
                     style: TextStyle(
-                      color: _getTextColor().withOpacity(0.8),
+                      color: _getTextColor(context).withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -120,7 +123,7 @@ class AlertNotification extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.close,
-                color: _getTextColor(),
+                color: _getTextColor(context),
                 size: 20,
               ),
               onPressed: onDismiss,

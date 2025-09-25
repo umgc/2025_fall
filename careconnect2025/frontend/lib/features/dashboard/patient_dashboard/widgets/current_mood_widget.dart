@@ -26,15 +26,16 @@ class CurrentMoodWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -48,7 +49,7 @@ class CurrentMoodWidget extends StatelessWidget {
             children: [
               Icon(
                 Icons.favorite_outline,
-                color: Colors.blue.shade600,
+                color: theme.colorScheme.primary,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -57,7 +58,7 @@ class CurrentMoodWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Colors.blue.shade600,
+                  color: theme.colorScheme.primary,
                 ),
               ),
             ],
@@ -78,7 +79,7 @@ class CurrentMoodWidget extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w300,
-                      color: Colors.blue.shade600,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                   Text(
@@ -95,7 +96,7 @@ class CurrentMoodWidget extends StatelessWidget {
                 date == null ? 'Today' : _formatDate(date!),
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -104,24 +105,33 @@ class CurrentMoodWidget extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: moodTags.map((tag) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.blue.shade200,
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                tag,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.blue.shade700,
-                ),
-              ),
-            )).toList(),
+            children: moodTags
+                .map(
+                  (tag) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),

@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 class OfflineNotification extends StatelessWidget {
   final DateTime? lastSynced;
 
-  const OfflineNotification({
-    super.key,
-    this.lastSynced,
-  });
+  const OfflineNotification({super.key, this.lastSynced});
 
   /// Formats the time since the last sync
   String _getTimeSinceSync() {
@@ -25,18 +22,19 @@ class OfflineNotification extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2C3E50),
+        color: theme.colorScheme.inverseSurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
             Icons.wifi_off,
-            color: Colors.blue.shade300,
+            color: theme.colorScheme.primary.withValues(alpha: 0.7),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -44,10 +42,10 @@ class OfflineNotification extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Offline Mode',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: theme.colorScheme.onInverseSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -56,7 +54,9 @@ class OfflineNotification extends StatelessWidget {
                 Text(
                   'Last synced ${_getTimeSinceSync()}. Your data will sync when reconnected. The application will have limited functionality.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: theme.colorScheme.onInverseSurface.withValues(
+                      alpha: 0.8,
+                    ),
                     fontSize: 14,
                   ),
                 ),

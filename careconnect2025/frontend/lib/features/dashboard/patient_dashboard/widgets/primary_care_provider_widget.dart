@@ -25,15 +25,16 @@ class PrimaryCareProviderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -43,12 +44,12 @@ class PrimaryCareProviderWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Your Primary Care Provider',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -56,11 +57,11 @@ class PrimaryCareProviderWidget extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.blue.shade600,
+                backgroundColor: theme.colorScheme.primary,
                 child: Text(
                   providerName.split(' ').map((e) => e[0]).take(2).join(),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -81,14 +82,18 @@ class PrimaryCareProviderWidget extends StatelessWidget {
                       specialty,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                     Text(
                       organization,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                   ],
@@ -99,48 +104,40 @@ class PrimaryCareProviderWidget extends StatelessWidget {
           const SizedBox(height: 20),
           const Text(
             'Contact Information',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
             phone,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade700,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           Text(
             email,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade700,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           if (nextAppointment != null) ...[
             const SizedBox(height: 20),
             const Text(
               'Next Appointment',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               _formatAppointmentDate(nextAppointment!),
-              style: const TextStyle(
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontSize: 14),
             ),
             Text(
               _formatAppointmentTime(nextAppointment!) +
                   (appointmentType != null ? ' - $appointmentType' : ''),
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -150,7 +147,8 @@ class PrimaryCareProviderWidget extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onContactProvider,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade600,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -158,10 +156,7 @@ class PrimaryCareProviderWidget extends StatelessWidget {
               ),
               child: const Text(
                 'Contact Provider',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -172,8 +167,20 @@ class PrimaryCareProviderWidget extends StatelessWidget {
 
   /// Formats the appointment date into a more readable format
   String _formatAppointmentDate(DateTime date) {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
