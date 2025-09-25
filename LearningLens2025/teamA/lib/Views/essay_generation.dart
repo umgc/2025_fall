@@ -9,7 +9,14 @@ import '../Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
-
+import 'dart:io';
+import 'package:excel/excel.dart';
+import 'dart:typed_data';
+import 'package:excel/excel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'dart:html' as html; 
 
 // Required Components:
 // 2 Dropdowns: 1 for the Grade Level and 1 for the Point Scale
@@ -128,16 +135,18 @@ class _EssayGenerationState extends State<EssayGeneration>
 
         You must reply with a representation of the rubric in JSON format that exactly matches this format: 
         {
-            "criteria": [
-                {
-                    "description": #CriteriaName,
-                    "levels": [
-                        { "definition": #CriteriaDef, "score": #ScoreValue },
-                    ]
-                }
+          "criteria": [
+              {
+                  "description": #CriteriaName,
+                  "weight": #WeightPercentage,
+                  "levels": [
+                      { "definition": #CriteriaDef, "score": #ScoreValue },
+                  ]
+              }
           ]
         }
         #CriteriaName must be replaced with the name of the criteria.
+        #WeightPercentage must be replaced with the weight of this criterion as a number (total of all criteria should sum to 100).
         #CriteriaDef must be replaced with a detailed description of what meeting that criteria would look like for each scale value.
         #ScoreValue must be replaced with a number representing the score. The score for the lowest scale value will be 0, and the scores will increase by 1 for each scale.
         You should create as many "levels" objects as there are point scale values.
@@ -193,109 +202,111 @@ class _EssayGenerationState extends State<EssayGeneration>
             Expanded(
               flex:
                   2, // This controls the space for the left side, bigger ratio
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text("Rubric Generator",
-                      style: TextStyle(fontSize: 24)),
-                  const SizedBox(height: 16),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text("Rubric Generator",
+                        style: TextStyle(fontSize: 24)),
+                    const SizedBox(height: 16),
 
-                  // Grade Level Dropdown
-                  GradeLevelDropdown(
-                    selectedGradeLevel: _selectedGradeLevel,
-                    onChanged: _handleGradeLevelChanged,
-                  ),
+                    // Grade Level Dropdown
+                    GradeLevelDropdown(
+                      selectedGradeLevel: _selectedGradeLevel,
+                      onChanged: _handleGradeLevelChanged,
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Point Scale Dropdown
-                  PointScaleDropdown(
-                    selectedPointScale: _selectedPointScale,
-                    onChanged: _handlePointScaleChanged,
-                  ),
+                    // Point Scale Dropdown
+                    PointScaleDropdown(
+                      selectedPointScale: _selectedPointScale,
+                      onChanged: _handlePointScaleChanged,
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // LLM Selection Dropdown
-                  DropdownButton<LlmType>(
-                    value: selectedLLM,
-                    onChanged: _handleLLMChanged,
-                    // items: <String>['Perplexity', 'OpenAI', 'Claude']
-                    //     .map<DropdownMenuItem<String>>((String value) {
-                    //   return DropdownMenuItem<String>(
-                    //     value: value,
-                    //     child: Text(value),
-                    //   );
-                    // }).toList(),
-                    items: LlmType.values.map((LlmType llm) {
-                      return DropdownMenuItem<LlmType>(
-                        value: llm,
-                        enabled: LocalStorageService.userHasLlmKey(llm),
-                        child: Text(llm.displayName, style: TextStyle(
-                          color: LocalStorageService.userHasLlmKey(llm) ? Colors.black87 : Colors.grey,
+                    // LLM Selection Dropdown
+                    DropdownButton<LlmType>(
+                      value: selectedLLM,
+                      onChanged: _handleLLMChanged,
+                      // items: <String>['Perplexity', 'OpenAI', 'Claude']
+                      //     .map<DropdownMenuItem<String>>((String value) {
+                      //   return DropdownMenuItem<String>(
+                      //     value: value,
+                      //     child: Text(value),
+                      //   );
+                      // }).toList(),
+                      items: LlmType.values.map((LlmType llm) {
+                        return DropdownMenuItem<LlmType>(
+                          value: llm,
+                          enabled: LocalStorageService.userHasLlmKey(llm),
+                          child: Text(llm.displayName, style: TextStyle(
+                            color: LocalStorageService.userHasLlmKey(llm) ? Colors.black87 : Colors.grey,
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList()
-                  ),
+                        );
+                      }).toList()
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Standard/objective
-                  TextBox(
-                    label: "Standard / Objective",
-                    // icon: Icons.mic,
-                    // secondaryIcon: Icons.attachment,
-                    initialValue: '',
-                    onChanged: (newValue) {
-                      _standardObjectiveController.text = newValue!;
-                    },
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
+                    // Standard/objective
+                    TextBox(
+                      label: "Standard / Objective",
+                      // icon: Icons.mic,
+                      // secondaryIcon: Icons.attachment,
+                      initialValue: '',
+                      onChanged: (newValue) {
+                        _standardObjectiveController.text = newValue!;
+                      },
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
 
-                  // Assignment description
-                  TextBox(
-                    label: "Assignment Description",
-                    // icon: Icons.mic,
-                    // secondaryIcon: Icons.attachment,
-                    initialValue: '',
-                    onChanged: (newValue) {
-                      _assignmentDescriptionController.text = newValue!;
-                    },
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
+                    // Assignment description
+                    TextBox(
+                      label: "Assignment Description",
+                      // icon: Icons.mic,
+                      // secondaryIcon: Icons.attachment,
+                      initialValue: '',
+                      onChanged: (newValue) {
+                        _assignmentDescriptionController.text = newValue!;
+                      },
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
 
-                  // Additional customization
-                  TextBox(
-                    label: "Additional Customization for Rubric (Optional)",
-                    // icon: Icons.mic,
-                    // secondaryIcon: Icons.attachment,
-                    initialValue: '',
-                    onChanged: (newValue) {
-                      _additionalCustomizationController.text = newValue!;
-                    },
-                    maxLines: 2,
-                  ),
+                    // Additional customization
+                    TextBox(
+                      label: "Additional Customization for Rubric (Optional)",
+                      // icon: Icons.mic,
+                      // secondaryIcon: Icons.attachment,
+                      initialValue: '',
+                      onChanged: (newValue) {
+                        _additionalCustomizationController.text = newValue!;
+                      },
+                      maxLines: 2,
+                    ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Generate Button
-                  Button(
-                    'essay',
-                    onPressed: () {
-                      final result = getSelectedResponses();
+                    // Generate Button
+                    Button(
+                      'essay',
+                      onPressed: () {
+                        final result = getSelectedResponses();
 
-                      pingApi(result).then((dynamic results) {
-                        setState(() {
-                          rubricasjson = globalRubric;
-                          globalRubric = results; // Store the rubric
+                        pingApi(result).then((dynamic results) {
+                          setState(() {
+                            rubricasjson = globalRubric;
+                            globalRubric = results; // Store the rubric
+                          });
                         });
-                      });
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -304,130 +315,173 @@ class _EssayGenerationState extends State<EssayGeneration>
             // Right Side
             Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Container(
-                    height: 600,
-                    color: Colors.grey[200],
-                    child:
-                        _isLoading // Make the container dependent on the isLoading var
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    CircularProgressIndicator(), // Loading spinner
-                                    SizedBox(height: 16),
-                                    Text(
-                                      "Generating Rubric...", // Display this text when we start loading
-                                      style: TextStyle(
-                                          fontSize: 18, color: Colors.black54),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : globalRubric != null &&
-                                    globalRubric['criteria'] != null
-                                ? SingleChildScrollView(
-                                    child: Table(
-                                      border: TableBorder
-                                          .all(), // Adds border to the table cells
-                                      columnWidths: const {
-                                        0: FlexColumnWidth(
-                                            1), // Description column
-                                        // Dynamically add scores per column
-                                      },
-                                      children: [
-                                        TableRow(
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.all(8.0),
-                                              child: Text(
-                                                'Criteria',
-                                                style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16),
-                                              ),
-                                            ),
-
-                                            // Dynamically create score level headers
-                                            for (var level in globalRubric[
-                                                    'criteria'][0][
-                                                'levels']) // Assuming all criteria have the same number of levels
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.all(8.0),
-                                                child: Text(
-                                                  '${level['score']}',
-                                                  style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 16),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-
-                                        // Create rows
-                                        for (var criteria
-                                            in globalRubric['criteria']) ...[
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      height: 600,
+                      color: Colors.grey[200],
+                      child:
+                          _isLoading // Make the container dependent on the isLoading var
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircularProgressIndicator(), // Loading spinner
+                                      SizedBox(height: 16),
+                                      Text(
+                                        "Generating Rubric...", // Display this text when we start loading
+                                        style: TextStyle(
+                                            fontSize: 18, color: Colors.black54),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : globalRubric != null &&
+                                      globalRubric['criteria'] != null
+                                  ? SingleChildScrollView(
+                                      child: Table(
+                                        border: TableBorder
+                                            .all(), // Adds border to the table cells
+                                        columnWidths: const {
+                                          0: FlexColumnWidth(
+                                              1), // Description column
+                                          // Dynamically add scores per column
+                                        },
+                                        children: [
                                           TableRow(
                                             children: [
                                               Padding(
                                                 padding:
                                                     const EdgeInsets.all(8.0),
                                                 child: Text(
-                                                  criteria['description'],
+                                                  'Criteria',
                                                   style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold),
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16),
                                                 ),
                                               ),
-
-                                              // Add score levels for each column
-                                              for (var level
-                                                  in criteria['levels'])
+                                              Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Text(
+                                                  'Weight',
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                              // Dynamically create score level headers
+                                              for (var level in globalRubric[
+                                                      'criteria'][0][
+                                                  'levels']) // Assuming all criteria have the same number of levels
                                                 Padding(
                                                   padding:
                                                       const EdgeInsets.all(8.0),
                                                   child: Text(
-                                                    '${level['definition']}',
+                                                    '${level['score']}',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16),
                                                     textAlign: TextAlign.center,
                                                   ),
                                                 ),
                                             ],
                                           ),
+
+                                          // Create rows
+                                          for (var criteria
+                                              in globalRubric['criteria']) ...[
+                                            TableRow(
+                                              children: [
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(8.0),
+                                                  child: Text(
+                                                    criteria['description'],
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets.all(8.0),
+                                                  child: Text(
+                                                    '${criteria['weight']}%', // <-- weight here
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                                // Add score levels for each column
+                                                for (var level
+                                                    in criteria['levels'])
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(8.0),
+                                                    child: Text(
+                                                      '${level['definition']}',
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Text(
+                                        "No Rubric Data Available",
+                                        style: TextStyle(
+                                            fontSize: 18, color: Colors.black54),
+                                      ),
                                     ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      "No Rubric Data Available",
-                                      style: TextStyle(
-                                          fontSize: 18, color: Colors.black54),
-                                    ),
-                                  ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Send to Moodle Button
-                  Button(
-                    "assessment",
-                    onPressed: rubricasjson != null
-                        ? () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    EssayEditPage(rubricasjson, _assignmentDescriptionController.text),
-                              ),
-                            );
-                          }
-                        : null, // Disable button when rubricasjson is null
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Export Buttons Row
+                    if (globalRubric != null) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              if (globalRubric != null) {
+                                await exportPdf(globalRubric, 'rubric_pdf.pdf');
+                              }
+                            },
+                            icon: Icon(Icons.picture_as_pdf),
+                            label: Text("Export to PDF"),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              if (globalRubric != null) {
+                                await exportExcel(globalRubric, 'rubric_csv.xlsx');;
+                              }
+                            },
+                            icon: Icon(Icons.table_chart),
+                            label: Text("Export to CSV"),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    // Send to Moodle Button
+                    Button(
+                      "assessment",
+                      onPressed: globalRubric != null
+                          ? () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      EssayEditPage(globalRubric, _assignmentDescriptionController.text),
+                                ),
+                              );
+                            }
+                          : null, // Disable button when rubricasjson is null
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -600,5 +654,88 @@ class GradeLevelDropdown extends StatelessWidget {
       }).toList(),
       onChanged: _handleTextChanged,
     );
+  }
+}
+
+// PDF Export Feature
+Future<void> exportPdf(dynamic rubricData, String fileName) async {
+  try {
+    final pdf = pw.Document();
+    final criteria = rubricData['criteria'] as List<dynamic>;
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Rubric',
+                  style: pw.TextStyle(
+                      fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 16),
+              for (var c in criteria) ...[
+                pw.Text('${c['description']} (Weight: ${c['weight']}%)',
+                    style: pw.TextStyle(
+                        fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                for (var level in c['levels'])
+                  pw.Text('${level['score']}: ${level['definition']}'),
+                pw.SizedBox(height: 12),
+              ]
+            ],
+          );
+        },
+      ),
+    );
+
+    final pdfBytes = await pdf.save();
+
+    // Web Export Donwload
+    final blob = html.Blob([pdfBytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  } catch (e) {
+    print('Error exporting PDF: $e');
+  }
+}
+
+// Excel Export Feature
+Future<void> exportExcel(dynamic rubricData, String fileName) async {
+  try {
+    final excel = Excel.createExcel();
+    final sheet = excel[excel.getDefaultSheet()!];
+    final criteria = rubricData['criteria'] as List<dynamic>;
+
+    // Header
+    final header = ['Criteria', 'Weight'];
+    if (criteria.isNotEmpty) {
+      for (var level in criteria[0]['levels']) {
+        header.add(level['score'].toString());
+      }
+    }
+    sheet.appendRow(header);
+
+    // Data 
+    for (var c in criteria) {
+      final row = [c['description'], c['weight']];
+      for (var level in c['levels']) {
+        row.add(level['definition']);
+      }
+      sheet.appendRow(row);
+    }
+
+    final excelBytes = excel.encode()!;
+
+    // Web Export Download
+    final blob = html.Blob([excelBytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  } catch (e) {
+    print('Error exporting Excel: $e');
   }
 }
