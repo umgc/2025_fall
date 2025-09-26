@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/prompt_engine.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
@@ -99,6 +100,8 @@ class _AssessmentState extends State<CreateAssessment> {
         aiModel = GrokLLM(LocalStorageService.getGrokKey());
       } else if (selectedLLM == LlmType.PERPLEXITY) {
         aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+      } else if (selectedLLM == LlmType.DEEPSEEK) {
+        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
       } else {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       }

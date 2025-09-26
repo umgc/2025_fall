@@ -1,7 +1,8 @@
 enum LlmType {
   CHATGPT('ChatGPT'),
   PERPLEXITY('Perplexity'),
-  GROK('Grok');
+  GROK('Grok'),
+  DEEPSEEK('DeepSeek');
 
   final String displayName;
   const LlmType(this.displayName);

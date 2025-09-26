@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
@@ -91,6 +92,8 @@ class _EssayGenerationState extends State<EssayGeneration>
         return LocalStorageService.getGrokKey();
       case LlmType.PERPLEXITY:
         return LocalStorageService.getPerplexityKey();
+      case LlmType.DEEPSEEK:
+        return LocalStorageService.getDeepseekKey();
       default:
         return LocalStorageService.getOpenAIKey();
     }
@@ -116,6 +119,8 @@ class _EssayGenerationState extends State<EssayGeneration>
         llmInstance = GrokLLM(getApiKey());
       } else if (selectedLLM == LlmType.PERPLEXITY) {
         llmInstance = PerplexityLLM(getApiKey()); // Perplexity API class
+      } else if (selectedLLM == LlmType.DEEPSEEK) {
+        llmInstance = DeepseekLLM(LocalStorageService.getDeepseekKey());
       } else {
         throw Exception('Invalid LLM selected.');
       }

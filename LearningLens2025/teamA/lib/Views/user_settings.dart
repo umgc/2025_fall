@@ -21,6 +21,7 @@ class UserSettingsState extends State<UserSettings> {
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _grokKeyController = TextEditingController();
   final TextEditingController _preplexityKeyController = TextEditingController();
+  final TextEditingController _deepSeekKeyController= TextEditingController();
 
   final TextEditingController _googleClientIdController =
       TextEditingController();
@@ -39,6 +40,7 @@ class UserSettingsState extends State<UserSettings> {
     final preplexityKey = LocalStorageService.getPerplexityKey();
     final grokKey = LocalStorageService.getGrokKey();
     final googleClientId = LocalStorageService.getGoogleClientId();
+    final deepSeekKey = LocalStorageService.getDeepseekKey();
 
     setState(() {
       _usernameController.text = username;
@@ -47,6 +49,7 @@ class UserSettingsState extends State<UserSettings> {
       _apiKeyController.text = apiKey;
       _preplexityKeyController.text = preplexityKey;
       _grokKeyController.text = grokKey;
+      _deepSeekKeyController.text = deepSeekKey;
       _googleClientIdController.text = googleClientId;
     });
   }
@@ -249,6 +252,12 @@ class UserSettingsState extends State<UserSettings> {
           controller: _grokKeyController,
           loginNotifier: loginNotifier,
           keyType: LLMKey.grok,
+        ),
+                _buildApiKeyField(
+          label: 'Deepseek AI API Key',
+          controller: _deepSeekKeyController,
+          loginNotifier: loginNotifier,
+          keyType: LLMKey.deepseek,
         ),
       ],
     );
