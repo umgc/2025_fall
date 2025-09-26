@@ -4,10 +4,6 @@ import 'package:care_connect_app/features/integrations/presentation/pages/medica
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
-import 'package:care_connect_app/features/invoices/invoice_dashboard_page.dart';
-import 'package:care_connect_app/features/invoices/invoice_detail_page.dart';
-import 'package:care_connect_app/features/invoices/invoice_list_page.dart';
-import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -48,7 +44,11 @@ import '../../features/social/presentation/pages/main_feed_screen.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../providers/user_provider.dart';
 import 'package:provider/provider.dart';
-import '../../features/invoices/upload_invoice_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/upload_invoice_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on user role
 void navigateToDashboard(BuildContext context, {String? role}) {

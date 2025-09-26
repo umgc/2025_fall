@@ -257,3 +257,55 @@ class Invoice {
         recommendedActions: recommendedActions ?? this.recommendedActions,
       );
 }
+ 
+
+extension InvoiceFactories on Invoice {
+  static Invoice empty() {
+    final now = DateTime.now();
+    String iso(DateTime d) => d.toIso8601String();
+
+    return Invoice(
+      id: 'local-${now.millisecondsSinceEpoch}',     // temporary client id
+      invoiceNumber: '',                             // let server fill later
+      provider: const ProviderInfo(
+        name: '',
+        address: '',
+        phone: '',
+        email: null,
+      ),
+      patient: const PatientInfo(
+        name: '',
+        address: null,
+        accountNumber: null,
+        billingAddress: null,
+      ),
+      dates: InvoiceDates(
+        serviceDate: now,
+        billedDate: now,
+        dueDate: now.add(const Duration(days: 30)),
+        paidDate: null,
+      ),
+      services: const <ServiceLine>[],
+      paymentStatus: PaymentStatus.pending,
+      billedToInsurance: false,
+      amounts: const Amounts(
+        totalCharges: 0,
+        totalAdjustments: 0,
+        total: 0,
+        amountDue: 0,
+      ),
+      paymentReferences: PaymentReferences(
+        paymentLink: null,
+        qrCodeUrl: null,
+        notes: null,
+        supportedMethods: const <String>[],  
+      ),
+      checkPayableTo: null,
+      createdAt: iso(now),
+      updatedAt: iso(now),
+      history: const <HistoryEntry>[],
+      aiSummary: null,
+      recommendedActions: const <String>[],
+    );
+  }
+}

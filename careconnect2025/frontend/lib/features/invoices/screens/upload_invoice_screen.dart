@@ -1,3 +1,5 @@
+ 
+
 import 'package:care_connect_app/features/invoices/widgets/ocr_review_screen.dart';
 import 'package:care_connect_app/features/invoices/widgets/review_photos_screen.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
@@ -5,6 +7,10 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+ 
+import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import 'invoice_detail_page.dart';
 
 class UploadInvoiceScreen extends StatefulWidget {
   const UploadInvoiceScreen({super.key});
@@ -31,122 +37,141 @@ class _UploadInvoiceScreenState extends State<UploadInvoiceScreen> {
       if (mounted) setState(() => offline = isOffline);
     });
   }
-Future<void> _onUploadFile() async {
-  final res = await FilePicker.platform.pickFiles(
-    allowMultiple: true,
-    allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
-    type: FileType.custom,
-    withReadStream: false,
-  );
-  if (res == null) return;
 
-  String? ext(String? p) => p?.split('.').last.toLowerCase();
-
-  final imagePaths = <String>[];
-  final pdfPaths = <String>[];
-
-  for (final f in res.files) {
-    final path = f.path;
-    if (path == null) continue;
-    final e = ext(path);
-    if (e == 'png' || e == 'jpg' || e == 'jpeg') {
-      imagePaths.add(path);
-    } else if (e == 'pdf') {
-      pdfPaths.add(path);
-    }
-  }
-
-  if (imagePaths.isEmpty && pdfPaths.isEmpty) {
-    _snack('No supported files selected');
-    return;
-  }
-
-  if (imagePaths.isNotEmpty) {
-    final imagesAsX = imagePaths.map((p) => XFile(p)).toList();
-
-    final reviewed = await Navigator.push<List<XFile>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ReviewPhotosScreen(initialPhotos: imagesAsX),
-        fullscreenDialog: true,
-      ),
+  Future<void> _onUploadFile() async {
+    final res = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
+      type: FileType.custom,
+      withReadStream: false,
     );
-    if (!mounted) return;
+    if (res == null) return;
 
-    if (reviewed != null && reviewed.isNotEmpty) {
-      final ocrPayload = await Navigator.push<List<Map<String, String>>>(
+    String? ext(String? p) => p?.split('.').last.toLowerCase();
+
+    final imagePaths = <String>[];
+    final pdfPaths = <String>[];
+
+    for (final f in res.files) {
+      final path = f.path;
+      if (path == null) continue;
+      final e = ext(path);
+      if (e == 'png' || e == 'jpg' || e == 'jpeg') {
+        imagePaths.add(path);
+      } else if (e == 'pdf') {
+        pdfPaths.add(path);
+      }
+    }
+
+    if (imagePaths.isEmpty && pdfPaths.isEmpty) {
+      _snack('No supported files selected');
+      return;
+    }
+
+    if (imagePaths.isNotEmpty) {
+      final imagesAsX = imagePaths.map((p) => XFile(p)).toList();
+
+      final reviewed = await Navigator.push<List<XFile>>(
         context,
         MaterialPageRoute(
-          builder: (_) => OcrReviewScreen(images: reviewed),
+          builder: (_) => ReviewPhotosScreen(initialPhotos: imagesAsX),
           fullscreenDialog: true,
         ),
       );
       if (!mounted) return;
 
-      if (ocrPayload != null && ocrPayload.isNotEmpty) {
-        _snack('Ready to upload ${ocrPayload.length} item(s)');
-        // TODO: upload ocrPayload. Each item is { path, text }.
+      if (reviewed != null && reviewed.isNotEmpty) {
+        final ocrPayload = await Navigator.push<List<Map<String, String>>>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OcrReviewScreen(images: reviewed),
+            fullscreenDialog: true,
+          ),
+        );
+        if (!mounted) return;
+
+        if (ocrPayload != null && ocrPayload.isNotEmpty) {
+          _snack('Ready to upload ${ocrPayload.length} item(s)');
+          // TODO: upload ocrPayload. Each item is { path, text }.
+        } else {
+          _snack('No OCR results');
+        }
       } else {
-        _snack('No OCR results');
+        _snack('No photos selected');
       }
-    } else {
-      _snack('No photos selected');
+    }
+
+    if (pdfPaths.isNotEmpty) {
+      _snack('Selected ${pdfPaths.length} PDF(s)');
+      // TODO: route PDFs to your PDF flow.
     }
   }
 
-  if (pdfPaths.isNotEmpty) {
-    _snack('Selected ${pdfPaths.length} PDF(s)');
-    // TODO: route PDFs to your PDF flow.
-  }
-}
+  Future<void> _onTakePhoto() async {
+    final picker = ImagePicker();
 
-Future<void> _onTakePhoto() async {
-  final picker = ImagePicker();
+    final first = await picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 2048,
+      maxHeight: 2048,
+      imageQuality: 92,
+    );
+    if (first == null) return;
 
-  final first = await picker.pickImage(
-    source: ImageSource.camera,
-    maxWidth: 2048,
-    maxHeight: 2048,
-    imageQuality: 92,
-  );
-  if (first == null) return;
+    final reviewed = await Navigator.push<List<XFile>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
+        fullscreenDialog: true,
+      ),
+    );
+    if (!mounted) return;
 
-  final reviewed = await Navigator.push<List<XFile>>(
-    context,
-    MaterialPageRoute(
-      builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
-      fullscreenDialog: true,
-    ),
-  );
-  if (!mounted) return;
+    if (reviewed == null || reviewed.isEmpty) {
+      _snack('No photos selected');
+      return;
+    }
 
-  if (reviewed == null || reviewed.isEmpty) {
-    _snack('No photos selected');
-    return;
-  }
+    final ocrPayload = await Navigator.push<List<Map<String, String>>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OcrReviewScreen(images: reviewed),
+        fullscreenDialog: true,
+      ),
+    );
+    if (!mounted) return;
 
-  final ocrPayload = await Navigator.push<List<Map<String, String>>>(
-    context,
-    MaterialPageRoute(
-      builder: (_) => OcrReviewScreen(images: reviewed),
-      fullscreenDialog: true,
-    ),
-  );
-  if (!mounted) return;
+    if (ocrPayload == null || ocrPayload.isEmpty) {
+      _snack('No OCR results');
+      return;
+    }
 
-  if (ocrPayload == null || ocrPayload.isEmpty) {
-    _snack('No OCR results');
-    return;
+    _snack('Ready to upload ${ocrPayload.length} item(s)');
+    // TODO: upload ocrPayload
   }
 
-  _snack('Ready to upload ${ocrPayload.length} item(s)');
-  // TODO: upload ocrPayload
-}
+  Future<void> _onManualEntry() async {
+    // Open the detail screen in create mode
+    final created = await Navigator.push<Invoice>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InvoiceDetailPage(
+          invoice: InvoiceFactories.empty(),
+          isNew: true,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
 
- 
-  void _onManualEntry() {
-    _snack('Manual entry');
-    // TODO: navigate to manual invoice form
+    if (!mounted) return;
+
+    if (created == null) {
+      _snack('Manual entry cancelled');
+      return;
+    }
+
+    await InvoiceService.instance.upsert(created);
+    _snack('Invoice saved');
   }
 
   void _snack(String msg) {
@@ -162,7 +187,6 @@ Future<void> _onTakePhoto() async {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Upload Invoice'),
-        
         actions: [
           Stack(
             clipBehavior: Clip.none,
@@ -197,7 +221,7 @@ Future<void> _onTakePhoto() async {
           ),
         ],
       ),
-       drawer: const CommonDrawer(currentRoute: '/invoice-assistant/upload'),
+      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/upload'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -249,10 +273,10 @@ class _SecureStorageCard extends StatelessWidget {
           children: [
             Icon(Icons.verified_user_outlined, color: cs.primary),
             const SizedBox(width: 12),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text('Secure Storage', style: TextStyle(fontWeight: FontWeight.w600)),
                   SizedBox(height: 6),
                   Text(
@@ -330,7 +354,6 @@ class _SupportedFormatsRow extends StatelessWidget {
 class _OfflineBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1F2937),
@@ -338,8 +361,8 @@ class _OfflineBanner extends StatelessWidget {
         border: Border.all(color: const Color(0xFF374151)),
       ),
       padding: const EdgeInsets.all(12),
-      child: Row(
-        children: const [
+      child: const Row(
+        children: [
           Icon(Icons.wifi_off, color: Color(0xFF60A5FA)),
           SizedBox(width: 12),
           Expanded(

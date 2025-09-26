@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'models/invoice_models.dart';
-import 'services/invoice_service.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'invoice_detail_page.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 
