@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,31 +28,80 @@ import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.TaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/**
+ * Service layer for managing tasks (API v2).
+ *
+ * <p>
+ * This class contains business logic for creating, updating,
+ * retrieving, and deleting tasks. It also handles recurrence
+ * expansion, mapping between {@link Task} entities and
+ * {@link TaskDtoV2} DTOs, and scheduling of associated
+ * {@link ScheduledNotification}s.
+ * </p>
+ *
+ * <p>
+ * Key responsibilities:
+ * <ul>
+ * <li>CRUD operations on tasks</li>
+ * <li>Recurrence expansion (daily, weekly, monthly, yearly)</li>
+ * <li>Selective updates of recurring series</li>
+ * <li>Mapping between entity and DTO representations</li>
+ * <li>Notification management and time-shifting across occurrences</li>
+ * </ul>
+ * </p>
+ */
 @Service
 @Transactional
 public class TaskServiceV2 {
 
+    private static final Logger log = LoggerFactory.getLogger(TaskServiceV2.class);
     private TaskRepository taskRepository;
     private PatientRepository patientRepository;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private final ObjectMapper mapper;
 
+    /**
+     * Constructs the service with required repositories and mapper.
+     *
+     * @param taskRepository    repository for tasks
+     * @param patientRepository repository for patients
+     * @param mapper            Jackson object mapper
+     */
     public TaskServiceV2(TaskRepository taskRepository, PatientRepository patientRepository, ObjectMapper mapper) {
         this.taskRepository = taskRepository;
         this.patientRepository = patientRepository;
         this.mapper = mapper;
     }
 
+    /**
+     * Retrieves a task entity by its ID.
+     *
+     * @param taskId the ID of the task
+     * @return the {@link Task} entity
+     * @throws AppException if task not found
+     */
     public Task getTaskById(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
+    /**
+     * Retrieves a task as a DTO by its ID.
+     *
+     * @param taskId the ID of the task
+     * @return the {@link TaskDtoV2}
+     */
     public TaskDtoV2 getTaskDtoById(Long taskId) {
         Task task = getTaskById(taskId);
         return mapToDto(task);
     }
 
+    /**
+     * Retrieves all tasks for a given patient.
+     *
+     * @param patientId the ID of the patient
+     * @return list of {@link TaskDtoV2} objects (empty if none found)
+     */
     public List<TaskDtoV2> getTasksByPatient(Long patientId) {
         Optional<List<Task>> tasksOpt = taskRepository.findByPatientId(patientId);
         return tasksOpt.orElseGet(ArrayList::new).stream()
@@ -58,12 +109,20 @@ public class TaskServiceV2 {
                 .toList();
     }
 
+    /**
+     * Creates a new task for a patient. Expands recurrence
+     * into additional occurrences if defined.
+     *
+     * @param patientId the ID of the patient
+     * @param taskDto   DTO containing task details
+     * @return the created {@link TaskDtoV2}
+     */
     public TaskDtoV2 createTask(Long patientId, TaskDtoV2 taskDto) {
         Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
 
-        System.out.println("Creating task for patient: " + patient.getId());
-        System.out.println("Task details: " + taskDto);
+        log.info("Creating task for patient: " + patient.getId());
+        log.debug("Task details: " + taskDto);
 
         Task parentTask = Task.builder()
                 .name(taskDto.getName())
@@ -95,7 +154,7 @@ public class TaskServiceV2 {
             }
         }
         Task savedParent = taskRepository.save(parentTask);
-        System.out.println("New task created: " + parentTask);
+        log.info("New task created: " + parentTask);
 
         // Expand occurrences if recurrence is defined
         if (taskDto.getFrequency() != null && taskDto.getCount() != null && taskDto.getCount() > 1) {
@@ -106,6 +165,14 @@ public class TaskServiceV2 {
 
     }
 
+    /**
+     * Updates a task. Can apply updates to a single task
+     * or an entire recurring series based on {@code updateSeries}.
+     *
+     * @param taskId  ID of the task to update
+     * @param taskDto updated task details
+     * @return the updated {@link TaskDtoV2}
+     */
     public TaskDtoV2 updateTask(Long taskId, TaskDtoV2 taskDto) {
         Task existingTask = getTaskById(taskId);
 
@@ -174,6 +241,26 @@ public class TaskServiceV2 {
         return mapToDto(parentTask);
     }
 
+    /**
+     * Applies selective updates from a parent DTO to a child task
+     * in a recurring series.
+     *
+     * <p>
+     * This method is used during series updates to propagate
+     * only the fields that actually changed on the parent, leaving
+     * other child-specific details untouched (e.g., completion state).
+     * </p>
+     *
+     * @param task         the child {@link Task} to update
+     * @param dto          the updated task DTO
+     * @param nameChanged  whether the name field changed
+     * @param descChanged  whether the description field changed
+     * @param typeChanged  whether the task type field changed
+     * @param freqChanged  whether the frequency field changed
+     * @param intvChanged  whether the interval field changed
+     * @param countChanged whether the occurrence count changed
+     * @param daysChanged  whether the days-of-week field changed
+     */
     private void applySeriesFieldUpdatesToChild(
             Task task, TaskDtoV2 dto,
             boolean nameChanged, boolean descChanged, boolean typeChanged,
@@ -195,6 +282,13 @@ public class TaskServiceV2 {
             task.setDaysOfWeek(TaskMapper.serializeDays(dto.getDaysOfWeek()));
     }
 
+    /**
+     * Deletes a task. If {@code deleteSeries} is true,
+     * deletes the entire recurring series.
+     *
+     * @param taskId       ID of the task to delete
+     * @param deleteSeries whether to delete just this task or the whole series
+     */
     public void deleteTask(Long taskId, boolean deleteSeries) {
         Task task = getTaskById(taskId);
 
@@ -208,7 +302,7 @@ public class TaskServiceV2 {
                     .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Parent task not found")));
 
             taskRepository.deleteAll(seriesTasks);
-            System.out.println(" Deleted series with parentId=" + parentId + " (count=" + seriesTasks.size() + ")");
+            log.info(" Deleted series with parentId=" + parentId + " (count=" + seriesTasks.size() + ")");
         } else {
             if (task.getParentTaskId() == null) {
                 // Deleting the parent but not the series → promote a child
@@ -222,18 +316,30 @@ public class TaskServiceV2 {
                         children.get(i).setParentTaskId(newParent.getId());
                     }
                     taskRepository.saveAll(children.subList(1, children.size()));
-                    System.out.println("Promoted child " + newParent.getId() + " as new parent for series");
+                    log.info("Promoted child " + newParent.getId() + " as new parent for series");
                 }
             }
             taskRepository.delete(task);
-            System.out.println("🗑 Deleted single task id=" + taskId);
+            log.info("Deleted single task id=" + taskId);
         }
     }
 
+    /**
+     * Checks if a task exists by ID.
+     *
+     * @param taskId the task ID
+     * @return true if found, false otherwise
+     */
     public boolean existsById(Long taskId) {
         return taskRepository.findById(taskId).isPresent();
     }
 
+    /**
+     * Retrieves all tasks in the system.
+     *
+     * @return list of all {@link TaskDtoV2}
+     * @throws AppException if no tasks exist
+     */
     public List<TaskDtoV2> getAllTasks() {
         List<Task> tasks = taskRepository.findAll();
         if (tasks.isEmpty()) {
@@ -242,6 +348,13 @@ public class TaskServiceV2 {
         return tasks.stream().map(this::mapToDto).toList();
     }
 
+    // -----------------------------
+    // Private helpers (mapping, recurrence, updates)
+    // -----------------------------
+
+    /**
+     * Maps a {@link Task} entity to a {@link TaskDtoV2}.
+     */
     private TaskDtoV2 mapToDto(Task task) {
         return TaskDtoV2.builder()
                 .id(task.getId())
@@ -269,6 +382,9 @@ public class TaskServiceV2 {
                 .build();
     }
 
+    /**
+     * Generates missing occurrences of a recurring task series.
+     */
     private void generateOccurrences(Task parentTask, TaskDtoV2 dto, Patient patient) {
         List<LocalDate> expectedDates = calculateExpectedDates(dto);
         if (expectedDates.isEmpty())
@@ -306,10 +422,17 @@ public class TaskServiceV2 {
 
         if (!newOnes.isEmpty()) {
             taskRepository.saveAll(newOnes);
-            System.out.println("Added " + newOnes.size() + " new occurrences to series " + parentTask.getId());
+            log.info("Added " + newOnes.size() + " new occurrences to series " + parentTask.getId());
         }
     }
 
+    /**
+     * Applies updates from a DTO to a task.
+     *
+     * @param task         task entity to update
+     * @param dto          DTO with updates
+     * @param updateSeries whether to allow updates of recurrence fields
+     */
     private void applyTaskUpdates(Task task, TaskDtoV2 dto, boolean updateSeries) {
         // Patient assignment only if explicitly set
         if (dto.getPatientId() != null) {
@@ -408,6 +531,9 @@ public class TaskServiceV2 {
         }
     }
 
+    /**
+     * Builds a new recurring occurrence based on parent task and DTO.
+     */
     private Task buildOccurrence(Task parentTask, TaskDtoV2 dto, Patient patient,
             LocalDateTime baseDateTime, LocalDate occurrenceDate) {
         LocalDateTime occurrenceDateTime = occurrenceDate.atTime(LocalTime.parse(dto.getTimeOfDay()));
@@ -452,6 +578,13 @@ public class TaskServiceV2 {
         return occurrence;
     }
 
+    /**
+     * Calculates expected occurrence dates for a recurring task.
+     *
+     * <p>
+     * Supports daily, weekly, monthly, yearly frequencies.
+     * </p>
+     */
     private List<LocalDate> calculateExpectedDates(TaskDtoV2 dto) {
         LocalDate startDate = LocalDate.parse(dto.getDate().substring(0, 10));
         int interval = (dto.getInterval() != null && dto.getInterval() > 0) ? dto.getInterval() : 1;
