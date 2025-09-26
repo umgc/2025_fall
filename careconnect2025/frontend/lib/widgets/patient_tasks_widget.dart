@@ -1,10 +1,9 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/widgets/task_widget.dart';
-
+import 'package:flutter/material.dart';
 
 class PatientTasksWidget extends StatefulWidget {
   final int patientId;
@@ -109,76 +108,74 @@ class _PatientTasksWidgetState extends State<PatientTasksWidget> {
         child: loading
             ? const Center(child: CircularProgressIndicator())
             : error != null
-                ? Center(child: Text(error!))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            ? Center(child: Text(error!))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Tasks for ${widget.patientName}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (widget.isCaregiver)
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              tooltip: 'Add Task',
-                              onPressed: () => _showTaskForm(),
-                            ),
-                        ],
+                      Text(
+                        'Tasks for ${widget.patientName}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
-                      const Divider(),
-                      tasks.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('No tasks assigned.'),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: tasks.length,
-                              itemBuilder: (context, index) {
-                                final task = tasks[index];
-                                return ListTile(
-                                  title: Text(task.name),
-                                  subtitle: Text(task.description),
-                                  trailing: widget.isCaregiver
-                                      ? Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit),
-                                              tooltip: 'Edit Task',
-                                              onPressed: () =>
-                                                  _showTaskForm(task: task),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete),
-                                              tooltip: 'Delete Task',
-                                              onPressed: () =>
-                                                  _deleteTask(task.id),
-                                            ),
-                                          ],
-                                        )
-                                      : null,
-                                  onTap: () {
-                                    // Display task details in a non-editable format
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => TaskInfo(
-                                        task: task,
-                                      ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
+                      const Spacer(),
+                      if (widget.isCaregiver)
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          tooltip: 'Add Task',
+                          onPressed: () => _showTaskForm(),
+                        ),
                     ],
                   ),
+                  const Divider(),
+                  tasks.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('No tasks assigned.'),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = tasks[index];
+                            return ListTile(
+                              title: Text(task.name),
+                              subtitle: Text(task.description),
+                              trailing: widget.isCaregiver
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          tooltip: 'Edit Task',
+                                          onPressed: () =>
+                                              _showTaskForm(task: task),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          tooltip: 'Delete Task',
+                                          onPressed: () =>
+                                              _deleteTask(task.id!),
+                                        ),
+                                      ],
+                                    )
+                                  : null,
+                              onTap: () {
+                                // Display task details in a non-editable format
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => TaskInfo(task: task),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ],
+              ),
       ),
     );
   }

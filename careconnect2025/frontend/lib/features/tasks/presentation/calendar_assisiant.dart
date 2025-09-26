@@ -5,6 +5,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:care_connect_app/features/notifications/models/scheduled_notification_model.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
@@ -136,10 +137,13 @@ class RecurrenceUtils {
               : intervalToSend;
 
           if (normalizedEndDate != null) {
-            final daysBetween = normalizedEndDate
-                .difference(effectiveDate)
-                .inDays;
-            countToSend = (daysBetween ~/ intervalToSend) + 1;
+            int occurrences = 0;
+            DateTime cursor = effectiveDate;
+            while (!cursor.isAfter(normalizedEndDate)) {
+              occurrences++;
+              cursor = cursor.add(Duration(days: intervalToSend));
+            }
+            countToSend = occurrences;
           } else {
             countToSend ??= 30; // fallback: 30 days if no end date
           }
@@ -152,15 +156,29 @@ class RecurrenceUtils {
               : intervalToSend;
 
           if (normalizedEndDate != null) {
-            final totalWeeks =
-                (normalizedEndDate.difference(effectiveDate).inDays ~/ 7) + 1;
+            int occurrences = 0;
+            DateTime cursor = effectiveDate;
+            // walk week-by-week
+            while (!cursor.isAfter(normalizedEndDate)) {
+              for (int i = 0; i < 7; i++) {
+                if (daysOfWeek != null &&
+                    i < daysOfWeek.length &&
+                    daysOfWeek[i]) {
+                  // i=0 is Sunday → Dart DateTime.weekday is Mon=1…Sun=7
+                  int dartDow = (i == 0 ? DateTime.sunday : i + 1);
+                  DateTime candidate = cursor.subtract(
+                    Duration(days: cursor.weekday - dartDow),
+                  );
 
-            if (daysOfWeek != null && daysOfWeek.any((d) => d)) {
-              final selectedDays = daysOfWeek.where((d) => d).length;
-              countToSend = totalWeeks * selectedDays;
-            } else {
-              countToSend = totalWeeks;
+                  if (!candidate.isBefore(effectiveDate) &&
+                      !candidate.isAfter(normalizedEndDate)) {
+                    occurrences++;
+                  }
+                }
+              }
+              cursor = cursor.add(Duration(days: 7 * intervalToSend));
             }
+            countToSend = occurrences;
           } else {
             countToSend ??= 4; // default 4 weeks if no end date
           }
@@ -172,26 +190,54 @@ class RecurrenceUtils {
               ? 1
               : intervalToSend;
 
-          if (dayOfMonth != null) {
-            final daysInMonth = DateUtils.getDaysInMonth(
-              effectiveDate.year,
-              effectiveDate.month,
+          int dom = dayOfMonth ?? effectiveDate.day;
+
+          // Adjust the first occurrence so it’s not before the startDate
+          final daysInStartMonth = DateUtils.getDaysInMonth(
+            effectiveDate.year,
+            effectiveDate.month,
+          );
+          dom = dom.clamp(1, daysInStartMonth);
+          DateTime firstCandidate = DateTime(
+            effectiveDate.year,
+            effectiveDate.month,
+            dom,
+          );
+
+          if (firstCandidate.isBefore(effectiveDate)) {
+            // push to next month
+            final nextMonth = effectiveDate.month + 1;
+            final nextYear = effectiveDate.year + ((nextMonth - 1) ~/ 12);
+            final adjustedMonth = ((nextMonth - 1) % 12) + 1;
+            final daysInNextMonth = DateUtils.getDaysInMonth(
+              nextYear,
+              adjustedMonth,
             );
-            final dom = dayOfMonth.clamp(1, daysInMonth);
-            effectiveDate = DateTime(
-              effectiveDate.year,
-              effectiveDate.month,
-              dom,
-            );
+            final nextDom = dom.clamp(1, daysInNextMonth);
+            firstCandidate = DateTime(nextYear, adjustedMonth, nextDom);
           }
 
           if (normalizedEndDate != null) {
-            final months =
-                (normalizedEndDate.year - effectiveDate.year) * 12 +
-                (normalizedEndDate.month - effectiveDate.month);
-            countToSend = (months ~/ intervalToSend) + 1;
+            int occurrences = 0;
+            DateTime cursor = firstCandidate;
+            while (!cursor.isAfter(normalizedEndDate)) {
+              occurrences++;
+              final nextMonth = cursor.month + intervalToSend;
+              final nextYear = cursor.year + ((nextMonth - 1) ~/ 12);
+              final adjustedMonth = ((nextMonth - 1) % 12) + 1;
+              final daysInNextMonth = DateUtils.getDaysInMonth(
+                nextYear,
+                adjustedMonth,
+              );
+              final nextDom = dom.clamp(1, daysInNextMonth);
+              cursor = DateTime(nextYear, adjustedMonth, nextDom);
+            }
+            countToSend = occurrences;
+            effectiveDate =
+                firstCandidate; // anchor to correct first occurrence
           } else {
-            countToSend ??= 12; // default: 12 months
+            countToSend ??= 12; // fallback: 12 months
+            effectiveDate = firstCandidate;
           }
           break;
 
@@ -202,8 +248,17 @@ class RecurrenceUtils {
               : intervalToSend;
 
           if (normalizedEndDate != null) {
-            final years = normalizedEndDate.year - effectiveDate.year;
-            countToSend = (years ~/ intervalToSend) + 1;
+            int occurrences = 0;
+            DateTime cursor = effectiveDate;
+            while (!cursor.isAfter(normalizedEndDate)) {
+              occurrences++;
+              cursor = DateTime(
+                cursor.year + intervalToSend,
+                cursor.month,
+                cursor.day,
+              );
+            }
+            countToSend = occurrences;
           } else {
             countToSend ??= 5; // default: 5 years
           }
@@ -450,10 +505,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           try {
             final baseTask = Task.fromJson(map);
             baseTask.date = TaskUtils.normalizeDate(baseTask.date.toLocal());
-
-            // Expand recurrences
-            final expanded = baseTask.expandOccurrences();
-            tasks.addAll(expanded);
+            tasks.add(baseTask);
           } catch (e) {
             debugPrint("Error parsing task for patient $patientId: $e");
           }
@@ -835,7 +887,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     }
     // Show dialog
     if (!mounted) return;
-    final draftTask = await showDialog<Task>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => TaskFormDialog(
         isCaregiver: user.isCaregiver,
@@ -844,9 +896,10 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         initialDate: _selectedDay,
       ),
     );
-
-    if (draftTask == null) return;
+    if (result == null) return;
+    final draftTask = result['task'] as Task;
     final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
+
     try {
       final response = await ApiService.createTaskV2(
         newTask.userId!,
@@ -878,9 +931,17 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user == null) return;
 
+    if (task.id == null || task.id == -1) {
+      debugPrint("Tried to edit a task without a valid ID");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot edit a task without an ID")),
+      );
+      return;
+    }
+
     // Refresh task from backend
     try {
-      final freshResponse = await ApiService.getTaskByIdV2(task.id);
+      final freshResponse = await ApiService.getTaskByIdV2(task.id!);
       if (freshResponse.statusCode == 200) {
         task = Task.fromJson(jsonDecode(freshResponse.body));
         task = task.copyWith(
@@ -902,7 +963,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     // Show edit form
     if (!mounted) return;
-    final editedTask = await showDialog<Task>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => TaskFormDialog(
         initialTask: task,
@@ -913,21 +974,32 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       ),
     );
 
-    if (editedTask == null) return;
+    if (result == null) return;
 
-    //normalize recurrence
+    final editedTask = result['task'] as Task;
+    final applyToSeries = result['applyToSeries'] as bool? ?? false;
+
+    // normalize recurrence
     final newTask = RecurrenceUtils.buildTask(baseTask: editedTask);
+
     try {
       final response = await ApiService.editTaskV2(
-        newTask.id,
+        newTask.id!,
         newTask.toJson(),
+        updateSeries: applyToSeries,
       );
 
       if (response.statusCode == 200) {
         await _loadTasksFromDb();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Task updated successfully")),
+          SnackBar(
+            content: Text(
+              applyToSeries
+                  ? "Series updated successfully"
+                  : "Task updated successfully",
+            ),
+          ),
         );
       } else {
         if (!mounted) return;
@@ -947,38 +1019,80 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
   /// This function is to remove tasks in the CareConnect system displayed by the Calendar Assistant
   Future<void> _removeTask(Task task) async {
-    final confirmed = await showDialog<bool>(
+    bool applyToSeries = false;
+
+    final confirmed = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Confirm Delete"),
-          content: Text("Are you sure you want to delete '${task.name}'?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Delete"),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Confirm Delete"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Are you sure you want to delete '${task.name}'?"),
+                  if (task.frequency != null || task.parentTaskId != null)
+                    CheckboxListTile(
+                      title: const Text("Delete entire series"),
+                      value: applyToSeries,
+                      onChanged: (val) {
+                        setState(() => applyToSeries = val ?? false);
+                      },
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () => Navigator.pop(context, {
+                    'confirmed': true,
+                    'applyToSeries': applyToSeries,
+                  }),
+                  child: const Text("Delete"),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    if (confirmed != true) return;
+    if (confirmed == null || confirmed['confirmed'] != true) return;
+    if (!mounted) return;
+
+    final deleteSeries = confirmed['applyToSeries'] as bool? ?? false;
+
+    if (task.id == null || task.id == -1) {
+      debugPrint("Tried to remove a task without a valid ID");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot delete a task without an ID")),
+      );
+      return;
+    }
 
     try {
-      final response = await ApiService.deleteTaskV2(task.id);
+      final response = await ApiService.deleteTaskV2(
+        task.id!,
+        deleteSeries: deleteSeries,
+      );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         await _loadTasksFromDb();
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Task '${task.name}' deleted")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              deleteSeries
+                  ? "Task series deleted"
+                  : "Task '${task.name}' deleted",
+            ),
+          ),
+        );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1039,6 +1153,18 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   DateTime? startDate;
   DateTime? endDate;
   int? dayOfMonth;
+  bool applyToSeries = false;
+
+  String? selectedReminder = "None";
+  final List<String> reminderOptions = [
+    "None",
+    "5 minutes before",
+    "15 minutes before",
+    "30 minutes before",
+    "1 hour before",
+    "1 day before",
+  ];
+  static const String _keepExistingCustom = "Keep existing (custom)";
 
   @override
   void initState() {
@@ -1108,6 +1234,87 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       // Use initialDate from the calendar if passed, otherwise fallback to now
       startDate = TaskUtils.normalizeDate(widget.initialDate ?? DateTime.now());
     }
+    _prefillReminderFromExistingIfEditing();
+  }
+
+  // ===== Reminder helpers =====
+  Duration? _offsetForLabel(String? label) {
+    switch (label) {
+      case "5 minutes before":
+        return const Duration(minutes: 5);
+      case "15 minutes before":
+        return const Duration(minutes: 15);
+      case "30 minutes before":
+        return const Duration(minutes: 30);
+      case "1 hour before":
+        return const Duration(hours: 1);
+      case "1 day before":
+        return const Duration(days: 1);
+      default:
+        return null;
+    }
+  }
+
+  String? _labelForOffset(Duration diff) {
+    const tol = Duration(minutes: 2);
+    final candidates = <String, Duration>{
+      "5 minutes before": const Duration(minutes: 5),
+      "15 minutes before": const Duration(minutes: 15),
+      "30 minutes before": const Duration(minutes: 30),
+      "1 hour before": const Duration(hours: 1),
+      "1 day before": const Duration(days: 1),
+    };
+
+    for (final e in candidates.entries) {
+      if ((e.value - diff).abs() <= tol) return e.key;
+    }
+    return null;
+  }
+
+  void _prefillReminderFromExistingIfEditing() {
+    final t = widget.initialTask;
+    if (t == null || t.notifications == null || t.notifications!.isEmpty) {
+      selectedReminder = "None";
+      return;
+    }
+
+    // Use first (earliest) notification
+    final notif =
+        (t.notifications!..sort((a, b) {
+              final da =
+                  DateTime.tryParse(a.scheduledTime.toIso8601String()) ??
+                  DateTime(1900);
+              final db =
+                  DateTime.tryParse(b.scheduledTime.toIso8601String()) ??
+                  DateTime(1900);
+              return da.compareTo(db);
+            }))
+            .first;
+
+    if (startDate == null) {
+      selectedReminder = "None";
+      return;
+    }
+
+    final taskDateTime = DateTime(
+      startDate!.year,
+      startDate!.month,
+      startDate!.day,
+      selectedTime?.hour ?? 0,
+      selectedTime?.minute ?? 0,
+    );
+
+    final scheduled = DateTime.tryParse(notif.scheduledTime.toIso8601String());
+    if (scheduled == null) {
+      selectedReminder = "None";
+      return;
+    }
+
+    final diff = taskDateTime.difference(scheduled);
+
+    // Try to match to a standard label
+    final label = _labelForOffset(diff);
+    selectedReminder = label ?? "None";
   }
 
   String? _inferRecurrenceTypeFromTask(Task t) {
@@ -1242,19 +1449,43 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                   floatingLabelBehavior: FloatingLabelBehavior.always,
                 ),
                 initialValue: selectedPatientId,
-                items: widget.patients.map((p) {
-                  return DropdownMenuItem<int>(
-                    value: p['patient']?['id'],
-                    child: Text(
-                      "${p['patient']?['firstName']} ${p['patient']?['lastName']}",
-                    ),
-                  );
-                }).toList(),
+                items:
+                    (widget.patients..sort((a, b) {
+                          final aName =
+                              "${a['patient']?['firstName'] ?? ''} ${a['patient']?['lastName'] ?? ''}";
+                          final bName =
+                              "${b['patient']?['firstName'] ?? ''} ${b['patient']?['lastName'] ?? ''}";
+                          return aName.compareTo(bName);
+                        }))
+                        .map(
+                          (p) => DropdownMenuItem<int>(
+                            value: p['patient']?['id'],
+                            child: Text(
+                              "${p['patient']?['firstName']} ${p['patient']?['lastName']}",
+                            ),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (val) => setState(() => selectedPatientId = val),
               ),
+            const SizedBox(height: 12),
+
+            // Reminder dropdown
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: "Reminder Notification",
+                border: OutlineInputBorder(),
+              ),
+              initialValue: selectedReminder,
+              items: reminderOptions.map((opt) {
+                return DropdownMenuItem(value: opt, child: Text(opt));
+              }).toList(),
+              onChanged: (val) {
+                setState(() => selectedReminder = val);
+              },
+            ),
 
             const SizedBox(height: 16),
-
             // Recurrence form
             RecurrenceForm(
               initialIsRecurring: isRecurring,
@@ -1265,6 +1496,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               initialStartDate: startDate,
               initialEndDate: endDate,
               initialDayOfMonth: dayOfMonth,
+              showApplyToSeries: widget.initialTask != null,
               onChanged:
                   ({
                     bool? isRecurring,
@@ -1275,6 +1507,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     DateTime? startDate,
                     DateTime? endDate,
                     int? dayOfMonth,
+                    bool? applyToSeries,
                   }) {
                     setState(() {
                       this.isRecurring = isRecurring ?? false;
@@ -1285,6 +1518,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                       this.startDate = startDate ?? this.startDate;
                       this.endDate = endDate;
                       this.dayOfMonth = dayOfMonth;
+                      this.applyToSeries = applyToSeries ?? this.applyToSeries;
                     });
                   },
             ),
@@ -1300,7 +1534,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
           onPressed: canSave
               ? () {
                   final rawTask = Task(
-                    id: widget.initialTask?.id ?? -1,
+                    id: widget.initialTask?.id,
                     name: titleController.text,
                     description: descriptionController.text,
                     date: startDate ?? DateTime.now(),
@@ -1319,6 +1553,40 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             .toLowerCase(),
                   );
 
+                  // Set notifications
+                  List<ScheduledNotification>? notificationsToSave;
+                  if (selectedReminder == "None") {
+                    notificationsToSave = [];
+                  } else if (selectedReminder == _keepExistingCustom) {
+                    notificationsToSave =
+                        widget.initialTask?.notifications ?? [];
+                  } else {
+                    final off = _offsetForLabel(selectedReminder);
+                    final base = DateTime(
+                      rawTask.date.year,
+                      rawTask.date.month,
+                      rawTask.date.day,
+                      rawTask.timeOfDay?.hour ?? 0,
+                      rawTask.timeOfDay?.minute ?? 0,
+                    );
+                    final reminderTime = off == null
+                        ? base
+                        : base.subtract(off);
+                    notificationsToSave = [
+                      ScheduledNotification(
+                        scheduledTime: reminderTime,
+                        title: "Reminder: ${rawTask.name}",
+                        body: rawTask.description.isNotEmpty
+                            ? rawTask.description
+                            : "Don't forget this task.",
+                        notificationType: "TASK_REMINDER",
+                        receiverId: rawTask.userId!,
+                        status: "PENDING",
+                      ),
+                    ];
+                  }
+                  rawTask.notifications = notificationsToSave;
+
                   final finalTask = RecurrenceUtils.buildTask(
                     baseTask: rawTask,
                     isRecurring: isRecurring,
@@ -1330,8 +1598,13 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     endDate: endDate,
                     dayOfMonth: dayOfMonth,
                   );
-
-                  Navigator.pop(context, finalTask);
+                  Future.microtask(() {
+                    if (!mounted) return;
+                    Navigator.pop(context, {
+                      'task': finalTask,
+                      'applyToSeries': applyToSeries,
+                    });
+                  });
                 }
               : null, //disabled if invalid
           child: const Text("Save"),
@@ -1355,6 +1628,7 @@ class RecurrenceForm extends StatefulWidget {
     DateTime? startDate,
     DateTime? endDate,
     int? dayOfMonth,
+    bool? applyToSeries,
   })
   onChanged;
 
@@ -1366,6 +1640,9 @@ class RecurrenceForm extends StatefulWidget {
   final DateTime? initialStartDate;
   final DateTime? initialEndDate;
   final int? initialDayOfMonth;
+  final bool applyToSeries;
+  final bool initialApplyToSeries;
+  final bool showApplyToSeries;
 
   const RecurrenceForm({
     super.key,
@@ -1378,6 +1655,9 @@ class RecurrenceForm extends StatefulWidget {
     this.initialStartDate,
     this.initialEndDate,
     this.initialDayOfMonth,
+    this.showApplyToSeries = false,
+    this.applyToSeries = false,
+    this.initialApplyToSeries = false,
   });
 
   @override
@@ -1393,6 +1673,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
   DateTime? startDate;
   DateTime? endDate;
   int? dayOfMonth;
+  bool applyToSeries = false;
 
   @override
   void initState() {
@@ -1411,6 +1692,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
         ? TaskUtils.normalizeDate(widget.initialEndDate!)
         : null;
     dayOfMonth = widget.initialDayOfMonth;
+    applyToSeries = widget.initialApplyToSeries;
   }
 
   //validation flags for inline error messages
@@ -1486,6 +1768,25 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
                 style: TextStyle(color: Colors.red, fontSize: 12),
               ),
             ),
+          if (widget.showApplyToSeries)
+            CheckboxListTile(
+              title: const Text("Apply changes to entire series"),
+              value: applyToSeries,
+              onChanged: (val) {
+                setState(() => applyToSeries = val ?? false);
+                widget.onChanged(
+                  isRecurring: isRecurring,
+                  recurrenceType: recurrenceType,
+                  daysOfWeek: daysOfWeek,
+                  interval: interval,
+                  count: count,
+                  startDate: startDate,
+                  endDate: endDate,
+                  dayOfMonth: dayOfMonth,
+                  applyToSeries: applyToSeries,
+                );
+              },
+            ),
 
           // Weekly days-of-week picker
           if (recurrenceType == "Weekly") ...[
@@ -1560,6 +1861,7 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
             ),
           ],
           const SizedBox(height: 16),
+
           // Start date picker
           Row(
             children: [

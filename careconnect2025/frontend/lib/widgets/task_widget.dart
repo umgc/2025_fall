@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/tasks/models/template_model.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:flutter/material.dart';
 
 class TaskFormDialog extends StatefulWidget {
   final int patientId;
@@ -127,7 +128,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         await ApiService.createTask(widget.patientId, jsonEncode(taskData));
       } else {
         // Edit
-        await ApiService.editTask(widget.existingTask!.id, taskData);
+        await ApiService.editTask(widget.existingTask!.id!, taskData);
       }
     } catch (e) {
       print('Error saving task: $e');

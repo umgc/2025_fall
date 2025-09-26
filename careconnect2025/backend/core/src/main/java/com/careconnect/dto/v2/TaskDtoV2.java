@@ -1,5 +1,9 @@
 package com.careconnect.dto.v2;
 
+import java.util.List;
+
+import com.careconnect.dto.ScheduledNotificationDTO;
+
 import io.micrometer.common.lang.Nullable;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -12,6 +16,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TaskDtoV2 {
+    private Long id;
+
     @NotNull(message = "Task name is required")
     private String name;
 
@@ -37,12 +43,19 @@ public class TaskDtoV2 {
     private Integer count;
 
     @Nullable
-    private String daysOfWeek;
+    private List<Boolean> daysOfWeek;
 
     @Nullable
     private String taskType;
 
     // Only used in UPDATE flow (optional for reassignments)
+    // This does flatten the patient nested object to just id.
     @Nullable
     private Long patientId;
+
+    @Nullable
+    private List<ScheduledNotificationDTO> notifications;
+
+    // true = update all tasks in series, false/null = just this one
+    private Boolean updateSeries;
 }
