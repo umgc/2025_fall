@@ -648,65 +648,6 @@ class _PatientDashboardState extends State<PatientDashboard> {
                           ),
                       ],
 
-                      // Quick Actions Section
-                      Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(
-                                context,
-                              ).shadowColor.withValues(alpha: 0.1),
-                              spreadRadius: 1,
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Quick Actions',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                _buildQuickActionChip(
-                                  icon: Icons.task,
-                                  label: 'Today\'s Tasks',
-                                  onTap: () => context.go('/tasks/today'),
-                                ),
-                                _buildQuickActionChip(
-                                  icon: Icons.calendar_today,
-                                  label: 'Appointments',
-                                  onTap: () => context.push('/appointments'),
-                                ),
-                                _buildQuickActionChip(
-                                  icon: Icons.medication,
-                                  label: 'Medications',
-                                  onTap: () => context.push('/medications'),
-                                ),
-                                _buildQuickActionChip(
-                                  icon: Icons.family_restroom,
-                                  label: 'Family',
-                                  onTap: () => context.push('/family'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
                       // Emergency Actions
                       Container(
                         margin: const EdgeInsets.symmetric(
