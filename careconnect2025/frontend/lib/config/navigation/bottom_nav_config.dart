@@ -1,21 +1,28 @@
-import 'package:care_connect_app/features/dashboard/presentation/sosscreen.dart';
-import 'package:care_connect_app/features/health/presentation/pages/symptom_tracker_screen.dart';
+import 'package:care_connect_app/config/navigation/caregiver-more-features-bottom-drawer.dart';
+import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
+import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
+import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
+import 'patient-more-features-bottom-drawer.dart';
 
-/// This is the individual bottom nav bar buttons
-/// @param label - The label of the button
-/// @param icon - The icon of the button
-/// @param activeIcon - The active icon of the button
-/// @param routeName - The route name of the button
-/// @param screen - The optional screen of the button (which is rendered when clicked on
-/// the button)
-/// @param onPress - The optional function to be called when the button is
-/// pressed.
-/// @param requiresPatientId - Whether the button requires a patient ID to be
-/// set
+/// Represents a single item in the bottom navigation bar.
 ///
+/// This class defines the structure for navigation items that appear in the
+/// bottom navigation bar. Each item can either navigate to a screen or
+/// execute a custom function when pressed.
+///
+/// Parameters:
+/// * [label] - The text label displayed below the icon
+/// * [icon] - The icon displayed when the item is not active
+/// * [activeIcon] - Optional icon displayed when the item is active
+/// * [routeName] - The route identifier for navigation purposes
+/// * [screen] - Optional widget to display when the item is pressed
+/// * [requiresPatientId] - Whether this item requires a patient ID to function
+/// * [onPress] - Optional callback function executed when the item is pressed
+///
+/// Either [screen] or [onPress] must be provided, but not both.
 class BottomNavItem {
   final String label;
   final IconData icon;
@@ -25,6 +32,16 @@ class BottomNavItem {
   final bool requiresPatientId;
   final void Function(BuildContext context, WidgetBuilder builder)? onPress;
 
+  /// Creates a new BottomNavItem.
+  ///
+  /// Parameters:
+  /// * [label] - The text label displayed below the icon
+  /// * [icon] - The icon displayed when the item is not active
+  /// * [activeIcon] - Optional icon displayed when the item is active
+  /// * [routeName] - The route identifier for navigation purposes
+  /// * [screen] - Optional widget to display when the item is pressed
+  /// * [requiresPatientId] - Whether this item requires a patient ID to function (defaults to false)
+  /// * [onPress] - Optional callback function executed when the item is pressed
   const BottomNavItem({
     required this.label,
     required this.icon,
@@ -39,14 +56,20 @@ class BottomNavItem {
        );
 }
 
-/// The bottom nav bar config for each role. To add a new role create a method
-/// and build a list of BottomNavItem objects.
+/// Configuration class for bottom navigation bar items.
+///
+/// This class provides static methods to generate navigation items
+/// for different user roles within the application. Each role has
+/// its own set of navigation items tailored to their functionality.
 class BottomNavConfig {
-
-  /// Get Patient Bottom Nav bar items:
-  /// Home, Symptoms, Health, Symptoms, Messages, More
-  /// The More will open up a bottom drawer modal which will show additional
-  /// features
+  /// Returns the bottom navigation items for patient users.
+  ///
+  /// Creates a list of navigation items specifically designed for patients,
+  /// including Home, Symptoms, Health, Messages, and More sections.
+  /// The More section opens a bottom drawer with additional features.
+  ///
+  /// Returns:
+  /// * List<BottomNavItem> - A list of navigation items for patient interface
   static List<BottomNavItem> getPatientNavItems() {
     return [
       BottomNavItem(
@@ -61,7 +84,7 @@ class BottomNavConfig {
         icon: Icons.medical_information_outlined,
         activeIcon: Icons.medical_information,
         routeName: 'symptoms',
-        screen: const SymptomTrackerScreen(),
+        screen: const SymptomsAllergiesPage(),
       ),
       BottomNavItem(
         label: 'Health',
@@ -86,57 +109,7 @@ class BottomNavConfig {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return SizedBox(
-                height: 280,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const Text(
-                        'Additional Features',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Card(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SosScreen(),
-                              ),
-                            );
-                          },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const <Widget>[
-                              ListTile(
-                                leading: Icon(Icons.sos, color: Colors.red),
-                                title: Text('SOS'),
-                                subtitle: Text(
-                                  'Informing Caregiver of emergency',
-                                ),
-                                trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        child: const Text('Close'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return const PatientMoreFeaturesBottomDrawerWidget();
             },
           );
         },
@@ -144,23 +117,29 @@ class BottomNavConfig {
     ];
   }
 
-  /// Build Caregiver Bottom Nav bar items:
-  /// Home, Tasks, Analytics, Messages, Profile
+  /// Returns the bottom navigation items for caregiver users.
+  ///
+  /// Creates a list of navigation items specifically designed for caregivers,
+  /// including Home, Patient List, Analytics, Messages, and More sections.
+  /// The More section opens a bottom drawer with additional features.
+  ///
+  /// Returns:
+  /// * List<BottomNavItem> - A list of navigation items for caregiver interface
   static List<BottomNavItem> getCaregiverNavItems() {
     return [
       BottomNavItem(
-        label: 'Patients',
-        icon: Icons.people_outlined,
-        activeIcon: Icons.people,
-        routeName: 'patients',
-        screen: const CaregiverPatientsTab(),
+        label: 'Home',
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        routeName: 'home',
+        screen: const CaregiverDashboard(),
       ),
       BottomNavItem(
-        label: 'Tasks',
-        icon: Icons.assignment_outlined,
-        activeIcon: Icons.assignment,
+        label: 'Patient List',
+        icon: Icons.person_2_outlined,
+        activeIcon: Icons.person_2,
         routeName: 'tasks',
-        screen: const CaregiverTasksTab(),
+        screen: const CaregiverPatientList(),
       ),
       BottomNavItem(
         label: 'Analytics',
@@ -177,17 +156,34 @@ class BottomNavConfig {
         screen: const CaregiverMessagesTab(),
       ),
       BottomNavItem(
-        label: 'Profile',
-        icon: Icons.person_outlined,
-        activeIcon: Icons.person,
+        label: 'More',
+        icon: Icons.more_horiz_outlined,
+        activeIcon: Icons.more,
         routeName: 'profile',
-        screen: const CaregiverProfileTab(),
+        onPress: (context, builder) {
+          showModalBottomSheet<void>(
+            context: context,
+            builder: (BuildContext context) {
+              return const CaregiverMoreFeaturesBottomDrawerWidget();
+            },
+          );
+        },
+
       ),
     ];
   }
 
-  /// Get nav items for a given role
-  /// @param role - The role of the user
+  /// Returns navigation items based on the specified user role.
+  ///
+  /// This method acts as a factory that returns the appropriate navigation
+  /// items based on the user's role. Supports PATIENT, CAREGIVER, FAMILY_LINK,
+  /// and ADMIN roles, with patient navigation as the default fallback.
+  ///
+  /// Parameters:
+  /// * [role] - The user's role as a string (case-insensitive)
+  ///
+  /// Returns:
+  /// * List<BottomNavItem> - Navigation items appropriate for the specified role
   static List<BottomNavItem> getNavItemsForRole(String role) {
     switch (role.toUpperCase()) {
       case 'PATIENT':

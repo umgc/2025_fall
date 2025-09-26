@@ -66,7 +66,7 @@ class _WelcomePageState extends State<WelcomePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Image.asset(
-                          'assets/images/CareConnectLogo.png', // Update this path to your PNG file
+                          'assets/images/CareConnectLogo.png',
                           width: isMobile ? 90 : 190,
                           fit: BoxFit.contain,
                           color: Colors.white, // Optional: to tint the image white

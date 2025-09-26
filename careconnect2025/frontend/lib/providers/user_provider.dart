@@ -1,17 +1,51 @@
+import 'package:care_connect_app/features/dashboard/models/patient_model.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_token_manager.dart';
 import '../services/auth_service.dart';
 import '../services/user_role_storage_service.dart';
+import '../models/user_model.dart';
+import '../models/patient_model.dart';
+import '../models/caregiver_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
+/// Represents an authenticated user session with basic information.
+///
+/// This class contains the essential session data obtained during login,
+/// including user identification, authentication tokens, and role information.
+/// It serves as the foundation for user authentication and authorization.
 class UserSession {
+  /// Unique user identifier from the authentication system
   final int id;
+
+  /// User's email address (login credential)
   final String email;
+
+  /// User's role in the system (PATIENT, CAREGIVER, etc.)
   final String role;
+
+  /// JWT authentication token for API requests
   final String token;
+
+  /// Associated patient ID (if user has patient role)
   final int? patientId;
+
+  /// Associated caregiver ID (if user has caregiver role)
   final int? caregiverId;
+
+  /// User's display name
   final String? name;
 
+  /// Creates a new UserSession instance.
+  ///
+  /// Parameters:
+  /// * [id] - Unique user identifier from the authentication system
+  /// * [email] - User's email address (login credential)
+  /// * [role] - User's role in the system (PATIENT, CAREGIVER, etc.)
+  /// * [token] - JWT authentication token for API requests
+  /// * [patientId] - Associated patient ID (optional)
+  /// * [caregiverId] - Associated caregiver ID (optional)
+  /// * [name] - User's display name (optional)
   UserSession({
     required this.id,
     required this.email,
@@ -22,6 +56,16 @@ class UserSession {
     this.name,
   });
 
+  /// Creates a UserSession from JSON data.
+  ///
+  /// Factory constructor for deserializing session data from storage
+  /// or API responses during authentication.
+  ///
+  /// Parameters:
+  /// * [json] - JSON map containing session data
+  ///
+  /// Returns:
+  /// * UserSession - New session instance from JSON data
   factory UserSession.fromJson(Map<String, dynamic> json) {
     return UserSession(
       id: json['id'],
@@ -34,6 +78,13 @@ class UserSession {
     );
   }
 
+  /// Converts the UserSession to JSON format.
+  ///
+  /// Used for session persistence and data serialization.
+  /// All session fields are included for complete state preservation.
+  ///
+  /// Returns:
+  /// * Map<String, dynamic> - JSON representation of the session
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -46,19 +97,87 @@ class UserSession {
     };
   }
 
+  /// Checks if the user is a family member.
+  ///
+  /// Returns:
+  /// * bool - True if user role is FAMILY_MEMBER
   bool get isFamilyMember => role == 'FAMILY_MEMBER';
+
+  /// Checks if the user is a caregiver.
+  ///
+  /// Returns:
+  /// * bool - True if user role is CAREGIVER
   bool get isCaregiver => role == 'CAREGIVER';
+
+  /// Checks if the user is a patient.
+  ///
+  /// Returns:
+  /// * bool - True if user role is PATIENT
   bool get isPatient => role == 'PATIENT';
+
+  /// Checks if the user has write access permissions.
+  ///
+  /// Currently only caregivers have write access to modify patient data.
+  ///
+  /// Returns:
+  /// * bool - True if user has write permissions
   bool get hasWriteAccess => role == 'CAREGIVER';
 }
 
+/// Provider class managing user authentication state and detailed user models.
+///
+/// This provider handles the complete user authentication lifecycle including:
+/// - Session management and persistence
+/// - Token validation and refresh
+/// - Role-based user data fetching
+/// - User model creation based on role (Patient or Caregiver)
+/// - Activity tracking for session management
+///
+/// The provider follows a two-step authentication process:
+/// 1. Initial login creates a UserSession with basic information
+/// 2. Detailed user data is fetched based on role and stored in specific models
 class UserProvider extends ChangeNotifier {
+  /// Current user session containing authentication and basic user data
   UserSession? _user;
+
+  /// Public getter for the current user session
   UserSession? get user => _user;
+
+  /// Loading state indicator for async operations
   bool _isLoading = false;
+
+  /// Public getter for loading state
   bool get isLoading => _isLoading;
 
-  // Initialize user from stored data on app start
+  /// Base user model containing core user information
+  UserModel? _userModel;
+
+  /// Detailed patient model (populated only for patient users)
+  PatientUserModel? _patientModel;
+
+  /// Detailed caregiver model (populated only for caregiver users)
+  CaregiverModel? _caregiverModel;
+
+  /// Public getter for base user model
+  UserModel? get userModel => _userModel;
+
+  /// Public getter for patient model
+  PatientUserModel? get patientModel => _patientModel;
+
+  /// Public getter for caregiver model
+  CaregiverModel? get caregiverModel => _caregiverModel;
+
+  /// Initializes user authentication state from stored data on app start.
+  ///
+  /// This method is called when the app starts to restore any existing
+  /// user session from local storage. It performs the following operations:
+  /// - Initializes storage services
+  /// - Attempts to restore user session from stored tokens
+  /// - Validates session freshness and handles stale sessions
+  /// - Fetches detailed user data if session is valid
+  ///
+  /// Returns:
+  /// * Future<void> - Completes when initialization is finished
   Future<void> initializeUser() async {
     _isLoading = true;
     notifyListeners();
@@ -85,6 +204,8 @@ class UserProvider extends ChangeNotifier {
         } else {
           // Sync user data with UserRoleStorageService
           await _syncUserDataToStorage();
+          // Fetch detailed user data based on role
+          await fetchUserDetails();
         }
       }
     } catch (e) {
@@ -98,6 +219,17 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the current user session and updates related state.
+  ///
+  /// This method is called after successful login to establish the user session.
+  /// It performs several important operations:
+  /// - Updates the user session
+  /// - Records user activity for session tracking
+  /// - Synchronizes user data to persistent storage
+  /// - Notifies listeners of state changes
+  ///
+  /// Parameters:
+  /// * [user] - The authenticated user session to set
   void setUser(UserSession user) {
     _user = user;
     // Update activity when user is set (e.g., after login)
@@ -107,8 +239,143 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fetches detailed user information based on the user's role.
+  ///
+  /// This method is the second step in the authentication process. After
+  /// login establishes a basic user session, this method fetches complete
+  /// user information including:
+  /// - Creates a base UserModel from session data
+  /// - Fetches role-specific details (Patient or Caregiver)
+  /// - Populates appropriate detailed models
+  ///
+  /// The method makes API calls to retrieve comprehensive user data
+  /// and handles errors gracefully.
+  ///
+  /// Returns:
+  /// * Future<void> - Completes when user details are fetched and models created
+  Future<void> fetchUserDetails() async {
+    if (_user == null) return;
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Create base UserModel from session data
+      _userModel = UserModel(
+        name: _user!.name ?? '',
+        email: _user!.email,
+        userId: _user!.id.toString(),
+        role: _user!.role,
+      );
+
+      // Fetch detailed data based on role
+      if (_user!.role.toUpperCase() == 'PATIENT') {
+        await _fetchPatientDetails();
+      } else if (_user!.role.toUpperCase() == 'CAREGIVER') {
+        await _fetchCaregiverDetails();
+      }
+    } catch (e) {
+      print('Error fetching user details: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Fetch patient-specific details
+  Future<void> _fetchPatientDetails() async {
+    if (_user == null || _user!.patientId == null) return;
+
+    try {
+      const baseUrl = 'http://localhost:8080/v1/api';
+      final response = await http.get(
+        Uri.parse('$baseUrl/patients/${_user!.patientId}'),
+        headers: {
+          'Authorization': 'Bearer ${_user!.token}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final patientData = json.decode(response.body);
+
+        // Create PatientModel with combined data
+        _patientModel = PatientUserModel(
+          name: _userModel!.name,
+          email: _userModel!.email,
+          userId: _userModel!.userId,
+          role: _userModel!.role,
+          firstName: patientData['firstName'] ?? '',
+          lastName: patientData['lastName'] ?? '',
+          phone: patientData['phone'] ?? '',
+          dob: patientData['dob'] ?? '',
+          gender: patientData['gender'] ?? '',
+          address: Address.fromJson(patientData['address'] ?? {}),
+        );
+      }
+    } catch (e) {
+      print('Error fetching patient details: $e');
+    }
+  }
+
+  /// Fetch caregiver-specific details
+  Future<void> _fetchCaregiverDetails() async {
+    if (_user == null || _user!.caregiverId == null) return;
+
+    try {
+      const baseUrl = 'http://localhost:8080/v1/api';
+      final response = await http.get(
+        Uri.parse('$baseUrl/caregivers/${_user!.caregiverId}'),
+        headers: {
+          'Authorization': 'Bearer ${_user!.token}',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final caregiverData = json.decode(response.body);
+
+        // Create CaregiverModel with combined data
+        _caregiverModel = CaregiverModel(
+          name: _userModel!.name,
+          email: _userModel!.email,
+          userId: _userModel!.userId,
+          role: _userModel!.role,
+          firstName: caregiverData['firstName'] ?? '',
+          lastName: caregiverData['lastName'] ?? '',
+          phone: caregiverData['phone'] ?? '',
+          dob: caregiverData['dob'] ?? '',
+          gender: caregiverData['gender'] ?? '',
+          caregiverType: caregiverData['caregiverType'] ?? '',
+          address: Address.fromJson(caregiverData['address'] ?? {}),
+          professionalInfo: caregiverData['professional'] != null
+              ? ProfessionalInfo.fromJson(caregiverData['professional'])
+              : null,
+        );
+      }
+    } catch (e) {
+      print('Error fetching caregiver details: $e');
+    }
+  }
+
+  /// Clears all user data and authentication state.
+  ///
+  /// This method performs a complete logout by:
+  /// - Clearing the user session
+  /// - Removing all user models (base, patient, caregiver)
+  /// - Clearing stored authentication tokens
+  /// - Clearing cached user data from storage
+  /// - Notifying listeners of the state change
+  ///
+  /// Called during logout or when authentication becomes invalid.
+  ///
+  /// Returns:
+  /// * Future<void> - Completes when all user data is cleared
   Future<void> clearUser() async {
     _user = null;
+    _userModel = null;
+    _patientModel = null;
+    _caregiverModel = null;
     await AuthTokenManager.clearAuthData();
     await UserRoleStorageService.instance.clearUserData();
     notifyListeners();
@@ -128,6 +395,9 @@ class UserProvider extends ChangeNotifier {
     final isValid = await AuthTokenManager.validateCurrentSession();
     if (!isValid) {
       _user = null;
+      _userModel = null;
+      _patientModel = null;
+      _caregiverModel = null;
       await UserRoleStorageService.instance.clearUserData();
       notifyListeners();
     }
@@ -148,6 +418,9 @@ class UserProvider extends ChangeNotifier {
       } else {
         // Refresh failed, clear user
         _user = null;
+        _userModel = null;
+        _patientModel = null;
+        _caregiverModel = null;
         await UserRoleStorageService.instance.clearUserData();
         notifyListeners();
         return false;
@@ -155,6 +428,9 @@ class UserProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Token refresh failed in UserProvider: $e');
       _user = null;
+      _userModel = null;
+      _patientModel = null;
+      _caregiverModel = null;
       await UserRoleStorageService.instance.clearUserData();
       notifyListeners();
       return false;

@@ -238,6 +238,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
       'email': _emailController.text,
       'password': _passwordController.text,
       'role': 'PATIENT',
+      'firstName': _firstNameController.text,
+      'lastName': _lastNameController.text,
+      'phone': _phoneController.text,
+      'dob': _dobController.text,
+      'gender': _selectedGender?.toUpperCase(),
+      'address': {
+        'line1': _addressLine1Controller.text,
+        'line2': _addressLine2Controller.text,
+        'city': _cityController.text,
+        'state': _stateController.text,
+        'zip': _zipController.text,
+        'phone': _addressPhoneController.text,
+      },
       'verificationBaseUrl': 'http://localhost:50030',
     };
 
@@ -273,11 +286,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
     const baseUrl = 'http://localhost:8080/v1/api';
 
     final caregiverData = {
+      'name': '${_firstNameController.text} ${_lastNameController.text}',
+      'email': _emailController.text,
+      'password': _passwordController.text,
       'firstName': _firstNameController.text,
       'lastName': _lastNameController.text,
-      'email': _emailController.text,
       'phone': _phoneController.text,
       'dob': _dobController.text,
+      'role': "CAREGIVER",
       'gender': _selectedGender?.toUpperCase(),
       'caregiverType': _selectedCaregiverType,
       'address': {
@@ -304,7 +320,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
 
     final response = await http.post(
-      Uri.parse('$baseUrl/caregivers'),
+      Uri.parse('$baseUrl/auth/register'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': '*/*',

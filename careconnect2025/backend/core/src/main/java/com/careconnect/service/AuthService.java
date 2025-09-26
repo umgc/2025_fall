@@ -1,5 +1,7 @@
 package com.careconnect.service;
 
+import com.careconnect.dto.*;
+import com.careconnect.model.Address;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -14,8 +16,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
 
-import com.careconnect.dto.LoginRequest;
-import com.careconnect.dto.LoginResponse;
 import com.careconnect.model.Caregiver;
 import com.careconnect.model.Patient;
 import com.careconnect.model.FamilyMember;
@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.careconnect.dto.RegisterRequest;
 import com.careconnect.security.Role;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -150,7 +149,8 @@ public class AuthService {
         user.setIsVerified(false);
         user.setVerificationToken(verificationToken);
         user.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-        userRepository.save(user);
+
+        registerRole(request, user);
 
         String verificationBaseUrl = request.getVerificationBaseUrl();
         String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
@@ -161,6 +161,60 @@ public class AuthService {
 
         return ResponseEntity.ok(Collections.singletonMap("message",
                 "Registration successful! Please check your email to verify your account."));
+    }
+
+    private void registerRole(RegisterRequest request, User user) {
+        switch (user.getRole()) {
+            case PATIENT -> {
+                if (request instanceof PatientRegistration regReq) {
+                    final Patient patient = new Patient();
+                    patient.setPhone(regReq.getPhone());
+                    patient.setDob(regReq.getDob());
+                    patient.setAddress(
+                        new Address(
+                            regReq.getAddress().line1(),
+                            regReq.getAddress().line2(),
+                            regReq.getAddress().city(),
+                            regReq.getAddress().state(),
+                            regReq.getAddress().zip()
+                        )
+                    );
+                    patient.setGender(regReq.getGender());
+                    patient.setEmail(request.getEmail());
+                    patient.setFirstName(regReq.getFirstName());
+                    patient.setLastName(regReq.getLastName());
+                    patient.setUser(user);
+                    patients.save(patient);
+                    userRepository.save(user);
+                }
+            }
+            case CAREGIVER -> {
+                if (request instanceof CaregiverRegistration regReq) {
+                    final Caregiver caregiver = new Caregiver();
+                    caregiver.setCaregiverType(regReq.getCaregiverType());
+                    caregiver.setDob(regReq.getDob());
+                    caregiver.setPhone(regReq.getPhone());
+                    caregiver.setAddress(
+                        new Address(
+                            regReq.getAddress().line1(),
+                            regReq.getAddress().line2(),
+                            regReq.getAddress().city(),
+                            regReq.getAddress().state(),
+                            regReq.getAddress().zip()
+                        )
+                    );
+                    caregiver.setEmail(request.getEmail());
+                    caregiver.setFirstName(regReq.getFirstName());
+                    caregiver.setLastName(regReq.getLastName());
+                    caregiver.setGender(regReq.getGender());
+                    caregiver.setUser(user);
+                    userRepository.save(user);
+                    caregivers.save(caregiver);
+                }
+            }
+            default -> throw new AppException(HttpStatus.BAD_REQUEST, 
+                    "Registration for " + user.getRole().toString() + " is unsupported");
+        }
     }
 
     // ✅ Validate user for login

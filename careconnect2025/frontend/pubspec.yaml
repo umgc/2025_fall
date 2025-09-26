@@ -119,6 +119,14 @@ dependencies:
   flutter_svg: ^2.0.9  # Add this line
 
   web: ^1.1.0
+  #speech to text, voice recognition, and diarization
+  sherpa_onnx: ^1.12.14
+  #for recording audio samples for speaker recognition
+  record: ^6.1.1
+
+  #The following is needed as the calendar for the Calendar Assisstant feature
+  table_calendar: ^3.2.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

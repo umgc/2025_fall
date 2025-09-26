@@ -1,0 +1,153 @@
+import 'package:flutter/material.dart';
+
+class SymptomCard extends StatelessWidget {
+  final String title;
+  final String severity;
+  final String time;
+  final String description;
+  final bool requiresAttention;
+  final bool caregiverAlert;
+
+  const SymptomCard({
+    Key? key,
+    required this.title,
+    required this.severity,
+    required this.time,
+    required this.description,
+    required this.requiresAttention,
+    required this.caregiverAlert,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    Color severityColor = _getSeverityColor(severity);
+    Color cardColor = severity == 'severe'
+        ? Theme.of(context).colorScheme.errorContainer
+        : Theme.of(context).colorScheme.surface;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: severity == 'severe'
+              ? Theme.of(context).colorScheme.error.withOpacity(0.3)
+              : Theme.of(context).dividerColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                severity == 'severe' ? Icons.warning : Icons.favorite,
+                color: severityColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: severityColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  severity,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (caregiverAlert) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.error,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Caregiver Alert',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onError,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  // Handle dismiss
+                },
+                icon: const Icon(Icons.close, size: 16),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            time,
+            style: TextStyle(
+              color: severity == 'severe'
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              fontSize: 14,
+              fontWeight: severity == 'severe'
+                  ? FontWeight.w500
+                  : FontWeight.normal,
+            ),
+          ),
+          if (requiresAttention)
+            Text(
+              ' — Requires immediate attention',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getSeverityColor(String severity) {
+    switch (severity.toLowerCase()) {
+      case 'severe':
+        return Colors.red;
+      case 'moderate':
+        return Colors.orange;
+      case 'mild':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+}
