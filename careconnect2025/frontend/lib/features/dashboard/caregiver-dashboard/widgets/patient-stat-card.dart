@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:care_connect_app/config/theme/app_theme.dart';
 
+/// Widget that displays patient statistics in responsive card layout.
+///
+/// This widget shows key metrics for caregivers including missed check-ins
+/// and active patients count. The layout adapts to screen size, displaying
+/// cards in a column on small screens and in a row on larger screens.
 class PatientStatisticsCards extends StatelessWidget {
+  /// Creates a PatientStatisticsCards widget.
   const PatientStatisticsCards({super.key});
 
+  /// Builds the responsive statistics card layout.
+  ///
+  /// Uses LayoutBuilder to determine screen size and adjusts the layout
+  /// accordingly. On screens smaller than 600px, cards are arranged vertically.
+  /// On larger screens, cards are arranged horizontally.
+  ///
+  /// Parameters:
+  /// * [context] - The build context
+  ///
+  /// Returns:
+  /// * Widget - A responsive layout containing statistics cards
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -18,7 +34,7 @@ class PatientStatisticsCards extends StatelessWidget {
                 iconColor: Colors.blue,
                 title: '# of Missed Check-Ins',
                 value: '24',
-                valueColor: Colors.blue,
+                valueColor: Theme.of(context).primaryColor,
               ),
               const SizedBox(height: 16),
               _StatCard(
@@ -60,13 +76,34 @@ class PatientStatisticsCards extends StatelessWidget {
   }
 }
 
+/// Private widget that displays an individual statistic card.
+///
+/// This widget renders a single statistic with an icon, title, and value
+/// in a visually appealing card format with rounded corners and shadow.
 class _StatCard extends StatelessWidget {
+  /// The icon to display at the top of the card
   final IconData icon;
+
+  /// The color for the icon and its background
   final Color iconColor;
+
+  /// The title text displayed below the icon
   final String title;
+
+  /// The statistical value to be prominently displayed
   final String value;
+
+  /// The color for the value and title text
   final Color valueColor;
 
+  /// Creates a _StatCard widget.
+  ///
+  /// Parameters:
+  /// * [icon] - The icon to display at the top of the card
+  /// * [iconColor] - The color for the icon and its background
+  /// * [title] - The title text displayed below the icon
+  /// * [value] - The statistical value to be prominently displayed
+  /// * [valueColor] - The color for the value and title text
   const _StatCard({
     required this.icon,
     required this.iconColor,
@@ -75,6 +112,17 @@ class _StatCard extends StatelessWidget {
     required this.valueColor,
   });
 
+  /// Builds the statistic card widget.
+  ///
+  /// Creates a container with rounded corners, shadow, and padding that
+  /// displays the icon, title, and value in a centered column layout.
+  /// The card has a minimum height of 120px and uses theme colors.
+  ///
+  /// Parameters:
+  /// * [context] - The build context
+  ///
+  /// Returns:
+  /// * Widget - A decorated container with the statistic information
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -113,7 +161,7 @@ class _StatCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).secondaryHeaderColor,
+              color: valueColor,
               height: 1.2,
             ),
           ),
