@@ -4,7 +4,7 @@ import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/notifiers/login_state.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
-enum LLMKey { openAI, perplexity, claude, grok }
+enum LLMKey { openAI, perplexity, claude, grok, deepseek }
 
 class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
@@ -67,10 +67,12 @@ class LoginNotifier with ChangeNotifier {
     final openAIKey = LocalStorageService.getOpenAIKey();
     final perplexityKey = LocalStorageService.getPerplexityKey();
     final grokKey = LocalStorageService.getGrokKey();
+    final deepseekKey = LocalStorageService.getDeepseekKey();
 
     return (openAIKey != null && openAIKey.isNotEmpty) ||
         (perplexityKey != null && perplexityKey.isNotEmpty) ||
-        (grokKey != null && grokKey.isNotEmpty);
+        (grokKey != null && grokKey.isNotEmpty) ||
+        (deepseekKey != null && deepseekKey.isNotEmpty);
   }
 
   // ---------------------------------------
@@ -263,6 +265,8 @@ class LoginNotifier with ChangeNotifier {
         break;
       case LLMKey.claude:
         // If you had a Claude key, you could handle it here
+      case LLMKey.deepseek:
+        LocalStorageService.saveDeepseekKey(value);
         break;
     }
 

@@ -1,3 +1,4 @@
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
@@ -70,7 +71,9 @@ class EditQuestionsState extends State<EditQuestions> {
     } else if (selectedLLM == LlmType.PERPLEXITY) {
       // aiModel = OpenAiLLM(perplexityApiKey); 
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
-    } else {
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    }else {
       // default
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     }
