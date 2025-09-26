@@ -70,13 +70,6 @@ class GoogleLmsService extends LmsInterface {
   // ****************************************************************************************
   // Auth / Login
   // ****************************************************************************************
-
-  @override
-  Future<UserRole> getUserRole(List<Course> courses) async {
-    // TODO implement
-    throw UnimplementedError();
-  }
-
   @override
   Future<void> login(String username, String password, String baseURL) {
     // TODO: implement google api code
@@ -161,9 +154,11 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   void logout() {
-    print('Logging out of Google...');
-    _googleSignIn.signOut();
-    resetLMSUserInfo();
+    if(isLoggedIn()){
+      print('Logging out of Google...');
+      _googleSignIn.signOut();
+      resetLMSUserInfo();
+    }
   }
 
   @override
@@ -190,6 +185,30 @@ class GoogleLmsService extends LmsInterface {
     // Never called??
     throw UnimplementedError();
   }
+
+  @override
+  Future<UserRole> getUserRole(List<Course> courses) async {
+    final GoogleSignInAccount? account = await _googleSignIn.signIn();
+    
+    for(Course course in courses){
+      final response = await ApiService().httpGet(
+          Uri.parse(
+              'https://classroom.googleapis.com/v1/courses/${course.id}/teachers'),
+              headers: {'Authorization': 'Bearer $_userToken'},
+      );
+      
+      final decodedJson = jsonDecode(response.body);
+      final List<dynamic> teachers = decodedJson['teachers'];
+      for(dynamic teacher in teachers){
+        if(teacher['userId'].toString() == account!.id){
+          return UserRole.teacher;
+        }
+      }
+    }
+
+    return UserRole.student;
+  }
+
 
   @override
   Future<List<Course>> getUserCourses() async {

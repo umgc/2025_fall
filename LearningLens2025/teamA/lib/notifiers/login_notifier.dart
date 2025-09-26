@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/notifiers/login_state.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
@@ -56,7 +57,7 @@ class LoginNotifier with ChangeNotifier {
     _hasLLMKey = await _checkHasLLMKey();
 
     // Attempt auto-login if we had credentials
-    _autoLogin();
+    await _autoLogin();
     notifyListeners();
   }
 
@@ -165,36 +166,46 @@ class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
   // Google: Sign-in
   // ---------------------------------------
-  Future<void> signInWithGoogle() async {
-    if (_clientID == null) {
-      throw Exception("GOOGLE_CLIENT_ID not found in .env file.");
-    }
+  Future<void> signInWithGoogle(String clientID) async {
+    // if (_clientID == null) {
+    //   throw Exception("GOOGLE_CLIENT_ID not found in .env file.");
+    // }
 
     try {
-      await LmsFactory.getLmsServiceGoogle().loginOath(_clientID!);
+      final GoogleLmsService googleLms = LmsFactory.getLmsServiceGoogle();
+      await googleLms.loginOath(clientID);
 
-      // if (_api.isLoggedIn()) {
-      if (LmsFactory.getLmsServiceGoogle().isLoggedIn()) {
-        _googleState.isLoggedIn = true;
-        _googleState.errorMessage = null;
-
-        // Save to local storage
-        LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
-        LocalStorageService.saveGoogleAccessToken(
-            LmsFactory.getLmsServiceGoogle().getGoogleAccessToken());
-
-        notifyListeners();
-      } else {
+      if (!googleLms.isLoggedIn()) {
         _googleState.isLoggedIn = false;
         _googleState.errorMessage = 'Google login failed.';
         notifyListeners();
-        throw Exception('Google login failed.');
+        return;
       }
+
+      final UserRole role = await googleLms.getUserRole(googleLms.courses!);
+      if (role == UserRole.teacher || role == UserRole.student) {
+        _googleState.isLoggedIn = true;
+        _googleState.errorMessage = null;
+        _role = role;
+        // Save to local storage
+        LocalStorageService.saveUserRole(role);
+        LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
+        LocalStorageService.saveGoogleAccessToken(
+            googleLms.getGoogleAccessToken()
+        );
+        LocalStorageService.saveGoogleClientId(clientID);
+      }
+      else{
+        googleLms.logout();
+        _googleState.isLoggedIn = false;
+        _googleState.errorMessage = 'User does not have a valid role';
+      }
+
+      notifyListeners();
     } catch (e) {
       _googleState.isLoggedIn = false;
       _googleState.errorMessage = "Google login failed: ${e.toString()}";
       notifyListeners();
-      rethrow; // Or remove if you don't want to rethrow
     }
   }
 

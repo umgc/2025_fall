@@ -6,7 +6,6 @@ import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class UserSettings extends StatefulWidget {
   @override
@@ -23,8 +22,7 @@ class UserSettingsState extends State<UserSettings> {
   final TextEditingController _preplexityKeyController = TextEditingController();
   final TextEditingController _deepSeekKeyController= TextEditingController();
 
-  final TextEditingController _googleClientIdController =
-      TextEditingController();
+  final TextEditingController _googleClientIdController = TextEditingController();
 
   @override
   void initState() {
@@ -143,9 +141,9 @@ class UserSettingsState extends State<UserSettings> {
           ElevatedButton(
             onPressed: () {
               loginNotifier.signInWithMoodle(
-                _usernameController.text,
-                _passwordController.text,
-                _moodleUrlController.text,
+                _usernameController.text.trim(),
+                _passwordController.text.trim(),
+                _moodleUrlController.text.trim(),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -191,12 +189,16 @@ class UserSettingsState extends State<UserSettings> {
         TextField(
           controller: _googleClientIdController,
           decoration: InputDecoration(labelText: 'Client ID'),
-          enabled: false, // Make it non-editable
+          enabled: !googleState.isLoggedIn, // Make it non-editable
         ),
         const SizedBox(height: 10),
         if (!googleState.isLoggedIn)
           ElevatedButton(
-            onPressed: loginNotifier.signInWithGoogle,
+            onPressed: (){
+              loginNotifier.signInWithGoogle(
+                _googleClientIdController.text.trim()
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
