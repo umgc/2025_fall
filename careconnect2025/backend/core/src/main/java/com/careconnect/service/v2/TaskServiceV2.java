@@ -16,6 +16,7 @@ import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.TaskRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Service
 @Transactional
@@ -60,6 +61,7 @@ public class TaskServiceV2 {
                 .build();
         System.out.println("New task created: " + newTask);
         ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule()).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         try {
             String jsonString = mapper.writeValueAsString(newTask);

@@ -1,9 +1,12 @@
 package com.careconnect.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.cglib.core.Local;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,15 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.careconnect.dto.PatientNoteDTO;
 import com.careconnect.dto.PatientNotetakerConfigDTO;
-import com.careconnect.dto.TaskDto;
+import com.careconnect.dto.v2.TaskDtoV2;
 import com.careconnect.model.PatientNote;
 import com.careconnect.model.PatientNotetakerConfig;
 import com.careconnect.model.PatientNotetakerKeyword;
 import com.careconnect.model.PatientNotetakerKeyword.EventType;
 import com.careconnect.repository.PatientNoteRepository;
 import com.careconnect.repository.PatientNotetakerConfigRepository;
-import com.careconnect.service.OpenAIService.OpenAIChatRequest;
-import com.careconnect.service.OpenAIService.OpenAIResponse;
+import com.careconnect.service.DeepSeekService.DeepSeekChatRequest;
+import com.careconnect.service.DeepSeekService.DeepSeekResponse;
+import com.careconnect.service.DeepSeekService.Message;
+import com.careconnect.service.v2.TaskServiceV2;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -27,8 +32,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
 public class PatientNotetakerService {
-    private final TaskService taskService;
-    private final OpenAIService openAIService;
+    private final TaskServiceV2 taskService;
+    private final DeepSeekService deepSeekService;
     private final PatientNoteRepository patientNoteRepository;
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
@@ -36,13 +41,13 @@ public class PatientNotetakerService {
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
         PatientService patientService,
-        OpenAIService openAIService,
-        TaskService taskService
+        DeepSeekService deepSeekService,
+        TaskServiceV2 taskService
         ) {
         this.patientNoteRepository = patientNoteRepository;
         this.patientNotetakerConfigRepository = patientNotetakerConfigRepository;
         this.patientService = patientService;
-        this.openAIService = openAIService;
+        this.deepSeekService = deepSeekService;
         this.taskService = taskService;
     }
 
@@ -138,8 +143,8 @@ public class PatientNotetakerService {
         for(PatientNotetakerKeyword keyword : keywords) {
             if(fileData.contains(keyword.getKeyword())) {
                 String truncatedMessage = fileData.substring(
-                    Math.min(fileData.indexOf(keyword.getKeyword()) - 100, 0),
-                    Math.min(fileData.indexOf(keyword.getKeyword()) + 100, fileData.length())
+                    Math.max(fileData.indexOf(keyword.getKeyword()) - 200, 0),
+                    Math.min(fileData.indexOf(keyword.getKeyword()) + 200, fileData.length()-1)
                 );
                 foundKeywords.add(keyword.getKeyword());
                 System.out.println("Keyword detected: " + keyword.getKeyword());
@@ -160,25 +165,30 @@ public class PatientNotetakerService {
                     + "', generate a json object with the following properties: "
                     + "name (string), "
                     + "date (string) , "
-                    + "days_of_week (array of booleans for each day of the week), "
+                    + "daysOfWeek (array of booleans for each day of the week, represented as a string), "
                     + "description (string), "
-                    + "do_count (int), "
+                    + "count (int), "
                     + "frequency (string), "
-                    + "task_type (string, one of the following: medication, appointment, exercise, general, lab, pharmacy),"
-                    + "time_of_day (localdatetime as a string)"
-                    + ". The json should be in the following format: {\"date\":\"YYYY-MM-DD\", \"days_of_week\":[true, false, false, false, false, false, false], \"description\":\"description text\", \"do_count\":1, \"frequency\":\"once\", \"task_type\":\"general\", \"time_of_day\":\"hr:min:sec\"}. "
+                    + "taskType (string, one of the following: medication, appointment, exercise, general, lab, pharmacy),"
+                    + "timeOfDay (localdatetime as a string)"
+                    + ". The json should be in the following format: {\"date\":\"YYYY-MM-DD\", \"daysOfWeek\":\"[true, false, false, false, false, false, false]\", \"description\":\"description text\", \"count\":1, \"frequency\":\"once\", \"taskType\":\"general\", \"timeOfDay\":\"hr:min:sec\"}. "
                     + "Use the following text to derive these properties as they relate to the keyword: '"
                     + truncatedMessage
-                    + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object.";
-            System.out.println("Sending openAI request...");
-            OpenAIChatRequest request = new OpenAIChatRequest(
-                    "gpt-3.5-turbo",
-                    java.util.Collections.singletonList(new OpenAIService.Message("system", prompt)),
+                    + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object beginning with { and ending with }.";
+            System.out.println("Sending DeepSeek request...");
+            DeepSeekChatRequest request = new DeepSeekChatRequest(
+                    "deepseek/deepseek-chat-v3.1:free",
+                    Arrays.asList(new Message("system", "You are an expert language interpreter and software engineer"),new Message("user", prompt)),
                     0.2,
                     256);
 
-            OpenAIResponse response = openAIService.sendChatRequest(request);
-
+            DeepSeekResponse response; 
+            try {
+                response = deepSeekService.sendChatRequest(request);
+            } catch (Exception e) {
+                log.error("Unable to reach DeepSeek service: {}", e.getMessage());
+                return;
+            }
             String aiContent = null;
             if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()
                     && response.getChoices().get(0).getMessage() != null) {
@@ -186,7 +196,8 @@ public class PatientNotetakerService {
             } else {
                 aiContent = "";
             }
-            TaskDto aiTask = mapJson(aiContent, TaskDto.class);
+
+            TaskDtoV2 aiTask = mapJson(aiContent, TaskDtoV2.class);
             if (aiTask == null || aiTask.getName() == null || aiTask.getTaskType() == null
                     || aiTask.getDescription() == null || aiTask.getDate() == null) {
                 log.error("Invalid AI Task generated for keyword '{}': {}", keyword.getKeyword(), aiTask);
@@ -195,6 +206,10 @@ public class PatientNotetakerService {
             log.info("OpenAI response for keyword '{}': {}", keyword.getKeyword(), response);
             log.info("Created Task from AI: {}", aiTask);
             aiTask.setDescription("AI GENERATED TASK: " + aiTask.getDescription());
+            aiTask.setCompleted(false);
+            //deepseek model is old, so it gets the current year wrong, fix.
+            LocalDate date = LocalDate.parse(aiTask.getDate()); 
+            aiTask.setDate(date.withYear(LocalDate.now().getYear()).toString());
             taskService.createTask(patientId, aiTask);
         }
     }
