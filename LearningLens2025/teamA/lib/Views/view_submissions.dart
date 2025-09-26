@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
@@ -41,6 +42,7 @@ class SubmissionListState extends State<SubmissionList> {
   final perplexityApiKey = LocalStorageService.getPerplexityKey();
   final openApiKey = LocalStorageService.getOpenAIKey();
   final grokApiKey = LocalStorageService.getGrokKey();
+  final deepseekApiKey = LocalStorageService.getDeepseekKey();
 
   LlmType? selectedLLM;
 
@@ -53,6 +55,8 @@ class SubmissionListState extends State<SubmissionList> {
         return openApiKey;
       case LlmType.GROK:
         return grokApiKey;
+      case LlmType.DEEPSEEK:
+        return deepseekApiKey;
       default:
         return perplexityApiKey;
     }
@@ -526,7 +530,14 @@ class SubmissionListState extends State<SubmissionList> {
                                                                   llmInstance =
                                                                       GrokLLM(
                                                                           apiKey);
-                                                                } else {
+                                                                } else if (selectedLLM ==
+                                                                    LlmType
+                                                                        .DEEPSEEK) {
+                                                                  llmInstance =
+                                                                      DeepseekLLM(
+                                                                          apiKey);
+                                                                }
+                                                                else {
                                                                   llmInstance =
                                                                       PerplexityLLM(
                                                                           apiKey);

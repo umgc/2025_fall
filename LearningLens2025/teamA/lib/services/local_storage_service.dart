@@ -204,6 +204,25 @@ class LocalStorageService {
     _prefs.remove('grokKey');
   }
 
+  /// Saves Deepseek API key.
+  static void saveDeepseekKey(String deepseekKey) {
+    _prefs.setString('deepseekKey', deepseekKey);
+  }
+  /// Retrieves Deepseek API key from storage or dotenv.
+  static String getDeepseekKey() {
+    return _prefs.getString('deepseekKey') ??
+        dotenv.env['deepseek_apiKey'] ??
+        '';
+  }
+  /// Checks if Deepseek API key exists.
+  static bool hasDeepseekKey() {
+    return getDeepseekKey().isNotEmpty;
+  }
+  /// Clears Deepseek API key.
+  static void clearDeepseekKey() {
+    _prefs.remove('deepseekKey');
+  }
+
   static String getGoogleClientId() {
     return _prefs.getString('GOOGLE_CLIENT_ID') ??
         dotenv.env['GOOGLE_CLIENT_ID'] ??
@@ -265,7 +284,8 @@ class LocalStorageService {
   static hasLLMKey() {
     return getOpenAIKey().isNotEmpty ||
         getGrokKey().isNotEmpty ||
-        getPerplexityKey().isNotEmpty;
+        getPerplexityKey().isNotEmpty ||
+        getDeepseekKey().isNotEmpty;
   }
 
   static bool userHasLlmKey(LlmType llm) {
@@ -275,6 +295,8 @@ class LocalStorageService {
       return LocalStorageService.hasGrokKey();
     } else if (llm == LlmType.PERPLEXITY) {
       return LocalStorageService.hasPerplexityKey();
+    } else if (llm == LlmType.DEEPSEEK) {
+      return LocalStorageService.hasDeepseekKey();
     }
 
     return false;
