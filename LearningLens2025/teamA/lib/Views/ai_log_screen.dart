@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:excel/excel.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
@@ -8,6 +14,11 @@ import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+
+import 'package:learninglens_app/stub/html_stub.dart'
+    if (dart.library.html) 'dart:html' as html;
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 class AiLogScreen extends StatefulWidget {
   @override
@@ -23,10 +34,11 @@ class _AiLogScreenState extends State<AiLogScreen> {
   Participant? selectedStudent;
   List<AiLog> logs = [];
   late _AiLogSource logSource;
-  int sortIndex = 0;
-  bool sortAsc = true;
+  int sortIndex = 7;
+  bool sortAsc = false;
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
+  bool isLoading = false;
 
   int? selected;
 
@@ -40,16 +52,16 @@ class _AiLogScreenState extends State<AiLogScreen> {
   Future<void> _loadCourses() async {
     selectedCourse = null;
     try {
-      var userCourses = LmsFactory.getLmsService().courses;
+      var userCourses = await LmsFactory.getLmsService().getUserCourses();
       setState(() {
-        if (userCourses != null) {
-          courses = userCourses; // Update the state with fetched courses
-        } else {
-          courses = [];
-        }
+        courses = userCourses; // Update the state with fetched courses
       });
     } catch (e) {
-      print("Error loading courses: $e");
+      setState(() {
+        isLoading = false;
+        isError = true;
+        message = 'Error loading courses: $e';
+      });
     }
   }
 
@@ -95,34 +107,37 @@ class _AiLogScreenState extends State<AiLogScreen> {
   void _queryDatabase() async {
     // For now just test adding data, get data
     if (selectedCourse != null) {
-      final String longText = """
-    This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. This is long database text for testing. 
-    """;
+      final String testString = "This is a test string for a prompt.";
+      final String replyString = "This is a test string for a reply.";
+      final String reflectionString = "This is a test reflection.";
       if (selectedAssignment != null && selectedStudent != null) {
-        print(await AILoggingSingleton().addLog(AiLog(
+        await AILoggingSingleton().addLog(AiLog(
             selectedCourse!,
             selectedAssignment!,
             selectedStudent!,
-            longText,
-            longText,
-            LlmType.CHATGPT)));
+            testString,
+            replyString,
+            LlmType.CHATGPT,
+            reflectionString));
       }
       List<AiLog> newLogs = [];
       setState(() {
         logs = [];
-        message = 'Loading logs...';
+        isLoading = true;
+        message = 'Loading AI logs...';
         isError = false;
-        sortIndex = 0;
-        sortAsc = true;
+        sortIndex = 7;
+        sortAsc = false;
         logSource.setData(logs, sortIndex, sortAsc);
       });
       try {
         newLogs = await AILoggingSingleton().getLogs(
-            selectedCourse!.id,
-            selectedAssignment?.id,
-            selectedStudent?.id,
+            selectedCourse!,
+            selectedAssignment,
+            selectedStudent,
             LocalStorageService.getSelectedClassroom().index);
         setState(() {
+          isLoading = false;
           if (newLogs.isEmpty) {
             message = 'No logs found for the selected filters.';
           }
@@ -131,6 +146,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
         });
       } catch (e) {
         setState(() {
+          isLoading = false;
           isError = true;
           message = 'Error retrieving logs: $e';
         });
@@ -157,6 +173,103 @@ class _AiLogScreenState extends State<AiLogScreen> {
     });
   }
 
+  void _exportLogs() async {
+    String defaultName =
+        '${selectedCourse?.fullName.replaceAll(" ", "")}_${selectedAssignment == null ? "AllAssignments" : selectedAssignment?.name.replaceAll(" ", "")}_${selectedStudent == null ? "AllStudents" : selectedStudent?.fullname}.xlsx';
+    if (kIsWeb) {
+      // Build bytes.
+      List<int> bytes = await _exportReportAsExcel();
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..style.display = 'none'
+        ..download = defaultName;
+      html.document.body?.append(anchor);
+      anchor.click();
+      anchor.remove();
+      html.Url.revokeObjectUrl(url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Report exported to Excel via browser download.')),
+      );
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        List<int> bytes = await _exportReportAsExcel();
+        var dir = await getApplicationDocumentsDirectory();
+        File(path.join('${dir.path}/$defaultName'))
+          ..createSync(recursive: true)
+          ..writeAsBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Report saved to Excel at:\n$dir')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save report: $e')),
+        );
+      }
+    } else {
+      final savePath = await _pickFileLocation(defaultName);
+      if (savePath == null) return;
+      try {
+        List<int> bytes = await _exportReportAsExcel();
+        final file = File(savePath);
+        await file.writeAsBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Report saved to Excel at:\n$savePath')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save report: $e')),
+        );
+      }
+    }
+  }
+
+  Future<String?> _pickFileLocation(String defaultName) async {
+    if (kIsWeb) return null;
+    final result = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save Report',
+      fileName: defaultName,
+    );
+    return result;
+  }
+
+  Future<List<int>> _exportReportAsExcel() async {
+    var excel = Excel.createExcel();
+    // Dynamic export for student breakdown.
+    Sheet studentSheet = excel['AI Logs'];
+    if (logSource.sortedData.isNotEmpty) {
+      // Get headers dynamically from the first map.
+      var studentHeaders = [
+        AiLog.getHeaderForColumn(0),
+        AiLog.getHeaderForColumn(1),
+        AiLog.getHeaderForColumn(2),
+        AiLog.getHeaderForColumn(3),
+        AiLog.getHeaderForColumn(4),
+        AiLog.getHeaderForColumn(5),
+        AiLog.getHeaderForColumn(6),
+        AiLog.getHeaderForColumn(7),
+      ];
+      studentSheet.appendRow(studentHeaders);
+      // Append each student row by mapping the values to strings.
+      for (var log in logSource.sortedData) {
+        studentSheet.appendRow(
+          [
+            log.getValueForColumn(0),
+            log.getValueForColumn(1),
+            log.getValueForColumn(2),
+            log.getValueForColumn(3),
+            log.getValueForColumn(4),
+            log.getValueForColumn(5),
+            log.getValueForColumn(6),
+            log.getValueForColumn(7).toString(),
+          ],
+        );
+      }
+    }
+    return excel.encode()!;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -178,14 +291,18 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                       Expanded(
-                          child: DropdownButtonFormField<Course>(
+                          child: DropdownButtonFormField<Course?>(
                         value: selectedCourse,
-                        items: courses.map<DropdownMenuItem<Course>>((course) {
-                          return DropdownMenuItem<Course>(
-                            value: course,
-                            child: Text(course.fullName),
-                          );
-                        }).toList(),
+                        items: List.empty(growable: true)
+                          ..add(DropdownMenuItem<Course?>(
+                              value: null, child: Text('Select Course')))
+                          ..addAll(
+                              courses.map<DropdownMenuItem<Course?>>((course) {
+                            return DropdownMenuItem<Course?>(
+                              value: course,
+                              child: Text(course.fullName),
+                            );
+                          })),
                         onChanged: (value) {
                           setState(() {
                             selectedCourse = value;
@@ -200,46 +317,69 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       )),
                       SizedBox(width: 10),
                       Expanded(
-                          child: DropdownButtonFormField<Assignment>(
-                        decoration: const InputDecoration(
-                          labelText: 'Select Assignment',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: selectedAssignment,
-                        items: assignments
-                            .map<DropdownMenuItem<Assignment>>((assignment) {
-                          return DropdownMenuItem<Assignment>(
-                            value: assignment,
-                            child: Text(assignment.name),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedAssignment = newValue;
-                          });
-                        },
-                      )),
+                          child: Opacity(
+                              opacity: selectedCourse == null ? .5 : 1,
+                              child: DropdownButtonFormField<Assignment?>(
+                                decoration: InputDecoration(
+                                    labelText: 'Select Assignment',
+                                    border: OutlineInputBorder(),
+                                    disabledBorder: null,
+                                    enabled: selectedCourse != null),
+                                value: selectedAssignment,
+                                items: selectedCourse == null
+                                    ? null
+                                    : List.empty(growable: true)
+                                  ?..add(DropdownMenuItem<Assignment?>(
+                                      value: null,
+                                      child: Text('Select Assignment')))
+                                  ..addAll(assignments
+                                      .map<DropdownMenuItem<Assignment?>>(
+                                          (assignment) {
+                                    return DropdownMenuItem<Assignment?>(
+                                      value: assignment,
+                                      child: Text(assignment.name),
+                                    );
+                                  })),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedAssignment = newValue;
+                                  });
+                                },
+                              ))),
                       SizedBox(width: 10),
                       Expanded(
-                          child: DropdownButtonFormField<Participant>(
-                        decoration: const InputDecoration(
-                          labelText: 'Select Student',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: selectedStudent,
-                        items: participants
-                            .map<DropdownMenuItem<Participant>>((participant) {
-                          return DropdownMenuItem<Participant>(
-                            value: participant,
-                            child: Text(participant.fullname),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            selectedStudent = newValue;
-                          });
-                        },
-                      )),
+                          child: Opacity(
+                              opacity: selectedCourse == null ? .5 : 1,
+                              child: DropdownButtonFormField<Participant?>(
+                                decoration: InputDecoration(
+                                    labelText: 'Select Student',
+                                    border: OutlineInputBorder(),
+                                    disabledBorder: null,
+                                    enabled: selectedCourse != null),
+                                value: selectedStudent,
+                                dropdownColor: selectedCourse == null
+                                    ? Colors.grey.shade400
+                                    : null,
+                                items: selectedCourse == null
+                                    ? null
+                                    : List.empty(growable: true)
+                                  ?..add(DropdownMenuItem<Participant?>(
+                                      value: null,
+                                      child: Text('Select Student')))
+                                  ..addAll(participants
+                                      .map<DropdownMenuItem<Participant?>>(
+                                          (participant) {
+                                    return DropdownMenuItem<Participant?>(
+                                      value: participant,
+                                      child: Text(participant.fullname),
+                                    );
+                                  })),
+                                onChanged: (newValue) {
+                                  setState(() {
+                                    selectedStudent = newValue;
+                                  });
+                                },
+                              ))),
                       SizedBox(width: 10),
                       ElevatedButton(
                         onPressed: (selectedCourse == null &&
@@ -248,7 +388,13 @@ class _AiLogScreenState extends State<AiLogScreen> {
                             ? null
                             : _queryDatabase,
                         child: const Text('Filter'),
-                      )
+                      ),
+                      Spacer(),
+                      ElevatedButton(
+                        onPressed:
+                            logSource.sortedData.isEmpty ? null : _exportLogs,
+                        child: const Text('Export Logs'),
+                      ),
                     ]))
               ],
             ),
@@ -269,33 +415,35 @@ class _AiLogScreenState extends State<AiLogScreen> {
                           columns: [
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Student'),
+                                label: Text(AiLog.getHeaderForColumn(0)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Assignment'),
+                                label: Text(AiLog.getHeaderForColumn(1)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('Course'),
+                                label: Text(AiLog.getHeaderForColumn(2)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Prompt'),
+                                label: Text(AiLog.getHeaderForColumn(3)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Response'),
+                                label: Text(AiLog.getHeaderForColumn(4)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(225),
-                                label: Text('Reflection'),
+                                label: Text(AiLog.getHeaderForColumn(5)),
                                 onSort: sort),
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
-                                label: Text('LLM'),
+                                label: Text(AiLog.getHeaderForColumn(6)),
                                 onSort: sort),
-                            DataColumn(label: Text('Timestamp'), onSort: sort),
+                            DataColumn(
+                                label: Text(AiLog.getHeaderForColumn(7)),
+                                onSort: sort),
                           ],
                           source: logSource,
                         ))
@@ -303,6 +451,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
                     ),
                   ),
                 )),
+            Visibility(
+                visible: isLoading,
+                child: Align(child: CircularProgressIndicator())),
             Visibility(
                 visible: logSource.sortedData.isEmpty,
                 child: Expanded(

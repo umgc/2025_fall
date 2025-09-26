@@ -22,7 +22,7 @@ class AiLog {
   // Simple constructor. Feedback param is optional.
   AiLog(this.course, this.assignment, this.student, this.prompt, this.response,
       this.model,
-      [this.uuid = "", this.reflection = "", LmsType? lms, DateTime? created]) {
+      [this.reflection = "", this.uuid = "", LmsType? lms, DateTime? created]) {
     if (lms != null) {
       this.lms = lms;
     }
@@ -72,5 +72,28 @@ class AiLog {
   @override
   String toString() {
     return toJson().toString();
+  }
+
+  static String getHeaderForColumn(int column) {
+    switch (column) {
+      case 0:
+        return "Student";
+      case 1:
+        return "Assignment";
+      case 2:
+        return "Course";
+      case 3:
+        return "Prompt";
+      case 4:
+        return "Response";
+      case 5:
+        return "Reflection";
+      case 6:
+        return "AI Model";
+      case 7:
+        return "Created";
+      default:
+        return "";
+    }
   }
 }
