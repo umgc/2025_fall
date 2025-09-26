@@ -310,29 +310,6 @@ class GoogleLmsService extends LmsInterface {
       throw HttpException('Failed to fetch students: ${studentsResponse.body}');
     }
 
-    // Fetch teachers
-    final teachersResponse = await ApiService().httpGet(
-      Uri.parse(apiURL + '/courses/$courseId/teachers'),
-      headers: {'Authorization': 'Bearer $_userToken'},
-    );
-
-    if (teachersResponse.statusCode == 200) {
-      final teachersJson = jsonDecode(teachersResponse.body);
-      if (teachersJson.containsKey('teachers')) {
-        for (var teacher in teachersJson['teachers']) {
-          participants.add(Participant(
-            id: teacher['userId'].hashCode,
-            fullname: teacher['profile']['name']['fullName'],
-            firstname: teacher['profile']['name']['givenName'],
-            lastname: teacher['profile']['name']['familyName'],
-            roles: ['teacher'],
-          ));
-        }
-      }
-    } else {
-      throw HttpException('Failed to fetch teachers: ${teachersResponse.body}');
-    }
-
     return participants;
   }
 

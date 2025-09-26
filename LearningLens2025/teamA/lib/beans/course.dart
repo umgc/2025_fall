@@ -1,6 +1,6 @@
+import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/learning_lens_interface.dart';
 import 'package:learninglens_app/beans/quiz.dart';
-import 'package:learninglens_app/beans/assignment.dart';
 
 class Course implements LearningLensInterface {
   int id;
@@ -52,6 +52,8 @@ class Course implements LearningLensInterface {
   @override
   Course fromGoogleJson(Map<String, dynamic> json) {
     // TODO: Figure out an end date.
+    dynamic teacherFolder = json['teacherFolder'];
+
     print(json);
     return Course(
       int.parse(json['id']),
@@ -60,7 +62,8 @@ class Course implements LearningLensInterface {
       json['name'],
       DateTime.parse(json['creationTime']),
       DateTime.parse(json['updateTime']).add(Duration(days: 180)),
-      teacherFolderId: json['teacherFolder']['id'],
+      // teacherFolder is null if the logged in user is a student
+      teacherFolderId: teacherFolder != null ? teacherFolder['id'] : '',
     );
   }
 

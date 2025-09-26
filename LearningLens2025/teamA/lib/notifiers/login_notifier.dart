@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
@@ -80,18 +81,26 @@ class LoginNotifier with ChangeNotifier {
   // Auto-login if we have saved credentials
   // ---------------------------------------
   Future<void> _autoLogin() async {
-    if ((_username != null && _username!.isNotEmpty) &&
-        (_password != null && _password!.isNotEmpty) &&
-        (_moodleUrl != null && _moodleUrl!.isNotEmpty)) {
-      try {
-        await signInWithMoodle(_username!, _password!, _moodleUrl!);
-      } catch (e) {
-        print('Auto-login Error: $e');
+    try {
+      if(LocalStorageService.getSelectedClassroom() == LmsType.GOOGLE &&
+          _clientID != null && _clientID!.isNotEmpty){
+          await signInWithGoogle(_clientID!);
       }
-    } else {
-      print('Auto-login skipped: Missing or empty credentials.');
+      else if (LocalStorageService.getSelectedClassroom() == LmsType.MOODLE &&
+          (_username != null && _username!.isNotEmpty) &&
+          (_password != null && _password!.isNotEmpty) &&
+          (_moodleUrl != null && _moodleUrl!.isNotEmpty)) {
+          await signInWithMoodle(_username!, _password!, _moodleUrl!);
+      } 
+      else {
+        print('Auto-login skipped: Missing or empty credentials.');
+      }
+    } 
+    catch (e) {
+      print('Auto-login Error: $e');
     }
   }
+
 
   // ---------------------------------------
   // Moodle: Sign-in
