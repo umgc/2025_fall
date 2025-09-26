@@ -15,12 +15,14 @@ import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../screens/main_screen.dart';
+import '../../config/navigation/main_screen_config.dart';
+import '../../config/navigation/navigation_helper.dart';
+import '../../services/user_role_storage_service.dart';
 
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
-import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
-import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
@@ -39,21 +41,13 @@ import '../../features/dashboard/presentation/pages/patient_status_page.dart';
 import '../../providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
-/// Helper function to navigate to the appropriate dashboard based on user role
-void navigateToDashboard(BuildContext context, {String? role}) {
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  final userRole = role ?? userProvider.user?.role;
-
-  if (userRole == null) {
-    // If no role is found, redirect to login with the last known userType if available
-    final lastUserType = userProvider.user != null
-        ? userProvider.user!.role.toLowerCase()
-        : 'patient';
-    context.go('/login', extra: {'userType': lastUserType});
-    return;
-  }
-
-  context.go('/dashboard?role=$userRole');
+/// Helper function to navigate to the appropriate dashboard based on stored user role
+Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
+  await NavigationHelper.navigateToMainScreen(
+    context,
+    tabIndex: tabIndex,
+    clearHistory: true,
+  );
 }
 
 final GoRouter appRouter = GoRouter(
@@ -79,46 +73,90 @@ final GoRouter appRouter = GoRouter(
       path: '/signup',
       builder: (context, state) {
         // We're now using a single caregiver sign up screen
-        return const SignUpScreen(userType: 'caregiver');
+        return const RegistrationPage();
       },
     ),
     GoRoute(
       path: '/dashboard',
       builder: (context, state) {
-        final urlRole = state.uri.queryParameters['role'];
+        return FutureBuilder<UserData?>(
+          future: UserRoleStorageService.instance.getUserData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final sessionRole = userProvider.user?.role;
+            final userData = snapshot.data;
+            if (userData == null || !userData.isLoggedIn || userData.userId <= 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go('/login');
+              });
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final userRole = urlRole ?? sessionRole;
+            // Parse tab index from URL if provided
+            final tabIndex = state.uri.queryParameters['tab'];
+            int? initialTabIndex;
+            if (tabIndex != null) {
+              initialTabIndex = NavigationHelper.getTabIndexFromName(
+                userData.role,
+                tabIndex,
+              );
+            }
 
-        if (userRole == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+            // Create configuration based on stored role
+            MainScreenConfig config;
+            switch (userData.role.toUpperCase()) {
+              case 'PATIENT':
+                config = MainScreenConfig.forPatient(
+                  userId: userData.userId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'CAREGIVER':
+                config = MainScreenConfig.forCaregiver(
+                  userId: userData.userId,
+                  caregiverId: userData.caregiverId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'FAMILY_LINK':
+                config = MainScreenConfig.forFamilyMember(
+                  userId: userData.userId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'ADMIN':
+                config = MainScreenConfig(
+                  userRole: 'ADMIN',
+                  userId: userData.userId,
+                  showAppBar: true,
+                  appBarTitle: 'Admin Dashboard',
+                  primaryColor: Colors.red,
+                );
+                break;
+              default:
+                // Unknown role, redirect to login
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  context.go('/login');
+                });
+                return const Scaffold(
+                  body: Center(
+                    child: Text('Unknown user role. Redirecting to login...'),
+                  ),
+                );
+            }
 
-        switch (userRole.toUpperCase()) {
-          case 'PATIENT':
-            return const PatientDashboard();
-          case 'CAREGIVER':
-          case 'FAMILY_LINK':
-          case 'ADMIN':
-            return const CaregiverDashboard();
-          default:
-          // Unknown role, redirect to login
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/login');
-            });
-            return const Scaffold(
-              body: Center(
-                child: Text('Unknown user role. Redirecting to login...'),
-              ),
+            return MainScreen(
+              config: config,
+              initialTabIndex: initialTabIndex,
             );
-        }
+          },
+        );
       },
     ),
     GoRoute(
@@ -126,7 +164,33 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final userIdStr = state.uri.queryParameters['userId'];
         final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
-        return PatientDashboard(userId: userId); // Pass userId if provided
+
+        // Check if userId is valid
+        if (userId == null || userId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid user ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Redirect to new MainScreen with patient configuration
+        final config = MainScreenConfig.forPatient(
+          userId: userId,
+          patientId: userId,
+        );
+
+        return MainScreen(config: config);
       },
     ),
 
@@ -136,43 +200,63 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final caregiverIdStr = state.uri.queryParameters['caregiverId'];
         final patientIdStr = state.uri.queryParameters['patientId'];
-        final userRole = state.uri.queryParameters['userRole'] ?? 'CAREGIVER';
 
         final caregiverId = caregiverIdStr != null
             ? int.tryParse(caregiverIdStr)
-            : 1;
+            : null;
         final patientId = patientIdStr != null
             ? int.tryParse(patientIdStr)
             : null;
 
-        return CaregiverDashboard(
-          userRole: userRole,
+        // Check if caregiverId is valid
+        if (caregiverId == null || caregiverId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid caregiver ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Redirect to new MainScreen with caregiver configuration
+        final config = MainScreenConfig.forCaregiver(
+          userId: caregiverId,
+          caregiverId: caregiverId,
           patientId: patientId,
-          caregiverId: caregiverId ?? 1,
         );
+
+        return MainScreen(config: config);
       },
     ),
     // Add a redirect route for authenticated users going to root
     GoRoute(
       path: '/home',
-      redirect: (context, state) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final userRole = userProvider.user?.role;
-
-        if (userRole != null) {
-          return '/dashboard?role=$userRole';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard';
         }
         return '/';
       },
     ),
     GoRoute(
       path: '/register/caregiver',
-      builder: (_, __) => const SignUpScreen(userType: 'caregiver'),
+      builder: (_, __) => const RegistrationPage(),
     ),
-    GoRoute(
-      path: '/register/caregiver/payment',
-      builder: (_, __) => const CaregiverRegistrationFlowPage(),
-    ),
+    // TODO - Update Subscription page
+    // GoRoute(
+    //   path: '/register/caregiver/payment',
+    //   builder: (_, __) => const CaregiverRegistrationFlowPage(),
+    // ),
     GoRoute(
       path: '/register/patient',
       builder: (_, __) => const PatientRegistrationPage(),
@@ -302,7 +386,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -340,7 +424,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -397,7 +481,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -429,7 +513,7 @@ final GoRouter appRouter = GoRouter(
 
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -488,22 +572,36 @@ final GoRouter appRouter = GoRouter(
     // Handle routes from legacy menus
     GoRoute(
       path: '/taskscheduling',
-      redirect: (context, state) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final userRole = userProvider.user?.role;
-        return '/dashboard?role=$userRole';
+      redirect: (context, state) async {
+        final userData = await UserRoleStorageService.instance.getUserData();
+        if (userData?.isLoggedIn == true) {
+          // Redirect to tasks tab for caregivers, home for patients
+          if (userData!.role.toUpperCase() == 'CAREGIVER') {
+            return '/dashboard?tab=tasks';
+          }
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(
       path: '/chatandcalls',
-      redirect: (context, state) {
-        return '/dashboard?tab=calls';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=messages';
+        }
+        return '/login';
       },
     ),
     GoRoute(
       path: '/aiassistant',
-      redirect: (context, state) {
-        return '/dashboard?tab=ai';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(
@@ -514,8 +612,12 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/sos',
-      redirect: (context, state) {
-        return '/dashboard?tab=emergency';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/video_call_service.dart';
 import '../services/sms_service.dart';
 import '../services/messaging_service.dart';
-import '../widgets/real_video_call_widget.dart'; // Use REAL video call widget
+// Use REAL video call widget
 import '../config/theme/app_theme.dart';
 
 class CommunicationWidget extends StatefulWidget {
