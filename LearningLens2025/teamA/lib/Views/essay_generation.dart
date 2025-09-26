@@ -38,7 +38,7 @@ class _EssayGenerationState extends State<EssayGeneration>
   LlmType? selectedLLM;
 
   // llm options
-  final List<String> llmOptions = ['ChatGPT', 'CLAUDE', 'Perplexity'];
+  final List<String> llmOptions = ['ChatGPT', 'CLAUDE', 'Perplexity', 'Grok', 'Deepseek'];
 
   // Variables to store the text inputs
   final TextEditingController _standardObjectiveController =

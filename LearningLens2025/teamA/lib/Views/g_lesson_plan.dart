@@ -4,6 +4,7 @@
 import "dart:convert";
 import "package:flutter/material.dart";
 import "package:http/http.dart" as http;
+import "package:learninglens_app/Api/llm/DeepSeek_api.dart";
 import "package:learninglens_app/Api/llm/llm_api_modules_base.dart";
 import "package:learninglens_app/Api/lms/constants/learning_lens.constants.dart";
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
@@ -43,6 +44,7 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
   bool hasOpenAIKey = false;
   bool hasGrokKey = false;
   bool hasPerplexityKey = false;
+  bool hasDeepseekKey = false;
 
   final TextEditingController lessonPlanNameController =
       TextEditingController();
@@ -72,10 +74,12 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
       String openAIKey = LocalStorageService.getOpenAIKey() ?? '';
       String grokKey = LocalStorageService.getGrokKey() ?? '';
       String perplexityKey = LocalStorageService.getPerplexityKey() ?? '';
+      String deepseekKey = LocalStorageService.getDeepseekKey() ?? '';
 
       hasOpenAIKey = openAIKey.isNotEmpty;
       hasGrokKey = grokKey.isNotEmpty;
       hasPerplexityKey = perplexityKey.isNotEmpty;
+      hasDeepseekKey = deepseekKey.isNotEmpty;
       // print('OpenAI key: $hasOpenAIKey');
       // hasGrokKey = LocalStorageService.getGrokKey() as bool;
       // print('Grok key: $hasGrokKey');
@@ -161,6 +165,7 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
     final openApiKey = LocalStorageService.getOpenAIKey();
     final grokApiKey = LocalStorageService.getGrokKey();
     final perplexityApiKey = LocalStorageService.getPerplexityKey();
+    final deepseekApiKey = LocalStorageService.getDeepseekKey();
 
     try {
       late final LLM aiModel;
@@ -174,6 +179,8 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
         case 'Perplexity':
           aiModel = PerplexityLLM(perplexityApiKey);
           break;
+        case 'Deepseek':
+          aiModel = DeepseekLLM(deepseekApiKey);
         default:
           throw Exception('Unsupported AI model: $selectedLLM');
       }
@@ -460,7 +467,8 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
                                               selectedLLM == 'Grok' &&
                                                   hasGrokKey ||
                                               selectedLLM == 'Perplexity' &&
-                                                  hasPerplexityKey) &&
+                                                  hasPerplexityKey || 
+                                              selectedLLM != 'DeepSeek' && hasDeepseekKey) &&
                                           selectedGradeLevel != null &&
                                           lessonPlanNameController
                                               .text.isNotEmpty
