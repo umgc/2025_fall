@@ -13,12 +13,13 @@ class Task {
   TimeOfDay? timeOfDay; // Optional, can be null if not set
   bool isComplete;
   List<Notification_dto>? notifications;
-  String? frequency; // e.g., 'daily', 'weekly', 'monthly'
-  int? interval; // e.g., every 2 days, every 3 weeks
-  int? count; // Number of occurrences
-  List<bool>? daysOfWeek; // e.g., [false, true, false, true, false, true, false] for Sun, Mon, Tue, Wed, Thu, Fri, Sat
 
-
+  //Recurrence fields
+  String? frequency; // e.g., daily, weekly, monthly, yearly
+  int? interval; // number of days/weeks/months between recurrences
+  int? count; // number of total occurrences
+  List<bool>? daysOfWeek; // e.g., [false, true, false, true, ...] for Mon/Wed
+  final String? taskType; // "General" | "Lab" | "Appointment" | "custom"
 
   Task({
     required this.id,
@@ -33,13 +34,20 @@ class Task {
     this.interval,
     this.count,
     this.daysOfWeek,
+    this.taskType,
   });
-  
+
   factory Task.fromJson(Map<String, dynamic> json) {
+    final parsedDays = json['daysOfWeek'] != null
+        ? (json['daysOfWeek'] is String
+              ? List<bool>.from(jsonDecode(json['daysOfWeek']))
+              : List<bool>.from(json['daysOfWeek']))
+        : null;
+
     return Task(
       id: json['id'] != null ? json['id'] as int : -1,
       name: json['name'],
-      description: json['description'],
+      description: json['description'] ?? "",
       date: DateTime.parse(json['date']),
       timeOfDay: json['timeOfDay'] != null
           ? TimeOfDay(
@@ -51,128 +59,139 @@ class Task {
                   : json['timeOfDay']['minute'],
             )
           : null,
-      userId: json['assignedTo'],
+      userId: json['patient']?['id'],
       isComplete: json['isComplete'] ?? false,
       frequency: json['frequency'],
-      interval: json['taskInterval'],
-      count: json['doCount'],
-      daysOfWeek: json['daysOfWeek'] != null
-          ? (json['daysOfWeek'] is String
-              ? List<bool>.from(jsonDecode(json['daysOfWeek']))
-              : List<bool>.from(json['daysOfWeek']))
-          : null
+      interval: json['interval'] ?? json['taskInterval'],
+      count: json['count'] ?? json['doCount'],
+      daysOfWeek: parsedDays,
+      taskType: json['taskType'],
     );
   }
 
   Map<String, dynamic> toJson() {
-    String taskType = 'custom'; // Default task type
-    if (daysOfWeek != null) {
-      taskType = 'dayOfWeek';
-    } else if (frequency != null && interval != null) {
-      taskType = 'frequency';
-    }
     return {
       'name': name,
       'description': description,
-      'date': date.toString(),
+      'date': date.toIso8601String(),
       'timeOfDay': timeOfDay != null
           ? "${timeOfDay!.hour}:${timeOfDay!.minute}"
           : null,
       'isCompleted': isComplete,
       'notifications': null,
       'frequency': frequency,
-      'taskInterval': interval,
-      'doCount': count,
-      'daysOfWeek': jsonEncode(daysOfWeek),
-      'taskType': taskType,
+      'interval': interval,
+      'count': count,
+      'daysOfWeek': daysOfWeek != null ? jsonEncode(daysOfWeek) : null,
+      'taskType': taskType ?? "general",
+      'patientId': userId,
     };
   }
 
   bool isValid() {
     return name.isNotEmpty && description.isNotEmpty;
   }
-}
 
-class FrequencyTask extends Task {
-  @override
-  final String frequency; // e.g., 'daily', 'weekly', 'monthly'
-  @override
-  final int interval; // e.g., every 2 days, every 3 weeks
-  @override
-  final int? count; // Number of occurrences
+  List<Task> expandOccurrences() {
+    // If not recurring, return the single task
+    if (frequency == null) {
+      return [this];
+    }
 
-  FrequencyTask({
-    required this.frequency,
-    required this.interval,
-    this.count = 0,
-    required super.id,
-    required super.name,
-    required super.description,
-    required super.date,
-    super.timeOfDay,
-    super.userId,
-    super.isComplete = false,
-    super.notifications,
-  });
+    int safeInterval;
+    switch (frequency!.toLowerCase()) {
+      case "daily":
+        safeInterval = (interval ?? 1).clamp(1, 365);
+        break;
+      case "weekly":
+        safeInterval = (interval ?? 1).clamp(1, 52);
+        break;
+      case "monthly":
+        safeInterval = (interval ?? 1).clamp(1, 12);
+        break;
+      case "yearly":
+        safeInterval = (interval ?? 1).clamp(1, 100);
+        break;
+      default:
+        safeInterval = 1;
+    }
 
-  factory FrequencyTask.fromJson(Map<String, dynamic> json) {
-    return FrequencyTask(
-      frequency: json['frequency'],
-      interval: json['taskInterval'],
-      count: json['doCount'],
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      date: DateTime.parse(json['date']),
-      timeOfDay: json['timeOfDay'] != null
-          ? TimeOfDay(
-              hour: json['timeOfDay']['hour'],
-              minute: json['timeOfDay']['minute'],
-            )
-          : null,
-      userId: json['userId'],
-      isComplete: json['isComplete'] ?? false,
-      notifications: (json['notifications'] as List?)
-          ?.map((n) => Notification_dto.fromJson(n))
-          .toList(),
-    );
-  }
-}
+    int effectiveCount = (count == null || count! <= 0) ? 0 : count!;
 
-class DayOfWeekTask extends Task {
-  @override
-  final List<bool> daysOfWeek; // e.g., [true, false, true, false, true, false, false] for Mon, Wed, Fri
+    // Fallbacks if count not set
+    if (effectiveCount <= 0) {
+      switch (frequency!.toLowerCase()) {
+        case "daily":
+          effectiveCount = 30;
+          break;
+        case "weekly":
+          if (daysOfWeek != null && daysOfWeek!.contains(true)) {
+            effectiveCount = 12 * daysOfWeek!.where((d) => d).length;
+          } else {
+            effectiveCount = 12;
+          }
+          break;
+        case "monthly":
+          effectiveCount = 12;
+          break;
+        case "yearly":
+          effectiveCount = 5;
+          break;
+        default:
+          effectiveCount = 1;
+      }
+    }
 
-  DayOfWeekTask({
-    required this.daysOfWeek,
-    required super.id,
-    required super.name,
-    required super.description,
-    required super.date,
-    super.timeOfDay,
-    super.userId,
-    super.isComplete = false,
-    super.notifications,
-  });
+    final List<Task> occurrences = [];
+    DateTime current = DateTime(date.year, date.month, date.day);
 
-  factory DayOfWeekTask.fromJson(Map<String, dynamic> json) {
-    return DayOfWeekTask(
-      daysOfWeek: List<bool>.from(json['daysOfWeek']),
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      date: DateTime.parse(json['date']),
-      timeOfDay: json['timeOfDay'] != null
-          ? TimeOfDay(
-              hour: json['timeOfDay']['hour'],
-              minute: json['timeOfDay']['minute'],
-            )
-          : null,
-      userId: json['userId'],
-      isComplete: json['isComplete'] ?? false,
-      notifications: (json['notifications'] as List?)
-          ?.map((n) => Notification_dto.fromJson(n))
-          .toList(),
-    );
+    for (int i = 0; i < effectiveCount; i++) {
+      occurrences.add(
+        Task(
+          id: id,
+          name: name,
+          description: description,
+          date: current,
+          timeOfDay: timeOfDay,
+          userId: userId,
+          isComplete: isComplete,
+          notifications: notifications,
+          frequency: frequency,
+          interval: safeInterval,
+          count: effectiveCount,
+          daysOfWeek: daysOfWeek,
+          taskType: taskType,
+        ),
+      );
+
+      switch (frequency!.toLowerCase()) {
+        case "daily":
+          current = current.add(Duration(days: safeInterval));
+          break;
+
+        case "weekly":
+          if (daysOfWeek != null && daysOfWeek!.contains(true)) {
+            DateTime next = current.add(const Duration(days: 1));
+            while (!daysOfWeek![next.weekday % 7]) {
+              next = next.add(const Duration(days: 1));
+            }
+            current = next;
+          } else {
+            current = current.add(Duration(days: safeInterval));
+          }
+          break;
+
+        case "monthly":
+          final startDay = date.day; // always use original start day
+          current = DateTime(current.year, current.month + 1, startDay);
+          break;
+
+        case "yearly":
+          current = DateTime(current.year + 1, current.month, current.day);
+          break;
+      }
+    }
+
+    return occurrences;
   }
 }
