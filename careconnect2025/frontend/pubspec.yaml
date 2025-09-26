@@ -30,6 +30,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_chat_core: ^2.0.0
+  flutter_chat_ui: ^2.0.0
+  uuid: ^4.2.1
   file_picker: ^10.3.3
   path: ^1.9.1
   shared_preferences: ^2.5.3
