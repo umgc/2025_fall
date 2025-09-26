@@ -1,4 +1,5 @@
 import 'package:care_connect_app/features/health/medication-tracker/models/medication-model.dart';
+import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 import 'package:flutter/material.dart';
 
 /// Modal for adding a new medication
@@ -76,6 +77,29 @@ class _AddMedicationModalState extends State<AddMedicationModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const AIChatModal(role: 'patient'),
+                          );
+                        },
+                        icon: const Icon(Icons.smart_toy, size: 16),
+                        label: const Text('Use AI Service'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.primary,
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     _buildTextField(
                       controller: _nameController,
                       label: 'Medication Name',

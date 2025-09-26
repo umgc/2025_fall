@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 
 class AllergyInputForm extends StatefulWidget {
-  const AllergyInputForm({Key? key}) : super(key: key);
+  final Function(Map<String, dynamic>)? onAllergyAdded;
+
+  const AllergyInputForm({Key? key, this.onAllergyAdded}) : super(key: key);
 
   @override
   State<AllergyInputForm> createState() => _AllergyInputFormState();
@@ -10,6 +13,7 @@ class AllergyInputForm extends StatefulWidget {
 class _AllergyInputFormState extends State<AllergyInputForm> {
   String _selectedSeverity = 'Mild (Minor symptoms)';
   final TextEditingController _reactionController = TextEditingController();
+  final TextEditingController _drugController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +43,10 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    // Handle AI service
+                    showDialog(
+                      context: context,
+                      builder: (context) => const AIChatModal(role: 'patient'),
+                    );
                   },
                   icon: const Icon(Icons.smart_toy, size: 16),
                   label: const Text('Use AI Service'),
@@ -62,11 +69,20 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          Text(
-            'e.g., Penicillin, Aspirin, Codeine, Sulfa drugs...',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              fontSize: 14,
+          TextField(
+            controller: _drugController,
+            decoration: InputDecoration(
+              hintText: 'e.g., Penicillin, Aspirin, Codeine, Sulfa drugs...',
+              hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              contentPadding: const EdgeInsets.all(12),
             ),
           ),
           const SizedBox(height: 16),
@@ -132,7 +148,30 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // Handle adding allergy
+                if (_drugController.text.trim().isNotEmpty &&
+                    _reactionController.text.trim().isNotEmpty) {
+                  final allergyData = {
+                    'drug': _drugController.text.trim(),
+                    'reaction': _reactionController.text.trim(),
+                    'severity': _selectedSeverity.split(' ')[0].toLowerCase(),
+                    'note': 'Added ${DateTime.now().toString().split(' ')[0]}',
+                  };
+
+                  widget.onAllergyAdded?.call(allergyData);
+
+                  _drugController.clear();
+                  _reactionController.clear();
+                  setState(() {
+                    _selectedSeverity = 'Mild (Minor symptoms)';
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Drug allergy added successfully'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Drug Allergy'),
@@ -154,6 +193,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
   @override
   void dispose() {
     _reactionController.dispose();
+    _drugController.dispose();
     super.dispose();
   }
 }

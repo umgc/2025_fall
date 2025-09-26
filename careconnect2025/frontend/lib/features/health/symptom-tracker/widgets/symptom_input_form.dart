@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 
 class SymptomInputForm extends StatefulWidget {
-  const SymptomInputForm({Key? key}) : super(key: key);
+  final Function(Map<String, dynamic>)? onSymptomAdded;
+
+  const SymptomInputForm({Key? key, this.onSymptomAdded}) : super(key: key);
 
   @override
   State<SymptomInputForm> createState() => _SymptomInputFormState();
@@ -10,6 +13,7 @@ class SymptomInputForm extends StatefulWidget {
 class _SymptomInputFormState extends State<SymptomInputForm> {
   String _selectedSeverity = 'Mild';
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _symptomController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +43,10 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    // Handle AI service
+                    showDialog(
+                      context: context,
+                      builder: (context) => const AIChatModal(role: 'patient'),
+                    );
                   },
                   icon: const Icon(Icons.smart_toy, size: 16),
                   label: const Text('Use AI Service'),
@@ -62,11 +69,20 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          Text(
-            'e.g., Suicidal thoughts, Manic episode, Anxiety...',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              fontSize: 14,
+          TextField(
+            controller: _symptomController,
+            decoration: InputDecoration(
+              hintText: 'e.g., Suicidal thoughts, Manic episode, Anxiety...',
+              hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              contentPadding: const EdgeInsets.all(12),
             ),
           ),
           const SizedBox(height: 16),
@@ -124,7 +140,33 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // Handle recording symptom
+                if (_symptomController.text.trim().isNotEmpty) {
+                  final symptomData = {
+                    'title': _symptomController.text.trim(),
+                    'severity': _selectedSeverity.toLowerCase(),
+                    'time': 'Just now',
+                    'description': _notesController.text.trim().isNotEmpty
+                        ? _notesController.text.trim()
+                        : 'No additional notes provided',
+                    'requiresAttention': _selectedSeverity == 'Severe',
+                    'caregiverAlert': _selectedSeverity == 'Severe',
+                  };
+
+                  widget.onSymptomAdded?.call(symptomData);
+
+                  _symptomController.clear();
+                  _notesController.clear();
+                  setState(() {
+                    _selectedSeverity = 'Mild';
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Symptom recorded successfully'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Record Symptom'),
@@ -146,6 +188,7 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
   @override
   void dispose() {
     _notesController.dispose();
+    _symptomController.dispose();
     super.dispose();
   }
 }

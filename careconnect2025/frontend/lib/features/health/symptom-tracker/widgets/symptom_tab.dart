@@ -2,10 +2,20 @@ import 'package:flutter/material.dart';
 import 'symptom_input_form.dart';
 import 'symptom_card.dart';
 
-class SymptomTab extends StatelessWidget {
+class SymptomTab extends StatefulWidget {
   const SymptomTab({Key? key}) : super(key: key);
 
-  final List<Map<String, dynamic>> _mockSymptoms = const [
+  @override
+  State<SymptomTab> createState() => _SymptomTabState();
+}
+
+class _SymptomTabState extends State<SymptomTab> {
+  late List<Map<String, dynamic>> _symptoms;
+
+  @override
+  void initState() {
+    super.initState();
+    _symptoms = [
     {
       'title': 'Suicidal thoughts',
       'severity': 'severe',
@@ -48,6 +58,13 @@ class SymptomTab extends StatelessWidget {
       'caregiverAlert': true,
     },
   ];
+  }
+
+  void _addSymptom(Map<String, dynamic> symptomData) {
+    setState(() {
+      _symptoms.insert(0, symptomData);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +73,7 @@ class SymptomTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SymptomInputForm(),
+          SymptomInputForm(onSymptomAdded: _addSymptom),
           const SizedBox(height: 24),
           Text(
             'Recent Mental Health Symptoms',
@@ -70,10 +87,10 @@ class SymptomTab extends StatelessWidget {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _mockSymptoms.length,
+            itemCount: _symptoms.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final symptom = _mockSymptoms[index];
+              final symptom = _symptoms[index];
               return SymptomCard(
                 title: symptom['title'],
                 severity: symptom['severity'],
