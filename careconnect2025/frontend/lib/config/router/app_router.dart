@@ -23,6 +23,8 @@ import '../../services/user_role_storage_service.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
+import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
+import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
@@ -562,11 +564,21 @@ final GoRouter appRouter = GoRouter(
       path: '/ai-configuration',
       builder: (_, __) => const AIConfigurationPage(),
     ),
+    GoRoute(
+      path: '/notetaker-configuration',
+      builder: (_, __) => const NotetakerConfigurationPage(),
+    ),
 
     // Video Call Test Route
     GoRoute(
       path: '/video-call-test',
       builder: (_, __) => const VideoCallTestPage(),
+    ),
+
+    //Adding Calendar Assistant route
+    GoRoute(
+      path: '/calendar',
+      builder: (_, __) => const CalendarAssistantScreen(),
     ),
 
     // Handle routes from legacy menus
@@ -625,8 +637,9 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-      // Return the Tasks widget with the patientId
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        // Return the Tasks widget with the patientId
         return TasksScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -635,7 +648,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return AssignTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -644,7 +658,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientIdStr = state.uri.queryParameters['patientId'];
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
@@ -655,8 +670,13 @@ final GoRouter appRouter = GoRouter(
         final patientId = int.tryParse(patientIdStr ?? '0') ?? 0;
         final templateIdStr = state.uri.queryParameters['templateId'];
         final templateId = int.tryParse(templateIdStr ?? '0') ?? 0;
-        final patientName = state.uri.queryParameters['patientName'] ?? 'Name Not Found';
-        return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
+        final patientName =
+            state.uri.queryParameters['patientName'] ?? 'Name Not Found';
+        return PreDefinedTaskScreen(
+          patientId: patientId,
+          templateId: templateId,
+          patientName: patientName,
+        );
       },
     ),
   ],
