@@ -15,6 +15,7 @@ import 'Views/edit_questions.dart';
 import 'Views/essay_generation.dart';
 import 'Views/quiz_generator.dart';
 import 'Views/edit_questions.dart';
+import 'Views/gamification_view.dart';
 
 
 void main() async{
@@ -54,7 +55,7 @@ class MyApp extends StatelessWidget {
     // used to determine which dashboard to show based on the local storage system
     var selectedClassroom = LocalStorageService.getSelectedClassroom();
     var home = selectedClassroom == LmsType.MOODLE ? TeacherDashboard() : TeacherDashboard(); //GoogleTeacherDashboard(); 
-    
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: "Learning Lens",
@@ -76,6 +77,7 @@ class MyApp extends StatelessWidget {
         '/assessments': (context) => AssessmentsView(),
         // '/viewExams': (context) => const ViewExamPage(),
         // '/settings': (context) => Setting(themeModeNotifier: _themeModeNotifier)
+        '/gamification': (context) => GamificationView(),
       },
     );
   }
@@ -174,7 +176,13 @@ class _DevLaunch extends State {
                   builder: (context) => AssessmentsView())
               );
             }
-          )
+          ),
+          ElevatedButton(
+            child: const Text('Gamification Page'),
+            onPressed: () {
+              Navigator.pushNamed(context, '/gamification');
+            },
+          ),
         ]));
   }
 
