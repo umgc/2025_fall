@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/experimental/assistant/textbased_function_caller.dart';
 import 'package:learninglens_app/Api/experimental/assistant/textbased_llm_client.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
@@ -51,6 +52,8 @@ class _TextBasedFunctionCallerViewState
     } else if (selectedLLM == LlmType.PERPLEXITY) {
       // aiModel = OpenAiLLM(perplexityApiKey);
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
     } else {
       // default
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());

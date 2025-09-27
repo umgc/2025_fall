@@ -70,13 +70,6 @@ class GoogleLmsService extends LmsInterface {
   // ****************************************************************************************
   // Auth / Login
   // ****************************************************************************************
-
-  @override
-  Future<UserRole> getUserRole(List<Course> courses) async {
-    // TODO implement
-    throw UnimplementedError();
-  }
-
   @override
   Future<void> login(String username, String password, String baseURL) {
     // TODO: implement google api code
@@ -161,9 +154,11 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   void logout() {
-    print('Logging out of Google...');
-    _googleSignIn.signOut();
-    resetLMSUserInfo();
+    if(isLoggedIn()){
+      print('Logging out of Google...');
+      _googleSignIn.signOut();
+      resetLMSUserInfo();
+    }
   }
 
   @override
@@ -190,6 +185,30 @@ class GoogleLmsService extends LmsInterface {
     // Never called??
     throw UnimplementedError();
   }
+
+  @override
+  Future<UserRole> getUserRole(List<Course> courses) async {
+    final GoogleSignInAccount? account = await _googleSignIn.signIn();
+    
+    for(Course course in courses){
+      final response = await ApiService().httpGet(
+          Uri.parse(
+              'https://classroom.googleapis.com/v1/courses/${course.id}/teachers'),
+              headers: {'Authorization': 'Bearer $_userToken'},
+      );
+      
+      final decodedJson = jsonDecode(response.body);
+      final List<dynamic> teachers = decodedJson['teachers'];
+      for(dynamic teacher in teachers){
+        if(teacher['userId'].toString() == account!.id){
+          return UserRole.teacher;
+        }
+      }
+    }
+
+    return UserRole.student;
+  }
+
 
   @override
   Future<List<Course>> getUserCourses() async {
@@ -289,29 +308,6 @@ class GoogleLmsService extends LmsInterface {
       }
     } else {
       throw HttpException('Failed to fetch students: ${studentsResponse.body}');
-    }
-
-    // Fetch teachers
-    final teachersResponse = await ApiService().httpGet(
-      Uri.parse(apiURL + '/courses/$courseId/teachers'),
-      headers: {'Authorization': 'Bearer $_userToken'},
-    );
-
-    if (teachersResponse.statusCode == 200) {
-      final teachersJson = jsonDecode(teachersResponse.body);
-      if (teachersJson.containsKey('teachers')) {
-        for (var teacher in teachersJson['teachers']) {
-          participants.add(Participant(
-            id: teacher['userId'].hashCode,
-            fullname: teacher['profile']['name']['fullName'],
-            firstname: teacher['profile']['name']['givenName'],
-            lastname: teacher['profile']['name']['familyName'],
-            roles: ['teacher'],
-          ));
-        }
-      }
-    } else {
-      throw HttpException('Failed to fetch teachers: ${teachersResponse.body}');
     }
 
     return participants;

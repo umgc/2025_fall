@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For saving/loading chat history
@@ -65,6 +66,8 @@ class _ChatScreenState extends State<ChatScreen> {
       } else if (selectedLLM == LlmType.PERPLEXITY) {
         // aiModel = OpenAiLLM(perplexityApiKey); 
         aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+      } else if (selectedLLM == LlmType.DEEPSEEK) {
+        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
       } else {
         // default
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());

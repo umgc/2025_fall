@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/notifiers/login_state.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
-enum LLMKey { openAI, perplexity, claude, grok }
+enum LLMKey { openAI, perplexity, claude, grok, deepseek }
 
 class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
@@ -56,7 +58,7 @@ class LoginNotifier with ChangeNotifier {
     _hasLLMKey = await _checkHasLLMKey();
 
     // Attempt auto-login if we had credentials
-    _autoLogin();
+    await _autoLogin();
     notifyListeners();
   }
 
@@ -67,28 +69,38 @@ class LoginNotifier with ChangeNotifier {
     final openAIKey = LocalStorageService.getOpenAIKey();
     final perplexityKey = LocalStorageService.getPerplexityKey();
     final grokKey = LocalStorageService.getGrokKey();
+    final deepseekKey = LocalStorageService.getDeepseekKey();
 
     return (openAIKey != null && openAIKey.isNotEmpty) ||
         (perplexityKey != null && perplexityKey.isNotEmpty) ||
-        (grokKey != null && grokKey.isNotEmpty);
+        (grokKey != null && grokKey.isNotEmpty) ||
+        (deepseekKey != null && deepseekKey.isNotEmpty);
   }
 
   // ---------------------------------------
   // Auto-login if we have saved credentials
   // ---------------------------------------
   Future<void> _autoLogin() async {
-    if ((_username != null && _username!.isNotEmpty) &&
-        (_password != null && _password!.isNotEmpty) &&
-        (_moodleUrl != null && _moodleUrl!.isNotEmpty)) {
-      try {
-        await signInWithMoodle(_username!, _password!, _moodleUrl!);
-      } catch (e) {
-        print('Auto-login Error: $e');
+    try {
+      if(LocalStorageService.getSelectedClassroom() == LmsType.GOOGLE &&
+          _clientID != null && _clientID!.isNotEmpty){
+          await signInWithGoogle(_clientID!);
       }
-    } else {
-      print('Auto-login skipped: Missing or empty credentials.');
+      else if (LocalStorageService.getSelectedClassroom() == LmsType.MOODLE &&
+          (_username != null && _username!.isNotEmpty) &&
+          (_password != null && _password!.isNotEmpty) &&
+          (_moodleUrl != null && _moodleUrl!.isNotEmpty)) {
+          await signInWithMoodle(_username!, _password!, _moodleUrl!);
+      } 
+      else {
+        print('Auto-login skipped: Missing or empty credentials.');
+      }
+    } 
+    catch (e) {
+      print('Auto-login Error: $e');
     }
   }
+
 
   // ---------------------------------------
   // Moodle: Sign-in
@@ -163,36 +175,46 @@ class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
   // Google: Sign-in
   // ---------------------------------------
-  Future<void> signInWithGoogle() async {
-    if (_clientID == null) {
-      throw Exception("GOOGLE_CLIENT_ID not found in .env file.");
-    }
+  Future<void> signInWithGoogle(String clientID) async {
+    // if (_clientID == null) {
+    //   throw Exception("GOOGLE_CLIENT_ID not found in .env file.");
+    // }
 
     try {
-      await LmsFactory.getLmsServiceGoogle().loginOath(_clientID!);
+      final GoogleLmsService googleLms = LmsFactory.getLmsServiceGoogle();
+      await googleLms.loginOath(clientID);
 
-      // if (_api.isLoggedIn()) {
-      if (LmsFactory.getLmsServiceGoogle().isLoggedIn()) {
-        _googleState.isLoggedIn = true;
-        _googleState.errorMessage = null;
-
-        // Save to local storage
-        LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
-        LocalStorageService.saveGoogleAccessToken(
-            LmsFactory.getLmsServiceGoogle().getGoogleAccessToken());
-
-        notifyListeners();
-      } else {
+      if (!googleLms.isLoggedIn()) {
         _googleState.isLoggedIn = false;
         _googleState.errorMessage = 'Google login failed.';
         notifyListeners();
-        throw Exception('Google login failed.');
+        return;
       }
+
+      final UserRole role = await googleLms.getUserRole(googleLms.courses!);
+      if (role == UserRole.teacher || role == UserRole.student) {
+        _googleState.isLoggedIn = true;
+        _googleState.errorMessage = null;
+        _role = role;
+        // Save to local storage
+        LocalStorageService.saveUserRole(role);
+        LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
+        LocalStorageService.saveGoogleAccessToken(
+            googleLms.getGoogleAccessToken()
+        );
+        LocalStorageService.saveGoogleClientId(clientID);
+      }
+      else{
+        googleLms.logout();
+        _googleState.isLoggedIn = false;
+        _googleState.errorMessage = 'User does not have a valid role';
+      }
+
+      notifyListeners();
     } catch (e) {
       _googleState.isLoggedIn = false;
       _googleState.errorMessage = "Google login failed: ${e.toString()}";
       notifyListeners();
-      rethrow; // Or remove if you don't want to rethrow
     }
   }
 
@@ -263,6 +285,8 @@ class LoginNotifier with ChangeNotifier {
         break;
       case LLMKey.claude:
         // If you had a Claude key, you could handle it here
+      case LLMKey.deepseek:
+        LocalStorageService.saveDeepseekKey(value);
         break;
     }
 

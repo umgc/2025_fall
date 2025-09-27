@@ -2,6 +2,7 @@ import 'dart:io' show File; // For non-web file I/O
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
@@ -110,6 +111,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // AI Analysis data.
   List<Map<String, dynamic>> _aiAnalysisData = [];
   bool _isAnalyzingAI = false;
+
+  LlmType? selectedLLM;
 
   @override
   void initState() {
@@ -688,8 +691,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 child: const Text('Export'),
               ),
               const SizedBox(width: 8),
+                              DropdownButton<LlmType>(
+                        value: selectedLLM,
+                        onChanged: (LlmType? newValue) {
+                          setState(() {
+                            selectedLLM = newValue;
+                          });
+                        },
+                        items: LlmType.values.map((LlmType llm) {
+                          return DropdownMenuItem<LlmType>(
+                            value: llm,
+                            enabled: LocalStorageService.userHasLlmKey(llm),
+                            child: Text(llm.displayName, style: TextStyle(
+                              color: LocalStorageService.userHasLlmKey(llm) ? Colors.black87 : Colors.grey,
+                              ),
+                            ),
+                          );
+                        }).toList()),
               ElevatedButton(
-                onPressed: _studentBreakdown.isNotEmpty ? _analyzeReport : null,
+                onPressed: _studentBreakdown.isNotEmpty && selectedLLM != null ? _analyzeReport : null,
                 child: _isAnalyzingAI
                     ? const SizedBox(
                         width: 24,
@@ -1193,16 +1213,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Future<void> _analyzeReport() async {
     if (_studentBreakdown.isEmpty) return;
-
-    // Check for available AI credentials
-    LlmType? selectedLLM;
-    if (LocalStorageService.userHasLlmKey(LlmType.CHATGPT)) {
-      selectedLLM = LlmType.CHATGPT;
-    } else if (LocalStorageService.userHasLlmKey(LlmType.GROK)) {
-      selectedLLM = LlmType.GROK;
-    } else if (LocalStorageService.userHasLlmKey(LlmType.PERPLEXITY)) {
-      selectedLLM = LlmType.PERPLEXITY;
-    } else {
+    if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
@@ -1232,7 +1243,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     } else if (selectedLLM == LlmType.GROK) {
       aiModel = GrokLLM(LocalStorageService.getGrokKey());
-    } else {
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    }  else {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     }
 
