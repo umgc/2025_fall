@@ -1,0 +1,6 @@
+boto3
+pytesseract
+Pillow
+pdf2image
+opencv-python-headless
+numpy
