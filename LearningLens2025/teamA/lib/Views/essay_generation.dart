@@ -9,14 +9,7 @@ import '../Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
-import 'dart:io';
-import 'package:excel/excel.dart';
-import 'dart:typed_data';
-import 'package:excel/excel.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:pdf/pdf.dart';
-import 'dart:html' as html; 
+
 
 // Required Components:
 // 2 Dropdowns: 1 for the Grade Level and 1 for the Point Scale
@@ -437,34 +430,6 @@ class _EssayGenerationState extends State<EssayGeneration>
                                     ),
                     ),
                     const SizedBox(height: 16),
-                    // Export Buttons Row
-                    if (globalRubric != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              if (globalRubric != null) {
-                                await exportPdf(globalRubric, 'rubric_pdf.pdf');
-                              }
-                            },
-                            icon: Icon(Icons.picture_as_pdf),
-                            label: Text("Export to PDF"),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              if (globalRubric != null) {
-                                await exportExcel(globalRubric, 'rubric_csv.xlsx');;
-                              }
-                            },
-                            icon: Icon(Icons.table_chart),
-                            label: Text("Export to CSV"),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                    ],
                     // Send to Moodle Button
                     Button(
                       "assessment",
@@ -474,7 +439,7 @@ class _EssayGenerationState extends State<EssayGeneration>
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      EssayEditPage(globalRubric, _assignmentDescriptionController.text),
+                                      EssayEditPage(jsonEncode(globalRubric), _assignmentDescriptionController.text),
                                 ),
                               );
                             }
@@ -657,85 +622,3 @@ class GradeLevelDropdown extends StatelessWidget {
   }
 }
 
-// PDF Export Feature
-Future<void> exportPdf(dynamic rubricData, String fileName) async {
-  try {
-    final pdf = pw.Document();
-    final criteria = rubricData['criteria'] as List<dynamic>;
-
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Rubric',
-                  style: pw.TextStyle(
-                      fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 16),
-              for (var c in criteria) ...[
-                pw.Text('${c['description']} (Weight: ${c['weight']}%)',
-                    style: pw.TextStyle(
-                        fontSize: 18, fontWeight: pw.FontWeight.bold)),
-                for (var level in c['levels'])
-                  pw.Text('${level['score']}: ${level['definition']}'),
-                pw.SizedBox(height: 12),
-              ]
-            ],
-          );
-        },
-      ),
-    );
-
-    final pdfBytes = await pdf.save();
-
-    // Web Export Donwload
-    final blob = html.Blob([pdfBytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
-      ..click();
-    html.Url.revokeObjectUrl(url);
-  } catch (e) {
-    print('Error exporting PDF: $e');
-  }
-}
-
-// Excel Export Feature
-Future<void> exportExcel(dynamic rubricData, String fileName) async {
-  try {
-    final excel = Excel.createExcel();
-    final sheet = excel[excel.getDefaultSheet()!];
-    final criteria = rubricData['criteria'] as List<dynamic>;
-
-    // Header
-    final header = ['Criteria', 'Weight'];
-    if (criteria.isNotEmpty) {
-      for (var level in criteria[0]['levels']) {
-        header.add(level['score'].toString());
-      }
-    }
-    sheet.appendRow(header);
-
-    // Data 
-    for (var c in criteria) {
-      final row = [c['description'], c['weight']];
-      for (var level in c['levels']) {
-        row.add(level['definition']);
-      }
-      sheet.appendRow(row);
-    }
-
-    final excelBytes = excel.encode()!;
-
-    // Web Export Download
-    final blob = html.Blob([excelBytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
-      ..click();
-    html.Url.revokeObjectUrl(url);
-  } catch (e) {
-    print('Error exporting Excel: $e');
-  }
-}
