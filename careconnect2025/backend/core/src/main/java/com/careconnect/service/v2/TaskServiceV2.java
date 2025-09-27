@@ -14,13 +14,14 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.careconnect.dto.ScheduledNotificationDTO;
 import com.careconnect.dto.v2.TaskDtoV2;
-import com.careconnect.exception.AppException;
+import com.careconnect.exception.ParentTaskNotFoundException;
+import com.careconnect.exception.PatientNotFoundException;
+import com.careconnect.exception.TaskNotFoundException;
 import com.careconnect.model.Patient;
 import com.careconnect.model.ScheduledNotification;
 import com.careconnect.model.Task;
@@ -78,11 +79,11 @@ public class TaskServiceV2 {
      *
      * @param taskId the ID of the task
      * @return the {@link Task} entity
-     * @throws AppException if task not found
+     * @throws TaskNotFoundException if task not found
      */
     public Task getTaskById(Long taskId) {
         return taskRepository.findById(taskId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Task not found"));
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
     }
 
     /**
@@ -119,7 +120,7 @@ public class TaskServiceV2 {
      */
     public TaskDtoV2 createTask(Long patientId, TaskDtoV2 taskDto) {
         Patient patient = patientRepository.findById(patientId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
+                .orElseThrow(() -> new PatientNotFoundException(patientId));
 
         log.info("Creating task for patient: " + patient.getId());
         log.debug("Task details: " + taskDto);
@@ -191,7 +192,7 @@ public class TaskServiceV2 {
         Task parentTask = (existingTask.getParentTaskId() == null)
                 ? existingTask
                 : taskRepository.findById(parentId)
-                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Parent not found"));
+                        .orElseThrow(() -> new ParentTaskNotFoundException(parentId));
 
         // Snapshot old fields to detect changes
         String oldName = parentTask.getName();
@@ -299,7 +300,7 @@ public class TaskServiceV2 {
 
             List<Task> seriesTasks = taskRepository.findByParentTaskId(parentId);
             seriesTasks.add(taskRepository.findById(parentId)
-                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Parent task not found")));
+                    .orElseThrow(() -> new ParentTaskNotFoundException(parentId)));
 
             taskRepository.deleteAll(seriesTasks);
             log.info(" Deleted series with parentId=" + parentId + " (count=" + seriesTasks.size() + ")");
@@ -338,12 +339,12 @@ public class TaskServiceV2 {
      * Retrieves all tasks in the system.
      *
      * @return list of all {@link TaskDtoV2}
-     * @throws AppException if no tasks exist
+     * @throws TaskNotFoundException if no tasks exist
      */
     public List<TaskDtoV2> getAllTasks() {
         List<Task> tasks = taskRepository.findAll();
         if (tasks.isEmpty()) {
-            throw new AppException(HttpStatus.NOT_FOUND, "No tasks found");
+            throw new TaskNotFoundException("No tasks found");
         }
         return tasks.stream().map(this::mapToDto).toList();
     }
@@ -437,7 +438,7 @@ public class TaskServiceV2 {
         // Patient assignment only if explicitly set
         if (dto.getPatientId() != null) {
             Patient newPatient = patientRepository.findById(dto.getPatientId())
-                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
+                    .orElseThrow(() -> new PatientNotFoundException(dto.getPatientId()));
             task.setPatient(newPatient);
         }
 
