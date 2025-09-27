@@ -20,7 +20,7 @@ export const handler = async (event, context) => {
       idle_timeout: 2,
       ssl: {
         rejectUnauthorized: true,
-      }
+      },
     });
 
     } catch (error) {
@@ -33,9 +33,9 @@ export const handler = async (event, context) => {
 
   if (method === "GET") {
     if (command === "getLogs") {
-      const courseId = parseInt(event["queryStringParameters"]["courseId"]);
-      const assignmentId = parseInt(event["queryStringParameters"]["assignmentId"]);
-      const studentId = parseInt(event["queryStringParameters"]["studentId"]);
+      const courseId = BigInt(event["queryStringParameters"]["courseId"]);
+      const assignmentId = BigInt(event["queryStringParameters"]["assignmentId"]);
+      const studentId = BigInt(event["queryStringParameters"]["studentId"]);
       const lms = parseInt(event["queryStringParameters"]["lmsType"]);
       return await getAllLogs(client, courseId, assignmentId, studentId, lms);
     }
