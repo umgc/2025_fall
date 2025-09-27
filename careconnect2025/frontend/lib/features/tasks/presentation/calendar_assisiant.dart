@@ -458,10 +458,19 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       final List<Task> allTasks = [];
 
       if (user.isPatient) {
-        allTasks.addAll(await _fetchTasksForPatient(user.id));
+        // Build their display name
+        if (user.patientId != null) {
+          final safeName = (user.name ?? "").trim();
+          patientNames[user.patientId!] = safeName.isNotEmpty
+              ? safeName
+              : "Unknown Patient";
+        }
+        allTasks.addAll(await _fetchTasksForPatient(user.patientId!));
       } else if (user.isCaregiver) {
         patientNames.clear();
-        final patientsResponse = await ApiService.getCaregiverPatients(user.id);
+        final patientsResponse = await ApiService.getCaregiverPatients(
+          user.caregiverId!,
+        );
         if (patientsResponse.statusCode == 200) {
           final patients = json.decode(patientsResponse.body);
           for (final patient in patients) {
@@ -808,7 +817,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                         final assignedName = task.userId != null
                             ? patientNames[task.userId] ?? "Unknown Patient"
                             : "Unassigned";
-
                         return ListTile(
                           leading: Icon(
                             TaskTypeUtils.getIcon(task.taskType),
@@ -880,7 +888,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     // Preload patients if caregiver
     List<Map<String, dynamic>> patients = [];
     if (user.isCaregiver) {
-      final response = await ApiService.getCaregiverPatients(user.id);
+      final response = await ApiService.getCaregiverPatients(user.caregiverId!);
       if (response.statusCode == 200) {
         patients = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
@@ -892,7 +900,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       builder: (_) => TaskFormDialog(
         isCaregiver: user.isCaregiver,
         patients: patients,
-        defaultPatientId: user.isPatient ? user.id : null,
+        defaultPatientId: user.isPatient ? user.patientId : null,
         initialDate: _selectedDay,
       ),
     );
@@ -955,7 +963,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     // Preload patients if caregiver
     List<Map<String, dynamic>> patients = [];
     if (user.isCaregiver) {
-      final response = await ApiService.getCaregiverPatients(user.id);
+      final response = await ApiService.getCaregiverPatients(user.caregiverId!);
       if (response.statusCode == 200) {
         patients = List<Map<String, dynamic>>.from(jsonDecode(response.body));
       }
@@ -969,7 +977,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         initialTask: task,
         isCaregiver: user.isCaregiver,
         patients: patients,
-        defaultPatientId: user.isPatient ? user.id : task.userId,
+        defaultPatientId: user.isPatient ? user.patientId : task.userId,
         initialDate: _selectedDay,
       ),
     );
