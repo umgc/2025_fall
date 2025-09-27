@@ -307,6 +307,12 @@ class TeacherDashboard extends StatelessWidget {
             ),
         'color': Colors.orange,
       },
+      {
+          'title': 'Gamification',
+          'description': 'Earn points and level up!',
+          'onPressed': () => Navigator.pushNamed(context, '/gamification'),
+          'color': Colors.amber,
+        },
     ];
 
     if(role == UserRole.student){
