@@ -249,6 +249,7 @@ void _handleButtonClick({required VoidCallback action}) {
     });
 
     allRows[rowIndex] = safeRow;
+
   }
 
   double total = 0;
@@ -343,7 +344,7 @@ void _handleButtonClick({required VoidCallback action}) {
             pw.Text('Rubric', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 16),
 
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: [
                 'Criteria',
                 'Weight',
