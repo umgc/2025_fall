@@ -197,7 +197,7 @@ void _handleButtonClick({required VoidCallback action}) {
     int rowIndex = editedRow['row'];
     allRows[rowIndex] = {
       ...allRows[rowIndex],
-      ...editedRow..remove('row'),
+      ...editedRow
     };
   }
 
@@ -283,7 +283,7 @@ void _handleButtonClick({required VoidCallback action}) {
             pw.Text('Rubric', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 16),
 
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               headers: [
                 'Criteria',
                 'Weight',
