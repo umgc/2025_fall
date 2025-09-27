@@ -101,17 +101,17 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
   void populateHeadersAndRows() {
     try {
       Map<String, dynamic> jsonData = jsonDecode(widget.updatedJson);
-
       List<dynamic> levels =
           List<dynamic>.from(jsonData['criteria'][0]['levels'] as List);
       headers = [
         {"title": 'Criteria', 'index': 1, 'key': 'name'},
+        {"title": 'Weight', 'index': 2, 'key': 'weight'},  // Weight column
       ];
 
       for (int i = 0; i < levels.length; i++) {
         headers.add({
           "title": '${levels[i]['score']}', // The score (5, 3, 1) as headers
-          'index': i + 2,
+          'index': i + 3,
           'key': 'level_$i'
         });
       }
@@ -119,6 +119,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
       rows = (jsonData['criteria'] ?? []).map((criterion) {
         Map<String, dynamic> row = {
           "name": criterion['description'],
+          "weight": criterion['weight'].toString(),
         };
 
         for (int i = 0; i < (criterion['levels'] as List).length; i++) {
@@ -185,7 +186,8 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
         for (var row in rows)
           TableRow(children: [
             _buildTableCell(row['name']),
-            for (var i = 0; i < headers.length - 1; i++)
+            _buildTableCell(row['weight']),
+            for (var i = 0; i < headers.length - 2; i++)
               _buildTableCell(row['level_$i']),
           ]),
       ],
