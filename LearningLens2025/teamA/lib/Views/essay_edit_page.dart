@@ -87,8 +87,53 @@ class EssayEditPageState extends State<EssayEditPage> {
 
 /// Get the current JSON from Editable safely
 String getUpdatedJson() {
-  final updatedData = {'criteria': jsonDecode(widget.jsonData)['criteria']};
-  return jsonEncode(updatedData);
+  final editableState = _editableKey.currentState;
+  final updatedRows = List<Map<String, dynamic>>.from(rows);
+
+  // Merge edited rows safely
+  if (editableState != null) {
+    for (var editedRow in editableState.editedRows) {
+      int rowIndex = editedRow['row'];
+      Map<String, dynamic> safeRow = Map<String, dynamic>.from(updatedRows[rowIndex]);
+
+      editedRow.forEach((key, value) {
+        if (key != 'row') {
+          safeRow[key] = value ?? '';
+        }
+      });
+
+      updatedRows[rowIndex] = safeRow;
+    }
+  }
+
+  // Update JSON safely
+  Map<String, dynamic> mappedData = jsonDecode(widget.jsonData);
+  final criteriaList = mappedData['criteria'] as List<dynamic>;
+
+  for (int i = 0; i < updatedRows.length; i++) {
+    final row = updatedRows[i];
+    final criterion = criteriaList[i];
+
+    // Safe weight parsing
+    final weightValue = row['weight'];
+    int weightInt = 0;
+    if (weightValue is int) {
+      weightInt = weightValue;
+    } else if (weightValue is double) {
+      weightInt = weightValue.toInt();
+    } else if (weightValue is String) {
+      weightInt = double.tryParse(weightValue)?.toInt() ?? 0;
+    }
+    criterion['weight'] = weightInt;
+
+    // Update level definitions safely
+    for (int j = 0; j < (criterion['levels'] as List).length; j++) {
+      final def = row['level_$j'];
+      criterion['levels'][j]['definition'] = def?.toString() ?? '';
+    }
+  }
+
+  return jsonEncode(mappedData);
 }
 
   @override
@@ -195,10 +240,15 @@ void _handleButtonClick({required VoidCallback action}) {
   // Merge any edits
   for (var editedRow in editableState.editedRows) {
     int rowIndex = editedRow['row'];
-    allRows[rowIndex] = {
-      ...allRows[rowIndex],
-      ...editedRow..remove('row'),
-    };
+    Map<String, dynamic> safeRow = Map<String, dynamic>.from(allRows[rowIndex]);
+
+    editedRow.forEach((key, value) {
+      if (key != 'row') {
+        safeRow[key] = value ?? '';
+      }
+    });
+
+    allRows[rowIndex] = safeRow;
   }
 
   double total = 0;
@@ -206,19 +256,19 @@ void _handleButtonClick({required VoidCallback action}) {
   // Validate each weight first
   for (int i = 0; i < allRows.length; i++) {
     final weightValue = allRows[i]['weight'];
+    double? weightDouble;
 
-    if (weightValue == null || weightValue.toString().trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Weight cannot be empty in row ${i + 1}. Please enter a number.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+    if (weightValue == null || (weightValue is String && weightValue.trim().isEmpty)) {
+      weightDouble = null;
+    } else if (weightValue is int) {
+      weightDouble = weightValue.toDouble();
+    } else if (weightValue is double) {
+      weightDouble = weightValue;
+    } else if (weightValue is String) {
+      weightDouble = double.tryParse(weightValue);
     }
 
-    final weight = double.tryParse(weightValue.toString());
-    if (weight == null) {
+    if (weightDouble == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Invalid weight in row ${i + 1}: "$weightValue". Please enter a number.'),
@@ -228,7 +278,7 @@ void _handleButtonClick({required VoidCallback action}) {
       return;
     }
 
-    total += weight;
+    total += weightDouble;
   }
 
   // Validate total weight
@@ -251,11 +301,21 @@ void _handleButtonClick({required VoidCallback action}) {
     final criterion = criteriaList[i];
 
     // Update weight safely
-    criterion['weight'] = double.tryParse(row['weight'].toString())?.toInt() ?? 0;
+    final weightValue = row['weight'];
+    int weightInt = 0;
+    if (weightValue is int) {
+      weightInt = weightValue;
+    } else if (weightValue is double) {
+      weightInt = weightValue.toInt();
+    } else if (weightValue is String) {
+      weightInt = double.tryParse(weightValue)?.toInt() ?? 0;
+    }
+    criterion['weight'] = weightInt;
 
     // Update levels
     for (int j = 0; j < (criterion['levels'] as List).length; j++) {
-      criterion['levels'][j]['definition'] = row['level_$j'] ?? '';
+      final def = row['level_$j'];
+      criterion['levels'][j]['definition'] = def?.toString() ?? '';
     }
   }
 
