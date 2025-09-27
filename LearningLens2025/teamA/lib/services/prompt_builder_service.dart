@@ -1,70 +1,37 @@
 String buildLlmPrompt({
   required String submissionText,
   required String? fetchedRubric,
+  required String tone,
+  required String voice,
+  required String detailLevel,
 }) {
   return '''
 I am building a program that generates essay rubric assignments that teachers can distribute to students
-who can then submit their responses to be graded. Here is an example format of a rubric roughly:
-[
-    {
-        "id": 82,
-        "rubric_criteria": [
-            {
-                "id": 52,
-                "description": "Content",
-                "levels": [
-                    {
-                        "id": 157,
-                        "score": 1,
-                        "definition": "Poor"
-                    },
-                    {
-                        "id": 156,
-                        "score": 3,
-                        "definition": "Good"
-                    },
-                    {
-                        "id": 155,
-                        "score": 5,
-                        "definition": "Excellent"
-                    }
-                ]
-            },
-            {
-                "id": 53,
-                "description": "Clarity",
-                "levels": [
-                    {
-                        "id": 160,
-                        "score": 1,
-                        "definition": "Unclear"
-                    },
-                    {
-                        "id": 159,
-                        "score": 3,
-                        "definition": "Somewhat Clear"
-                    },
-                    {
-                        "id": 158,
-                        "score": 5,
-                        "definition": "Very Clear"
-                    }
-                ]
-            }
-        ]
-    }
-]
+who can then submit their responses to be graded.
 
-I have the following generated essay rubric:
+Grade the following submission based on the rubric below: 
+Submission: $submissionText
 Rubric: $fetchedRubric
 
-Grade the following submission based on that rubric: 
-Submission: $submissionText 
+Instructions:
 
-You must reply with a representation of the rubric in JSON format that matches this example format, 
-obviously put your generated scores in and be specific with the remarks on the scoring and give specific examples from the 
-submitted assignment that were either good or bad depending on the score given. Also cut out anything that is not
-the json response. No extraneous comments outside that: 
+1. Tone options: Formal, Straightforward, Casual. Selected: $tone.
+2. Voice options: Supportive, Neutral, Constructive. Selected: $voice.
+3. Level of Detail options: Basic, Neutral, Detailed. Selected: $detailLevel.
+   - Basic: 1 paragraph per criterion
+   - Neutral: 2 paragraphs per criterion
+   - Detailed: 3 paragraphs per criterion
+
+**Strict Rules**:
+- Generate exactly the number of paragraphs specified by the Level of Detail.
+- Combine all paragraphs into the "remark" field as a single JSON string.
+- Separate paragraphs with `\\n` inside the JSON string.
+- Include examples from the submission in each paragraph to justify the score.
+- Do not include any text outside JSON.
+- Do not generate more or fewer paragraphs than specified.
+
+Output JSON format:
+
 [
   {
       "criterionid": 67,
@@ -72,7 +39,7 @@ the json response. No extraneous comments outside that:
       "levelid": 236,
       "level_description": "Essay is mostly well-organized, with few issues in flow",
       "score": 6,
-      "remark": "The essay has a clear structure and transitions between paragraphs. Each paragraph focuses on a different aspect of having a park, such as relaxation, activity, and aesthetics. However, there are a few places where the flow could be improved, like the transition between the third and fourth paragraphs."
+      "remark": "Paragraph 1\\nParagraph 2\\nParagraph 3"
   },
   {
       "criterionid": 68,
@@ -80,7 +47,7 @@ the json response. No extraneous comments outside that:
       "levelid": 243,
       "level_description": "Good use of evidence with occasional gaps",
       "score": 6,
-      "remark": "The essay uses good evidence to support its claims, such as 'Spending time outside can make us feel happier and less anxious, which would help us do better in class.' However, there are occasional gaps where more specific or detailed evidence could strengthen the arguments further."
+      "remark": "Paragraph 1\\nParagraph 2\\nParagraph 3"
   }
 ]
 ''';

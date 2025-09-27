@@ -32,6 +32,9 @@ class SubmissionListState extends State<SubmissionList> {
   LmsInterface api = LmsFactory.getLmsService();
   Map<int, bool> isLoadingMap = {};
   Map<int, LlmType> llmSelectionMap = {};
+  Map<int, String> toneSelectionMap = {};
+  Map<int, String> voiceSelectionMap = {};
+  Map<int, String> detailLevelSelectionMap = {};
 
   late Future<List<SubmissionWithGrade>> futureSubmissionsWithGrades =
       api.getSubmissionsWithGrades(widget.assignmentId);
@@ -96,6 +99,30 @@ class SubmissionListState extends State<SubmissionList> {
   void _handleFullNameFilterChanged(String newValue) {
     setState(() {
       fullNameFilter = newValue;
+    });
+  }
+
+  void _handleToneChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        toneSelectionMap[participantId] = newValue;
+      }
+    });
+  }
+
+  void _handleVoiceChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        voiceSelectionMap[participantId] = newValue;
+      }
+    });
+  }
+
+  void _handleDetailChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        detailLevelSelectionMap[participantId] = newValue;
+      }
     });
   }
 
@@ -361,6 +388,93 @@ class SubmissionListState extends State<SubmissionList> {
                                                       }).toList(),
                                                     ),
                                                     SizedBox(height: 4),
+                                                    // Tone Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value: toneSelectionMap[
+                                                              participant.id] ??
+                                                          'Formal',
+                                                      decoration:
+                                                          InputDecoration(
+                                                              labelText:
+                                                                  'Tone'),
+                                                      onChanged: (newValue) =>
+                                                          _handleToneChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Formal',
+                                                        'Straightforward',
+                                                        'Casual'
+                                                      ]
+                                                          .map((tone) =>
+                                                              DropdownMenuItem(
+                                                                value: tone,
+                                                                child:
+                                                                    Text(tone),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
+
+                                                    // Voice Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value: voiceSelectionMap[
+                                                              participant.id] ??
+                                                          'Supportive',
+                                                      decoration:
+                                                          InputDecoration(
+                                                              labelText:
+                                                                  'Voice'),
+                                                      onChanged: (newValue) =>
+                                                          _handleVoiceChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Supportive',
+                                                        'Neutral',
+                                                        'Constructive'
+                                                      ]
+                                                          .map((voice) =>
+                                                              DropdownMenuItem(
+                                                                value: voice,
+                                                                child:
+                                                                    Text(voice),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
+
+                                                    // Level of Detail Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value:
+                                                          detailLevelSelectionMap[
+                                                                  participant
+                                                                      .id] ??
+                                                              'Neutral',
+                                                      decoration: InputDecoration(
+                                                          labelText:
+                                                              'Level of Detail'),
+                                                      onChanged: (newValue) =>
+                                                          _handleDetailChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Basic',
+                                                        'Neutral',
+                                                        'Detailed'
+                                                      ]
+                                                          .map((detail) =>
+                                                              DropdownMenuItem(
+                                                                value: detail,
+                                                                child: Text(
+                                                                    detail),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
                                                   ],
                                                 )
                                               else
@@ -437,7 +551,16 @@ class SubmissionListState extends State<SubmissionList> {
                                                                     submissionText:
                                                                         submissionText,
                                                                     fetchedRubric:
-                                                                        fetchedRubric);
+                                                                        fetchedRubric,
+                                                                    tone: toneSelectionMap[participant
+                                                                            .id] ??
+                                                                        'Formal',
+                                                                    voice: voiceSelectionMap[participant
+                                                                            .id] ??
+                                                                        'Supportive',
+                                                                    detailLevel:
+                                                                        detailLevelSelectionMap[participant.id] ??
+                                                                            'Neutral');
 
                                                                 String apiKey =
                                                                     getApiKey(
