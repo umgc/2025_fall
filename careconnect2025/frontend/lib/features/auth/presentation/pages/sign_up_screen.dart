@@ -580,7 +580,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
-                          value: _selectedGender,
+                          initialValue: _selectedGender,
                           decoration: AppTheme.inputDecoration(
                             'Gender',
                             hint: 'Select your gender',

@@ -8,8 +8,8 @@ import com.careconnect.model.User;
 import com.careconnect.repository.UserFileRepository;
 import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,16 +21,28 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class FileManagementService {
-    
+
     private final UserFileRepository userFileRepository;
     private final UserRepository userRepository;
     private final PatientRepository patientRepository;
     private final DatabaseStorageService databaseStorageService;
     private final S3StorageService s3StorageService;
+
+    @Autowired
+    public FileManagementService(UserFileRepository userFileRepository,
+                               UserRepository userRepository,
+                               PatientRepository patientRepository,
+                               DatabaseStorageService databaseStorageService,
+                               @Autowired(required = false) S3StorageService s3StorageService) {
+        this.userFileRepository = userFileRepository;
+        this.userRepository = userRepository;
+        this.patientRepository = patientRepository;
+        this.databaseStorageService = databaseStorageService;
+        this.s3StorageService = s3StorageService;
+    }
     
     @Value("${app.file.storage.default:database}")
     private String defaultStorageType;
@@ -50,8 +62,8 @@ public class FileManagementService {
             validateFile(file);
             // No access control or ownership checks; all uploads are allowed for now
             
-            // Determine storage service
-            StorageService storageService = useS3ForNewFiles ? s3StorageService : databaseStorageService;
+            // Determine storage service - fall back to database if S3 is not available
+            StorageService storageService = (useS3ForNewFiles && s3StorageService != null) ? s3StorageService : databaseStorageService;
             
             // Upload file
             String filePath = storageService.uploadFile(file, userId, userType, category);
@@ -66,13 +78,13 @@ public class FileManagementService {
                     .ownerType(UserFile.OwnerType.valueOf(userType.toUpperCase()))
                     .fileCategory(mapCategoryToEnum(category))
                     .patientId(patientId != null ? patientId : determinePatientId(userId, userType))
-                    .storageType(useS3ForNewFiles ? UserFile.StorageType.S3 : UserFile.StorageType.DATABASE)
-                    .s3Path(useS3ForNewFiles ? filePath : null)
+                    .storageType((useS3ForNewFiles && s3StorageService != null) ? UserFile.StorageType.S3 : UserFile.StorageType.DATABASE)
+                    .s3Path((useS3ForNewFiles && s3StorageService != null) ? filePath : null)
                     .description(description)
                     .build();
             
             // For database storage, we need to update the record that was already created
-            if (!useS3ForNewFiles) {
+            if (!(useS3ForNewFiles && s3StorageService != null)) {
                 Long fileId = extractFileIdFromPath(filePath);
                 Optional<UserFile> existingFile = userFileRepository.findById(fileId);
                 if (existingFile.isPresent()) {
@@ -131,6 +143,9 @@ public class FileManagementService {
             return userFile.getFileData();
         } else {
             // File is in S3
+            if (s3StorageService == null) {
+                throw new RuntimeException("S3 storage service not available, but file is stored in S3");
+            }
             return s3StorageService.download(userFile.getS3Path());
         }
     }
@@ -284,7 +299,7 @@ public class FileManagementService {
             Optional<User> userOpt = userRepository.findById(userId);
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
-                String imageUrl = useS3ForNewFiles ? s3StorageService.getFileUrl(filePath) : 
+                String imageUrl = (useS3ForNewFiles && s3StorageService != null) ? s3StorageService.getFileUrl(filePath) :
                                  databaseStorageService.getFileUrl(filePath);
                 user.setProfileImageUrl(imageUrl);
                 userRepository.save(user);
@@ -321,7 +336,11 @@ public class FileManagementService {
         if (userFile.getStorageType() == UserFile.StorageType.DATABASE) {
             fileUrl = databaseStorageService.getFileUrl("db://files/" + userFile.getId());
         } else {
-            fileUrl = s3StorageService.getFileUrl(userFile.getS3Path());
+            if (s3StorageService == null) {
+                fileUrl = "unavailable://s3-service-not-configured";
+            } else {
+                fileUrl = s3StorageService.getFileUrl(userFile.getS3Path());
+            }
         }
         
         return UserFileDTO.builder()

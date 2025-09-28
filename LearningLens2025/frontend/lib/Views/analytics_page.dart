@@ -60,7 +60,7 @@ class Assessment {
 
   int get id {
     if (type == "essay") {
-      return (assessment as Assignment).id ?? 0;
+      return (assessment as Assignment).id;
     } else {
       return (assessment as Quiz).id ?? 0;
     }

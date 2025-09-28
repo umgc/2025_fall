@@ -2,34 +2,34 @@
 -- Add tasks and templates functionality for patients
 
 CREATE TABLE tasks (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     patient_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     date TIMESTAMP NOT NULL,
     time_of_day TIME NOT NULL,
     isCompleted BOOLEAN NOT NULL DEFAULT FALSE,
-    task_type ENUM('TASK', 'FREQUENCY', 'DAYOFWEEK') NOT NULL,
+    task_type VARCHAR(20) NOT NULL CHECK (task_type IN ('TASK', 'FREQUENCY', 'DAYOFWEEK')),
     frequency TEXT,
     task_interval INT,
     do_count INT,
-    days_of_week JSON NOT NULL,
-    status ENUM('PENDING', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    days_of_week JSONB NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED')),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE templates (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     frequency TEXT,
     task_interval INT,
     do_count INT,
-    days_of_week JSON,
+    days_of_week JSONB,
     time_of_day TIME,
     icon VARCHAR(255) NOT NULL,
-    notifications JSON,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    notifications JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );

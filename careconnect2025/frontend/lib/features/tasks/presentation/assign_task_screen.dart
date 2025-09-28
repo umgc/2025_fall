@@ -1,15 +1,10 @@
 import 'dart:convert';
 
 import 'package:care_connect_app/features/tasks/models/template_model.dart';
-import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
-import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:care_connect_app/features/tasks/presentation/pre_defined_task_screen.dart';
 
 // This screen provides a choice of what type of task to assign to a patient
 // by loading the available pre-defined tasks or offering to create a custom task.

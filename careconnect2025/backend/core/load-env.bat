@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM ================================
 REM CareConnect Backend Environment Loader (Windows)
 REM ================================
@@ -14,16 +15,17 @@ if not exist ".env" (
 
 REM Load environment variables from .env file
 for /f "usebackq tokens=1* delims==" %%a in (".env") do (
-    if not "%%a"=="" (
-        if not "%%a"=="%%a:#=%" (
-            REM Skip comment lines
-        ) else (
+    set "line=%%a"
+    if not "!line!"=="" (
+        if not "!line:~0,1!"=="#" (
             set "%%a=%%b"
+            echo Loaded: %%a
         )
     )
 )
 
 echo Environment variables loaded successfully!
+echo Database: %JDBC_URI%
 
 REM Verify critical variables are set
 set "missing_vars="

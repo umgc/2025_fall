@@ -11,12 +11,12 @@ class TaskFormDialog extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const TaskFormDialog({
-    Key? key,
+    super.key,
     required this.patientId,
     this.existingTask,
     this.onTaskSaved,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskFormDialog> createState() => _TaskFormDialogState();
@@ -285,12 +285,12 @@ class TaskForm extends StatefulWidget {
   final int patientId;
 
   const TaskForm({
-    Key? key,
+    super.key,
     this.initialTask,
     this.template,
     required this.onSaved,
     required this.patientId,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskForm> createState() => _TaskFormState();
@@ -412,7 +412,7 @@ class _TaskFormState extends State<TaskForm> {
             const SizedBox(height: 8),
             // Frequency Dropdown
             DropdownButtonFormField<String>(
-              value: task.frequency,
+              initialValue: task.frequency,
               items: const [
                 DropdownMenuItem(value: 'DAILY', child: Text('Daily')),
                 DropdownMenuItem(value: 'WEEKLY', child: Text('Weekly')),
@@ -499,7 +499,7 @@ class _TaskFormState extends State<TaskForm> {
 class TaskInfo extends StatelessWidget {
   final Task task;
 
-  const TaskInfo({Key? key, required this.task}) : super(key: key);
+  const TaskInfo({super.key, required this.task});
 
   @override
   Widget build(BuildContext context) {

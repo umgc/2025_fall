@@ -1,4 +1,5 @@
 /// Centralized Auth Guard Service for page protection
+library;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';

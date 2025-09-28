@@ -8,8 +8,9 @@ import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
 import lombok.Builder;
 import com.careconnect.repository.*;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.langchain4j.memory.ChatMemory;
@@ -21,7 +22,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = true)
 public class DefaultAIChatService implements AIChatService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultAIChatService.class);
 
@@ -29,6 +30,36 @@ public class DefaultAIChatService implements AIChatService {
     private final ChatModel chatModel; // Should be configured for OpenAI or DeepSeek
     // Use a message window memory for demo (20 messages)
     private final ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(20);
+
+    private final UserAIConfigRepository userAIConfigRepository;
+    private final ChatConversationRepository chatConversationRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final PatientRepository patientRepository;
+    private final OpenAIService openAIService;
+    private final DeepSeekService deepSeekService;
+    private final MedicalContextService medicalContextService;
+    private final PatientContextRetrievalService patientContextRetrievalService;
+
+    @Autowired
+    public DefaultAIChatService(ChatModel chatModel,
+                              UserAIConfigRepository userAIConfigRepository,
+                              ChatConversationRepository chatConversationRepository,
+                              ChatMessageRepository chatMessageRepository,
+                              PatientRepository patientRepository,
+                              @Autowired(required = false) OpenAIService openAIService,
+                              @Autowired(required = false) DeepSeekService deepSeekService,
+                              MedicalContextService medicalContextService,
+                              PatientContextRetrievalService patientContextRetrievalService) {
+        this.chatModel = chatModel;
+        this.userAIConfigRepository = userAIConfigRepository;
+        this.chatConversationRepository = chatConversationRepository;
+        this.chatMessageRepository = chatMessageRepository;
+        this.patientRepository = patientRepository;
+        this.openAIService = openAIService;
+        this.deepSeekService = deepSeekService;
+        this.medicalContextService = medicalContextService;
+        this.patientContextRetrievalService = patientContextRetrievalService;
+    }
     // Helper: Get or create patient AI config
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
         return userAIConfigRepository.findByUserIdAndPatientIdAndIsActiveTrue(userId, patientId)
@@ -365,14 +396,6 @@ public class DefaultAIChatService implements AIChatService {
             this.error = error;
         }
     }
-    private final UserAIConfigRepository userAIConfigRepository;
-    private final ChatConversationRepository chatConversationRepository;
-    private final ChatMessageRepository chatMessageRepository;
-    private final PatientRepository patientRepository;
-    private final OpenAIService openAIService;
-    private final DeepSeekService deepSeekService;
-    private final MedicalContextService medicalContextService;
-    private final PatientContextRetrievalService patientContextRetrievalService;
 
     @Transactional
     public ChatResponse processChat(ChatRequest request) {

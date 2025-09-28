@@ -265,7 +265,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
       Icons.android, // Changed from Icons.smart_toy for better compatibility
       [
         DropdownButtonFormField<String>(
-          value: _selectedProvider,
+          initialValue: _selectedProvider,
           decoration: InputDecoration(
             labelText: 'Select AI Provider',
             labelStyle: TextStyle(
@@ -313,7 +313,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
       Icons.person, // Changed from Icons.psychology for better compatibility
       [
         DropdownButtonFormField<String>(
-          value: _personality,
+          initialValue: _personality,
           decoration: InputDecoration(
             labelText: 'Assistant Personality',
             labelStyle: TextStyle(
@@ -461,7 +461,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
       ),
       const SizedBox(height: 16),
       DropdownButtonFormField<String>(
-        value: _language,
+        initialValue: _language,
         decoration: InputDecoration(
           labelText: 'Language',
           labelStyle: TextStyle(
@@ -575,7 +575,7 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: theme.colorScheme.primary,
+            activeThumbColor: theme.colorScheme.primary,
           ),
         ],
       ),

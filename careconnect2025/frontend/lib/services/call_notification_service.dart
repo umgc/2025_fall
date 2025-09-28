@@ -248,7 +248,7 @@ class CallNotificationService {
       if (message is String) {
         // quick-and-dirty for demo; use jsonDecode in real code
         return Map<String, dynamic>.from(
-          (message as String).replaceAll('"', '"') == message ? {} : {},
+          (message).replaceAll('"', '"') == message ? {} : {},
         ); // TODO: replace with jsonDecode
       }
     } catch (e) {
