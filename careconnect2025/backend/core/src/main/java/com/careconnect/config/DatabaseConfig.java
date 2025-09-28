@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
@@ -17,6 +18,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import javax.sql.DataSource;
 
 @Configuration
+@ConditionalOnProperty(name = "careconnect.database.use-aws-config", havingValue = "true", matchIfMissing = true)
 public class DatabaseConfig {
 
     @Value("${careconnect.db.url}")

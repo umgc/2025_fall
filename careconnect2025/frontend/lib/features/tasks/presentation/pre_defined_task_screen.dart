@@ -129,7 +129,7 @@ class _PreDefinedTaskScreenState extends State<PreDefinedTaskScreen> {
                           ),
                     ),
                     DropdownButtonFormField<String>(
-                      value: task.frequency,
+                      initialValue: task.frequency,
                       items: const [
                         DropdownMenuItem(value: 'DAILY', child: Text('Daily')),
                         DropdownMenuItem(value: 'WEEKLY', child: Text('Weekly')),
@@ -233,9 +233,7 @@ class _PreDefinedTaskScreenState extends State<PreDefinedTaskScreen> {
                       ),
                       child: ListTile(
                         title: Text(
-                          task.date != null
-                              ? '${task.date!.toLocal()}'.split(' ')[0]
-                              : 'No date selected',
+                          '${task.date.toLocal()}'.split(' ')[0],
                         ),
                         leading: const Icon(Icons.calendar_today, color: Colors.indigo, size: 40),
                         onTap: () async {
@@ -282,18 +280,12 @@ class _PreDefinedTaskScreenState extends State<PreDefinedTaskScreen> {
                 widget.patientId,
                 jsonEncode(task.toJson()),
               );
-              if (result != null) {
-                context.go('/patient-tasks',
-                    extra: {
-                      'patientId': widget.patientId,
-                      'patientName': widget.patientName,
-                    });
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to create task.')),
-                );
-              }
-            } catch (e) {
+              context.go('/patient-tasks',
+                  extra: {
+                    'patientId': widget.patientId,
+                    'patientName': widget.patientName,
+                  });
+                        } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Error: $e')),
               );

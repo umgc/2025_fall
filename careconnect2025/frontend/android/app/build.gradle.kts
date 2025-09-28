@@ -1,16 +1,13 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // Firebase Google Services plugin
-    id("com.google.gms.google-services")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.example.care_connect_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -22,10 +19,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.care_connect_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -34,22 +28,50 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    packagingOptions {
+        // Only keep WebRTC native library conflicts (these work)
+        pickFirst("**/libjingle_peerconnection_so.so")
+        pickFirst("**/libc++_shared.so")
+        pickFirst("**/libwebrtc.so")
+
+        // Standard metadata exclusions
+        exclude("META-INF/DEPENDENCIES")
+        exclude("META-INF/LICENSE")
+        exclude("META-INF/LICENSE.txt")
+        exclude("META-INF/NOTICE")
+        exclude("META-INF/NOTICE.txt")
+    }
+}
+
+// ===============================
+// MINIMAL RESOLUTION - FIREBASE BOM + WEBRTC ONLY
+// ===============================
+configurations.all {
+    resolutionStrategy {
+        // Only force WebRTC - let packages handle React Native naturally
+        force("org.jitsi:webrtc:124.0.0")
+    }
+
+    // Only exclude firebase-iid from ML Kit
+    exclude(group = "com.google.firebase", module = "firebase-iid")
+}
+
+dependencies {
+    // Firebase BOM - manages all Firebase Android SDK versions
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+
+    // Firebase dependencies - versions managed by BOM
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-common")
 }
 
 flutter {
     source = "../.."
-}
-
-dependencies {
-    // Exclude conflicting dependencies to avoid duplicate class errors
-    configurations.all {
-        exclude(group = "com.google.firebase", module = "firebase-iid")
-        // Exclude older Jitsi WebRTC to avoid conflicts with newer WebRTC SDK
-        exclude(group = "org.jitsi", module = "webrtc")
-    }
 }

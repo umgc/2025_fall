@@ -4,9 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../config/theme/app_theme.dart';
-import '../core/services/api_service.dart';
 import '../providers/user_provider.dart';
-import '../services/auth_token_manager.dart';
 import '../services/comprehensive_file_service.dart';
 import '../services/enhanced_file_service.dart';
 
@@ -24,7 +22,7 @@ class ManualTextEntryCard extends StatefulWidget {
 
 class _ManualTextEntryCardState extends State<ManualTextEntryCard> {
   final _fileNameController = TextEditingController();
-  late var _fileContentController = TextEditingController();
+  late final _fileContentController = TextEditingController();
   FileCategory? _selectedCategory;
 
   List<FileCategory> get _availableCategories {
@@ -75,7 +73,7 @@ class _ManualTextEntryCardState extends State<ManualTextEntryCard> {
         }
         return null;
       },
-      value: _selectedCategory,  // Starts as null!
+      initialValue: _selectedCategory,  // Starts as null!
       hint: const Text('Select Category'),  // This shows when value is null
       decoration: InputDecoration(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

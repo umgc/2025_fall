@@ -30,7 +30,7 @@ public class SubscriptionEnrichmentService {
     private final UserRepository userRepository;
     private final PlanRepository planRepository;
     
-    @Autowired
+    @Autowired(required = false)
     private StripeService stripeService;
     
     // Configurable sets of price IDs for different plan types

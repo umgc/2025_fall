@@ -1342,7 +1342,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                 ),
                 child: Text(
-                  '${selectedDays} days avg',
+                  '$selectedDays days avg',
                   style: TextStyle(
                     color: isDarkMode ? Colors.white : Colors.white,
                     fontSize: 9, // Reduced font size
@@ -1354,7 +1354,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ),
           const SizedBox(height: 8), // Reduced spacing
           // Main health metrics in compact horizontal scroll
-          Container(
+          SizedBox(
             height: 85, // Further reduced height to prevent overflow
             child: ListView(
               scrollDirection: Axis.horizontal,
@@ -1362,7 +1362,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.avgHeartRate != null)
                   _buildCompactCard(
                     'HR',
-                    '${dashData.avgHeartRate!.toStringAsFixed(0)}',
+                    dashData.avgHeartRate!.toStringAsFixed(0),
                     'bpm',
                     Icons.favorite,
                     Colors.red.shade300,
@@ -1370,7 +1370,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.avgSpo2 != null)
                   _buildCompactCard(
                     'SpO₂',
-                    '${dashData.avgSpo2!.toStringAsFixed(1)}',
+                    dashData.avgSpo2!.toStringAsFixed(1),
                     '%',
                     Icons.bloodtype,
                     Colors.blue.shade300,
@@ -1387,7 +1387,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.avgWeight != null)
                   _buildCompactCard(
                     'Weight',
-                    '${dashData.avgWeight!.toStringAsFixed(1)}',
+                    dashData.avgWeight!.toStringAsFixed(1),
                     'lbs',
                     Icons.monitor_weight,
                     Colors.green.shade300,
@@ -1395,7 +1395,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.avgMoodValue != null)
                   _buildCompactCard(
                     'Mood',
-                    '${dashData.avgMoodValue!.toStringAsFixed(1)}',
+                    dashData.avgMoodValue!.toStringAsFixed(1),
                     '/10',
                     Icons.mood,
                     Colors.amber.shade300,
@@ -1403,7 +1403,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.avgPainValue != null)
                   _buildCompactCard(
                     'Pain',
-                    '${dashData.avgPainValue!.toStringAsFixed(1)}',
+                    dashData.avgPainValue!.toStringAsFixed(1),
                     '/10',
                     Icons.healing,
                     Colors.orange.shade300,
@@ -1411,7 +1411,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 if (dashData.adherenceRate != null)
                   _buildCompactCard(
                     'Adherence',
-                    '${dashData.adherenceRate!.toStringAsFixed(0)}',
+                    dashData.adherenceRate!.toStringAsFixed(0),
                     '%',
                     Icons.check_circle,
                     Colors.indigo.shade300,
@@ -1458,7 +1458,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ],
             ),
             const SizedBox(height: 4), // Reduced spacing
-            Container(
+            SizedBox(
               height: 70, // Further reduced height to prevent overflow
               child: ListView(
                 scrollDirection: Axis.horizontal,
@@ -1486,7 +1486,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                   _buildCompactCard(
                     'Weight',
-                    '${latestVital.weight.toStringAsFixed(1)}',
+                    latestVital.weight.toStringAsFixed(1),
                     'lbs',
                     Icons.monitor_weight,
                     Colors.green.shade200,
@@ -1852,7 +1852,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         floatingActionButton: FloatingActionButton(
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          child: const Icon(Icons.chat_bubble_outline),
           onPressed: () {
             final double sheetHeight =
                 MediaQuery.of(context).size.height * 0.75;
@@ -1877,6 +1876,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             );
           },
           tooltip: 'Ask AI about analytics',
+          child: const Icon(Icons.chat_bubble_outline),
         ),
       );
     }

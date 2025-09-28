@@ -7,10 +7,8 @@ import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/services/auth_token_manager.dart';
 import 'package:http/http.dart' as http;
-import '../../../../widgets/ai_chat_modal.dart';
 import '../../../../services/subscription_service.dart';
 import '../../../../widgets/responsive_page_wrapper.dart';
-import '../../../../utils/responsive_utils.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import '../../../../services/video_call_service.dart';
 import '../../../../services/messaging_service.dart';
@@ -63,7 +61,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
 
   Future<void> _initializeServices() async {
     try {
-      await VideoCallService.initializeService();
+      // await VideoCallService.initializeService();
       await MessagingService.initialize();
     } catch (e) {
       print('Error initializing services: $e');
@@ -567,17 +565,17 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       }
 
       // Check if patient is available for call
-      final isAvailable = await VideoCallService.checkUserAvailability(
-        patient.id.toString(),
-      );
-      if (!isAvailable) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${patient.firstName} is currently unavailable'),
-          ),
-        );
-        return;
-      }
+      // final isAvailable = await VideoCallService.checkUserAvailability(
+      //   patient.id.toString(),
+      // );
+      // if (!isAvailable) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     SnackBar(
+      //       content: Text('${patient.firstName} is currently unavailable'),
+      //     ),
+      //   );
+      //   return;
+      // }
 
       // Generate unique call ID
       final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
@@ -597,35 +595,35 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       }
 
       // Also use the existing video call service for backward compatibility
-      final callData = await VideoCallService.initiateCall(
-        callId: callId,
-        callerId: widget.caregiverId.toString(),
-        recipientId: patient.id.toString(),
-        isVideoCall: isVideoCall,
-      );
+      // final callData = await VideoCallService.initiateCall(
+      //   callId: callId,
+      //   callerId: widget.caregiverId.toString(),
+      //   recipientId: patient.id.toString(),
+      //   isVideoCall: isVideoCall,
+      // );
 
-      if (callData['success'] == true) {
-        // Navigate to video call screen
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => VideoCallWidget(
-              callId: callData['callId'],
-              currentUserId: widget.caregiverId.toString(),
-              currentUserName: caregiverName ?? 'Caregiver',
-              otherUserId: patient.id.toString(),
-              otherUserName: '${patient.firstName} ${patient.lastName}',
-              isVideoCall: isVideoCall,
-              isIncoming: false,
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to initiate call. Please try again.'),
-          ),
-        );
-      }
+      // if (callData['success'] == true) {
+      //   // Navigate to video call screen
+      //   Navigator.of(context).push(
+      //     MaterialPageRoute(
+      //       builder: (context) => VideoCallWidget(
+      //         callId: callData['callId'],
+      //         currentUserId: widget.caregiverId.toString(),
+      //         currentUserName: caregiverName ?? 'Caregiver',
+      //         otherUserId: patient.id.toString(),
+      //         otherUserName: '${patient.firstName} ${patient.lastName}',
+      //         isVideoCall: isVideoCall,
+      //         isIncoming: false,
+      //       ),
+      //     ),
+      //   );
+      // } else {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(
+      //       content: Text('Failed to initiate call. Please try again.'),
+      //     ),
+      //   );
+      // }
     } catch (e) {
       print('Error initiating call: $e');
       ScaffoldMessenger.of(context).showSnackBar(

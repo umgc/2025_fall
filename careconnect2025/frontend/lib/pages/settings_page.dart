@@ -168,7 +168,7 @@ class _SettingsPageState extends State<SettingsPage> {
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Theme.of(context).colorScheme.primary,
+          activeThumbColor: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -470,6 +470,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
               ],
+              _buildSectionHeader(context, 'Notetaker Assistant'),
+              _buildSettingsCard(
+                context,
+                icon: Icons.edit_note,
+                title: 'Notetaker Configuration',
+                subtitle: 'Customize your Notetaker assistant settings',
+                onTap: () => context.push('/notetaker-configuration'),
+              ),
+              const SizedBox(height: 24),
               _buildSectionHeader(context, 'General'),
               _buildSettingsCard(
                 context,
