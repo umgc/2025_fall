@@ -30,7 +30,7 @@ jobs:
       # Step 2: Get Flutter dependencies
       - name: Get Flutter dependencies
         # Set the working directory to where your pubspec.yaml is located
-        working-directory: ./LearningLens2025/frontend/lib
+        working-directory: ./LearningLens2025/frontend
         run: flutter pub get
 
       # Uncomment this step to verify the use of 'dart format' on each commit.
