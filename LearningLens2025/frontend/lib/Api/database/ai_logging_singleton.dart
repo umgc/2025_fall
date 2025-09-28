@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
-import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/assignment.dart';
