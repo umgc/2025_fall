@@ -24,13 +24,13 @@ class AILoggingSingleton {
   }
 
   Future<List<AiLog>> getLogs(Course course, Assignment? assignment,
-      Participant? student, int lmsType) async {
+      Participant? student, int lmsType, DateTime? startDate, DateTime? endDate) async {
     List<AiLog> list = List.empty(growable: true);
     int courseId = course.id;
     int assignmentIdParam = assignment?.id ?? -1;
     int studentIdParam = student?.id ?? -1;
     final url = Uri.parse(
-        "${LocalStorageService.getAILoggingUrl()}/?command=getLogs&courseId=$courseId&assignmentId=$assignmentIdParam&studentId=$studentIdParam&lmsType=$lmsType");
+        "${LocalStorageService.getAILoggingUrl()}/?command=getLogs&courseId=$courseId&assignmentId=$assignmentIdParam&studentId=$studentIdParam&lmsType=$lmsType&startDate=${getDateString(startDate)}&endDate=${getDateString(endDate)}");
     final response = await http.get(url);
     final postResponse = response.body;
     final d = jsonDecode(postResponse);
@@ -54,6 +54,13 @@ class AILoggingSingleton {
           DateTime.parse(m["time"])));
     }
     return list;
+  }
+
+  String getDateString(DateTime? date) {
+    if (date == null) {
+      return "null";
+    }
+    return date.toUtc().toString().split(' ')[0];
   }
 
   Future<String> addLog(AiLog log) async {
