@@ -34,10 +34,10 @@ macos/
 web/
 windows/
 Flutter/
-teama/linux/*
-teama/macos/*
-teama/windows/*
-teama/assets/api-keys.json
-teama/android/
+frontend/linux/*
+frontend/macos/*
+frontend/windows/*
+frontend/assets/api-keys.json
+frontend/android/
 
 terraform/terraformout.txt

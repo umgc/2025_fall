@@ -108,7 +108,7 @@ resource "aws_amplify_app" "edulenseweb" {
             - flutter config --no-analytics
             - flutter doctor
             - echo "Installing dependencies"
-            - cd LearningLens2025/teamA/
+            - cd LearningLens2025/frontend/
             - flutter pub get
             - flutter create . --platforms web
         build:
@@ -118,7 +118,7 @@ resource "aws_amplify_app" "edulenseweb" {
             - export ENV_FILE=
             - flutter build web
       artifacts:
-        baseDirectory: LearningLens2025/teamA/build/web/
+        baseDirectory: LearningLens2025/frontend/build/web/
         files:
           - '**/*'
           - '.env'
@@ -129,7 +129,7 @@ resource "aws_amplify_app" "edulenseweb" {
           commands:
             - echo "Exporting Artifacts"
       artifacts:
-        baseDirectory: LearningLens2025/teamA/build/web/
+        baseDirectory: LearningLens2025/frontend/build/web/
         files:
           - '**/*'
           - '.env'
@@ -140,7 +140,7 @@ resource "aws_amplify_app" "edulenseweb" {
   EOT
 
   environment_variables = {
-    ENV_FILE = file("../teamA/.env")
+    ENV_FILE = file("../frontend/.env")
   }
 }
 
