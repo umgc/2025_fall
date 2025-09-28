@@ -24,11 +24,12 @@ abstract class LmsInterface {
   String? fullName;
   String? profileImage;
   List<Course>? courses;
-
+  UserRole? role;
+  
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
   bool isLoggedIn();
-  Future<UserRole> getUserRole(List<Course> moodleCourses);
+  Future<UserRole> getUserRole();
   Future<bool> isUserTeacher(List<Course> moodleCourses);
   void logout();
   void resetLMSUserInfo();
