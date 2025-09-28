@@ -18,10 +18,10 @@ class SubmissionList extends StatefulWidget {
   final String courseId;
 
   SubmissionList({
-    Key? key,
+    super.key,
     required this.assignmentId,
     required this.courseId,
-  }) : super(key: key);
+  });
 
   @override
   SubmissionListState createState() => SubmissionListState();
@@ -412,7 +412,7 @@ class SubmissionListState extends State<SubmissionList> {
                                                                         widget
                                                                             .courseId);
 
-                                                                var fetchedRubric;
+                                                                Object? fetchedRubric;
                                                                 if (contextId !=
                                                                     null) {
                                                                   fetchedRubric = await LmsFactory
@@ -428,7 +428,7 @@ class SubmissionListState extends State<SubmissionList> {
                                                                   }
                                                                   fetchedRubric =
                                                                       jsonEncode(
-                                                                          fetchedRubric?.toJson() ??
+                                                                          fetchedRubric.toJson() ??
                                                                               {});
                                                                 }
 

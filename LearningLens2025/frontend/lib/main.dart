@@ -14,7 +14,6 @@ import 'Views/dashboard.dart';
 import 'Views/edit_questions.dart';
 import 'Views/essay_generation.dart';
 import 'Views/quiz_generator.dart';
-import 'Views/edit_questions.dart';
 import 'Views/gamification_view.dart';
 
 void main() async {

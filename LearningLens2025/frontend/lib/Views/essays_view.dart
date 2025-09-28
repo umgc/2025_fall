@@ -40,7 +40,7 @@ class _EssaysState extends State<EssaysView> {
       int essayId) async {
     try {
       return await LmsFactory.getLmsService().getSubmissionsWithGrades(essayId);
-    } on UnimplementedError catch (e) {
+    } on UnimplementedError {
       setState(() {
         submissionError =
             "Submissions/Grading feature is currently not available for Google Classroom. Please reach out to the developer for more information.";
@@ -58,7 +58,7 @@ class _EssaysState extends State<EssaysView> {
   Future<List<Participant>> fetchCourseParticipants(String courseId) async {
     try {
       return await LmsFactory.getLmsService().getCourseParticipants(courseId);
-    } on UnimplementedError catch (e) {
+    } on UnimplementedError {
       setState(() {
         participantError = "Participants feature is not yet implemented.";
       });
@@ -149,7 +149,7 @@ class _EssaysState extends State<EssaysView> {
                                         participantError = null; // Reset error
                                         futureSubmissionsWithGrades =
                                             fetchSubmissionsWithGrades(
-                                                essay.id!);
+                                                essay.id);
                                         futureParticipants =
                                             fetchCourseParticipants(
                                                 essay.courseId.toString());

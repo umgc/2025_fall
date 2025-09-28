@@ -245,8 +245,9 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
                           keyboardType: TextInputType.number,
                           validator: (value) {
                             if (value!.isEmpty) return 'Please enter points';
-                            if (int.tryParse(value) == null)
+                            if (int.tryParse(value) == null) {
                               return 'Please enter a valid number';
+                            }
                             return null;
                           },
                           onSaved: (value) => _points = int.parse(value!),

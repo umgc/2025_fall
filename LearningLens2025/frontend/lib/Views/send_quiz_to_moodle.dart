@@ -422,7 +422,7 @@ class QuizMoodleState extends State<QuizMoodle> {
                                 print('Error during quiz creation: $e');
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content: Text('An error occurred: ${e}')),
+                                      content: Text('An error occurred: $e')),
                                 );
                               } finally {
                                 setState(() {
@@ -516,7 +516,7 @@ class QuizMoodleState extends State<QuizMoodle> {
                                 print('Error during quiz creation: $e');
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content: Text('An error occurred: ${e}')),
+                                      content: Text('An error occurred: $e')),
                                 );
                               } finally {
                                 setState(() {

@@ -129,7 +129,6 @@ class XmlConverter {
     switch (quiz.questionList.first.type) {
       case 'essay':
         qperq = 1;
-        break;
       case 'multichoice':
       case 'truefalse':
       case 'shortanswer':

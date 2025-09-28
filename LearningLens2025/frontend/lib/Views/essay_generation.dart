@@ -590,10 +590,10 @@ class PointScaleDropdown extends StatelessWidget {
   final ValueChanged<int?> onChanged;
 
   const PointScaleDropdown({
-    Key? key,
+    super.key,
     required this.selectedPointScale,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   void _handleValueChanged(int? newValue) {
     // Additional Logic
@@ -622,10 +622,10 @@ class GradeLevelDropdown extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   const GradeLevelDropdown({
-    Key? key,
+    super.key,
     required this.selectedGradeLevel,
     required this.onChanged,
-  }) : super(key: key);
+  });
 
   void _handleTextChanged(String? newValue) {
     // Additional Logic

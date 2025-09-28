@@ -20,10 +20,7 @@ import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz.dart';
-import 'package:learninglens_app/beans/quiz_type.dart';
 
-import 'package:learninglens_app/Views/dashboard.dart';
-import 'package:learninglens_app/Views/user_settings.dart';
 
 // Import the APIs for the Learning Lens Model (LLM).
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
@@ -72,7 +69,7 @@ class Assessment {
 }
 
 class AnalyticsPage extends StatefulWidget {
-  const AnalyticsPage({Key? key}) : super(key: key);
+  const AnalyticsPage({super.key});
 
   @override
   _AnalyticsPageState createState() => _AnalyticsPageState();
@@ -924,7 +921,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         );
       },

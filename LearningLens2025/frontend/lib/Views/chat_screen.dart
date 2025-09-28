@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For saving/loading chat history
@@ -59,7 +60,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (input.isEmpty) {
       return;
     }
-    final aiModel;
+    final LLM aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     } else if (selectedLLM == LlmType.GROK) {

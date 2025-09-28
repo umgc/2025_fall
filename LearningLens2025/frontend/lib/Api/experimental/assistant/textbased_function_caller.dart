@@ -11,7 +11,7 @@ class TextBasedFunctionCaller {
   /// Dispatch the function call based on [functionName] and [args].
   Future<String> callFunctionByName(
       String functionName, Map<String, dynamic> args) async {
-    print('${functionName}, ${args}');
+    print('$functionName, $args');
     try {
       switch (functionName) {
         case "getUserCourses":

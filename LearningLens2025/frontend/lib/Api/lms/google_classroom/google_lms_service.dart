@@ -287,7 +287,7 @@ class GoogleLmsService extends LmsInterface {
 
     // Fetch students
     final studentsResponse = await ApiService().httpGet(
-      Uri.parse(apiURL + '/courses/$courseId/students'),
+      Uri.parse('$apiURL/courses/$courseId/students'),
       headers: {'Authorization': 'Bearer $_userToken'},
     );
 
@@ -325,8 +325,9 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<List<Quiz>> getQuizzes(int? courseID, {int? topicId}) async {
-    if (_userToken == null)
+    if (_userToken == null) {
       throw StateError('User not logged in to Google Classroom');
+    }
 
     final response = await ApiService().httpGet(
       Uri.parse(
@@ -705,8 +706,9 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<List<Assignment>> getEssays(int? courseID, {int? topicId}) async {
-    if (_userToken == null)
+    if (_userToken == null) {
       throw StateError('User not logged in to Google Classroom');
+    }
 
     final response = await ApiService().httpGet(
       Uri.parse(
@@ -940,7 +942,6 @@ class GoogleLmsService extends LmsInterface {
             }
             requests.add(_createMultipleChoiceQuestionRequest(
                 questionText, options, correctAnswerIndices, points));
-            break;
           case 'truefalse':
             int points = 5; // Set truefalse to 5 points
             String correctAnswer = questionElement
@@ -951,7 +952,6 @@ class GoogleLmsService extends LmsInterface {
                 'True';
             requests.add(_createTrueFalseQuestionRequest(
                 questionText, correctAnswer, points));
-            break;
           case 'shortanswer':
             int points = 10; // Set shortanswer to 10 point
             String correctAnswer = questionElement
@@ -962,7 +962,6 @@ class GoogleLmsService extends LmsInterface {
                 '';
             requests.add(_createShortAnswerQuestionRequest(
                 questionText, correctAnswer, points));
-            break;
           default:
             print('Warning: Unsupported question type: $questionType');
         }

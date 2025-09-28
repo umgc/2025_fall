@@ -6,7 +6,6 @@ import 'package:learninglens_app/beans/g_question_form_data.dart';
 import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/course.dart';
 import "package:learninglens_app/Controller/custom_appbar.dart";
-import "package:learninglens_app/beans/quiz_type.dart";
 import 'package:learninglens_app/content_carousel.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:flutter/services.dart';

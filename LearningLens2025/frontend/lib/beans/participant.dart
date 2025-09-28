@@ -49,7 +49,7 @@ class Participant implements LearningLensInterface {
 
   @override
   String toString() {
-    return "$fullname";
+    return fullname;
   }
 
   @override

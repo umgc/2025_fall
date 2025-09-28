@@ -91,6 +91,6 @@ class Assignment implements LearningLensInterface {
 
   @override
   String toString() {
-    return "$name";
+    return name;
   }
 }

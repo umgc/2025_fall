@@ -71,10 +71,10 @@ class LoginNotifier with ChangeNotifier {
     final grokKey = LocalStorageService.getGrokKey();
     final deepseekKey = LocalStorageService.getDeepseekKey();
 
-    return (openAIKey != null && openAIKey.isNotEmpty) ||
-        (perplexityKey != null && perplexityKey.isNotEmpty) ||
-        (grokKey != null && grokKey.isNotEmpty) ||
-        (deepseekKey != null && deepseekKey.isNotEmpty);
+    return (openAIKey.isNotEmpty) ||
+        (perplexityKey.isNotEmpty) ||
+        (grokKey.isNotEmpty) ||
+        (deepseekKey.isNotEmpty);
   }
 
   // ---------------------------------------
@@ -271,18 +271,14 @@ class LoginNotifier with ChangeNotifier {
     switch (key) {
       case LLMKey.openAI:
         LocalStorageService.saveOpenAIKey(value);
-        break;
       case LLMKey.perplexity:
         LocalStorageService.savePerplexityKey(value);
-        break;
       case LLMKey.grok:
         LocalStorageService.saveGrokKey(value);
-        break;
       case LLMKey.claude:
       // If you had a Claude key, you could handle it here
       case LLMKey.deepseek:
         LocalStorageService.saveDeepseekKey(value);
-        break;
     }
 
     _hasLLMKey = await _checkHasLLMKey();

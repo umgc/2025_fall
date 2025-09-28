@@ -219,8 +219,9 @@ class SubmissionDetailState extends State<SubmissionDetail> {
 
 // Interactive rubric table with dynamic width expansion
   Widget buildInteractiveRubricTable() {
-    if (rubric == null)
+    if (rubric == null) {
       return Container(); // No rubric, return an empty container
+    }
 
     List<TableRow> tableRows = [];
 
@@ -263,7 +264,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                 ),
               ),
             );
-          }).toList(),
+          }),
           TableCell(
             child: Padding(
               padding: EdgeInsets.all(8.0),

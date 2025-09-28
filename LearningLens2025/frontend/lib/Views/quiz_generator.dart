@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/prompt_engine.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
@@ -93,7 +94,7 @@ class _AssessmentState extends State<CreateAssessment> {
       setState(() {
         _isLoading = true;
       });
-      final aiModel;
+      final LLM aiModel;
       if (selectedLLM == LlmType.CHATGPT) {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       } else if (selectedLLM == LlmType.GROK) {

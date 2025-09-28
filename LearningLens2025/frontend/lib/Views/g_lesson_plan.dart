@@ -172,13 +172,10 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
       switch (selectedLLM) {
         case 'ChatGPT':
           aiModel = OpenAiLLM(openApiKey);
-          break;
         case 'Grok':
           aiModel = GrokLLM(grokApiKey);
-          break;
         case 'Perplexity':
           aiModel = PerplexityLLM(perplexityApiKey);
-          break;
         case 'Deepseek':
           aiModel = DeepseekLLM(deepseekApiKey);
         default:
@@ -230,7 +227,7 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
         return AlertDialog(
           title: Text(lessonPlan['title'] ?? 'Untitled'),
           content: SingleChildScrollView(
-            child: Container(
+            child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.4,
               child: Text(lessonPlan['description'] ?? '',
                   textAlign: TextAlign.left),

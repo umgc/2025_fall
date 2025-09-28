@@ -927,9 +927,8 @@ class MoodleLmsService implements LmsInterface {
   // ****************************************************************************************
   // TODO: add the method below to the lms_interface.
   // ****************************************************************************************
-  /**
-   * Fetches all the questions from a quiz.
-   */
+  /// Fetches all the questions from a quiz.
+  @override
   Future<List<QuestionType>> getQuestionsFromQuiz(int quizId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
@@ -1023,8 +1022,9 @@ class MoodleLmsService implements LmsInterface {
     // Add only non-null fields
     if (userId != null) body['userid'] = userId.toString();
     if (groupId != null) body['groupid'] = groupId.toString();
-    if (allowsubmissionsfromdate != null)
+    if (allowsubmissionsfromdate != null) {
       body['allowsubmissionsfromdate'] = allowsubmissionsfromdate.toString();
+    }
     if (dueDate != null) body['duedate'] = dueDate.toString();
     if (cutoffDate != null) body['cutoffdate'] = cutoffDate.toString();
     if (timelimit != null) body['timelimit'] = timelimit.toString();
@@ -1041,9 +1041,7 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-/**
- * Fetches all lesson plans associated with a given course ID.
- */
+/// Fetches all lesson plans associated with a given course ID.
   Future<List<LessonPlan>> getLessonPlans(int? courseId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
@@ -1133,9 +1131,7 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-  /**
-  * Deletes a lesson plan from Moodle by its lesson ID.
-  */
+  /// Deletes a lesson plan from Moodle by its lesson ID.
   Future<bool> deleteLessonPlan(int lessonId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
@@ -1169,9 +1165,7 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-  /**
- * Updates a lesson plan in Moodle by its lesson ID.
- */
+  /// Updates a lesson plan in Moodle by its lesson ID.
   Future<bool> updateLessonPlan({
     required int lessonId,
     String? name,
@@ -1216,6 +1210,7 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
+  @override
   Future<List<Participant>> getQuizGradesForParticipants(
       String courseId, int quizId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');

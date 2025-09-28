@@ -12,7 +12,7 @@ import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
 class TextBasedFunctionCallerView extends StatefulWidget {
-  const TextBasedFunctionCallerView({Key? key}) : super(key: key);
+  const TextBasedFunctionCallerView({super.key});
 
   @override
   _TextBasedFunctionCallerViewState createState() =>
@@ -44,7 +44,7 @@ class _TextBasedFunctionCallerViewState
 
   // grabs the selected LLM.
   LLM getLLM() {
-    final aiModel;
+    final LLM aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     } else if (selectedLLM == LlmType.GROK) {

@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:learninglens_app/Api/llm/DeepSeek_api.dart";
+import "package:learninglens_app/Api/llm/llm_api_modules_base.dart";
 import "package:learninglens_app/Api/lms/constants/learning_lens.constants.dart";
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
 import "package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart";
@@ -63,7 +64,7 @@ class _LessonPlanState extends State<LessonPlans> {
 
   Future<void> _loadCourses() async {
     try {
-      var userCourses = await LmsFactory.getLmsService().courses;
+      var userCourses = LmsFactory.getLmsService().courses;
       setState(() {
         courses = userCourses; // Update the state with fetched courses
       });
@@ -98,7 +99,7 @@ class _LessonPlanState extends State<LessonPlans> {
 
   Future<void> generateLessonPlanWithAI() async {
     try {
-      final aiModel;
+      final LLM aiModel;
       if (selectedLLM == LlmType.CHATGPT) {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       } else if (selectedLLM == LlmType.GROK) {
@@ -147,7 +148,7 @@ class _LessonPlanState extends State<LessonPlans> {
         return AlertDialog(
           title: Text(plan.name),
           content: SingleChildScrollView(
-            child: Container(
+            child: SizedBox(
               width: MediaQuery.of(context).size.width * 0.4,
               child:
                   Text(_stripHtmlTags(plan.intro), textAlign: TextAlign.left),
@@ -495,7 +496,7 @@ class _LessonPlanState extends State<LessonPlans> {
                                             ConstrainedBox(
                                               constraints:
                                                   BoxConstraints(maxWidth: 250),
-                                              child: Container(
+                                              child: SizedBox(
                                                 height:
                                                     60, // Fixed height to maintain row size
                                                 child: Scrollbar(
@@ -916,7 +917,7 @@ class _LessonPlanState extends State<LessonPlans> {
                                       ConstrainedBox(
                                         constraints:
                                             BoxConstraints(maxWidth: 250),
-                                        child: Container(
+                                        child: SizedBox(
                                           height:
                                               60, // Fixed height to maintain row size
                                           child: Scrollbar(
