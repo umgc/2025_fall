@@ -15,5 +15,11 @@ abstract class LLM {
   LLM(this.apiKey);
 
   // Abstract method that subclasses must implement
+  Future<String> postToLlm(String prompt);
+
+  // Abstract method that subclasses must implement
+  Future<String> getChatResponse(String prompt);
+
+  // Abstract method that subclasses must implement
   Future<String> generate(String prompt);
 }

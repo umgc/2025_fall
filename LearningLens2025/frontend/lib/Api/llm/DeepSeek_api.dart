@@ -43,6 +43,7 @@ class DeepseekLLM implements LLM {
   }
 
   /// The exposed method to interact with the LLM API. Used in many original features
+  @override
   Future<String> postToLlm(String queryPrompt) async {
     var resp = "";
 
@@ -95,6 +96,7 @@ class DeepseekLLM implements LLM {
   }
 
   /// Method used in the chat interface feature.
+  @override
   Future<String> getChatResponse(String prompt) async {
     final postHeaders = getPostHeaders();
     final postBody = getPostBody(prompt);

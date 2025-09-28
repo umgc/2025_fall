@@ -87,6 +87,7 @@ class PerplexityLLM implements LLM {
   }
 
   //
+  @override
   Future<String> postToLlm(String queryPrompt) async {
     var resp = "";
 
@@ -118,6 +119,7 @@ class PerplexityLLM implements LLM {
     return retResponse;
   }
 
+  @override
   Future<String> getChatResponse(String prompt) async {
     final postHeaders = getPostHeaders();
     final postBody = getPostBody(prompt);

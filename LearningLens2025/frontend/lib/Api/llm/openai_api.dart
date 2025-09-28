@@ -99,6 +99,7 @@ class OpenAiLLM implements LLM {
   ///
   ///
   ///
+  @override
   Future<String> postToLlm(String queryPrompt) async {
     var resp = "";
 
@@ -132,6 +133,7 @@ class OpenAiLLM implements LLM {
     return retResponse;
   }
 
+  @override
   Future<String> getChatResponse(String prompt) async {
     final postHeaders = getPostHeaders();
     final postBody = getPostBody(prompt);

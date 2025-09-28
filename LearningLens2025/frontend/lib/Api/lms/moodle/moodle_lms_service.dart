@@ -1041,7 +1041,7 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-/// Fetches all lesson plans associated with a given course ID.
+  /// Fetches all lesson plans associated with a given course ID.
   Future<List<LessonPlan>> getLessonPlans(int? courseId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 

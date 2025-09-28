@@ -5,6 +5,7 @@ import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
+import 'package:learninglens_app/beans/moodle_rubric.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/beans/participant.dart';
@@ -412,15 +413,16 @@ class SubmissionListState extends State<SubmissionList> {
                                                                         widget
                                                                             .courseId);
 
-                                                                Object? fetchedRubric;
+                                                                String?
+                                                                    fetchedRubric;
                                                                 if (contextId !=
                                                                     null) {
-                                                                  fetchedRubric = await LmsFactory
-                                                                          .getLmsService()
-                                                                      .getRubric(widget
+                                                                  MoodleRubric?
+                                                                      moodleRubric =
+                                                                      await LmsFactory.getLmsService().getRubric(widget
                                                                           .assignmentId
                                                                           .toString());
-                                                                  if (fetchedRubric ==
+                                                                  if (moodleRubric ==
                                                                       null) {
                                                                     print(
                                                                         'Failed to fetch rubric.');
@@ -428,8 +430,8 @@ class SubmissionListState extends State<SubmissionList> {
                                                                   }
                                                                   fetchedRubric =
                                                                       jsonEncode(
-                                                                          fetchedRubric.toJson() ??
-                                                                              {});
+                                                                          moodleRubric
+                                                                              .toJson());
                                                                 }
 
                                                                 String
