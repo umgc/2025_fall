@@ -38,6 +38,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   String message = 'Select filters and press Filter to view AI logs.';
   bool isError = false;
   bool isLoading = false;
+  DateTime? startDate;
+  DateTime? endDate;
 
   int? selected;
 
@@ -134,7 +136,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
             selectedCourse!,
             selectedAssignment,
             selectedStudent,
-            LocalStorageService.getSelectedClassroom().index);
+            LocalStorageService.getSelectedClassroom().index,
+            startDate,
+            endDate);
         setState(() {
           isLoading = false;
           if (newLogs.isEmpty) {
@@ -174,7 +178,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
 
   void _exportLogs() async {
     String defaultName =
-        '${selectedCourse?.fullName.replaceAll(" ", "")}_${selectedAssignment == null ? "AllAssignments" : selectedAssignment?.name.replaceAll(" ", "")}_${selectedStudent == null ? "AllStudents" : selectedStudent?.fullname}.xlsx';
+        '${selectedCourse?.fullName.replaceAll(" ", "")}_${selectedAssignment == null ? "AllAssignments" : selectedAssignment?.name.replaceAll(" ", "")}_${selectedStudent == null ? "AllStudents" : selectedStudent?.fullname}${startDate != null ? "_After_${getDateString(startDate!)}" : ""}${endDate != null ? "_Before_${getDateString(endDate!)}" : ""}.xlsx';
     if (kIsWeb) {
       // Build bytes.
       List<int> bytes = await _exportReportAsExcel();
@@ -380,10 +384,20 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                 },
                               ))),
                       SizedBox(width: 10),
+                      Expanded(
+                              child: ElevatedButton(
+                                onPressed: selectedCourse == null ? null : _selectStartDate,
+                                child: startDate == null ? Text("Select Start Date") : Text("Start Date: ${getDateString(startDate!)}"),
+                              )),
+                      SizedBox(width: 10),
+                      Expanded(
+                              child: ElevatedButton(
+                                onPressed: selectedCourse == null ? null : _selectEndDate,
+                                child: endDate == null ? Text("Select End Date") : Text("End Date: ${getDateString(endDate!)}"),
+                              )),
+                      SizedBox(width: 10),
                       ElevatedButton(
-                        onPressed: (selectedCourse == null &&
-                                selectedAssignment == null &&
-                                selectedStudent == null)
+                        onPressed: (selectedCourse == null)
                             ? null
                             : _queryDatabase,
                         child: const Text('Filter'),
@@ -464,6 +478,38 @@ class _AiLogScreenState extends State<AiLogScreen> {
                             message))))
           ],
         ));
+  }
+  
+  void _selectStartDate() async {
+    final DateTime? picked = await showDatePicker(
+      cancelText: "Clear",
+      context: context,
+      initialDate: endDate == null ? DateTime.now() : endDate!,
+      firstDate: DateTime(2025, 9),
+      lastDate: endDate == null ? DateTime.now() : endDate!,
+    );
+    
+    setState(() {
+      startDate = picked == null ? null : DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  void _selectEndDate() async {
+    final DateTime? picked = await showDatePicker(
+      cancelText: "Clear",
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: startDate == null ? DateTime(2025, 9) : startDate!,
+      lastDate: DateTime.now(),
+    );
+    
+    setState(() {
+      endDate = picked == null ? null : DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  String getDateString(DateTime date) {
+    return date.toLocal().toString().split(' ')[0];
   }
 }
 

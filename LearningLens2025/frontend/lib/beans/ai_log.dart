@@ -63,7 +63,7 @@ class AiLog {
       case 6:
         return model.displayName;
       case 7:
-        return created;
+        return created.toLocal();
       default:
         return "";
     }

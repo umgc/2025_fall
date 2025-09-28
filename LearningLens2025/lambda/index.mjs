@@ -37,7 +37,15 @@ export const handler = async (event, context) => {
       const assignmentId = BigInt(event["queryStringParameters"]["assignmentId"]);
       const studentId = BigInt(event["queryStringParameters"]["studentId"]);
       const lms = parseInt(event["queryStringParameters"]["lmsType"]);
-      return await getAllLogs(client, courseId, assignmentId, studentId, lms);
+      let startDate = new Date((event["queryStringParameters"]["startDate"]));
+      if (startDate.toString() === "Invalid Date") {
+        startDate = -1;
+      }
+      let endDate = new Date((event["queryStringParameters"]["endDate"]));
+        if (endDate.toString() === "Invalid Date") {
+        endDate = null;
+      }
+      return await getAllLogs(client, courseId, assignmentId, studentId, lms, startDate, endDate);
     }
   }
   if (method === "POST") {
@@ -74,13 +82,15 @@ export const handler = async (event, context) => {
     }
 };
 
-  async function getAllLogs(client, courseId, assignmentId, studentId, lms) {
+  async function getAllLogs(client, courseId, assignmentId, studentId, lms, startDate, endDate) {
     try {
       return await client`SELECT * FROM AI_LOGS WHERE
       course_id = ${courseId} AND
       lms_service = ${lms} AND
       (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
-      (${studentId} = -1  OR student_id = ${studentId});`;
+      (${studentId} = -1  OR student_id = ${studentId}) AND
+      (${startDate} = NULL OR date_trunc('day', time) >= date_trunc('day', ${startDate})) AND
+      (${endDate} = NULL OR date_trunc('day', time) <= date_trunc('day', ${endDate}));`;
     }
     catch (error) {
       console.error("Failed to get logs ", error);
