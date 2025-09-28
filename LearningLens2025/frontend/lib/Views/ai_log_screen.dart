@@ -41,7 +41,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   DateTime? startDate;
   DateTime? endDate;
   final DateTime earliestPossibleDate = DateTime(2025, 9);
-  final DateTime lastPossibleDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  final DateTime lastPossibleDate =
+      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   int? selected;
 
@@ -519,85 +520,101 @@ class _AiLogScreenState extends State<AiLogScreen> {
   String getDateString(DateTime date) {
     return date.toLocal().toString().split(' ')[0];
   }
-    // Function to show details in a dialog
+
+  // Function to show details in a dialog
   void _showDetailsDialog(BuildContext context) {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("AI Interaction"),
-          content: SingleChildScrollView(child: 
-            Column(
-              children: [
-                      Align(
-                        alignment:
-                            Alignment.centerRight,
-                        child: Container(
-                          margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color:Colors.deepPurple,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(3).toString(),
-                            style: TextStyle(
-                              color:
-                                  Colors.white,
-                              fontSize: 16,
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("AI Interaction"),
+            content: SingleChildScrollView(
+                child: Column(children: [
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                      margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        logSource.sortedData[selected!]
+                            .getValueForColumn(3)
+                            .toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ))),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                      margin: const EdgeInsets.fromLTRB(0, 6, 20, 6),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        logSource.sortedData[selected!]
+                            .getValueForColumn(4)
+                            .toString(),
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 16,
+                        ),
+                      ))),
+              Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                      margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
+                      padding: const EdgeInsets.all(14),
+                      decoration: logSource.sortedData[selected!]
+                              .getValueForColumn(5)
+                              .toString()
+                              .isEmpty
+                          ? null
+                          : BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          )
-                        )
-                ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.fromLTRB(0, 6, 20, 6),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(4).toString(),
-                            style: TextStyle(
-                              color:
-                                 Colors.black87,
-                              fontSize: 16,
-                            ),
-                          )
-                        )
-                ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
-                          padding: const EdgeInsets.all(14),
-                          decoration: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? null : BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? "There was no micro-reflection for this AI prompt." : logSource.sortedData[selected!].getValueForColumn(5).toString(),
-                            style: TextStyle(
-                              color: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ?
-                                Colors.grey :
-                                  Colors.white,
-                              fontSize: 16,
-                              fontStyle: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? FontStyle.italic : FontStyle.normal
-                            ),
-                          )
-                        )
-                )])),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Close"),
-            ),
-          ],
-        );});
+                      child: Text(
+                        logSource.sortedData[selected!]
+                                .getValueForColumn(5)
+                                .toString()
+                                .isEmpty
+                            ? "There was no micro-reflection for this AI prompt."
+                            : logSource.sortedData[selected!]
+                                .getValueForColumn(5)
+                                .toString(),
+                        style: TextStyle(
+                            color: logSource.sortedData[selected!]
+                                    .getValueForColumn(5)
+                                    .toString()
+                                    .isEmpty
+                                ? Colors.grey
+                                : Colors.white,
+                            fontSize: 16,
+                            fontStyle: logSource.sortedData[selected!]
+                                    .getValueForColumn(5)
+                                    .toString()
+                                    .isEmpty
+                                ? FontStyle.italic
+                                : FontStyle.normal),
+                      )))
+            ])),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text("Close"),
+              ),
+            ],
+          );
+        });
   }
 }
 
