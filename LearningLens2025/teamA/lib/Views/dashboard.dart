@@ -270,7 +270,7 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.grade_outlined
       },
       {
-        'title': 'IEP',
+        'title': 'Individualized Education Plan',
         'description': 'Manage Individualized Education Plans.',
         'onPressed': () => Navigator.push(
               context,
@@ -309,8 +309,8 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.quiz_outlined
       },
       {
-          'title': 'Gamification',
-          'description': 'Earn points and level up!',
+          'title': 'Create Game',
+          'description': 'Create games for students to learn while having fun.',
           'onPressed': () => Navigator.pushNamed(context, '/gamification'),
           'icon': Icons.videogame_asset_outlined
         },
@@ -354,7 +354,7 @@ class TeacherDashboard extends StatelessWidget {
         children: buttonData.map((data) => 
           SizedBox(
             width: 350,
-            height: 120,
+            height: 140,
             child: NavigationCard(
                   title: data['title'],
                   icon: data['icon'],
