@@ -377,6 +377,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                 onChanged: (newValue) {
                                   setState(() {
                                     selectedStudent = newValue;
+                                    _showDetailsDialog(context);
                                   });
                                 },
                               ))),
@@ -466,6 +467,92 @@ class _AiLogScreenState extends State<AiLogScreen> {
           ],
         ));
   }
+    // Function to show details in a dialog
+  void _showDetailsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Details"),
+          content: SingleChildScrollView(child: 
+            Expanded(
+            child: Column(
+              children: [
+                Expanded(
+                      child: Align(
+                        alignment:
+                            Alignment.centerRight,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color:Colors.deepPurple,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            logSource.sortedData[selected!].getValueForColumn(4).toString(),
+                            style: TextStyle(
+                              color:
+                                  Colors.white,
+                              fontSize: 16,
+                            ),
+                          )
+                        )
+                      )
+                ),
+                                Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            logSource.sortedData[selected!].getValueForColumn(5).toString(),
+                            style: TextStyle(
+                              color:
+                                 Colors.black87,
+                              fontSize: 16,
+                            ),
+                          )
+                        )
+                      )
+                ),
+                                Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            logSource.sortedData[selected!].getValueForColumn(6).toString().isEmpty ? "There was no micro-reflection for this AI prompt." : logSource.sortedData[selected!].getValueForColumn(6).toString(),
+                            style: TextStyle(
+                              color:
+                                  Colors.white,
+                              fontSize: 16,
+                              fontStyle: logSource.sortedData[selected!].getValueForColumn(6).toString().isEmpty ? FontStyle.italic : FontStyle.normal
+                            ),
+                          )
+                        )
+                      )
+                )]))),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text("Close"),
+            ),
+          ],
+        );});
+  }
 }
 
 class _AiLogSource extends DataTableSource {
@@ -493,8 +580,8 @@ class _AiLogSource extends DataTableSource {
       sortedData[row].getValueForColumn(column).toString(),
       softWrap: true,
       textAlign: TextAlign.start,
-      maxLines: row == parentState.selected ? null : 3,
-      overflow: row == parentState.selected ? null : TextOverflow.ellipsis,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
     ));
   }
 
