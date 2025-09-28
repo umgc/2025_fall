@@ -104,7 +104,6 @@ class LoginNotifier with ChangeNotifier {
   Future<void> signInWithMoodle(
       String username, String password, String moodleUrl) async {
     try {
-      
       MoodleLmsService lms = LmsFactory.getLmsServiceMoodle();
 
       await lms.login(username, password, moodleUrl);
@@ -210,8 +209,7 @@ class LoginNotifier with ChangeNotifier {
     } catch (e) {
       _googleState.isLoggedIn = false;
       _googleState.errorMessage = "Google login failed: ${e.toString()}";
-    }
-    finally{
+    } finally {
       LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
       notifyListeners();
     }

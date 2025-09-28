@@ -385,21 +385,26 @@ class _AiLogScreenState extends State<AiLogScreen> {
                               ))),
                       SizedBox(width: 10),
                       Expanded(
-                              child: ElevatedButton(
-                                onPressed: selectedCourse == null ? null : _selectStartDate,
-                                child: startDate == null ? Text("Select Start Date") : Text("Start Date: ${getDateString(startDate!)}"),
-                              )),
+                          child: ElevatedButton(
+                        onPressed:
+                            selectedCourse == null ? null : _selectStartDate,
+                        child: startDate == null
+                            ? Text("Select Start Date")
+                            : Text("Start Date: ${getDateString(startDate!)}"),
+                      )),
                       SizedBox(width: 10),
                       Expanded(
-                              child: ElevatedButton(
-                                onPressed: selectedCourse == null ? null : _selectEndDate,
-                                child: endDate == null ? Text("Select End Date") : Text("End Date: ${getDateString(endDate!)}"),
-                              )),
+                          child: ElevatedButton(
+                        onPressed:
+                            selectedCourse == null ? null : _selectEndDate,
+                        child: endDate == null
+                            ? Text("Select End Date")
+                            : Text("End Date: ${getDateString(endDate!)}"),
+                      )),
                       SizedBox(width: 10),
                       ElevatedButton(
-                        onPressed: (selectedCourse == null)
-                            ? null
-                            : _queryDatabase,
+                        onPressed:
+                            (selectedCourse == null) ? null : _queryDatabase,
                         child: const Text('Filter'),
                       ),
                       Spacer(),
@@ -479,7 +484,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
           ],
         ));
   }
-  
+
   void _selectStartDate() async {
     final DateTime? picked = await showDatePicker(
       cancelText: "Clear",
@@ -488,9 +493,11 @@ class _AiLogScreenState extends State<AiLogScreen> {
       firstDate: DateTime(2025, 9),
       lastDate: endDate == null ? DateTime.now() : endDate!,
     );
-    
+
     setState(() {
-      startDate = picked == null ? null : DateTime(picked.year, picked.month, picked.day);
+      startDate = picked == null
+          ? null
+          : DateTime(picked.year, picked.month, picked.day);
     });
   }
 
@@ -502,9 +509,11 @@ class _AiLogScreenState extends State<AiLogScreen> {
       firstDate: startDate == null ? DateTime(2025, 9) : startDate!,
       lastDate: DateTime.now(),
     );
-    
+
     setState(() {
-      endDate = picked == null ? null : DateTime(picked.year, picked.month, picked.day);
+      endDate = picked == null
+          ? null
+          : DateTime(picked.year, picked.month, picked.day);
     });
   }
 

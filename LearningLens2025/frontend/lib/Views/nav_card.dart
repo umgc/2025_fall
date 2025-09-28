@@ -7,12 +7,12 @@ class NavigationCard extends StatelessWidget {
   final VoidCallback? onPressed;
 
   const NavigationCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.icon,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

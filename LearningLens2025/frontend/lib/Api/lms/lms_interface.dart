@@ -25,7 +25,7 @@ abstract class LmsInterface {
   String? profileImage;
   List<Course>? courses;
   UserRole? role;
-  
+
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
   bool isLoggedIn();

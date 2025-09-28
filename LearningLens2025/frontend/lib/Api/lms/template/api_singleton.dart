@@ -48,7 +48,7 @@ class ApiSingleton implements LmsInterface {
 
   @override
   UserRole? role;
-  
+
   @override
   List<Course>? courses;
 

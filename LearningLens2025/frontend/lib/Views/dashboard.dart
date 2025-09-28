@@ -313,11 +313,11 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.quiz_outlined
       },
       {
-          'title': 'Create Game',
-          'description': 'Create games for students to learn while having fun.',
-          'onPressed': () => Navigator.pushNamed(context, '/gamification'),
-          'icon': Icons.videogame_asset_outlined
-        },
+        'title': 'Create Game',
+        'description': 'Create games for students to learn while having fun.',
+        'onPressed': () => Navigator.pushNamed(context, '/gamification'),
+        'icon': Icons.videogame_asset_outlined
+      },
     ];
 
     if (role == UserRole.student) {
@@ -355,18 +355,17 @@ class TeacherDashboard extends StatelessWidget {
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
-        children: buttonData.map((data) => 
-          SizedBox(
-            width: 350,
-            height: 140,
-            child: NavigationCard(
-                  title: data['title'],
-                  icon: data['icon'],
-                  description: data['description'],
-                  onPressed: data['onPressed']
-                )
-          )).toList(),
-        ),
+        children: buttonData
+            .map((data) => SizedBox(
+                width: 350,
+                height: 140,
+                child: NavigationCard(
+                    title: data['title'],
+                    icon: data['icon'],
+                    description: data['description'],
+                    onPressed: data['onPressed'])))
+            .toList(),
+      ),
     );
   }
 }
