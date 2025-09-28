@@ -193,7 +193,7 @@ class _FileManagementPageState extends State<FileManagementPage>
             children: [
               Expanded(
                 child: DropdownButtonFormField<FileCategory?>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: AppTheme.inputDecoration('Filter by category'),
                   items: [
                     const DropdownMenuItem<FileCategory?>(

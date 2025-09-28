@@ -3,6 +3,7 @@ import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
 import 'package:learninglens_app/notifiers/login_state.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -25,10 +26,8 @@ class LoginNotifier with ChangeNotifier {
   String? _password;
   String? _moodleUrl;
   String? _clientID; // for Google
-  String? _otherError; // If you want any global error, or remove if not needed
+  // String? _otherError; // Uncomment if you want any global error
   UserRole? _role;
-
-  final LmsInterface _api = LmsFactory.getLmsService(); // Moodle API instance
 
   bool get hasLLMKey => _hasLLMKey;
   String? get username => _username;
@@ -45,13 +44,13 @@ class LoginNotifier with ChangeNotifier {
   // ---------------------------------------
   Future<void> _loadLoginState() async {
     // Moodle
-    _moodleState.isLoggedIn = LocalStorageService.isLoggedIntoMoodle();
+    _moodleState.isLoggedIn = LmsFactory.getLmsServiceMoodle().isLoggedIn();
     _username = LocalStorageService.getUsername();
     _password = LocalStorageService.getPassword();
     _moodleUrl = LocalStorageService.getMoodleUrl();
 
     // Google
-    _googleState.isLoggedIn = LocalStorageService.isLoggedIntoGoogle();
+    _googleState.isLoggedIn = LmsFactory.getLmsServiceGoogle().isLoggedIn();
     _clientID = LocalStorageService.getGoogleClientId();
 
     // LLM Key
@@ -105,9 +104,11 @@ class LoginNotifier with ChangeNotifier {
   Future<void> signInWithMoodle(
       String username, String password, String moodleUrl) async {
     try {
-      await _api.login(username, password, moodleUrl);
+      MoodleLmsService lms = LmsFactory.getLmsServiceMoodle();
 
-      if (!_api.isLoggedIn()) {
+      await lms.login(username, password, moodleUrl);
+
+      if (!lms.isLoggedIn()) {
         // Logged in is false; set a custom error
         _moodleState.isLoggedIn = false;
         _moodleState.errorMessage = "Invalid username or password.";
@@ -115,7 +116,7 @@ class LoginNotifier with ChangeNotifier {
         return;
       }
       // Make sure moodle user is a teacher.
-      final UserRole role = await _api.getUserRole(_api.courses!);
+      final UserRole role = await lms.getUserRole();
       print(role);
 
       if (role == UserRole.teacher || role == UserRole.student) {
@@ -134,7 +135,7 @@ class LoginNotifier with ChangeNotifier {
         LocalStorageService.saveUserRole(role);
       } else {
         // user is not a teacher or a student
-        _api.logout();
+        lms.logout();
         _moodleState.isLoggedIn = false;
         _moodleState.errorMessage = "User does not have a valid role";
       }
@@ -184,11 +185,12 @@ class LoginNotifier with ChangeNotifier {
       if (!googleLms.isLoggedIn()) {
         _googleState.isLoggedIn = false;
         _googleState.errorMessage = 'Google login failed.';
+        LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
         notifyListeners();
         return;
       }
 
-      final UserRole role = await googleLms.getUserRole(googleLms.courses!);
+      final UserRole role = await googleLms.getUserRole();
       if (role == UserRole.teacher || role == UserRole.student) {
         _googleState.isLoggedIn = true;
         _googleState.errorMessage = null;
@@ -204,11 +206,11 @@ class LoginNotifier with ChangeNotifier {
         _googleState.isLoggedIn = false;
         _googleState.errorMessage = 'User does not have a valid role';
       }
-
-      notifyListeners();
     } catch (e) {
       _googleState.isLoggedIn = false;
       _googleState.errorMessage = "Google login failed: ${e.toString()}";
+    } finally {
+      LocalStorageService.saveGoogleLoginState(_googleState.isLoggedIn);
       notifyListeners();
     }
   }

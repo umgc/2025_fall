@@ -1,13 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/services/api_service.dart';
-import 'package:care_connect_app/providers/user_provider.dart';
-import 'package:care_connect_app/features/tasks/models/template_model.dart';
-import 'package:care_connect_app/features/tasks/presentation/pre_defined_task_screen.dart';
-import 'package:go_router/go_router.dart';
 import 'package:care_connect_app/widgets/task_widget.dart';
 
 
@@ -19,11 +14,11 @@ class PatientTasksWidget extends StatefulWidget {
   final bool isCaregiver;
 
   const PatientTasksWidget({
-    Key? key,
+    super.key,
     required this.patientId,
     required this.patientName,
     required this.isCaregiver,
-  }) : super(key: key);
+  });
 
   @override
   State<PatientTasksWidget> createState() => _PatientTasksWidgetState();

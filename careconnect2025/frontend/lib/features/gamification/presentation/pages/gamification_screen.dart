@@ -134,7 +134,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         ],
       ),
       drawer: const CommonDrawer(currentRoute: '/gamification'),
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
           isLoading
@@ -172,7 +172,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
                           dailyMessage,
                          style: textTheme.bodyMedium?.copyWith(
                             fontStyle: FontStyle.italic,
-                            color: colorScheme.onBackground,
+                            color: colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -180,7 +180,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
                       const SizedBox(height: 10),
                       LinearProgressIndicator(
                         value: (xp % xpTarget) / xpTarget,
-                        backgroundColor: colorScheme.surfaceVariant,
+                        backgroundColor: colorScheme.surfaceContainerHighest,
                         color: colorScheme.primary,
                         minHeight: 10,
                         borderRadius: BorderRadius.circular(10),

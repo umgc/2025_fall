@@ -10,6 +10,7 @@ import 'package:learninglens_app/Views/essays_view.dart';
 import 'package:learninglens_app/Views/g_lesson_plan.dart';
 import 'package:learninglens_app/Views/iep_page.dart';
 import 'package:learninglens_app/Views/lesson_plans.dart';
+import 'package:learninglens_app/Views/nav_card.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -81,7 +82,7 @@ class TeacherDashboard extends StatelessWidget {
   }
 
   UserRole getUserRole() {
-    return LocalStorageService.getUserRole();
+    return LmsFactory.getLmsService().role ?? UserRole.student;
   }
 
   String getClassroom() {
@@ -261,7 +262,7 @@ class TeacherDashboard extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => CourseList()),
             ),
-        'color': Colors.blue,
+        'icon': Icons.school_outlined
       },
       {
         'title': 'Essays',
@@ -270,16 +271,16 @@ class TeacherDashboard extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => EssaysView()),
             ),
-        'color': Colors.red,
+        'icon': Icons.grade_outlined
       },
       {
-        'title': 'IEP',
+        'title': 'Individualized Education Plan',
         'description': 'Manage Individualized Education Plans.',
         'onPressed': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => IepPage()),
             ),
-        'color': !isMoodleSelected ? Colors.grey : Colors.green,
+        'icon': Icons.architecture_outlined
       },
       {
         'title': 'Analytics',
@@ -288,7 +289,7 @@ class TeacherDashboard extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => AnalyticsPage()),
             ),
-        'color': !isMoodleSelected ? Colors.grey : Colors.cyan,
+        'icon': Icons.analytics_outlined
       },
       {
         'title': 'Lesson Plan',
@@ -300,7 +301,7 @@ class TeacherDashboard extends StatelessWidget {
                     !isMoodleSelected ? GoogleLessonPlans() : LessonPlans(),
               ),
             ),
-        'color': Colors.purple,
+        'icon': Icons.book_outlined
       },
       {
         'title': 'Assessments',
@@ -309,13 +310,13 @@ class TeacherDashboard extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => AssessmentsView()),
             ),
-        'color': Colors.orange,
+        'icon': Icons.quiz_outlined
       },
       {
-        'title': 'Gamification',
-        'description': 'Earn points and level up!',
+        'title': 'Create Game',
+        'description': 'Create games for students to learn while having fun.',
         'onPressed': () => Navigator.pushNamed(context, '/gamification'),
-        'color': Colors.amber,
+        'icon': Icons.videogame_asset_outlined
       },
     ];
 
@@ -325,146 +326,45 @@ class TeacherDashboard extends StatelessWidget {
           'title': 'Essay Assistant',
           'description': 'Utilize AI to help complete essay assignments.',
           'onPressed': null,
-          'color': Colors.blue,
+          'icon': Icons.assistant_outlined
         },
         {
           'title': 'Roleplay Assignment',
           'description': 'Complete AI-based roleplay assignments.',
           'onPressed': null,
-          'color': Colors.red,
+          'icon': Icons.smart_toy_outlined
         },
         {
           'title': 'Games',
           'description': 'Participate in games assigned to you.',
           'onPressed': null,
-          'color': Colors.green,
+          'icon': Icons.videogame_asset_outlined
         },
         {
           'title': 'Reflections',
           'description': 'Reflect on your use of AI for your assignments.',
           'onPressed': null,
-          'color': Colors.cyan,
+          'icon': Icons.note_add_outlined
         },
       ];
     }
 
-    return Wrap(
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 1200),
+      child: Wrap(
         spacing: 12,
         runSpacing: 12,
         alignment: WrapAlignment.center,
         children: buttonData
-            .map(
-              (data) => SizedBox(
-                width: constraints.maxWidth / 2 - 24, // mimic 2-column grid
-                child: _buildResponsiveColumn(
-                  context,
-                  data['description'],
-                  data['title'],
-                  baseDescriptionFontSize,
-                  baseButtonSize,
-                  baseButtonFontSize,
-                  data['onPressed'],
-                  data['color'],
-                ),
-              ),
-            )
-            .toList());
-  }
-
-  Widget _buildResponsiveColumn(
-    BuildContext context,
-    String description,
-    String title,
-    double descriptionFontSize,
-    double buttonSize,
-    double buttonFontSize,
-    void Function()? onPressed,
-    Color buttonColor,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          child: Text(
-            description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: descriptionFontSize,
-              color: Colors.black,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8), // Reduced from 10
-        _buildDashboardButton(
-          context,
-          title,
-          buttonSize,
-          buttonFontSize,
-          onPressed,
-          buttonColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDashboardButton(
-    BuildContext context,
-    String title,
-    double size,
-    double fontSize,
-    void Function()? onPressed,
-    Color buttonColor,
-  ) {
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: buttonColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey[500]!,
-            offset: const Offset(4, 4),
-            blurRadius: 15,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Container(
-        margin: EdgeInsets.all(size * 0.1),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey[600]!,
-              offset: const Offset(4, 4),
-              blurRadius: 10,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            shape: const CircleBorder(),
-            backgroundColor: Colors.transparent,
-            padding: EdgeInsets.all(size * 0.15),
-            shadowColor: Colors.transparent,
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: fontSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ),
+            .map((data) => SizedBox(
+                width: 350,
+                height: 140,
+                child: NavigationCard(
+                    title: data['title'],
+                    icon: data['icon'],
+                    description: data['description'],
+                    onPressed: data['onPressed'])))
+            .toList(),
       ),
     );
   }

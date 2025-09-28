@@ -59,6 +59,8 @@ class MoodleLmsService implements LmsInterface {
   String? profileImage;
   @override
   List<Course>? courses;
+  @override
+  UserRole? role;
 
   List<Override>? overrides;
 
@@ -125,8 +127,8 @@ class MoodleLmsService implements LmsInterface {
   }
 
   @override
-  Future<UserRole> getUserRole(List<Course> moodleCourses) async {
-    for (var course in moodleCourses) {
+  Future<UserRole> getUserRole() async {
+    for (var course in courses!) {
       final rolesResponse =
           await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
         'wstoken': _userToken,
@@ -145,13 +147,15 @@ class MoodleLmsService implements LmsInterface {
         (obj) => obj['username'].toString() == userName,
       );
 
-      for (var role in currUser['roles']) {
-        if (role['roleid'] == 3 || role['roleid'] == 4) {
-          return UserRole.teacher;
+      for (var currRole in currUser['roles']) {
+        if (currRole['roleid'] == 3 || currRole['roleid'] == 4) {
+          role = UserRole.teacher;
+          return role!;
         }
       }
     }
-    return UserRole.student;
+    role = UserRole.student;
+    return role!;
   }
 
   @override

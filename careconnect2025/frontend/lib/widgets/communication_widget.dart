@@ -37,11 +37,11 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
   Future<void> _initializeServices() async {
     setState(() => _isInitializing = true);
 
-    try {
-      await VideoCallService.initializeService();
-    } catch (e) {
-      print('Error initializing communication services: $e');
-    }
+    // try {
+    //   await VideoCallService.initializeService();
+    // } catch (e) {
+    //   print('Error initializing communication services: $e');
+    // }
 
     setState(() => _isInitializing = false);
   }
@@ -49,30 +49,30 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
   Future<void> _startVideoCall() async {
     try {
       final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
-      final callData = await VideoCallService.initiateCall(
-        callId: callId,
-        callerId: widget.currentUserId,
-        recipientId: widget.targetUserId,
-        isVideoCall: true,
-      );
+      // final callData = await VideoCallService.initiateCall(
+      //   callId: callId,
+      //   callerId: widget.currentUserId,
+      //   recipientId: widget.targetUserId,
+      //   isVideoCall: true,
+      // );
 
-      if (callData['success'] && mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => RealVideoCallWidget(
-              // Use REAL video call widget
-              callId: callData['callId'],
-              currentUserId: widget.currentUserId,
-              currentUserName: widget.currentUserName,
-              otherUserId: widget.targetUserId,
-              otherUserName: widget.targetUserName,
-              isVideoCall: true,
-            ),
-          ),
-        );
-      } else {
-        _showError('Failed to start video call');
-      }
+      // if (callData['success'] && mounted) {
+      //   Navigator.of(context).push(
+      //     MaterialPageRoute(
+      //       builder: (context) => RealVideoCallWidget(
+      //         // Use REAL video call widget
+      //         callId: callData['callId'],
+      //         currentUserId: widget.currentUserId,
+      //         currentUserName: widget.currentUserName,
+      //         otherUserId: widget.targetUserId,
+      //         otherUserName: widget.targetUserName,
+      //         isVideoCall: true,
+      //       ),
+      //     ),
+      //   );
+      // } else {
+      //   _showError('Failed to start video call');
+      // }
     } catch (e) {
       _showError('Error starting video call: $e');
     }
@@ -81,30 +81,30 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
   Future<void> _startAudioCall() async {
     try {
       final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
-      final callData = await VideoCallService.initiateCall(
-        callId: callId,
-        callerId: widget.currentUserId,
-        recipientId: widget.targetUserId,
-        isVideoCall: false,
-      );
+      // final callData = await VideoCallService.initiateCall(
+      //   callId: callId,
+      //   callerId: widget.currentUserId,
+      //   recipientId: widget.targetUserId,
+      //   isVideoCall: false,
+      // );
 
-      if (callData['success'] && mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => RealVideoCallWidget(
-              // Use REAL audio call widget
-              callId: callData['callId'],
-              currentUserId: widget.currentUserId,
-              currentUserName: widget.currentUserName,
-              otherUserId: widget.targetUserId,
-              otherUserName: widget.targetUserName,
-              isVideoCall: false, // Audio call
-            ),
-          ),
-        );
-      } else {
-        _showError('Failed to start audio call');
-      }
+      // if (callData['success'] && mounted) {
+      //   Navigator.of(context).push(
+      //     MaterialPageRoute(
+      //       builder: (context) => RealVideoCallWidget(
+      //         // Use REAL audio call widget
+      //         callId: callData['callId'],
+      //         currentUserId: widget.currentUserId,
+      //         currentUserName: widget.currentUserName,
+      //         otherUserId: widget.targetUserId,
+      //         otherUserName: widget.targetUserName,
+      //         isVideoCall: false, // Audio call
+      //       ),
+      //     ),
+      //   );
+      // } else {
+      //   _showError('Failed to start audio call');
+      // }
     } catch (e) {
       _showError('Error starting audio call: $e');
     }

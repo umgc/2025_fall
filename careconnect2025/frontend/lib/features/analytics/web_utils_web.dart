@@ -1,8 +1,9 @@
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'dart:typed_data';
+import 'dart:js_interop';
 
 // Web-specific utilities for file downloads
-void downloadFile(String fileName, dynamic bytes) {
+void downloadFile(String fileName, dynamic bytes, [String? contentType]) {
   final Uint8List data;
   if (bytes is Uint8List) {
     data = bytes;
@@ -12,14 +13,21 @@ void downloadFile(String fileName, dynamic bytes) {
     throw ArgumentError('Unsupported bytes type: ${bytes.runtimeType}');
   }
 
-  final blob = html.Blob([data]);
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  final anchor = html.document.createElement('a') as html.AnchorElement
+  // Convert Uint8List to JSUint8Array and create blob
+  final jsArray = data.toJS;
+  final blob = web.Blob(
+    [jsArray].toJS,
+    contentType != null ? web.BlobPropertyBag(type: contentType) : web.BlobPropertyBag(),
+  );
+
+  final url = web.URL.createObjectURL(blob);
+  final anchor = web.document.createElement('a') as web.HTMLAnchorElement
     ..href = url
     ..style.display = 'none'
     ..download = fileName;
-  html.document.body!.children.add(anchor);
+
+  web.document.body!.appendChild(anchor);
   anchor.click();
-  html.document.body!.children.remove(anchor);
-  html.Url.revokeObjectUrl(url);
+  web.document.body!.removeChild(anchor);
+  web.URL.revokeObjectURL(url);
 }

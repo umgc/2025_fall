@@ -49,8 +49,8 @@ void main() {
   // Set up test environment
   setUpAll(() async {
     // Initialize DotEnv for tests
-    dotenv.testLoad(
-      fileInput: '''
+    dotenv.loadFromString(
+      envString: '''
 CC_BASE_URL_WEB=http://localhost:8080/v1/api/
 CC_BASE_URL_ANDROID=http://10.0.2.2:8080/v1/api/
 CC_BASE_URL_OTHER=http://localhost:8080/v1/api/
@@ -258,7 +258,7 @@ STRIPE_PUBLISHABLE_KEY=test_key
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        const MaterialApp(home: FriendRequestsScreen(userId: 1)),
+        const MaterialApp(home: FriendRequestsScreen()),
       );
 
       expect(find.byType(FriendRequestsScreen), findsOneWidget);
@@ -267,7 +267,7 @@ STRIPE_PUBLISHABLE_KEY=test_key
 
     testWidgets('NewPostScreen renders correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(home: NewPostScreen(userId: 1)),
+        const MaterialApp(home: NewPostScreen()),
       );
 
       expect(find.byType(NewPostScreen), findsOneWidget);

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/ai_chat_service.dart';
 import '../config/theme/app_theme.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'dart:io';
@@ -53,13 +52,13 @@ class AIChat extends StatefulWidget {
   final int? userId;
 
   const AIChat({
-    Key? key,
+    super.key,
     required this.role,
     this.healthDataContext,
     this.isModal = false,
     this.patientId,
     this.userId,
-  }) : super(key: key);
+  });
 
   @override
   State<AIChat> createState() => _AIChatState();
@@ -72,8 +71,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   final List<UploadedFile> _uploadedFiles = [];
   bool _isLoading = false;
   bool _isFilePickerOpen = false;
-  double _chatWidth = 320.0;
-  double _chatHeight = 500.0;
+  final double _chatWidth = 320.0;
+  final double _chatHeight = 500.0;
   late AnimationController _animationController;
 
   @override
@@ -389,24 +388,24 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: msg.isUser
                             ? AppTheme.chatUserMessage
-                            : colorScheme.surfaceVariant,
+                            : colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: colorScheme.outlineVariant),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          MarkdownBody(
-                            data: msg.text,
-                            shrinkWrap: true,
-                            styleSheet: MarkdownStyleSheet(
-                              p: msg.isUser
-                                  ? theme.textTheme.bodyMedium?.copyWith(
-                                      color: AppTheme.chatTextOnPrimary,
-                                    )
-                                  : theme.textTheme.bodyMedium,
-                            ),
-                          ),
+                          // MarkdownBody(
+                          //   data: msg.text,
+                          //   shrinkWrap: true,
+                          //   styleSheet: MarkdownStyleSheet(
+                          //     p: msg.isUser
+                          //         ? theme.textTheme.bodyMedium?.copyWith(
+                          //             color: AppTheme.chatTextOnPrimary,
+                          //           )
+                          //         : theme.textTheme.bodyMedium,
+                          //   ),
+                          // ),
                           if (msg.errorMessage != null)
                             Text(
                               msg.errorMessage!,
@@ -476,7 +475,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),

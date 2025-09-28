@@ -187,10 +187,10 @@ class GoogleLmsService extends LmsInterface {
   }
 
   @override
-  Future<UserRole> getUserRole(List<Course> courses) async {
+  Future<UserRole> getUserRole() async {
     final GoogleSignInAccount? account = await _googleSignIn.signIn();
 
-    for (Course course in courses) {
+    for (Course course in courses!) {
       final response = await ApiService().httpGet(
         Uri.parse(
             'https://classroom.googleapis.com/v1/courses/${course.id}/teachers'),
@@ -1032,7 +1032,6 @@ class GoogleLmsService extends LmsInterface {
 
   Map<String, dynamic> _createTrueFalseQuestionRequest(
       String questionText, String correctAnswer, int points) {
-    List<String> options = ["True", "False"];
     return {
       'createItem': {
         'item': {

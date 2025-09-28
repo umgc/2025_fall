@@ -32,24 +32,24 @@ class HybridVideoCallService {
   }) async {
     if (kIsWeb) {
       // Web initialization - create new instance
-      _webService = platform_service.VideoCallService();
-      await _webService.initialize(
-        userId: userId,
-        onRemoteStreamReceived: onRemoteStreamReceived != null
-            ? (int uid) => onRemoteStreamReceived(uid)
-            : null,
-        onCallEnded: onCallEnded,
-      );
+      // _webService = platform_service.VideoCallService();
+      // await _webService.initialize(
+      //   userId: userId,
+      //   onRemoteStreamReceived: onRemoteStreamReceived != null
+      //       ? (int uid) => onRemoteStreamReceived(uid)
+      //       : null,
+      //   onCallEnded: onCallEnded,
+      // );
     } else {
       // Mobile initialization - use constructor
-      _mobileService = platform_service.VideoCallService();
-      await _mobileService.initialize(
-        userId: userId,
-        onRemoteStreamReceived: onRemoteStreamReceived != null
-            ? (int uid) => onRemoteStreamReceived(uid)
-            : null,
-        onCallEnded: onCallEnded,
-      );
+      // _mobileService = platform_service.VideoCallService();
+      // await _mobileService.initialize(
+      //   userId: userId,
+      //   onRemoteStreamReceived: onRemoteStreamReceived != null
+      //       ? (int uid) => onRemoteStreamReceived(uid)
+      //       : null,
+      //   onCallEnded: onCallEnded,
+      // );
     }
   }
 

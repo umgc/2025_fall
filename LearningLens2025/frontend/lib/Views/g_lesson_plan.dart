@@ -71,10 +71,10 @@ class _LessonPlanState extends State<GoogleLessonPlans> {
 
   Future<void> _checkApiKeys() async {
     setState(() {
-      String openAIKey = LocalStorageService.getOpenAIKey() ?? '';
-      String grokKey = LocalStorageService.getGrokKey() ?? '';
-      String perplexityKey = LocalStorageService.getPerplexityKey() ?? '';
-      String deepseekKey = LocalStorageService.getDeepseekKey() ?? '';
+      String openAIKey = LocalStorageService.getOpenAIKey();
+      String grokKey = LocalStorageService.getGrokKey();
+      String perplexityKey = LocalStorageService.getPerplexityKey();
+      String deepseekKey = LocalStorageService.getDeepseekKey();
 
       hasOpenAIKey = openAIKey.isNotEmpty;
       hasGrokKey = grokKey.isNotEmpty;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+// import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../config/theme/app_theme.dart';
 
@@ -26,7 +26,7 @@ class RealVideoCallWidget extends StatefulWidget {
 }
 
 class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
-  late RtcEngine _engine;
+  // late RtcEngine _engine;
   bool _isInitialized = false;
   String _callStatus = 'Connecting...';
   int? _remoteUid;
@@ -66,59 +66,59 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
       print('📱 App ID: 6dd0e8e31625434e8dd185bcb075cd79');
       print('🎬 Channel: ${widget.callId}');
 
-      // Create Agora RTC Engine
-      _engine = createAgoraRtcEngine();
-      await _engine.initialize(
-        const RtcEngineContext(appId: "6dd0e8e31625434e8dd185bcb075cd79"),
-      );
+      // // Create Agora RTC Engine
+      // _engine = createAgoraRtcEngine();
+      // await _engine.initialize(
+      //   const RtcEngineContext(appId: "6dd0e8e31625434e8dd185bcb075cd79"),
+      // );
 
       // Set up event handlers
-      _engine.registerEventHandler(
-        RtcEngineEventHandler(
-          onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-            print('✅ Joined channel successfully');
-            setState(() {
-              _localUserJoined = true;
-              _callStatus = widget.isVideoCall
-                  ? 'Video call connected'
-                  : 'Audio call connected';
-            });
-          },
-          onUserJoined: (RtcConnection connection, int uid, int elapsed) {
-            print('👥 User joined: $uid');
-            setState(() {
-              _remoteUid = uid;
-              _callStatus = '${widget.otherUserName} joined the call';
-            });
-          },
-          onUserOffline:
-              (
-                RtcConnection connection,
-                int uid,
-                UserOfflineReasonType reason,
-              ) {
-                print('👋 User left: $uid');
-                setState(() {
-                  _remoteUid = null;
-                  _callStatus = '${widget.otherUserName} left the call';
-                });
-              },
-        ),
-      );
+      // _engine.registerEventHandler(
+      //   RtcEngineEventHandler(
+      //     onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+      //       print('✅ Joined channel successfully');
+      //       setState(() {
+      //         _localUserJoined = true;
+      //         _callStatus = widget.isVideoCall
+      //             ? 'Video call connected'
+      //             : 'Audio call connected';
+      //       });
+      //     },
+      //     onUserJoined: (RtcConnection connection, int uid, int elapsed) {
+      //       print('👥 User joined: $uid');
+      //       setState(() {
+      //         _remoteUid = uid;
+      //         _callStatus = '${widget.otherUserName} joined the call';
+      //       });
+      //     },
+      //     onUserOffline:
+      //         (
+      //           RtcConnection connection,
+      //           int uid,
+      //           UserOfflineReasonType reason,
+      //         ) {
+      //           print('👋 User left: $uid');
+      //           setState(() {
+      //             _remoteUid = null;
+      //             _callStatus = '${widget.otherUserName} left the call';
+      //           });
+      //         },
+      //   ),
+      // );
 
       // Enable video if this is a video call
-      if (widget.isVideoCall) {
-        await _engine.enableVideo();
-        await _engine.startPreview();
-      }
-
-      // Join the channel
-      await _engine.joinChannel(
-        token: "", // Empty string for no token
-        channelId: widget.callId,
-        uid: 0, // Let Agora assign a UID
-        options: const ChannelMediaOptions(),
-      );
+      // if (widget.isVideoCall) {
+      //   await _engine.enableVideo();
+      //   await _engine.startPreview();
+      // }
+      //
+      // // Join the channel
+      // await _engine.joinChannel(
+      //   token: "", // Empty string for no token
+      //   channelId: widget.callId,
+      //   uid: 0, // Let Agora assign a UID
+      //   options: const ChannelMediaOptions(),
+      // );
 
       setState(() {
         _isInitialized = true;
@@ -137,8 +137,8 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
   @override
   void dispose() {
     if (_isInitialized) {
-      _engine.leaveChannel();
-      _engine.release();
+      // _engine.leaveChannel();
+      // _engine.release();
     }
     super.dispose();
   }
@@ -190,66 +190,67 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
       children: [
         // Remote video (full screen)
         Expanded(
-          child: _remoteUid != null
-              ? AgoraVideoView(
-                  controller: VideoViewController.remote(
-                    rtcEngine: _engine,
-                    canvas: VideoCanvas(uid: _remoteUid),
-                    connection: RtcConnection(channelId: widget.callId),
-                  ),
-                )
-              : Container(
-                  color: backgroundColor,
-                  child: const Center(
-                    child: Text(
-                      'Waiting for other user...',
-                      style: TextStyle(
-                        color: AppTheme.videoCallText,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ),
+          child: Text("Placeholder")
+          // child: _remoteUid != null
+          //     ? AgoraVideoView(
+          //         controller: VideoViewController.remote(
+          //           rtcEngine: _engine,
+          //           canvas: VideoCanvas(uid: _remoteUid),
+          //           connection: RtcConnection(channelId: widget.callId),
+          //         ),
+          //       )
+          //     : Container(
+          //         color: backgroundColor,
+          //         child: const Center(
+          //           child: Text(
+          //             'Waiting for other user...',
+          //             style: TextStyle(
+          //               color: AppTheme.videoCallText,
+          //               fontSize: 18,
+          //             ),
+          //           ),
+          //         ),
+          //       ),
         ),
         // Local video (small overlay)
-        if (_localUserJoined)
-          Positioned(
-            top: 20,
-            right: 20,
-            width: 120,
-            height: 160,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: AgoraVideoView(
-                controller: VideoViewController(
-                  rtcEngine: _engine,
-                  canvas: const VideoCanvas(uid: 0),
-                ),
-              ),
-            ),
-          ),
+        // if (_localUserJoined)
+        //   Positioned(
+        //     top: 20,
+        //     right: 20,
+        //     width: 120,
+        //     height: 160,
+        //     child: ClipRRect(
+        //       borderRadius: BorderRadius.circular(8),
+        //       child: AgoraVideoView(
+        //         controller: VideoViewController(
+        //           rtcEngine: _engine,
+        //           canvas: const VideoCanvas(uid: 0),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
       ],
     );
   }
 
   // Toggle camera on/off
-  void _toggleCamera() async {
-    await _engine.enableLocalVideo(!_localUserJoined);
-    setState(() {
-      _localUserJoined = !_localUserJoined;
-    });
-  }
-
-  // Toggle microphone on/off
-  void _toggleMicrophone() async {
-    await _engine.muteLocalAudioStream(!_localUserJoined);
-  }
-
-  // End the call
-  void _endCall() async {
-    await _engine.leaveChannel();
-    Navigator.of(context).pop();
-  }
+  // void _toggleCamera() async {
+  //   await _engine.enableLocalVideo(!_localUserJoined);
+  //   setState(() {
+  //     _localUserJoined = !_localUserJoined;
+  //   });
+  // }
+  //
+  // // Toggle microphone on/off
+  // void _toggleMicrophone() async {
+  //   await _engine.muteLocalAudioStream(!_localUserJoined);
+  // }
+  //
+  // // End the call
+  // void _endCall() async {
+  //   await _engine.leaveChannel();
+  //   Navigator.of(context).pop();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -323,7 +324,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     FloatingActionButton(
-                      onPressed: _toggleCamera,
+                      onPressed: () => {} ,
                       backgroundColor: AppTheme.videoCallText,
                       child: const Icon(
                         Icons.videocam,
@@ -331,7 +332,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
                       ),
                     ),
                     FloatingActionButton(
-                      onPressed: _toggleMicrophone,
+                      onPressed: () => {},
                       backgroundColor: AppTheme.videoCallText,
                       child: const Icon(
                         Icons.mic,
@@ -339,7 +340,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
                       ),
                     ),
                     FloatingActionButton(
-                      onPressed: _endCall,
+                      onPressed: () => {},
                       backgroundColor:
                           Theme.of(context).brightness == Brightness.dark
                           ? AppTheme.videoCallEndCallDarkTheme

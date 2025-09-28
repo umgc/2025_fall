@@ -81,7 +81,7 @@ import '../model/message_dto.dart';
           user2: widget.peerUserId,
         );
 
-        final updatedMessages = (data as List)
+        final updatedMessages = (data)
             .map((json) => MessageDto.fromJson(json))
             .toList();
 

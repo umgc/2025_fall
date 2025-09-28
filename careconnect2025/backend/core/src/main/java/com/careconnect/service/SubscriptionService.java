@@ -8,6 +8,7 @@ import com.careconnect.repository.PaymentRepository;
 import com.careconnect.repository.PlanRepository;
 import com.careconnect.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.careconnect.repository.SubscriptionRepository;
@@ -35,6 +36,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "careconnect.stripe.enabled", havingValue = "true", matchIfMissing = true)
 public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
