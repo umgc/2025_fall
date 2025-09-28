@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
 
 class GamificationView extends StatefulWidget {
   const GamificationView({super.key});
@@ -16,7 +18,8 @@ class _GamificationViewState extends State<GamificationView> {
 
   @override
   Widget build(BuildContext context) {
-    bool isTeacher = true; // TEMP: Change to logic check later
+    bool isTeacher = LocalStorageService.getUserRole() ==
+        UserRole.teacher; // TEMP: Change to logic check later
 
     return Scaffold(
       appBar: AppBar(title: const Text('Gamification')),

@@ -221,11 +221,8 @@ class CarouselCard extends StatelessWidget {
   }
 
   static CarouselCard fromEssay(Assignment input) {
-    return CarouselCard(
-        input.name,
-        input.description.replaceAll(RegExp(r"<[^>]*>"), ""),
-        'essay',
-        input.id ?? 0,
+    return CarouselCard(input.name,
+        input.description.replaceAll(RegExp(r"<[^>]*>"), ""), 'essay', input.id,
         courseId: input.courseId);
   }
 
