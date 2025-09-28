@@ -1,0 +1,48 @@
+name: learninglens_app
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.3.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  editable: ^2.0.0  
+  flutter_dotenv: ^5.1.0
+  xml: ^6.2.2
+  http: ^1.2.1
+  provider: ^6.0.0
+  path: ^1.8.0
+  intl: ^0.20.2
+  flutter_colorpicker: ^1.1.0
+  shared_preferences: ^2.0.8
+  logger: ^1.4.0
+  google_sign_in: ^6.2.2
+  file_picker: ^9.0.2
+  pdf: ^3.10.1
+  excel: ^2.0.0
+  postgres: ^3.5.6
+  fl_chart: ^1.1.0
+  path_provider: ^2.1.5
+  url_launcher: ^6.3.2
+  logging: ^1.3.0
+
+  collection: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+
+flutter:
+  assets:
+    - assets/login_image.png
+    - ./.env
+
+  uses-material-design: true
