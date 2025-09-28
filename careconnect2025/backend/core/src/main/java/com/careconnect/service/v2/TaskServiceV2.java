@@ -377,7 +377,7 @@ public class TaskServiceV2 {
                                         n.getTitle(),
                                         n.getBody(),
                                         n.getNotificationType(),
-                                        n.getScheduledTime().toString()))
+                                        n.getScheduledTime() != null ? n.getScheduledTime().toString() : null))
                                 .toList()
                         : null)
                 .build();
@@ -392,7 +392,9 @@ public class TaskServiceV2 {
             return;
 
         LocalDate startDate = LocalDate.parse(dto.getDate().substring(0, 10));
-        LocalTime baseTime = LocalTime.parse(dto.getTimeOfDay());
+        LocalTime baseTime = (dto.getTimeOfDay() != null)
+                ? LocalTime.parse(dto.getTimeOfDay())
+                : LocalTime.MIDNIGHT;
         LocalDateTime baseDateTime = startDate.atTime(baseTime);
 
         Long parentId = parentTask.getParentTaskId() != null
@@ -537,7 +539,11 @@ public class TaskServiceV2 {
      */
     private Task buildOccurrence(Task parentTask, TaskDtoV2 dto, Patient patient,
             LocalDateTime baseDateTime, LocalDate occurrenceDate) {
-        LocalDateTime occurrenceDateTime = occurrenceDate.atTime(LocalTime.parse(dto.getTimeOfDay()));
+
+        LocalTime occTime = (dto.getTimeOfDay() != null)
+                ? LocalTime.parse(dto.getTimeOfDay())
+                : LocalTime.MIDNIGHT;
+        LocalDateTime occurrenceDateTime = occurrenceDate.atTime(occTime);
 
         Task occurrence = Task.builder()
                 .name(dto.getName())
