@@ -24,7 +24,7 @@ class AILoggingSingleton {
   }
 
   Future<List<AiLog>> getLogs(Course course, Assignment? assignment,
-      Participant? student, int lmsType, DateTime? startDate, DateTime? endDate) async {
+      Participant? student, int lmsType, DateTime startDate, DateTime endDate) async {
     List<AiLog> list = List.empty(growable: true);
     int courseId = course.id;
     int assignmentIdParam = assignment?.id ?? -1;
@@ -50,16 +50,13 @@ class AILoggingSingleton {
           LlmType.values.elementAt(m["ai_model"]),
           m["reflection"],
           m["log_id"],
-          LmsType.values.elementAt(m["lms_service"]),
+          LocalStorageService.getSelectedClassroom(),
           DateTime.parse(m["time"])));
     }
     return list;
   }
 
-  String getDateString(DateTime? date) {
-    if (date == null) {
-      return "null";
-    }
+  String getDateString(DateTime date) {
     return date.toUtc().toString().split(' ')[0];
   }
 

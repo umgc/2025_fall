@@ -41,6 +41,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
   bool isLoading = false;
   DateTime? startDate;
   DateTime? endDate;
+  final DateTime earliestPossibleDate = DateTime(2025, 9);
+  final DateTime lastPossibleDate = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
   int? selected;
 
@@ -138,8 +140,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
             selectedAssignment,
             selectedStudent,
             LocalStorageService.getSelectedClassroom().index,
-            startDate,
-            endDate);
+            startDate ?? earliestPossibleDate,
+            endDate ?? lastPossibleDate);
         setState(() {
           isLoading = false;
           if (newLogs.isEmpty) {
@@ -168,12 +170,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
 
   void selectionChanged(int? index) {
     setState(() {
-      if (index == selected) {
-        selected = null;
-      } else {
-        selected = index;
-      }
+      selected = index;
       logSource.selectedChanged();
+      _showDetailsDialog(context);
     });
   }
 
@@ -381,7 +380,6 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                 onChanged: (newValue) {
                                   setState(() {
                                     selectedStudent = newValue;
-                                    _showDetailsDialog(context);
                                   });
                                 },
                               ))),
@@ -486,9 +484,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
     final DateTime? picked = await showDatePicker(
       cancelText: "Clear",
       context: context,
-      initialDate: endDate == null ? DateTime.now() : endDate!,
-      firstDate: DateTime(2025, 9),
-      lastDate: endDate == null ? DateTime.now() : endDate!,
+      initialDate: endDate == null ? lastPossibleDate : endDate!,
+      firstDate: earliestPossibleDate,
+      lastDate: endDate == null ? lastPossibleDate : endDate!,
     );
     
     setState(() {
@@ -500,9 +498,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
     final DateTime? picked = await showDatePicker(
       cancelText: "Clear",
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: startDate == null ? DateTime(2025, 9) : startDate!,
-      lastDate: DateTime.now(),
+      initialDate: lastPossibleDate,
+      firstDate: startDate == null ? earliestPossibleDate : startDate!,
+      lastDate: lastPossibleDate,
     );
     
     setState(() {
@@ -519,24 +517,22 @@ class _AiLogScreenState extends State<AiLogScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Details"),
+          title: Text("AI Interaction"),
           content: SingleChildScrollView(child: 
-            Expanded(
-            child: Column(
+            Column(
               children: [
-                Expanded(
-                      child: Align(
+                      Align(
                         alignment:
                             Alignment.centerRight,
                         child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color:Colors.deepPurple,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(4).toString(),
+                            logSource.sortedData[selected!].getValueForColumn(3).toString(),
                             style: TextStyle(
                               color:
                                   Colors.white,
@@ -544,20 +540,18 @@ class _AiLogScreenState extends State<AiLogScreen> {
                             ),
                           )
                         )
-                      )
                 ),
-                                Expanded(
-                      child: Align(
+                      Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          margin: const EdgeInsets.fromLTRB(0, 6, 20, 6),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: Colors.grey[300],
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(5).toString(),
+                            logSource.sortedData[selected!].getValueForColumn(4).toString(),
                             style: TextStyle(
                               color:
                                  Colors.black87,
@@ -565,30 +559,28 @@ class _AiLogScreenState extends State<AiLogScreen> {
                             ),
                           )
                         )
-                      )
                 ),
-                                Expanded(
-                      child: Align(
+                      Align(
                         alignment: Alignment.centerRight,
                         child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
                           padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurple,
+                          decoration: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? null : BoxDecoration(
+                            color: Colors.blue,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            logSource.sortedData[selected!].getValueForColumn(6).toString().isEmpty ? "There was no micro-reflection for this AI prompt." : logSource.sortedData[selected!].getValueForColumn(6).toString(),
+                            logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? "There was no micro-reflection for this AI prompt." : logSource.sortedData[selected!].getValueForColumn(5).toString(),
                             style: TextStyle(
-                              color:
+                              color: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ?
+                                Colors.grey :
                                   Colors.white,
                               fontSize: 16,
-                              fontStyle: logSource.sortedData[selected!].getValueForColumn(6).toString().isEmpty ? FontStyle.italic : FontStyle.normal
+                              fontStyle: logSource.sortedData[selected!].getValueForColumn(5).toString().isEmpty ? FontStyle.italic : FontStyle.normal
                             ),
                           )
                         )
-                      )
-                )]))),
+                )])),
           actions: [
             TextButton(
               onPressed: () {
