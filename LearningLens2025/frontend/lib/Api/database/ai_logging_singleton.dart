@@ -23,8 +23,13 @@ class AILoggingSingleton {
     await http.post(url);
   }
 
-  Future<List<AiLog>> getLogs(Course course, Assignment? assignment,
-      Participant? student, int lmsType, DateTime? startDate, DateTime? endDate) async {
+  Future<List<AiLog>> getLogs(
+      Course course,
+      Assignment? assignment,
+      Participant? student,
+      int lmsType,
+      DateTime? startDate,
+      DateTime? endDate) async {
     List<AiLog> list = List.empty(growable: true);
     int courseId = course.id;
     int assignmentIdParam = assignment?.id ?? -1;

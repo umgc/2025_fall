@@ -1,6 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
+import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -310,9 +311,9 @@ class LocalStorageService {
 
   static bool canUserAccessApp() {
     bool isLoggedIntoGoogleClassroom =
-        LocalStorageService.isLoggedIntoGoogle() &&
+        LmsFactory.getLmsServiceGoogle().isLoggedIn() &&
             LocalStorageService.hasLLMKey();
-    bool isLoggedIntoMoodle = LocalStorageService.isLoggedIntoMoodle() &&
+    bool isLoggedIntoMoodle = LmsFactory.getLmsServiceMoodle().isLoggedIn() &&
         LocalStorageService.hasLLMKey();
     return isMoodle() ? isLoggedIntoMoodle : isLoggedIntoGoogleClassroom;
   }

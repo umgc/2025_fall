@@ -47,6 +47,9 @@ class ApiSingleton implements LmsInterface {
   String? profileImage;
 
   @override
+  UserRole? role;
+
+  @override
   List<Course>? courses;
 
   // Authentication/Login methods
@@ -62,7 +65,7 @@ class ApiSingleton implements LmsInterface {
   }
 
   @override
-  Future<UserRole> getUserRole(List<Course> courses) async {
+  Future<UserRole> getUserRole() async {
     // TODO implement getUserRole
     throw UnimplementedError();
   }
