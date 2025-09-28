@@ -22,9 +22,6 @@ class EssayEditPage extends StatefulWidget {
 }
 
 class EssayEditPageState extends State<EssayEditPage> {
-  // Checks is weights sum to 100
-  bool _weightsValid = true;
-
   // Convert JSON to rows compatible with Editable
   List rows = [];
 
@@ -393,7 +390,7 @@ class EssayEditPageState extends State<EssayEditPage> {
     final pdfBytes = await pdf.save();
     final blob = html.Blob([pdfBytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
+    html.AnchorElement(href: url)
       ..setAttribute('download', fileName)
       ..click();
     html.Url.revokeObjectUrl(url);
@@ -425,7 +422,7 @@ class EssayEditPageState extends State<EssayEditPage> {
       final excelBytes = excel.encode()!;
       final blob = html.Blob([excelBytes]);
       final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
+      html.AnchorElement(href: url)
         ..setAttribute('download', fileName)
         ..click();
       html.Url.revokeObjectUrl(url);

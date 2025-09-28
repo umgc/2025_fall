@@ -1032,7 +1032,6 @@ class GoogleLmsService extends LmsInterface {
 
   Map<String, dynamic> _createTrueFalseQuestionRequest(
       String questionText, String correctAnswer, int points) {
-    List<String> options = ["True", "False"];
     return {
       'createItem': {
         'item': {

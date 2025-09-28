@@ -350,25 +350,6 @@ class QuizMoodleState extends State<QuizMoodle> {
                               }
 
                               try {
-                                DateTime submissionDate = DateTime(
-                                  int.parse(selectedYearSubmission),
-                                  months.indexOf(selectedMonthSubmission) + 1,
-                                  int.parse(selectedDaySubmission),
-                                  int.parse(selectedHourSubmission),
-                                  int.parse(selectedMinuteSubmission),
-                                );
-
-                                DateTime dueDate = DateTime(
-                                  int.parse(selectedYearDue),
-                                  months.indexOf(selectedMonthDue) + 1,
-                                  int.parse(selectedDayDue),
-                                  int.parse(selectedHourDue),
-                                  int.parse(selectedMinuteDue),
-                                );
-
-                                String formattedDueDate =
-                                    "${dueDate.year}-${dueDate.month.toString().padLeft(2, '0')}-${dueDate.day.toString().padLeft(2, '0')}-${dueDate.hour.toString().padLeft(2, '0')}-${dueDate.minute.toString().padLeft(2, '0')}";
-
                                 var quizid =
                                     await LmsFactory.getLmsService().createQuiz(
                                   selectedCourse,
@@ -461,14 +442,6 @@ class QuizMoodleState extends State<QuizMoodle> {
                               }
 
                               try {
-                                DateTime submissionDate = DateTime(
-                                  int.parse(selectedYearSubmission),
-                                  months.indexOf(selectedMonthSubmission) + 1,
-                                  int.parse(selectedDaySubmission),
-                                  int.parse(selectedHourSubmission),
-                                  int.parse(selectedMinuteSubmission),
-                                );
-
                                 DateTime dueDate = DateTime(
                                   int.parse(selectedYearDue),
                                   months.indexOf(selectedMonthDue) + 1,

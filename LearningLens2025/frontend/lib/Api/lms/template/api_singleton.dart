@@ -236,7 +236,6 @@ class ApiSingleton implements LmsInterface {
     throw UnimplementedError();
   }
 
-  @override
   Future<List<QuestionType>> getQuestionsFromQuizGoogle(
       String courseId, String courseWorkId) async {
     // TODO: implement google api code

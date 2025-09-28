@@ -26,7 +26,7 @@ class LoginNotifier with ChangeNotifier {
   String? _password;
   String? _moodleUrl;
   String? _clientID; // for Google
-  String? _otherError; // If you want any global error, or remove if not needed
+  // String? _otherError; // Uncomment if you want any global error
   UserRole? _role;
 
   bool get hasLLMKey => _hasLLMKey;
