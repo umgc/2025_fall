@@ -53,7 +53,7 @@ class PatientCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
-        onTap: onTap,
+        onTap: null,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           decoration: BoxDecoration(
@@ -155,6 +155,34 @@ class PatientCard extends StatelessWidget {
                       theme,
                     ),
                   ],
+                ),
+
+                // "View Details" button
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: onTap, // reuses your existing callback
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 40), // comfy tap target
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const SizedBox.shrink(),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text('View Details'),
+                          SizedBox(width: 4),
+                          Icon(Icons.chevron_right, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

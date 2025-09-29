@@ -1,6 +1,7 @@
 import 'package:care_connect_app/features/health/caregiver-patient-list/models/patient-info.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient-info-card.dart';
 import 'package:care_connect_app/widgets/default_app_header.dart';
+import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
 import 'package:flutter/material.dart';
 
 /// Main screen for caregivers to view and manage their patient list.
@@ -368,16 +369,17 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                         return PatientCard(
                           patient: patient,
                           onTap: () {
-                            // Navigate to patient details
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Tapped on ${patient.fullName}'),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => PatientDetailsPage(
+                                  patientId: patient.id,   // or patient: patient
+                                ),
                               ),
                             );
                           },
                         );
                       },
-                    ),
+              ),
             ),
           ],
         ),
