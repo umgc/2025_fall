@@ -408,13 +408,15 @@ class _PatientDashboardState extends State<PatientDashboard> {
     final theme = Theme.of(context);
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
-    final String userName = user?.name as String;
     final isTablet = MediaQuery.of(context).size.width > 600;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+
       appBar: DashboardAppHeader(
-        userName: userName,
+        // TODO - the conditional needs to be removed. There is a bug in the
+        //        backend where patient and caregiver data is not fetched.
+        userName: user?.name ?? '',
         role: user?.role as String,
       ),
       floatingActionButton: FloatingActionButton(

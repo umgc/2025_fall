@@ -16,11 +16,12 @@ class CaregiverDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
-    final String userName = user?.name as String;
 
     return Scaffold(
       appBar: DashboardAppHeader(
-        userName: userName,
+        // TODO - the conditional needs to be removed. There is a bug in the
+        //        backend where patient and caregiver data is not fetched.
+        userName: user?.name ?? '',
         role: user?.role as String,
       ),
       backgroundColor: AppTheme.backgroundSecondary,
