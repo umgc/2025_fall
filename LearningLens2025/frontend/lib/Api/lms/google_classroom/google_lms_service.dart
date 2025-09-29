@@ -201,11 +201,12 @@ class GoogleLmsService extends LmsInterface {
       final List<dynamic> teachers = decodedJson['teachers'];
       for (dynamic teacher in teachers) {
         if (teacher['userId'].toString() == account!.id) {
+          role = UserRole.teacher;
           return UserRole.teacher;
         }
       }
     }
-
+    role = UserRole.student;
     return UserRole.student;
   }
 
