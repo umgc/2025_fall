@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -178,13 +179,13 @@ public class TaskServiceV2 {
         Task existingTask = getTaskById(taskId);
 
         if (!Boolean.TRUE.equals(taskDto.getUpdateSeries())) {
-            // Single-task update
+            // ---- Single-task update ----
             applyTaskUpdates(existingTask, taskDto, false);
             Task saved = taskRepository.save(existingTask);
             return mapToDto(saved);
         }
 
-        // --- SERIES UPDATE ---
+        // ---- SERIES UPDATE ----
         Long parentId = (existingTask.getParentTaskId() != null)
                 ? existingTask.getParentTaskId()
                 : existingTask.getId();
@@ -194,52 +195,116 @@ public class TaskServiceV2 {
                 : taskRepository.findById(parentId)
                         .orElseThrow(() -> new ParentTaskNotFoundException(parentId));
 
-        // Snapshot old fields to detect changes
-        String oldName = parentTask.getName();
-        String oldDesc = parentTask.getDescription();
-        String oldType = parentTask.getTaskType();
+        // Snapshot old fields
         String oldFreq = parentTask.getFrequency();
         Integer oldInterval = parentTask.getTaskInterval();
         Integer oldCount = parentTask.getDoCount();
         String oldDays = parentTask.getDaysOfWeek();
+
+        // Original implied end (before changes)
+        LocalDate originalEnd = impliedEndDateFromSaved(parentTask);
 
         // 1) Update parent itself
         applyTaskUpdates(parentTask, taskDto, true);
         taskRepository.save(parentTask);
 
         // Detect changes
-        boolean nameChanged = !java.util.Objects.equals(oldName, parentTask.getName());
-        boolean descChanged = !java.util.Objects.equals(oldDesc, parentTask.getDescription());
-        boolean typeChanged = !java.util.Objects.equals(oldType, parentTask.getTaskType());
-        boolean freqChanged = !java.util.Objects.equals(oldFreq, parentTask.getFrequency());
-        boolean intvChanged = !java.util.Objects.equals(oldInterval, parentTask.getTaskInterval());
-        boolean countChanged = !java.util.Objects.equals(oldCount, parentTask.getDoCount());
-        boolean daysChanged = !java.util.Objects.equals(oldDays, parentTask.getDaysOfWeek());
+        boolean freqChanged = !Objects.equals(oldFreq, parentTask.getFrequency())
+                || !Objects.equals(oldInterval, parentTask.getTaskInterval());
+        boolean daysChanged = !Objects.equals(oldDays, parentTask.getDaysOfWeek());
+        boolean intvChanged = !Objects.equals(oldInterval, parentTask.getTaskInterval());
+        boolean countChanged = !Objects.equals(oldCount, parentTask.getDoCount());
+
+        boolean recurrenceChanged = freqChanged || intvChanged || countChanged || daysChanged;
 
         // 2) Update children selectively
         List<Task> children = taskRepository.findByParentTaskId(parentId);
-        for (Task child : children) {
-            applySeriesFieldUpdatesToChild(child, taskDto,
-                    nameChanged, descChanged, typeChanged,
-                    freqChanged, intvChanged, countChanged, daysChanged);
-        }
-        taskRepository.saveAll(children);
 
-        // 3) Ensure missing ones are added (never delete extras)
-        TaskDtoV2 freshDto = mapToDto(parentTask);
+        if (recurrenceChanged) {
+            // Recurrence-defining fields changed → wipe children and regenerate
+            taskRepository.deleteAll(children);
 
-        if (parentTask.getDate() != null) {
-            String normalized = parentTask.getDate().length() >= 10
-                    ? parentTask.getDate().substring(0, 10)
-                    : parentTask.getDate();
-            freshDto.setDate(normalized);
-        }
-        if (parentTask.getTimeOfDay() != null) {
-            freshDto.setTimeOfDay(parentTask.getTimeOfDay());
-        }
-        generateOccurrences(parentTask, freshDto, parentTask.getPatient());
+            SeriesParams newParams = new SeriesParams(
+                    onlyDate(parentTask.getDate()),
+                    parentTask.getTimeOfDay() != null ? LocalTime.parse(parentTask.getTimeOfDay()) : null,
+                    parentTask.getFrequency(),
+                    Optional.ofNullable(parentTask.getTaskInterval()).orElse(1),
+                    Optional.ofNullable(parentTask.getDoCount()).orElse(1),
+                    TaskMapper.parseDays(parentTask.getDaysOfWeek()));
 
+            LocalDate impliedEnd = impliedEndDateFromSaved(parentTask);
+            if (taskDto.getDate() != null && taskDto.getCount() == null) {
+                LocalDate newEnd = impliedEnd;
+                LocalDate startDate = onlyDate(parentTask.getDate());
+                int newCount = calculateCount(
+                        startDate,
+                        newEnd,
+                        parentTask.getFrequency(),
+                        Optional.ofNullable(parentTask.getTaskInterval()).orElse(1),
+                        TaskMapper.parseDays(parentTask.getDaysOfWeek()));
+                parentTask.setDoCount(newCount);
+                taskRepository.save(parentTask);
+                newParams = newParams.withCount(newCount);
+            }
+            if ("weekly".equalsIgnoreCase(newParams.frequency) && daysChanged) {
+                // Weekly days changed → keep the same calendar END, recompute COUNT
+                int newCount = recomputeCountFromEnd(newParams, originalEnd);
+                parentTask.setDoCount(newCount);
+                taskRepository.save(parentTask);
+
+                newParams = newParams.withCount(newCount);
+                reconcileSeries(parentTask, newParams, originalEnd); // end-capped
+            } else {
+                // All other edits → use implied end from parentTask
+                LocalDate afterEditEnd = impliedEndDateFromSaved(parentTask);
+                reconcileSeries(parentTask, newParams, afterEditEnd);
+            }
+
+        } else {
+            // Non-recurrence edits → update children safely
+            for (Task child : children) {
+                applySeriesFieldUpdatesToChild(child, taskDto,
+                        taskDto.getName() != null,
+                        taskDto.getDescription() != null,
+                        taskDto.getTaskType() != null,
+                        freqChanged, intvChanged, countChanged, daysChanged);
+            }
+            taskRepository.saveAll(children);
+        }
         return mapToDto(parentTask);
+    }
+
+    private int calculateCount(LocalDate startDate, LocalDate endDate, String frequency,
+            int interval, List<Boolean> daysOfWeek) {
+        switch (frequency.toLowerCase()) {
+            case "daily":
+                long days = Duration.between(startDate.atStartOfDay(), endDate.atStartOfDay()).toDays();
+                return (int) (days / interval) + 1;
+            case "weekly":
+                if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+                    long weeks = Duration.between(startDate.atStartOfDay(), endDate.atStartOfDay()).toDays() / 7;
+                    return (int) (weeks / interval) + 1;
+                }
+                int count = 0;
+                LocalDate cursor = startDate;
+                while (!cursor.isAfter(endDate)) {
+                    int idx = (cursor.getDayOfWeek().getValue() % 7); // Sun=0…Sat=6
+                    if (daysOfWeek.size() > idx && Boolean.TRUE.equals(daysOfWeek.get(idx))) {
+                        count++;
+                    }
+                    cursor = cursor.plusDays(1);
+                }
+                return count;
+            case "monthly":
+                int months = (endDate.getYear() - startDate.getYear()) * 12
+                        + (endDate.getMonthValue() - startDate.getMonthValue());
+                return (months / interval) + 1;
+            case "yearly":
+                int years = endDate.getYear() - startDate.getYear();
+                return (years / interval) + 1;
+            default:
+                return 1;
+        }
     }
 
     /**
@@ -477,12 +542,16 @@ public class TaskServiceV2 {
             // Parent should stay anchored to earliest occurrence
             if (task.getParentTaskId() == null) {
                 if (dto.getDate() != null) {
-                    LocalDate newStart = LocalDate.parse(dto.getDate().substring(0, 10));
-                    LocalDate currentParent = LocalDate.parse(task.getDate().substring(0, 10));
-
-                    // Only move parent earlier, never later
-                    if (newStart.isBefore(currentParent)) {
+                    if ("monthly".equalsIgnoreCase(task.getFrequency())
+                            || "yearly".equalsIgnoreCase(task.getFrequency())) {
+                        // Always allow updating parent date to new selected day
                         task.setDate(dto.getDate());
+                    } else {
+                        LocalDate newStart = LocalDate.parse(dto.getDate().substring(0, 10));
+                        LocalDate currentParent = LocalDate.parse(task.getDate().substring(0, 10));
+                        if (newStart.isBefore(currentParent)) {
+                            task.setDate(dto.getDate());
+                        }
                     }
                 }
                 if (dto.getTimeOfDay() != null) {
@@ -641,6 +710,222 @@ public class TaskServiceV2 {
             }
         }
         return dates;
+    }
+    // --- Utilities ---------------------------------------------------------------
+
+    private static LocalDate onlyDate(String isoDateOrDateTime) {
+        // accepts "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm..."
+        return LocalDate.parse(isoDateOrDateTime.substring(0, 10));
+    }
+
+    /** Parameters that define a recurrence. */
+    private static final class SeriesParams {
+        final LocalDate startDate; // parent date (first occurrence)
+        final LocalTime time; // may be null
+        final String frequency; // daily|weekly|monthly|yearly
+        final int interval; // >= 1
+        final int count; // >= 1
+        final List<Boolean> days; // weekly: length=7 (Sun..Sat), else null
+
+        SeriesParams(LocalDate startDate, LocalTime time, String frequency,
+                int interval, int count, List<Boolean> days) {
+            this.startDate = startDate;
+            this.time = time;
+            this.frequency = frequency != null ? frequency : "daily";
+            this.interval = Math.max(1, interval);
+            this.count = Math.max(1, count);
+            this.days = days;
+        }
+
+        SeriesParams withCount(int newCount) {
+            return new SeriesParams(startDate, time, frequency, interval, Math.max(1, newCount), days);
+        }
+    }
+
+    /**
+     * Build the full list of occurrence dates either by COUNT (endCap=null) or by
+     * END cap (inclusive).
+     */
+    private List<LocalDate> generateDates(SeriesParams p, LocalDate endCap) {
+        List<LocalDate> out = new ArrayList<>();
+
+        switch (p.frequency.toLowerCase()) {
+            case "daily" -> {
+                if (endCap != null) {
+                    for (LocalDate d = p.startDate; !d.isAfter(endCap); d = d.plusDays(p.interval)) {
+                        out.add(d);
+                    }
+                } else {
+                    for (int i = 0; i < p.count; i++) {
+                        out.add(p.startDate.plusDays((long) i * p.interval));
+                    }
+                }
+            }
+            case "weekly" -> {
+                List<Boolean> days = p.days;
+                if (days == null || days.size() != 7) {
+                    // fallback to simple weekly step-by-step if days are missing
+                    if (endCap != null) {
+                        for (LocalDate d = p.startDate; !d.isAfter(endCap); d = d.plusWeeks(p.interval)) {
+                            out.add(d);
+                        }
+                    } else {
+                        for (int i = 0; i < p.count; i++) {
+                            out.add(p.startDate.plusWeeks((long) i * p.interval));
+                        }
+                    }
+                    break;
+                }
+
+                // Iterate week by week starting from the week containing startDate.
+                LocalDate cursor = p.startDate;
+                int made = 0;
+                while (true) {
+                    LocalDate weekStart = cursor.with(DayOfWeek.SUNDAY);
+                    for (int i = 0; i < 7; i++) {
+                        if (Boolean.TRUE.equals(days.get(i))) {
+                            // Map i=0..6 (Sun..Sat) -> DayOfWeek (Mon=1..Sun=7)
+                            DayOfWeek dow = DayOfWeek.of(((i + 6) % 7) + 1);
+                            LocalDate occ = weekStart.with(dow);
+                            if (!occ.isBefore(p.startDate)) {
+                                if (endCap != null) {
+                                    if (occ.isAfter(endCap))
+                                        return out;
+                                    out.add(occ);
+                                } else {
+                                    out.add(occ);
+                                    made++;
+                                    if (made >= p.count)
+                                        return out;
+                                }
+                            }
+                        }
+                    }
+                    cursor = cursor.plusWeeks(p.interval);
+                }
+            }
+            case "monthly" -> {
+                if (endCap != null) {
+                    for (LocalDate d = p.startDate; !d.isAfter(endCap); d = d.plusMonths(p.interval)) {
+                        out.add(d);
+                    }
+                } else {
+                    for (int i = 0; i < p.count; i++) {
+                        out.add(p.startDate.plusMonths((long) i * p.interval));
+                    }
+                }
+            }
+            case "yearly" -> {
+                if (endCap != null) {
+                    for (LocalDate d = p.startDate; !d.isAfter(endCap); d = d.plusYears(p.interval)) {
+                        out.add(d);
+                    }
+                } else {
+                    for (int i = 0; i < p.count; i++) {
+                        out.add(p.startDate.plusYears((long) i * p.interval));
+                    }
+                }
+            }
+            default -> {
+                // Unknown frequency: treat as one-time
+                out.add(p.startDate);
+            }
+        }
+        return out;
+    }
+
+    /** End of current saved series = last date from (parent + count). */
+    private LocalDate impliedEndDateFromSaved(Task parent) {
+        SeriesParams p = new SeriesParams(
+                onlyDate(parent.getDate()),
+                parent.getTimeOfDay() != null ? LocalTime.parse(parent.getTimeOfDay()) : null,
+                parent.getFrequency(),
+                Optional.ofNullable(parent.getTaskInterval()).orElse(1),
+                Optional.ofNullable(parent.getDoCount()).orElse(1),
+                TaskMapper.parseDays(parent.getDaysOfWeek()));
+        List<LocalDate> dates = generateDates(p, null);
+        return dates.isEmpty() ? onlyDate(parent.getDate()) : dates.get(dates.size() - 1);
+    }
+
+    /** Count given a target end cap. */
+    private int recomputeCountFromEnd(SeriesParams params, LocalDate endCap) {
+        return generateDates(params, endCap).size();
+    }
+
+    /**
+     * Make DB occurrences match exactly the target dates (add missing, delete
+     * extras).
+     */
+    private void reconcileSeries(Task parentTask, SeriesParams params, LocalDate endCap) {
+        Long parentId = parentTask.getParentTaskId() != null ? parentTask.getParentTaskId() : parentTask.getId();
+
+        List<LocalDate> target = generateDates(params, endCap);
+        Set<String> targetKeys = target.stream().map(LocalDate::toString).collect(Collectors.toSet());
+
+        // Load existing series (parent + children)
+        List<Task> existing = taskRepository.findByParentTaskId(parentId);
+        existing.add(parentTask);
+
+        LocalDate parentStart = params.startDate;
+
+        // Index by date (YYYY-MM-DD)
+        var byDate = existing.stream().collect(Collectors.toMap(
+                t -> onlyDate(t.getDate()).toString(),
+                t -> t,
+                (a, b) -> a));
+
+        // ADD missing
+        List<Task> toAdd = new ArrayList<>();
+        for (LocalDate day : target) {
+            String key = day.toString();
+            if (!byDate.containsKey(key)) {
+                Task occ = Task.builder()
+                        .name(parentTask.getName())
+                        .description(parentTask.getDescription())
+                        .date(day.toString())
+                        .timeOfDay(parentTask.getTimeOfDay())
+                        .isCompleted(false)
+                        .taskType(parentTask.getTaskType())
+                        .frequency(parentTask.getFrequency())
+                        .taskInterval(parentTask.getTaskInterval())
+                        .doCount(parentTask.getDoCount())
+                        .daysOfWeek(parentTask.getDaysOfWeek())
+                        .patient(parentTask.getPatient())
+                        .parentTaskId(parentId)
+                        .build();
+                toAdd.add(occ);
+            }
+        }
+
+        // DELETE extras
+        List<Task> toDelete = existing.stream()
+                .filter(t -> {
+                    String key = onlyDate(t.getDate()).toString();
+                    boolean isParent = Objects.equals(t.getId(), parentTask.getId());
+
+                    // Rule 1: delete if not in target list
+                    if (!isParent && !targetKeys.contains(key)) {
+                        return true;
+                    }
+
+                    // Rule 2: delete if before parent anchor
+                    LocalDate occDate = onlyDate(t.getDate());
+                    if (!isParent && occDate.isBefore(parentStart)) {
+                        return true;
+                    }
+
+                    return false;
+                })
+                .toList();
+
+        if (!toAdd.isEmpty()) {
+            taskRepository.saveAll(toAdd);
+            log.info("Reconcile: added {} new tasks", toAdd.size());
+        }
+        if (!toDelete.isEmpty()) {
+            taskRepository.deleteAll(toDelete);
+            log.info("Reconcile: deleted {} old tasks", toDelete.size());
+        }
     }
 
 }

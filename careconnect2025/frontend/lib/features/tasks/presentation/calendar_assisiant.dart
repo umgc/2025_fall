@@ -273,6 +273,77 @@ class RecurrenceUtils {
       daysOfWeek: daysOfWeek,
     );
   }
+
+  static int calculateCount({
+    required DateTime startDate,
+    required DateTime endDate,
+    required String frequency, // "daily", "weekly", "monthly", "yearly"
+    required int interval,
+    List<bool>? daysOfWeek, // for weekly: 7-length list Sunday..Saturday
+  }) {
+    switch (frequency.toLowerCase()) {
+      case "daily":
+        final diffDays = endDate.difference(startDate).inDays;
+        return (diffDays ~/ interval) + 1;
+
+      case "weekly":
+        if (daysOfWeek == null || daysOfWeek.length != 7) {
+          final diffWeeks = endDate.difference(startDate).inDays ~/ 7;
+          return (diffWeeks ~/ interval) + 1;
+        }
+        int count = 0;
+        DateTime cursor = startDate;
+        while (!cursor.isAfter(endDate)) {
+          if (daysOfWeek[cursor.weekday % 7]) {
+            count++;
+          }
+          cursor = cursor.add(const Duration(days: 1));
+        }
+        return count;
+
+      case "monthly":
+        int months =
+            (endDate.year - startDate.year) * 12 +
+            (endDate.month - startDate.month);
+        return (months ~/ interval) + 1;
+
+      case "yearly":
+        int years = endDate.year - startDate.year;
+        return (years ~/ interval) + 1;
+
+      default:
+        return 1;
+    }
+  }
+
+  static DateTime calculateEndDate({
+    required DateTime startDate,
+    required String frequency,
+    required int interval,
+    required int count,
+    List<bool>? daysOfWeek,
+  }) {
+    switch (frequency.toLowerCase()) {
+      case "daily":
+        return startDate.add(Duration(days: (count - 1) * interval));
+      case "weekly":
+        return startDate.add(Duration(days: (count - 1) * 7 * interval));
+      case "monthly":
+        return DateTime(
+          startDate.year,
+          startDate.month + (count - 1) * interval,
+          startDate.day,
+        );
+      case "yearly":
+        return DateTime(
+          startDate.year + (count - 1) * interval,
+          startDate.month,
+          startDate.day,
+        );
+      default:
+        return startDate;
+    }
+  }
 }
 
 // =============================
@@ -960,6 +1031,17 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       debugPrint("Error refreshing task ${task.id}: $e");
     }
 
+    DateTime seriesAnchorDate = task.date;
+    if (task.parentTaskId != null) {
+      try {
+        final parentResp = await ApiService.getTaskByIdV2(task.parentTaskId!);
+        if (parentResp.statusCode == 200) {
+          final parent = Task.fromJson(jsonDecode(parentResp.body));
+          seriesAnchorDate = TaskUtils.normalizeDate(parent.date.toLocal());
+        }
+      } catch (_) {}
+    }
+
     // Preload patients if caregiver
     List<Map<String, dynamic>> patients = [];
     if (user.isCaregiver) {
@@ -979,6 +1061,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         patients: patients,
         defaultPatientId: user.isPatient ? user.patientId : task.userId,
         initialDate: _selectedDay,
+        seriesAnchorDate: seriesAnchorDate,
       ),
     );
 
@@ -1129,6 +1212,7 @@ class TaskFormDialog extends StatefulWidget {
   final List<Map<String, dynamic>> patients;
   final int? defaultPatientId;
   final DateTime? initialDate;
+  final DateTime? seriesAnchorDate;
 
   const TaskFormDialog({
     super.key,
@@ -1137,6 +1221,7 @@ class TaskFormDialog extends StatefulWidget {
     required this.patients,
     this.defaultPatientId,
     this.initialDate,
+    this.seriesAnchorDate,
   });
 
   @override
@@ -1205,38 +1290,26 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
       interval = t.interval;
       count = t.count;
       startDate = t.date;
+      final anchorStart = TaskUtils.normalizeDate(
+        widget.seriesAnchorDate ?? t.date,
+      );
+
       if (recurrenceType == "Monthly") {
         dayOfMonth = t.date.day;
       }
-
-      // compute end date if missing
+      // compute end date using helper
       if (count != null &&
           count! > 0 &&
           startDate != null &&
           recurrenceType != null) {
         final iv = (interval == null || interval! < 1) ? 1 : interval!;
-        switch (recurrenceType!.toLowerCase()) {
-          case "daily":
-            endDate = startDate!.add(Duration(days: (count! - 1) * iv));
-            break;
-          case "weekly":
-            endDate = startDate!.add(Duration(days: (count! - 1) * 7 * iv));
-            break;
-          case "monthly":
-            endDate = DateTime(
-              startDate!.year,
-              startDate!.month + (count! - 1) * iv,
-              startDate!.day,
-            );
-            break;
-          case "yearly":
-            endDate = DateTime(
-              startDate!.year + (count! - 1) * iv,
-              startDate!.month,
-              startDate!.day,
-            );
-            break;
-        }
+        endDate = RecurrenceUtils.calculateEndDate(
+          startDate: anchorStart,
+          frequency: recurrenceType!,
+          interval: iv,
+          count: count!,
+          daysOfWeek: daysOfWeek,
+        );
       }
     } else {
       // Use initialDate from the calendar if passed, otherwise fallback to now
@@ -1505,6 +1578,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               initialEndDate: endDate,
               initialDayOfMonth: dayOfMonth,
               showApplyToSeries: widget.initialTask != null,
+              anchorStartDate: widget.seriesAnchorDate,
               onChanged:
                   ({
                     bool? isRecurring,
@@ -1651,6 +1725,7 @@ class RecurrenceForm extends StatefulWidget {
   final bool applyToSeries;
   final bool initialApplyToSeries;
   final bool showApplyToSeries;
+  final DateTime? anchorStartDate;
 
   const RecurrenceForm({
     super.key,
@@ -1666,6 +1741,7 @@ class RecurrenceForm extends StatefulWidget {
     this.showApplyToSeries = false,
     this.applyToSeries = false,
     this.initialApplyToSeries = false,
+    this.anchorStartDate,
   });
 
   @override
@@ -1926,6 +2002,25 @@ class _RecurrenceFormState extends State<RecurrenceForm> {
                     );
                     if (picked != null) {
                       setState(() => endDate = TaskUtils.normalizeDate(picked));
+                      if (recurrenceType != null) {
+                        final iv = (interval == null || interval! < 1)
+                            ? 1
+                            : interval!;
+                        // 👇 critical: choose the correct start for count math
+                        final effectiveStart = applyToSeries
+                            ? (widget.anchorStartDate ??
+                                  startDate ??
+                                  DateTime.now())
+                            : (startDate ?? DateTime.now());
+
+                        count = RecurrenceUtils.calculateCount(
+                          startDate: TaskUtils.normalizeDate(effectiveStart),
+                          endDate: endDate!,
+                          frequency: recurrenceType!,
+                          interval: iv,
+                          daysOfWeek: daysOfWeek,
+                        );
+                      }
                       widget.onChanged(
                         isRecurring: isRecurring,
                         recurrenceType: recurrenceType,
