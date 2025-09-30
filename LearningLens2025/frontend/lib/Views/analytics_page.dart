@@ -1256,9 +1256,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     String assessmentName = _selectedAssessment?.name ?? "Unknown Assessment";
 
     // Build a summary string from the student breakdown data.
-    String studentSummary = _studentBreakdown.map((student) {
-      return "Name: ${student['studentName']}, Avg Grade: ${student['avgGrade']}, Rank: ${student['classRank']}";
-    }).join("\n");
+    String studentSummary;
+    // Whole course
+    if (_selectedStudent == null) {
+      studentSummary = _studentBreakdown.map((student) {
+        return "Name: ${student['studentName']}, Avg Grade: ${student['avgGrade']}, Rank: ${student['classRank']}";
+      }).join("\n");
+    }
+    // Single student
+    else {
+      studentSummary =
+          "Name: ${_selectedStudent!['studentName']}, Avg Grade: ${_selectedStudent!['avgGrade']}, Rank: ${_selectedStudent!['classRank']}";
+    }
 
     String prompt =
         "Analyze the following analytics data for course '$courseName' and assignment '$assessmentName'.\n"
