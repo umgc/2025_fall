@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../services/enhanced_auth_service.dart';
 import '../../../../widgets/role_mismatch_dialog.dart';
+import '../../../../widgets/email_verification_dialog.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -52,6 +53,18 @@ class _LoginPageState extends State<LoginPage> {
       if (authResult.isSuccess) {
         // Login and role validation successful
         final user = authResult.userSession!;
+
+        // Check if email is verified
+        if (!user.emailVerified) {
+          // Show email verification dialog
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) =>
+                EmailVerificationDialog(email: user.email),
+          );
+          return; // Don't proceed with navigation
+        }
 
         // Save user info to Provider
         Provider.of<UserProvider>(context, listen: false).setUser(user);
@@ -113,7 +126,8 @@ class _LoginPageState extends State<LoginPage> {
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: isMobile ? double.infinity : 500,
-                minHeight: MediaQuery.of(context).size.height -
+                minHeight:
+                    MediaQuery.of(context).size.height -
                     MediaQuery.of(context).padding.top -
                     MediaQuery.of(context).padding.bottom,
               ),
@@ -143,7 +157,8 @@ class _LoginPageState extends State<LoginPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
-                          'assets/images/CareConnectLogo.png', // Update this path to your PNG file
+                          'assets/images/CareConnectLogo.png',
+                          // Update this path to your PNG file
                           width: isMobile ? 150 : 170,
                           height: isMobile ? 150 : 170,
                           fit: BoxFit.contain,
@@ -178,7 +193,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-
 
                   // Tagline
                   Text(
@@ -391,30 +405,30 @@ class _LoginPageState extends State<LoginPage> {
                             style: AppTheme.primaryButtonStyle,
                             child: _busy
                                 ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
                                 : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Sign In',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Sign In',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Icon(
+                                        Icons.arrow_forward_rounded,
+                                        size: 18,
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 8),
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
                           ),
                         ),
 
@@ -462,7 +476,10 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       _buildSecurityBadge('Secure', Icons.security),
                       const SizedBox(width: 16),
-                      _buildSecurityBadge('HIPAA Compliant', Icons.verified_user),
+                      _buildSecurityBadge(
+                        'HIPAA Compliant',
+                        Icons.verified_user,
+                      ),
                       const SizedBox(width: 16),
                       _buildSecurityBadge('Accessible', Icons.accessibility),
                     ],
@@ -474,18 +491,11 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.lock,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
+                      Icon(Icons.lock, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
                         'End-to-end encrypted',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       const SizedBox(width: 16),
                       Container(
@@ -509,10 +519,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(width: 4),
                       Text(
                         'WCAG AA compliant',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -528,11 +535,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildSecurityBadge(String text, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: Colors.green[600],
-        ),
+        Icon(icon, size: 14, color: Colors.green[600]),
         const SizedBox(width: 4),
         Text(
           text,
@@ -546,4 +549,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
