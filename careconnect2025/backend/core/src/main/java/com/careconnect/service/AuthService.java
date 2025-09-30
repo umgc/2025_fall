@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -97,6 +98,7 @@ public class AuthService {
     @Value("${careconnect.baseurl:http://localhost:8080}")
     private String backendUrl;
 
+    @Transactional
     public ResponseEntity<?> register(RegisterRequest request) {
         // 1. Lookup existing user by email & role
         Role roleEnum;
@@ -111,18 +113,15 @@ public class AuthService {
 
         // 2. If user exists
         if (existingUserOpt.isPresent()) {
-            User existingUser = existingUserOpt.get();
+            final User existingUser = existingUserOpt.get();
             if (Boolean.FALSE.equals(existingUser.getIsVerified())) {
                 // User exists but is not verified -> resend with a NEW token
-                String newToken = UUID.randomUUID().toString();
+                final String newToken = UUID.randomUUID().toString();
                 existingUser.setVerificationToken(newToken);
                 userRepository.save(existingUser);
 
                 // Use frontend-supplied base URL if provided, fallback to backend baseUrl
-                String verificationBaseUrl = request.getVerificationBaseUrl();
-                String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
-                        ? verificationBaseUrl : backendUrl)
-                        + "/api/auth/verify/" + newToken;
+                final String link = backendUrl + "/v1/api/auth/verify/" + newToken;
 
                 emailService.sendVerificationEmail(existingUser.getEmail(), link);
 
@@ -137,8 +136,8 @@ public class AuthService {
         }
 
         // 3. Normal registration flow for new users
-        String verificationToken = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        final String verificationToken = UUID.randomUUID().toString();
+        final String encodedPassword = passwordEncoder.encode(request.getPassword());
         
         User user = new User();
         user.setEmail(request.getEmail());
@@ -152,10 +151,10 @@ public class AuthService {
 
         registerRole(request, user);
 
-        String verificationBaseUrl = request.getVerificationBaseUrl();
-        String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
+        final String verificationBaseUrl = request.getVerificationBaseUrl();
+        final String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
                 ? verificationBaseUrl : backendUrl)
-                + "/api/auth/verify/" + verificationToken;
+                + "/v1/api/auth/verify/" + verificationToken;
 
         emailService.sendVerificationEmail(user.getEmail(), link);
 
@@ -167,6 +166,9 @@ public class AuthService {
         switch (user.getRole()) {
             case PATIENT -> {
                 if (request instanceof PatientRegistration regReq) {
+                    // Save user first to get the ID
+                    User savedUser = userRepository.save(user);
+
                     final Patient patient = new Patient();
                     patient.setPhone(regReq.getPhone());
                     patient.setDob(regReq.getDob());
@@ -183,13 +185,15 @@ public class AuthService {
                     patient.setEmail(request.getEmail());
                     patient.setFirstName(regReq.getFirstName());
                     patient.setLastName(regReq.getLastName());
-                    patient.setUser(user);
+                    patient.setUser(savedUser);
                     patients.save(patient);
-                    userRepository.save(user);
                 }
             }
             case CAREGIVER -> {
                 if (request instanceof CaregiverRegistration regReq) {
+                    // Save user first to get the ID
+                    User savedUser = userRepository.save(user);
+
                     final Caregiver caregiver = new Caregiver();
                     caregiver.setCaregiverType(regReq.getCaregiverType());
                     caregiver.setDob(regReq.getDob());
@@ -207,12 +211,11 @@ public class AuthService {
                     caregiver.setFirstName(regReq.getFirstName());
                     caregiver.setLastName(regReq.getLastName());
                     caregiver.setGender(regReq.getGender());
-                    caregiver.setUser(user);
-                    userRepository.save(user);
+                    caregiver.setUser(savedUser);
                     caregivers.save(caregiver);
                 }
             }
-            default -> throw new AppException(HttpStatus.BAD_REQUEST, 
+            default -> throw new AppException(HttpStatus.BAD_REQUEST,
                     "Registration for " + user.getRole().toString() + " is unsupported");
         }
     }
@@ -255,6 +258,62 @@ public class AuthService {
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired verification link.");
         }
+    }
+
+    /**
+     * Resend verification email for an unverified user
+     */
+    public ResponseEntity<?> resendVerificationEmail(String email) {
+        // Find user by email
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            // Don't reveal if user exists for security reasons
+            return ResponseEntity.ok(Collections.singletonMap("message",
+                    "If an unverified account exists with this email, a verification email has been sent."));
+        }
+
+        User user = userOpt.get();
+
+        // Check if user is already verified
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error",
+                            "This email address is already verified."));
+        }
+
+        // Generate new verification token
+        String newToken = UUID.randomUUID().toString();
+        user.setVerificationToken(newToken);
+        userRepository.save(user);
+
+        // Build verification link (use backend URL as default)
+        String link = backendUrl + "/v1/api/auth/verify/" + newToken;
+
+        // Send verification email
+        emailService.sendVerificationEmail(user.getEmail(), link);
+
+        return ResponseEntity.ok(Collections.singletonMap("message",
+                "Verification email sent successfully! Please check your inbox."));
+    }
+
+    /**
+     * Check if an email address is verified (without sending email)
+     */
+    public ResponseEntity<?> checkEmailVerificationStatus(String email) {
+        // Find user by email
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            // Don't reveal if user exists for security reasons
+            return ResponseEntity.ok(Collections.singletonMap("verified", false));
+        }
+
+        User user = userOpt.get();
+
+        // Return verification status
+        return ResponseEntity.ok(Collections.singletonMap("verified",
+                Boolean.TRUE.equals(user.getIsVerified())));
     }
 
     // public LoginResponse loginV2(LoginRequest req) {
@@ -394,8 +453,9 @@ public LoginResponse loginV2(LoginRequest req,
             .caregiverId(caregiverId)
             .name(name)
             .status(user.getStatus())
+            .emailVerified(user.getIsVerified())
             .build();
-    }
+}
 
     /**
      * OAuth login (Google) - no password validation required

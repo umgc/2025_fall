@@ -36,6 +36,9 @@ class UserSession {
   /// User's display name
   final String? name;
 
+  /// Whether the user's email has been verified
+  final bool emailVerified;
+
   /// Creates a new UserSession instance.
   ///
   /// Parameters:
@@ -46,6 +49,7 @@ class UserSession {
   /// * [patientId] - Associated patient ID (optional)
   /// * [caregiverId] - Associated caregiver ID (optional)
   /// * [name] - User's display name (optional)
+  /// * [emailVerified] - Whether the user's email has been verified
   UserSession({
     required this.id,
     required this.email,
@@ -54,6 +58,7 @@ class UserSession {
     this.patientId,
     this.caregiverId,
     this.name,
+    this.emailVerified = false,
   });
 
   /// Creates a UserSession from JSON data.
@@ -75,6 +80,7 @@ class UserSession {
       patientId: json['patientId'],
       caregiverId: json['caregiverId'],
       name: json['name'],
+      emailVerified: json['emailVerified'] ?? false,
     );
   }
 
@@ -94,6 +100,7 @@ class UserSession {
       'patientId': patientId,
       'caregiverId': caregiverId,
       'name': name,
+      'emailVerified': emailVerified,
     };
   }
 
@@ -469,6 +476,7 @@ class UserProvider extends ChangeNotifier {
         patientId: _user!.patientId,
         caregiverId: _user!.caregiverId,
         name: _user!.name,
+        emailVerified: _user!.emailVerified,
       );
       await UserRoleStorageService.instance.updateUserRole(newRole);
       notifyListeners();
@@ -486,6 +494,7 @@ class UserProvider extends ChangeNotifier {
         patientId: patientId,
         caregiverId: _user!.caregiverId,
         name: _user!.name,
+        emailVerified: _user!.emailVerified,
       );
       await UserRoleStorageService.instance.updatePatientId(patientId);
       notifyListeners();
@@ -506,6 +515,7 @@ class UserProvider extends ChangeNotifier {
         patientId: _user!.patientId,
         caregiverId: _user!.caregiverId,
         name: newName,
+        emailVerified: _user!.emailVerified,
       );
       notifyListeners();
     }

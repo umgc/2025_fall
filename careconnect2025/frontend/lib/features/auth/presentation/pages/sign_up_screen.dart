@@ -1,3 +1,5 @@
+import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/widgets/email_verification_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
@@ -110,22 +112,26 @@ class _RegistrationPageState extends State<RegistrationPage> {
     'Patient': {
       'icon': Icons.person,
       'subtitle': 'Managing my own health',
-      'description': 'As a patient, you\'ll have access to track your health, communicate with caregivers, manage medications, and monitor symptoms.',
+      'description':
+          'As a patient, you\'ll have access to track your health, communicate with caregivers, manage medications, and monitor symptoms.',
       'totalSteps': 5,
     },
     'Caregiver': {
       'icon': Icons.favorite,
       'subtitle': 'Caring for someone else',
-      'description': 'As a caregiver, you\'ll be able to monitor and assist with healthcare management for your loved ones, coordinate care, and communicate with healthcare providers.',
+      'description':
+          'As a caregiver, you\'ll be able to monitor and assist with healthcare management for your loved ones, coordinate care, and communicate with healthcare providers.',
       'totalSteps': 5,
     },
   };
 
-  int get _totalSteps => _selectedRole != null ? _roles[_selectedRole]!['totalSteps'] : 5;
+  int get _totalSteps =>
+      _selectedRole != null ? _roles[_selectedRole]!['totalSteps'] : 5;
 
   double get _progress => (_currentStep + 1) / _totalSteps;
 
-  int get _progressPercentage => ((_currentStep + 1) / _totalSteps * 100).round();
+  int get _progressPercentage =>
+      ((_currentStep + 1) / _totalSteps * 100).round();
 
   bool get _isLastStep => _currentStep == _totalSteps - 1;
 
@@ -171,32 +177,40 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   bool _validatePersonalInformation() {
     return _firstNameController.text.isNotEmpty &&
-           _lastNameController.text.isNotEmpty &&
-           _dobController.text.isNotEmpty &&
-           _selectedGender != null &&
-           (_selectedRole != 'Caregiver' || _selectedCaregiverType != null);
+        _lastNameController.text.isNotEmpty &&
+        _dobController.text.isNotEmpty &&
+        _selectedGender != null &&
+        (_selectedRole != 'Caregiver' || _selectedCaregiverType != null);
   }
 
   bool _validateContactInformation() {
-    final emailValid = _emailController.text.isNotEmpty &&
-                      RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text);
-    final addressValid = _addressLine1Controller.text.isNotEmpty &&
-                        _cityController.text.isNotEmpty &&
-                        _stateController.text.isNotEmpty &&
-                        _zipController.text.isNotEmpty;
-    final professionalValid = _selectedRole != 'Caregiver' ||
-                             _selectedCaregiverType != 'Professional' ||
-                             (_licenseNumberController.text.isNotEmpty &&
-                              _issuingStateController.text.isNotEmpty &&
-                              _yearsExperienceController.text.isNotEmpty);
+    final emailValid =
+        _emailController.text.isNotEmpty &&
+        RegExp(
+          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+        ).hasMatch(_emailController.text);
+    final addressValid =
+        _addressLine1Controller.text.isNotEmpty &&
+        _cityController.text.isNotEmpty &&
+        _stateController.text.isNotEmpty &&
+        _zipController.text.isNotEmpty;
+    final professionalValid =
+        _selectedRole != 'Caregiver' ||
+        _selectedCaregiverType != 'Professional' ||
+        (_licenseNumberController.text.isNotEmpty &&
+            _issuingStateController.text.isNotEmpty &&
+            _yearsExperienceController.text.isNotEmpty);
 
-    return emailValid && _phoneController.text.isNotEmpty && addressValid && professionalValid;
+    return emailValid &&
+        _phoneController.text.isNotEmpty &&
+        addressValid &&
+        professionalValid;
   }
 
   bool _validateSecurity() {
     return _passwordController.text.isNotEmpty &&
-           _passwordController.text.length >= 8 &&
-           _confirmPasswordController.text == _passwordController.text;
+        _passwordController.text.length >= 8 &&
+        _confirmPasswordController.text == _passwordController.text;
   }
 
   Future<void> _submitRegistration() async {
@@ -208,13 +222,18 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration successful! Please check your email to verify your account.'),
-            backgroundColor: Colors.green,
-          ),
+        // Show email verification dialog and wait for result
+        final verified = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              EmailVerificationDialog(email: _emailController.text),
         );
-        context.go('/login');
+
+        // If email was verified, navigate to login screen
+        if (verified == true && mounted) {
+          context.go('/login');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -227,10 +246,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
     }
   }
-
+  
   Future<void> _submitPatientRegistration() async {
-    const baseUrl = 'http://localhost:8080/v1/api';
-
     // For now, use the basic auth registration endpoint
     // In the future, this should be a dedicated patient registration endpoint
     final registrationData = {
@@ -255,13 +272,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
     };
 
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
+      Uri.parse('${ApiConstants.auth}/register'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
         'Connection': 'keep-alive',
-        'Origin': 'http://localhost:50030',   // TODO - update this to use .env
+        'Origin': 'http://localhost:50030', // TODO - update this to use .env
         'Referer': 'http://localhost:50030/', // TODO - update to use .env
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
@@ -276,7 +293,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
     } else {
       if (kDebugMode) {
-        debugPrint('❌ Patient registration failed: ${response.statusCode} - ${response.body}');
+        debugPrint(
+          '❌ Patient registration failed: ${response.statusCode} - ${response.body}',
+        );
       }
       throw Exception('Registration failed: ${response.body}');
     }
@@ -326,7 +345,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
         'Connection': 'keep-alive',
-        'Origin': 'http://localhost:50030',  // TODO - update to use .env
+        'Origin': 'http://localhost:50030', // TODO - update to use .env
         'Referer': 'http://localhost:50030/', // TODO - update to use .env
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
@@ -341,7 +360,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
       }
     } else {
       if (kDebugMode) {
-        debugPrint('❌ Caregiver registration failed: ${response.statusCode} - ${response.body}');
+        debugPrint(
+          '❌ Caregiver registration failed: ${response.statusCode} - ${response.body}',
+        );
       }
       throw Exception('Registration failed: ${response.body}');
     }
@@ -381,10 +402,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
         Text(
           'Choose the role that best describes your relationship to healthcare management',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
 
         const SizedBox(height: 32),
@@ -410,22 +428,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
             child: DropdownButton<String>(
               value: _selectedRole,
               hint: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 16,
+                ),
                 child: Text(
                   'Select account role',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
                 ),
               ),
               isExpanded: true,
               icon: Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Colors.grey[400],
-                ),
+                child: Icon(Icons.keyboard_arrow_down, color: Colors.grey[400]),
               ),
               items: _roles.keys.map((String role) {
                 return DropdownMenuItem<String>(
@@ -489,10 +504,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             ),
             child: Text(
               _roles[_selectedRole]!['description'],
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.primary,
-              ),
+              style: const TextStyle(fontSize: 14, color: AppTheme.primary),
             ),
           ),
         ],
@@ -517,10 +529,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           const SizedBox(height: 8),
           Text(
             'Enter your basic details',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           const SizedBox(height: 32),
 
@@ -633,10 +642,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           const SizedBox(height: 8),
           Text(
             'Provide your contact details and address',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           const SizedBox(height: 32),
 
@@ -650,7 +656,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
               if (value == null || value.isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$').hasMatch(value)) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$',
+              ).hasMatch(value)) {
                 return 'Please enter a valid email address';
               }
               return null;
@@ -752,7 +760,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ),
 
           // Professional Information (only for caregivers)
-          if (_selectedRole == 'Caregiver' && _selectedCaregiverType == 'Professional') ...[
+          if (_selectedRole == 'Caregiver' &&
+              _selectedCaregiverType == 'Professional') ...[
             const SizedBox(height: 32),
             const Text(
               'Professional Information',
@@ -834,10 +843,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           const SizedBox(height: 8),
           Text(
             'Set up your password to secure your account',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
           const SizedBox(height: 32),
 
@@ -905,10 +911,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                 const SizedBox(height: 8),
                 Text(
                   '• At least 8 characters long\n• Use a combination of letters, numbers, and symbols\n• Avoid using personal information',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -933,15 +936,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const SizedBox(height: 8),
         Text(
           'Please review your information before creating your account',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
         const SizedBox(height: 32),
 
         _buildReviewSection('Account Type', _selectedRole ?? ''),
-        _buildReviewSection('Name', '${_firstNameController.text} ${_lastNameController.text}'),
+        _buildReviewSection(
+          'Name',
+          '${_firstNameController.text} ${_lastNameController.text}',
+        ),
         _buildReviewSection('Email', _emailController.text),
         _buildReviewSection('Phone', _phoneController.text),
         _buildReviewSection('Date of Birth', _dobController.text),
@@ -950,13 +953,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
         if (_selectedRole == 'Caregiver')
           _buildReviewSection('Caregiver Type', _selectedCaregiverType ?? ''),
 
-        _buildReviewSection('Address',
-          '${_addressLine1Controller.text}${_addressLine2Controller.text.isNotEmpty ? ', ${_addressLine2Controller.text}' : ''}\n${_cityController.text}, ${_stateController.text} ${_zipController.text}'),
+        _buildReviewSection(
+          'Address',
+          '${_addressLine1Controller.text}${_addressLine2Controller.text.isNotEmpty ? ', ${_addressLine2Controller.text}' : ''}\n${_cityController.text}, ${_stateController.text} ${_zipController.text}',
+        ),
 
-        if (_selectedRole == 'Caregiver' && _selectedCaregiverType == 'Professional') ...[
+        if (_selectedRole == 'Caregiver' &&
+            _selectedCaregiverType == 'Professional') ...[
           _buildReviewSection('License Number', _licenseNumberController.text),
           _buildReviewSection('Issuing State', _issuingStateController.text),
-          _buildReviewSection('Years of Experience', _yearsExperienceController.text),
+          _buildReviewSection(
+            'Years of Experience',
+            _yearsExperienceController.text,
+          ),
         ],
 
         const SizedBox(height: 24),
@@ -969,19 +978,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.info_outline,
-                color: AppTheme.primary,
-                size: 20,
-              ),
+              const Icon(Icons.info_outline, color: AppTheme.primary, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'By creating an account, you agree to our Terms of Service and Privacy Policy.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[700],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                 ),
               ),
             ],
@@ -1011,10 +1013,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ),
         ],
@@ -1058,7 +1057,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppTheme.primary),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
         ),
       ],
@@ -1100,19 +1102,25 @@ class _RegistrationPageState extends State<RegistrationPage> {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppTheme.primary),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             suffixIcon: const Icon(Icons.calendar_today, size: 20),
             hintText: 'Select date',
           ),
           onTap: () async {
             final DateTime? picked = await showDatePicker(
               context: context,
-              initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+              initialDate: DateTime.now().subtract(
+                const Duration(days: 365 * 18),
+              ),
               firstDate: DateTime(1900),
               lastDate: DateTime.now(),
             );
             if (picked != null) {
-              controller.text = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+              controller.text =
+                  '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
             }
           },
         ),
@@ -1156,14 +1164,14 @@ class _RegistrationPageState extends State<RegistrationPage> {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppTheme.primary),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
           ),
           hint: Text('Select $label'),
           items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(item),
-            );
+            return DropdownMenuItem<String>(value: item, child: Text(item));
           }).toList(),
           onChanged: onChanged,
         ),
@@ -1208,7 +1216,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppTheme.primary),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             suffixIcon: IconButton(
               icon: Icon(
                 isVisible ? Icons.visibility : Icons.visibility_off,
@@ -1234,7 +1245,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: isMobile ? double.infinity : 600,
-                minHeight: MediaQuery.of(context).size.height -
+                minHeight:
+                    MediaQuery.of(context).size.height -
                     MediaQuery.of(context).padding.top -
                     MediaQuery.of(context).padding.bottom,
               ),
@@ -1388,13 +1400,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
                         Row(
                           children: [
                             Icon(
-                              _currentStep == 0 ? Icons.person : Icons.edit_document,
+                              _currentStep == 0
+                                  ? Icons.person
+                                  : Icons.edit_document,
                               size: 20,
                               color: const Color(0xFF374151),
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _currentStep == 0 ? 'Account Role' : 'Step ${_currentStep + 1}',
+                              _currentStep == 0
+                                  ? 'Account Role'
+                                  : 'Step ${_currentStep + 1}',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -1427,29 +1443,44 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     children: [
                       // Back button
                       TextButton.icon(
-                        onPressed: _currentStep > 0 ? _previousStep : () => context.go('/login'),
+                        onPressed: _currentStep > 0
+                            ? _previousStep
+                            : () => context.go('/login'),
                         icon: const Icon(Icons.arrow_back, size: 18),
-                        label: Text(_currentStep > 0 ? 'Previous' : 'Back to Login'),
+                        label: Text(
+                          _currentStep > 0 ? 'Previous' : 'Back to Login',
+                        ),
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.textSecondary,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                       ),
 
                       // Next/Sign Up button
                       ElevatedButton.icon(
-                        onPressed: _canProceed() ? (_isLastStep ? _submitRegistration : _nextStep) : null,
+                        onPressed: _canProceed()
+                            ? (_isLastStep ? _submitRegistration : _nextStep)
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           disabledBackgroundColor: Colors.grey[300],
                         ),
-                        icon: Icon(_isLastStep ? Icons.check : Icons.arrow_forward, size: 18),
+                        icon: Icon(
+                          _isLastStep ? Icons.check : Icons.arrow_forward,
+                          size: 18,
+                        ),
                         label: Text(_isLastStep ? 'Sign Up' : 'Next'),
                       ),
                     ],
