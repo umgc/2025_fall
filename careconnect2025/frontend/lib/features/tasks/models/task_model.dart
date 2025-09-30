@@ -2,6 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../notifications/models/scheduled_notification_model.dart';
 
+/// =============================
+/// Task Model
+/// =============================
+/// Represents a scheduled task in CareConnect, which can:
+/// - Belong to a patient (or be unassigned)
+/// - Be one-time or recurring
+/// - Contain reminders/notifications
+/// - Track completion state
+///
+/// Supports recurrence (daily, weekly, monthly, yearly)
+/// and series updates (via `parentTaskId` + `applyToSeries`).
 class Task {
   int? id;
   int? userId; // Optional, can be null if not assigned to a user
@@ -39,6 +50,12 @@ class Task {
     this.parentTaskId,
   });
 
+  /// Factory constructor: build a [Task] from JSON data.
+  ///
+  /// Handles:
+  /// - Parsing `daysOfWeek` into `List<bool>`
+  /// - Supporting timeOfDay as `"HH:mm"` string or map `{hour, minute}`
+  /// - Mapping backend variations (`interval` vs `taskInterval`, `count` vs `doCount`)
   factory Task.fromJson(Map<String, dynamic> json) {
     final parsedDays = json['daysOfWeek'] != null
         ? List<bool>.from(json['daysOfWeek'])
@@ -76,6 +93,12 @@ class Task {
     );
   }
 
+  /// Convert a [Task] to JSON for API serialization.
+  ///
+  /// Notes:
+  /// - Converts [date] to ISO8601 string
+  /// - Converts [timeOfDay] into `"HH:mm"` string
+  /// - Uses `"isCompleted"` for completion state (matches backend)
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
@@ -100,5 +123,47 @@ class Task {
 
   bool isValid() {
     return name.isNotEmpty && description.isNotEmpty;
+  }
+}
+
+// =============================
+// TaskCopyWith Extension
+// =============================
+/// Provides a `copyWith` method for immutability-style updates.
+///
+/// Example:
+/// ```dart
+/// final updated = task.copyWith(name: "New name", isComplete: true);
+/// ```
+extension TaskCopyWith on Task {
+  Task copyWith({
+    int? id,
+    String? name,
+    String? description,
+    DateTime? date,
+    TimeOfDay? timeOfDay,
+    int? userId,
+    bool? isComplete,
+    String? frequency,
+    int? interval,
+    int? count,
+    List<bool>? daysOfWeek,
+    String? taskType,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      timeOfDay: timeOfDay ?? this.timeOfDay,
+      userId: userId ?? this.userId,
+      isComplete: isComplete ?? this.isComplete,
+      notifications: this.notifications, // keep existing notifications
+      frequency: frequency ?? this.frequency,
+      interval: interval ?? this.interval,
+      count: count ?? this.count,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      taskType: taskType ?? this.taskType,
+    );
   }
 }
