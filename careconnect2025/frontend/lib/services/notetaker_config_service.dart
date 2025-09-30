@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -9,14 +10,11 @@ class PatientNotetakerKeyword {
   final String keyword;
   final String event_type;
 
-  PatientNotetakerKeyword({
-    required this.keyword,
-    required this.event_type,
-  });
+  PatientNotetakerKeyword({required this.keyword, required this.event_type});
 
   Map<String, String> toJson() => {
     'keyword': keyword,
-    'event_type': event_type
+    'event_type': event_type,
   };
 }
 
@@ -28,7 +26,6 @@ class PatientNotetakerConfigDTO {
   final bool permitCaregiverAccess;
   final List<PatientNotetakerKeyword> triggerKeywords;
   final DateTime? updatedAt;
-
 
   PatientNotetakerConfigDTO({
     this.id,
@@ -45,8 +42,14 @@ class PatientNotetakerConfigDTO {
       patientId: json['patientId'],
       isEnabled: json['isEnabled'] ?? 'DEFAULT',
       permitCaregiverAccess: json['permitCaregiverAccess'],
-      triggerKeywords: (List<dynamic>.from(json['triggerKeywords'] ?? []).map((trigger)=>
-      PatientNotetakerKeyword(keyword: trigger['keyword'], event_type: trigger['event_type'])).toList()),
+      triggerKeywords: (List<dynamic>.from(json['triggerKeywords'] ?? [])
+          .map(
+            (trigger) => PatientNotetakerKeyword(
+              keyword: trigger['keyword'],
+              event_type: trigger['event_type'],
+            ),
+          )
+          .toList()),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'])
           : null,
@@ -59,7 +62,9 @@ class PatientNotetakerConfigDTO {
       'patientId': patientId,
       'isEnabled': isEnabled,
       'permitCaregiverAccess': permitCaregiverAccess,
-      'triggerKeywords': triggerKeywords.map((trigger)=>trigger.toJson()).toList(),
+      'triggerKeywords': triggerKeywords
+          .map((trigger) => trigger.toJson())
+          .toList(),
     };
   }
 
@@ -75,7 +80,8 @@ class PatientNotetakerConfigDTO {
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
       isEnabled: isEnabled ?? this.isEnabled,
-      permitCaregiverAccess: permitCaregiverAccess ?? this.permitCaregiverAccess,
+      permitCaregiverAccess:
+          permitCaregiverAccess ?? this.permitCaregiverAccess,
       triggerKeywords: triggerKeywords ?? this.triggerKeywords,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -84,15 +90,15 @@ class PatientNotetakerConfigDTO {
 
 /// Service to manage Notetaker configuration settings for patients
 class NotetakerConfigService {
-
-  static String get baseUrl => '${getBackendBaseUrl()}/v1/api/patient-notetaker';
+  static String get baseUrl =>
+      '${getBackendBaseUrl()}/v1/api/patient-notetaker';
 
   /// Create or update Notetaker configuration for a user
   /// Returns the saved PatientNotetakerConfigDTO or null on failure
   static Future<PatientNotetakerConfigDTO?> saveUserNotetakerConfig(
-      PatientNotetakerConfigDTO config, {
-        required int userId,
-      }) async {
+    PatientNotetakerConfigDTO config, {
+    required int userId,
+  }) async {
     try {
       final authHeaders = await ApiService.getAuthHeaders();
       authHeaders['Content-Type'] = 'application/json';
@@ -104,7 +110,9 @@ class NotetakerConfigService {
         'patientId': config.patientId,
         'isEnabled': config.isEnabled,
         'permitCaregiverAccess': config.permitCaregiverAccess,
-        'triggerKeywords': config.triggerKeywords.map((trigger) => trigger.toJson()).toList(),
+        'triggerKeywords': config.triggerKeywords
+            .map((trigger) => trigger.toJson())
+            .toList(),
       };
 
       final response = await http.put(
@@ -116,7 +124,9 @@ class NotetakerConfigService {
         final data = jsonDecode(response.body);
         return PatientNotetakerConfigDTO.fromJson(data);
       } else {
-        print('❌ Failed to save/update Notetaker config: ${response.statusCode}');
+        print(
+          '❌ Failed to save/update Notetaker config: ${response.statusCode}',
+        );
         return null;
       }
     } catch (e) {
@@ -127,12 +137,13 @@ class NotetakerConfigService {
 
   /// Get Notetaker configuration for the logged-in user
   /// Usage: NotetakerConfigService.getUserAIConfig(context)
-  static Future<PatientNotetakerConfigDTO?> getUserNotetakerConfig(int patientId, context) async {
+  static Future<PatientNotetakerConfigDTO?> getUserNotetakerConfig(
+    int patientId,
+    context,
+  ) async {
     try {
       final authHeaders = await ApiService.getAuthHeaders();
-      final uri = Uri.parse(
-        '$baseUrl/${patientId.toString()}/config',
-      );
+      final uri = Uri.parse('$baseUrl/${patientId.toString()}/config');
       print('❌ Getting Notetaker config for patientId $patientId from: $uri');
       final response = await http.get(uri, headers: authHeaders);
       print('❌ Notetaker config response status: ${response.statusCode}');
@@ -140,7 +151,9 @@ class NotetakerConfigService {
         final data = jsonDecode(response.body);
         return PatientNotetakerConfigDTO.fromJson(data);
       } else if (response.statusCode == 404) {
-        print('❌ No Notetaker config found for patientId $patientId, using default');
+        print(
+          '❌ No Notetaker config found for patientId $patientId, using default',
+        );
         return _getDefaultConfig(patientId);
       } else {
         print('❌ Failed to get Notetaker config: ${response.statusCode}');
@@ -161,9 +174,38 @@ class NotetakerConfigService {
       isEnabled: true,
       permitCaregiverAccess: false,
       triggerKeywords: [
-        PatientNotetakerKeyword(keyword: 'PII_Social Security', event_type: 'ALERT'),
-        PatientNotetakerKeyword(keyword: 'PII_Credit Card', event_type: 'ALERT'),
+        PatientNotetakerKeyword(
+          keyword: 'PII_Social Security',
+          event_type: 'ALERT',
+        ),
+        PatientNotetakerKeyword(
+          keyword: 'PII_Credit Card',
+          event_type: 'ALERT',
+        ),
       ],
     );
+  }
+
+  static Future<List<PatientNote>> getPatientNotes(int patientId) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      final uri = Uri.parse('$baseUrl/${patientId.toString()}/notes');
+      print('❌ Getting Patient Notes for patientId $patientId from: $uri');
+      final response = await http.get(uri, headers: authHeaders);
+      print('❌ Patient Notes response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        return data.map((noteJson) => PatientNote.fromJson(noteJson)).toList();
+      } else if (response.statusCode == 404) {
+        print('❌ No Patient Notes found for patientId $patientId');
+        return [];
+      } else {
+        print('❌ Failed to get Patient Notes: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error getting Patient Notes: $e');
+      return [];
+    }
   }
 }

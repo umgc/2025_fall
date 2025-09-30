@@ -3,6 +3,7 @@ import 'package:care_connect_app/features/integrations/presentation/pages/home_m
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
+import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -485,6 +486,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/notetaker-configuration',
       builder: (_, __) => const NotetakerConfigurationPage(),
+    ),
+    GoRoute(
+      path: "/notetaker-search",
+      builder: (_, __) => const NotetakerSearchPage(),
     ),
 
     // Video Call Test Route
