@@ -318,6 +318,12 @@ class TeacherDashboard extends StatelessWidget {
         'onPressed': () => Navigator.pushNamed(context, '/gamification'),
         'icon': Icons.videogame_asset_outlined
       },
+      {
+        'title': 'Program Assessment',
+        'description': 'Automatically evaluate student programming assignments.',
+        'onPressed': () => Navigator.pushNamed(context, '/evaluate'),
+        'icon': Icons.terminal_outlined
+      },
     ];
 
     if (role == UserRole.student) {
