@@ -63,7 +63,7 @@ class AiLog {
       case 6:
         return model.displayName;
       case 7:
-        return created.toLocal();
+        return created;
       default:
         return "";
     }
@@ -91,7 +91,7 @@ class AiLog {
       case 6:
         return "AI Model";
       case 7:
-        return "Created";
+        return "Created (UTC)";
       default:
         return "";
     }
