@@ -274,6 +274,34 @@ public class TaskServiceV2 {
         return mapToDto(parentTask);
     }
 
+    /**
+     * Calculates the total number of expected occurrences for a series,
+     * given a start date, end date, frequency, and interval.
+     *
+     * <p>
+     * Supports daily, weekly (with optional days-of-week mask), monthly, and
+     * yearly.
+     * </p>
+     *
+     * <ul>
+     * <li><b>daily</b> – counts days between start and end, divided by
+     * interval</li>
+     * <li><b>weekly</b> – if daysOfWeek is provided, counts only matching weekdays;
+     * otherwise counts whole weeks</li>
+     * <li><b>monthly</b> – counts months between start and end, divided by
+     * interval</li>
+     * <li><b>yearly</b> – counts years between start and end, divided by
+     * interval</li>
+     * </ul>
+     *
+     * @param startDate  first occurrence date
+     * @param endDate    inclusive last date
+     * @param frequency  daily|weekly|monthly|yearly
+     * @param interval   spacing between occurrences (≥1)
+     * @param daysOfWeek for weekly recurrence: 7-length list (Sun=0..Sat=6); may be
+     *                   null
+     * @return number of expected occurrences (≥1)
+     */
     private int calculateCount(LocalDate startDate, LocalDate endDate, String frequency,
             int interval, List<Boolean> daysOfWeek) {
         switch (frequency.toLowerCase()) {
