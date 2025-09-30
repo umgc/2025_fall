@@ -675,39 +675,45 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             },
           ),
           const SizedBox(height: 12),
+          Row(children: [
+            ElevatedButton(
+              onPressed: (_selectedCourse == null ||
+                      _selectedSubject == null ||
+                      _selectedAssessment == null)
+                  ? null
+                  : _generateReport,
+              child: const Text('Generate'),
+            ),
+            Spacer(),
+            DropdownButton<LlmType>(
+                value: selectedLLM,
+                onChanged: (LlmType? newValue) {
+                  setState(() {
+                    selectedLLM = newValue;
+                  });
+                },
+                items: LlmType.values.map((LlmType llm) {
+                  return DropdownMenuItem<LlmType>(
+                    value: llm,
+                    enabled: LocalStorageService.userHasLlmKey(llm),
+                    child: Text(
+                      llm.displayName,
+                      style: TextStyle(
+                        color: LocalStorageService.userHasLlmKey(llm)
+                            ? Colors.black87
+                            : Colors.grey,
+                      ),
+                    ),
+                  );
+                }).toList()),
+          ]),
           Row(
             children: [
-              ElevatedButton(
-                onPressed: _generateReport,
-                child: const Text('Generate'),
-              ),
-              const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: _studentBreakdown.isNotEmpty ? _saveReport : null,
                 child: const Text('Export'),
               ),
-              const SizedBox(width: 8),
-              DropdownButton<LlmType>(
-                  value: selectedLLM,
-                  onChanged: (LlmType? newValue) {
-                    setState(() {
-                      selectedLLM = newValue;
-                    });
-                  },
-                  items: LlmType.values.map((LlmType llm) {
-                    return DropdownMenuItem<LlmType>(
-                      value: llm,
-                      enabled: LocalStorageService.userHasLlmKey(llm),
-                      child: Text(
-                        llm.displayName,
-                        style: TextStyle(
-                          color: LocalStorageService.userHasLlmKey(llm)
-                              ? Colors.black87
-                              : Colors.grey,
-                        ),
-                      ),
-                    );
-                  }).toList()),
+              Spacer(),
               ElevatedButton(
                 onPressed: _studentBreakdown.isNotEmpty && selectedLLM != null
                     ? _analyzeReport
@@ -718,7 +724,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         height: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('AI Analyze'),
+                    : Text(_selectedStudent == null
+                        ? 'AI Analyze Course'
+                        : 'AI Analyze Student'),
               ),
             ],
           ),
@@ -814,54 +822,64 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return SizedBox(
       height: 300,
       child: Scrollbar(
-        thumbVisibility: true,
-        controller: _verticalStudentController,
-        child: SingleChildScrollView(
+          thumbVisibility: true,
           controller: _verticalStudentController,
-          scrollDirection: Axis.vertical,
-          child: Scrollbar(
-            thumbVisibility: true,
-            controller: _horizontalStudentController,
-            notificationPredicate: (notification) => notification.depth == 2,
-            child: SingleChildScrollView(
-              controller: _horizontalStudentController,
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12.0,
-                columns: const [
-                  DataColumn(label: Text('Student Name')),
-                  DataColumn(label: Text('Average Grade')),
-                  DataColumn(label: Text('Class Rank')),
-                ],
-                rows: _studentBreakdown.map((student) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedStudent = student;
-                            });
-                          },
-                          child: Text(
-                            student['studentName'].toString(),
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
+          child: SingleChildScrollView(
+            controller: _verticalStudentController,
+            child: DataTable(
+              showCheckboxColumn: false,
+              columnSpacing: 12.0,
+              columns: const [
+                DataColumn(label: Expanded(child: Text('Student Name'))),
+                DataColumn(label: Text('Average Grade')),
+                DataColumn(label: Text('Class Rank')),
+              ],
+              rows: _studentBreakdown.map((student) {
+                return DataRow(
+                  color: WidgetStateProperty.resolveWith<Color?>(
+                      (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.15);
+                    }
+                    if (states.contains(WidgetState.hovered)) {
+                      return Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.25);
+                    }
+                    return _studentBreakdown.indexOf(student) % 2 == 0
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(.55)
+                        : null; // Use the default value.
+                  }),
+                  selected: student == _selectedStudent,
+                  onSelectChanged: (val) {
+                    setState(() {
+                      _selectedStudent = student;
+                    });
+                  },
+                  cells: [
+                    DataCell(
+                      Text(
+                        student['studentName'].toString(),
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
                         ),
                       ),
-                      DataCell(Text(student['avgGrade'].toString())),
-                      DataCell(Text(student['classRank'].toString())),
-                    ],
-                  );
-                }).toList(),
-              ),
+                    ),
+                    DataCell(Text(student['avgGrade'].toString())),
+                    DataCell(Text(student['classRank'].toString())),
+                  ],
+                );
+              }).toList(),
             ),
-          ),
-        ),
-      ),
+          )),
     );
   }
 
@@ -1021,10 +1039,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               // Top-left: the report form
               _buildReportForm(),
               const SizedBox(height: 20),
-              const Text(
-                'Student Breakdown',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              Row(children: [
+                Text(
+                  'Student Breakdown',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Spacer(),
+                ElevatedButton(
+                    onPressed: _selectedStudent == null
+                        ? null
+                        : () => setState(() {
+                              _selectedStudent = null;
+                            }),
+                    child: Text("Clear Selection"))
+              ]),
               const SizedBox(height: 8),
               Container(
                 color: Colors.white,
