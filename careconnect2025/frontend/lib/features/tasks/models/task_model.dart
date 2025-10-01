@@ -15,7 +15,7 @@ import '../../notifications/models/scheduled_notification_model.dart';
 /// and series updates (via `parentTaskId` + `applyToSeries`).
 class Task {
   int? id;
-  int? userId; // Optional, can be null if not assigned to a user
+  int? assignedPatientId; // Optional, can be null if not assigned to a user
   String name;
   String description;
   DateTime date;
@@ -38,7 +38,7 @@ class Task {
     this.description = "",
     required this.date,
     this.timeOfDay,
-    this.userId,
+    this.assignedPatientId,
     this.isComplete = false,
     this.notifications,
     this.frequency,
@@ -76,7 +76,7 @@ class Task {
                   : json['timeOfDay']['minute'],
             )
           : null,
-      userId: json['patientId'],
+      assignedPatientId: json['patientId'],
       isComplete: json['isComplete'] ?? false,
       notifications: json['notifications'] != null
           ? (json['notifications'] as List)
@@ -115,7 +115,7 @@ class Task {
       'count': count,
       'daysOfWeek': daysOfWeek,
       'taskType': taskType ?? "general",
-      'patientId': userId,
+      'patientId': assignedPatientId,
       'applyToSeries': applyToSeries,
       'parentTaskId': parentTaskId,
     };
@@ -156,7 +156,7 @@ extension TaskCopyWith on Task {
       description: description ?? this.description,
       date: date ?? this.date,
       timeOfDay: timeOfDay ?? this.timeOfDay,
-      userId: userId ?? this.userId,
+      assignedPatientId: userId ?? this.assignedPatientId,
       isComplete: isComplete ?? this.isComplete,
       notifications: this.notifications, // keep existing notifications
       frequency: frequency ?? this.frequency,

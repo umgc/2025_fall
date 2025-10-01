@@ -61,8 +61,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
             return false;
           }
           if (_selectedPatients.isNotEmpty &&
-              (task.userId == null ||
-                  !_selectedPatients.contains(task.userId))) {
+              (task.assignedPatientId == null ||
+                  !_selectedPatients.contains(task.assignedPatientId))) {
             return false;
           }
           return true;
@@ -527,8 +527,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
                     return Column(
                       children: dayTasks.map((task) {
-                        final assignedName = task.userId != null
-                            ? patientNames[task.userId] ?? "Unknown Patient"
+                        final assignedName = task.assignedPatientId != null
+                            ? patientNames[task.assignedPatientId] ??
+                                  "Unknown Patient"
                             : "Unassigned";
                         return ListTile(
                           leading: Icon(
@@ -632,7 +633,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     try {
       final response = await ApiService.createTaskV2(
-        newTask.userId!,
+        newTask.assignedPatientId!,
         jsonEncode(newTask.toJson()),
       );
       if (!mounted) return;
@@ -715,7 +716,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         initialTask: task,
         isCaregiver: user.isCaregiver,
         patients: patients,
-        defaultPatientId: user.isPatient ? user.patientId : task.userId,
+        defaultPatientId: user.isPatient
+            ? user.patientId
+            : task.assignedPatientId,
         initialDate: _selectedDay,
         seriesAnchorDate: seriesAnchorDate,
       ),

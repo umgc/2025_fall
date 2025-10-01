@@ -78,7 +78,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     titleController = TextEditingController(text: t?.name ?? '');
     descriptionController = TextEditingController(text: t?.description ?? '');
     selectedTime = t?.timeOfDay;
-    selectedPatientId = widget.defaultPatientId ?? t?.userId;
+    selectedPatientId = widget.defaultPatientId ?? t?.assignedPatientId;
     //If editing and taskType is valid, keep it
     if (t != null &&
         t.taskType != null &&
@@ -446,7 +446,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                     description: descriptionController.text,
                     date: startDate ?? DateTime.now(),
                     timeOfDay: selectedTime,
-                    userId: selectedPatientId,
+                    assignedPatientId: selectedPatientId,
                     isComplete: widget.initialTask?.isComplete ?? false,
                     notifications: widget.initialTask?.notifications,
                     frequency: recurrenceType,
@@ -487,7 +487,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                             ? rawTask.description
                             : "Don't forget this task.",
                         notificationType: "TASK_REMINDER",
-                        receiverId: rawTask.userId!,
+                        receiverId: rawTask.assignedPatientId!,
                         status: "PENDING",
                       ),
                     ];
