@@ -1098,26 +1098,38 @@ class ApiService {
   }
 
   // Delete a task by task ID (v2)
-  static Future<http.Response> deleteTaskV2(int taskId) async {
+  // Delete a task by task ID (v2), with optional deleteSeries flag
+  static Future<http.Response> deleteTaskV2(
+    int taskId, {
+    bool deleteSeries = false,
+  }) async {
     final headers = await AuthTokenManager.getAuthHeaders();
+
+    final url = Uri.parse(
+      '${ApiConstants.tasksV2}/$taskId',
+    ).replace(queryParameters: {'deleteSeries': deleteSeries.toString()});
+
     return await _httpClient
-        .delete(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
+        .delete(url, headers: headers)
         .timeout(const Duration(seconds: 30));
   }
 
   // Edit a task by task ID (v2)
   static Future<http.Response> editTaskV2(
     int taskId,
-    Map<String, dynamic> taskData,
-  ) async {
+    Map<String, dynamic> body, {
+    bool updateSeries = false,
+  }) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     headers['Content-Type'] = 'application/json';
 
+    final payload = Map<String, dynamic>.from(body);
+    payload['updateSeries'] = updateSeries;
     return await _httpClient
         .put(
           Uri.parse('${ApiConstants.tasksV2}/$taskId'),
           headers: headers,
-          body: jsonEncode(taskData),
+          body: jsonEncode(payload),
         )
         .timeout(const Duration(seconds: 30));
   }
