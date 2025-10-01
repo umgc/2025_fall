@@ -1,6 +1,7 @@
 package com.careconnect.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
+@ConditionalOnProperty(name = "careconnect.stripe.enabled", havingValue = "true", matchIfMissing = true)
 public class StripeService {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;

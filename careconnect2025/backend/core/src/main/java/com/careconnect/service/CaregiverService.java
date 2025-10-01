@@ -72,7 +72,7 @@ public class CaregiverService {
     @Autowired 
     private  FamilyMemberLinkRepository familyMemberLinkRepository;
     
-    @Autowired
+    @Autowired(required = false)
     private StripeService stripeService;
     
     @Autowired
@@ -278,7 +278,16 @@ public Patient registerPatient(PatientRegistration reg) {
         Map<String, Object> customerResult;
         
         try {
-            customerResult = stripeService.createCustomer(fullName, reg.getCredentials().getEmail());
+            if (stripeService != null) {
+                customerResult = stripeService.createCustomer(fullName, reg.getCredentials().getEmail());
+            } else {
+                // Mock customer result for development mode
+                customerResult = Map.of(
+                    "id", "cus_mock_" + System.currentTimeMillis(),
+                    "success", true
+                );
+                log.info("Development mode: Using mock Stripe customer creation");
+            }
         } catch (Exception e) {
             throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Failed to create Stripe customer: " + e.getMessage());
@@ -338,9 +347,19 @@ public Patient registerPatient(PatientRegistration reg) {
                 
                 // Create subscription
                 try {
-                    Map<String, Object> subscriptionResult = stripeService.createSubscription(
-                        stripeCustomerId, plan.getCode() // using plan.code as the Stripe price ID
-                    );
+                    Map<String, Object> subscriptionResult;
+                    if (stripeService != null) {
+                        subscriptionResult = stripeService.createSubscription(
+                            stripeCustomerId, plan.getCode() // using plan.code as the Stripe price ID
+                        );
+                    } else {
+                        // Mock subscription result for development mode
+                        subscriptionResult = Map.of(
+                            "id", "sub_mock_" + System.currentTimeMillis(),
+                            "success", true
+                        );
+                        log.info("Development mode: Using mock Stripe subscription creation");
+                    }
                     
                     // Save subscription information to database
                     if (subscriptionResult != null && subscriptionResult.get("id") != null) {

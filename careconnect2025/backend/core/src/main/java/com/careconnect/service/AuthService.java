@@ -79,7 +79,7 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider jwt;
 
-    @Autowired
+    @Autowired(required = false)
     private StripeService stripeService;
 
     @Autowired
