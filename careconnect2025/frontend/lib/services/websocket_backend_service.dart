@@ -44,7 +44,7 @@ class CareConnectWebSocketService {
 
       // Connect to Spring Boot WebSocket endpoint
       _channel = WebSocketChannel.connect(
-        Uri.parse('ws://localhost:8080/ws/careconnect'),
+        Uri.parse('ws://192.168.1.173:8080/ws/careconnect'),
       );
 
       _isConnected = true;
@@ -166,7 +166,7 @@ class CareConnectWebSocketService {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/api/sms/send'),
+        Uri.parse('http://192.168.1.173:8080/api/sms/send'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

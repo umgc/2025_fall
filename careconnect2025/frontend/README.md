@@ -163,7 +163,7 @@ cd summer2025
 * Or, in IntelliJ/IDEA:
   Click the green "Run" arrow for `CareconnectBackendApplication`.
 
-The backend runs by default at [http://localhost:8080](http://localhost:8080).
+The backend runs by default at [http://192.168.1.173:8080](http://192.168.1.173:8080).
 
 Read more in the that [README.](../backend/core/README.md)
 
@@ -175,7 +175,7 @@ Once both servers are running:
 
 * Open the Flutter app and register or log in.
 * Check the backend console for logs or errors.
-* Use Postman (optional) to test API endpoints manually (`http://localhost:8080/api/...`).
+* Use Postman (optional) to test API endpoints manually (`http://192.168.1.173:8080/api/...`).
 
 ---
 

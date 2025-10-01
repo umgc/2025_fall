@@ -269,9 +269,9 @@
 {"group":{"id":152,"suiteID":107,"parentID":129,"name":"Payment Tests","metadata":{"skip":false,"skipReason":null},"testCount":3,"line":191,"column":3,"url":"file:///Users/ashenafigebreeziabhere/Documents/VPProjects/summer2025/careconnect2025/frontend/test/widget_test.dart"},"type":"group","time":160502}
 {"test":{"id":153,"name":"Payment Tests SelectPackagePage renders correctly","suiteID":107,"groupIDs":[129,152],"metadata":{"skip":false,"skipReason":null},"line":175,"column":5,"url":"package:flutter_test/src/widget_tester.dart","root_line":192,"root_column":5,"root_url":"file:///Users/ashenafigebreeziabhere/Documents/VPProjects/summer2025/careconnect2025/frontend/test/widget_test.dart"},"type":"testStart","time":160502}
 {"testID":153,"messageType":"print","message":"🚀 SelectPackagePage initState called","type":"print","time":160532}
-{"testID":153,"messageType":"print","message":"🔗 Base URL: http://localhost:8080/v1/api/","type":"print","time":160537}
+{"testID":153,"messageType":"print","message":"🔗 Base URL: http://192.168.1.173:8080/v1/api/","type":"print","time":160537}
 {"testID":153,"messageType":"print","message":"🔍 Starting to fetch subscription plans...","type":"print","time":160543}
-{"testID":153,"messageType":"print","message":"📡 Making API call to: http://localhost:8080/v1/api/subscriptions/plans","type":"print","time":160551}
+{"testID":153,"messageType":"print","message":"📡 Making API call to: http://192.168.1.173:8080/v1/api/subscriptions/plans","type":"print","time":160551}
 {"testID":153,"messageType":"print","message":"📊 Response status: 400","type":"print","time":160670}
 {"testID":153,"messageType":"print","message":"📋 Response body: ","type":"print","time":160684}
 {"testID":153,"messageType":"print","message":"❌ API call failed with status: 400","type":"print","time":160687}

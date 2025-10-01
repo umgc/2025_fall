@@ -38,7 +38,7 @@ String _getUnifiedWebSocketBaseUrl() {
     return base.replaceFirst('http://', 'ws://');
   }
   // Fallback
-  return 'ws://localhost:8080';
+  return 'ws://192.168.1.173:8080';
 }
 
 /// Returns the WebRTC signaling server URL (points to /ws/notifications)
@@ -192,7 +192,7 @@ String getGoogleClientId() {
 }
 
 String getAppDomain() {
-  return dotenv.env['APP_DOMAIN'] ?? 'localhost';
+  return dotenv.env['APP_DOMAIN'] ?? '192.168.1.173';
 }
 
 String getAppPort() {
@@ -203,8 +203,8 @@ String getOAuthRedirectUri() {
   final domain = getAppDomain();
   final port = getAppPort();
 
-  // For localhost, include port. For production domains, don't include port
-  if (domain == 'localhost' || domain.startsWith('127.0.0.1')) {
+  // For 192.168.1.173, include port. For production domains, don't include port
+  if (domain == '192.168.1.173' || domain.startsWith('127.0.0.1')) {
     return 'http://$domain:$port/oauth2/callback/google';
   } else {
     return 'https://$domain/oauth2/callback/google';
@@ -215,8 +215,8 @@ String getWebBaseUrl() {
   final domain = getAppDomain();
   final port = getAppPort();
 
-  // For development/localhost
-  if (domain == 'localhost' || domain.startsWith('127.0.0.1')) {
+  // For development/192.168.1.173
+  if (domain == '192.168.1.173' || domain.startsWith('127.0.0.1')) {
     return 'http://$domain:$port';
   }
 
