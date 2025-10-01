@@ -1,0 +1,9 @@
+Checking for wireless devices...
+
+Connected devices:
+macOS (desktop) • macos  • darwin-arm64   • macOS 26.0 25A354 darwin-arm64
+Chrome (web)    • chrome • web-javascript • Google Chrome 140.0.7339.133
+[1]: macOS (macos)
+[2]: Chrome (chrome)
+Please choose one (or "q" to quit): 
+Please choose one (or "q" to quit): 
