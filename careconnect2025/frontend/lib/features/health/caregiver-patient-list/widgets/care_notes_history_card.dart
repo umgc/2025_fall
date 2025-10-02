@@ -169,15 +169,15 @@ class _CareNoteTile extends StatelessWidget {
     final type = typeRaw.toLowerCase().trim();
     switch (type) {
       case 'urgent':
-        return (cs.error, cs.onError, 'urgent');
+        return (Colors.red.shade600, Colors.white, 'urgent');
       case 'assessment':
-        return (cs.primary.withValues(alpha: 0.15), cs.primary, 'assessment');
+        return (Colors.blue.shade800, Colors.white, 'assessment');
       case 'medication':
-        return (cs.tertiary.withValues(alpha: 0.90), cs.onTertiary, 'medication');
+        return (Colors.orange.shade600, Colors.white, 'medication');
       default:
         return (
-        cs.surfaceContainerHighest.withValues(alpha: 0.70),
-        cs.onSurface,
+        Colors.grey.shade300,
+        Colors.black87,
         'general'
         );
     }
