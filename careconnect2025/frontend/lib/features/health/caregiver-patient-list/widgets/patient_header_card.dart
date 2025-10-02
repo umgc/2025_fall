@@ -107,7 +107,7 @@ class PatientHeaderCard extends StatelessWidget {
               ),
               // optional tiny alert icon (matches the red hint in mock)
               const SizedBox(width: 6),
-              Icon(Icons.priority_high, size: 14, color: cs.error),
+              Icon(Icons.trending_down, size: 16, color: cs.error),
             ],
           ),
 

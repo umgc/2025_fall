@@ -200,10 +200,9 @@ class _MedicationBlock extends StatelessWidget {
   }
 
   Color _complianceColor(BuildContext context, double pct) {
-    final cs = Theme.of(context).colorScheme;
-    if (pct >= 90) return cs.primary; // green
-    if (pct >= 80) return cs.tertiary; // amber
-    return cs.error; // red
+    if (pct >= 90) return Colors.green.shade600;
+    if (pct >= 70) return Colors.orange.shade600;
+    return Colors.red.shade600;
   }
 
   String _formatDateTime(DateTime d) {
@@ -239,8 +238,8 @@ class _StatusBadge extends StatelessWidget {
     } else {
       switch (status) {
         case MedicationStatus.active:
-          bg = cs.primary.withValues(alpha: 0.15);
-          fg = cs.primary;
+          bg = Colors.blue.shade900;
+          fg = Colors.white;
           text = 'active';
           break;
         case MedicationStatus.paused:
