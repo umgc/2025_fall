@@ -1,7 +1,4 @@
-import 'dart:collection';
 import 'dart:convert';
-
-import 'package:table_calendar/table_calendar.dart';
 
 import '../models/task_model.dart';
 
@@ -10,7 +7,6 @@ import '../models/task_model.dart';
 /// =============================
 /// Utility class for common task-related operations:
 /// - Normalizing API data into [Task] model-friendly structures
-/// - Grouping tasks by date for calendar display
 /// - Normalizing dates to midnight (for consistent comparisons)
 class TaskUtils {
   /// Normalize raw task map values (from API or DB) into expected formats.
@@ -40,33 +36,6 @@ class TaskUtils {
     return map;
   }
 
-  /// Group a list of [Task] objects by their normalized date (midnight).
-  ///
-  /// - Uses [isSameDay] from `table_calendar` for equality
-  /// - Custom hashCode ensures unique keys for year/month/day combos
-  /// - Deduplicates tasks by `(task.id + task.date)`
-  ///
-  /// Useful for feeding into `TableCalendar` or other date-based UIs.
-  static LinkedHashMap<DateTime, List<Task>> groupTasksByDate(
-    List<Task> tasks,
-  ) {
-    final grouped = LinkedHashMap<DateTime, List<Task>>(
-      equals: isSameDay,
-      hashCode: (date) => date.day * 1000000 + date.month * 10000 + date.year,
-    );
-
-    for (final task in tasks) {
-      final key = DateTime(task.date.year, task.date.month, task.date.day);
-
-      // Deduplicate by (task.id + task.date)
-      final existing = grouped.putIfAbsent(key, () => []);
-      if (!existing.any((t) => t.id == task.id && t.date == task.date)) {
-        existing.add(task);
-      }
-    }
-    return grouped;
-  }
-
   /// Normalize a [DateTime] by stripping out hours, minutes, and seconds.
   ///
   /// Example:
@@ -75,5 +44,11 @@ class TaskUtils {
   /// Ensures consistency for comparisons, calendar keys, etc.
   static DateTime normalizeDate(DateTime d) {
     return DateTime(d.year, d.month, d.day);
+  }
+
+  // In task_utils.dart (inside class TaskUtils)
+  static bool isSameDay(DateTime a, DateTime? b) {
+    if (b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }
