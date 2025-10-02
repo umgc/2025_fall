@@ -430,20 +430,23 @@ flutter run -d <device_id>
 **Environment Configuration:**
 Create a `.env` file in the frontend directory:
 ```bash
-# API Configuration
-CC_BASE_URL_WEB=http://localhost:8080
-CC_BASE_URL_ANDROID=http://10.0.2.2:8080
-CC_BASE_URL_OTHER=http://localhost:8080
 
-# JWT Secret
-JWT_SECRET=your_jwt_secret_key_here
+# PostgreSQL Development Database Configuration
+JDBC_URI=jdbc:postgresql://localhost:5432/careconnect
+DB_USER=postgres
+DB_PASSWORD=changeme
 
-# API Keys (optional)
-DEEPSEEK_API_KEY=your_deepseek_api_key
-OPENAI_API_KEY=your_openai_api_key
+# Security Configuration
+SECURITY_JWT_SECRET=ZGV2ZWxvcG1lbnRfc2VjcmV0X2tleV9mb3JfZGV2ZWxvcG1lbnRfb25seV9ub3RfZm9yX3Byb2R1Y3Rpb24=
 
-# Backend Token
-CC_BACKEND_TOKEN=your_backend_token
+# Firebase Configuration (mocked for development)
+FIREBASE_PROJECT_ID=00000
+FIREBASE_SENDER_ID=0000
+
+# AWS Configuration (mocked for development - not used in dev mode)
+AWS_ACCESS_KEY_ID=mock_access_key
+AWS_SECRET_ACCESS_KEY=mock_secret_key
+AWS_REGION=us-east-1
 ```
 
 **Platform-Specific Commands:**
