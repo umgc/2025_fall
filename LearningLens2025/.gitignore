@@ -41,3 +41,7 @@ teama/assets/api-keys.json
 teama/android/
 
 terraform/terraformout.txt
+
+# Terraform
+.terraform*
+*.tfstate*
