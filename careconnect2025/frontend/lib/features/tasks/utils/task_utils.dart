@@ -51,4 +51,19 @@ class TaskUtils {
     if (b == null) return false;
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  // Put this inside _CalendarAssistantScreenState (not inside build)
+  static DateTime getStartOfWeek(DateTime date, {bool mondayStart = true}) {
+    // normalize to midnight
+    final d = TaskUtils.normalizeDate(date);
+
+    if (mondayStart) {
+      // Monday = 1, Sunday = 7  → subtract (weekday - 1)
+      return d.subtract(Duration(days: d.weekday - 1));
+    } else {
+      // Sunday-start week: Sunday = 7 treated as 0
+      final offset = d.weekday % 7; // Sunday -> 0, Mon -> 1, ...
+      return d.subtract(Duration(days: offset));
+    }
+  }
 }

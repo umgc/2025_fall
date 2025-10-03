@@ -16,7 +16,13 @@ import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'widgets/calendar_cell.dart';
+import 'widgets/event_tile.dart';
+import 'widgets/filters_panel.dart';
+import 'widgets/legend.dart';
 import 'widgets/task_form_dialog.dart';
+import 'widgets/task_list_day.dart';
+import 'widgets/task_list_week.dart';
 
 // View type enum
 enum CalendarViewType { month, week, day }
@@ -202,73 +208,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     return tasks;
   }
 
-  /// Build a small colored dot + label for the legend
-  Widget _buildLegendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-        const SizedBox(width: 4),
-        Text(label),
-      ],
-    );
-  }
-
-  Widget _buildCalendarCell(
-    DateTime date,
-    List<CalendarEventData<Task>> events,
-    bool isToday,
-    bool isInMonth,
-    bool isWeekend,
-  ) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(
-          color: TaskUtils.isSameDay(date, _selectedDay)
-              ? Colors
-                    .green // highlight selected
-              : (isToday ? theme.colorScheme.primary : theme.dividerColor),
-          width: TaskUtils.isSameDay(date, _selectedDay) ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        children: [
-          Text(
-            "${date.day}",
-            style: (theme.textTheme.bodySmall ?? const TextStyle()).copyWith(
-              color: isInMonth
-                  ? theme.colorScheme.onSurface
-                  : theme.disabledColor,
-            ),
-          ),
-          Wrap(
-            spacing: 2,
-            runSpacing: 2,
-            children: events.take(4).map((e) {
-              final task = e.event;
-              return Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: TaskTypeUtils.getColor(task?.taskType),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Render the timeline hour labels (respects theme & dark mode)
   Widget _themedTimeLabel(DateTime date) {
     final theme = Theme.of(context);
@@ -283,50 +222,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurface,
         ),
-      ),
-    );
-  }
-
-  /// Custom tile for events in Week/Day views
-  Widget _buildEventTile(
-    DateTime date,
-    List<CalendarEventData<Task>> events,
-    Rect boundary,
-    DateTime startTime,
-    DateTime endTime,
-  ) {
-    if (events.isEmpty) return const SizedBox.shrink();
-
-    final task = events.first.event; // use first event for display
-    final color = TaskTypeUtils.getColor(task?.taskType);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        border: Border.all(color: color, width: 1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.all(6),
-            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-          ),
-          Expanded(
-            child: Text(
-              task?.name ?? "Task",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -365,8 +260,46 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              _buildFiltersRow(),
-
+              // ------------------
+              // Filters Row
+              // ------------------
+              FiltersPanel(
+                expanded: _filtersExpanded,
+                patientNames: patientNames,
+                selectedTypes: _selectedTypes,
+                selectedPatients: _selectedPatients,
+                onClear: () {
+                  setState(() {
+                    _selectedTypes.clear();
+                    _selectedPatients.clear();
+                  });
+                  _loadTasksFromDb();
+                },
+                onTypeToggled: (type) {
+                  setState(() {
+                    _selectedTypes.contains(type)
+                        ? _selectedTypes.remove(type)
+                        : _selectedTypes.add(type);
+                  });
+                  _loadTasksFromDb();
+                },
+                onPatientToggled: (id) {
+                  setState(() {
+                    _selectedPatients.contains(id)
+                        ? _selectedPatients.remove(id)
+                        : _selectedPatients.add(id);
+                  });
+                  _loadTasksFromDb();
+                },
+                onToggleExpanded: () {
+                  setState(() => _filtersExpanded = !_filtersExpanded);
+                },
+                onTodayPressed: () {
+                  setState(() {
+                    _selectedDay = DateTime.now();
+                  });
+                },
+              ),
               // ------------------
               // View switcher
               // ------------------
@@ -387,7 +320,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                             _selectedDay ??= DateTime.now();
                             if (val == CalendarViewType.week &&
                                 _selectedDay != null) {
-                              _selectedDay = _getStartOfWeek(_selectedDay!);
+                              _selectedDay = TaskUtils.getStartOfWeek(
+                                _selectedDay!,
+                              );
                             }
                           });
                         }
@@ -427,7 +362,20 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                             controller: _eventController,
                             initialMonth: _selectedDay,
                             cellAspectRatio: 1.5,
-                            cellBuilder: _buildCalendarCell,
+                            cellBuilder:
+                                (date, events, isToday, isInMonth, isWeekend) {
+                                  return CalendarCell(
+                                    date: date,
+                                    events: events,
+                                    isToday: isToday,
+                                    isInMonth: isInMonth,
+                                    isWeekend: isWeekend,
+                                    isSelected: TaskUtils.isSameDay(
+                                      date,
+                                      _selectedDay,
+                                    ),
+                                  );
+                                },
                             headerStyle: HeaderStyle(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surface,
@@ -482,7 +430,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                             initialDay: _selectedDay,
                             onPageChange: (date, _) {
                               setState(() {
-                                _selectedDay = _getStartOfWeek(date);
+                                _selectedDay = TaskUtils.getStartOfWeek(date);
                               });
                             },
                             backgroundColor: theme.colorScheme.surface,
@@ -498,7 +446,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                             ),
                             timeLineWidth: 56,
                             timeLineBuilder: _themedTimeLabel,
-                            eventTileBuilder: _buildEventTile,
+                            eventTileBuilder:
+                                (date, events, boundary, start, end) =>
+                                    EventTile(events: events),
                             headerStyle: HeaderStyle(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surface,
@@ -607,7 +557,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                             ),
                             timeLineWidth: 56,
                             timeLineBuilder: _themedTimeLabel,
-                            eventTileBuilder: _buildEventTile,
+                            eventTileBuilder:
+                                (date, events, boundary, start, end) =>
+                                    EventTile(events: events),
                             headerStyle: HeaderStyle(
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.surface,
@@ -642,11 +594,13 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
               const SizedBox(height: 16),
 
+              // ------------------
               // Legend
+              // ------------------
               Wrap(
                 spacing: 16,
                 children: TaskTypeUtils.taskTypeColors.entries
-                    .map((e) => _buildLegendDot(e.value, e.key))
+                    .map((e) => LegendDot(color: e.value, label: e.key))
                     .toList(),
               ),
 
@@ -655,8 +609,29 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
               // Task list changes depending on view
               if (_selectedDay != null)
                 _currentView == CalendarViewType.week
-                    ? _buildTaskListForWeek(_selectedDay!)
-                    : _buildTaskListForDay(_selectedDay!),
+                    ? TaskListWeek(
+                        events: _eventController.events.where((e) {
+                          final weekStart = TaskUtils.getStartOfWeek(
+                            _selectedDay!,
+                          );
+                          final weekEnd = weekStart.add(
+                            const Duration(days: 7),
+                          );
+                          return e.date.isAfter(
+                                weekStart.subtract(const Duration(seconds: 1)),
+                              ) &&
+                              e.date.isBefore(weekEnd);
+                        }).toList(),
+                        patientNames: patientNames,
+                        onEdit: _editTask,
+                        onDelete: _removeTask,
+                      )
+                    : TaskListDay(
+                        events: _eventController.getEventsOnDay(_selectedDay!),
+                        patientNames: patientNames,
+                        onEdit: _editTask,
+                        onDelete: _removeTask,
+                      ),
             ],
           ),
         ),
@@ -664,317 +639,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
   }
 
-  // Put this inside _CalendarAssistantScreenState (not inside build)
-  DateTime _getStartOfWeek(DateTime date, {bool mondayStart = true}) {
-    // normalize to midnight
-    final d = TaskUtils.normalizeDate(date);
-
-    if (mondayStart) {
-      // Monday = 1, Sunday = 7  → subtract (weekday - 1)
-      return d.subtract(Duration(days: d.weekday - 1));
-    } else {
-      // Sunday-start week: Sunday = 7 treated as 0
-      final offset = d.weekday % 7; // Sunday -> 0, Mon -> 1, ...
-      return d.subtract(Duration(days: offset));
-    }
-  }
-
-  Widget _buildFiltersRow() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            fit: FlexFit.tight,
-            child: Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, // 👈 key change
-                children: [
-                  ListTile(
-                    title: const Text("Filters"),
-                    trailing: IconButton(
-                      icon: Icon(
-                        _filtersExpanded
-                            ? Icons.expand_more
-                            : Icons.chevron_right,
-                      ),
-                      onPressed: () {
-                        setState(() => _filtersExpanded = !_filtersExpanded);
-                      },
-                    ),
-                  ),
-                  if (_filtersExpanded) ...[
-                    // -----------------------
-                    // Task Type Filters
-                    // -----------------------
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                      child: Text(
-                        "Task Types",
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      child: SizedBox(
-                        // 👈 force full width
-                        width: double.infinity,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.start,
-                          children: TaskTypeUtils.getSortedTypes().map((type) {
-                            return FilterChip(
-                              label: Text(
-                                type[0].toUpperCase() + type.substring(1),
-                              ),
-                              selected: _selectedTypes.contains(type),
-                              onSelected: (sel) {
-                                setState(() {
-                                  sel
-                                      ? _selectedTypes.add(type)
-                                      : _selectedTypes.remove(type);
-                                });
-                                _loadTasksFromDb();
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-
-                    // -----------------------
-                    // Patient Filters
-                    // -----------------------
-                    if (Provider.of<UserProvider>(
-                          context,
-                          listen: false,
-                        ).user?.isCaregiver ??
-                        false)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                            child: Text(
-                              "Patients",
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                            child: SizedBox(
-                              // 👈 same fix here
-                              width: double.infinity,
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.start,
-                                children: patientNames.entries.map((entry) {
-                                  return FilterChip(
-                                    label: Text(entry.value),
-                                    selected: _selectedPatients.contains(
-                                      entry.key,
-                                    ),
-                                    onSelected: (sel) {
-                                      setState(() {
-                                        sel
-                                            ? _selectedPatients.add(entry.key)
-                                            : _selectedPatients.remove(
-                                                entry.key,
-                                              );
-                                      });
-                                      _loadTasksFromDb();
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                    // -----------------------
-                    // Clear button
-                    // -----------------------
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.clear),
-                        label: const Text("Clear"),
-                        onPressed: () {
-                          setState(() {
-                            _selectedTypes.clear();
-                            _selectedPatients.clear();
-                          });
-                          _loadTasksFromDb();
-                        },
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.today),
-            label: const Text("Today"),
-            onPressed: () {
-              setState(() {
-                _selectedDay = DateTime.now();
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskListForWeek(DateTime weekDate) {
-    final weekStart = weekDate.subtract(
-      Duration(days: weekDate.weekday - 1),
-    ); // Monday
-    final weekEnd = weekStart.add(const Duration(days: 7));
-
-    final events = _eventController.events.where((e) {
-      return e.date.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-          e.date.isBefore(weekEnd);
-    }).toList();
-
-    if (events.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text("No tasks this week"),
-      );
-    }
-
-    final tasks = events.map((e) => e.event!).toList()
-      ..sort((a, b) {
-        final cmpDate = a.date.compareTo(b.date);
-        if (cmpDate != 0) return cmpDate;
-
-        if (a.timeOfDay != null && b.timeOfDay != null) {
-          final aMins = a.timeOfDay!.hour * 60 + a.timeOfDay!.minute;
-          final bMins = b.timeOfDay!.hour * 60 + b.timeOfDay!.minute;
-          return aMins.compareTo(bMins);
-        }
-        if (a.timeOfDay != null) return -1;
-        if (b.timeOfDay != null) return 1;
-
-        return a.name.compareTo(b.name);
-      });
-
-    return Column(
-      children: tasks.map((task) {
-        final assignedName = task.assignedPatientId != null
-            ? patientNames[task.assignedPatientId] ?? "Unknown Patient"
-            : "Unassigned";
-
-        return ListTile(
-          leading: Icon(
-            TaskTypeUtils.getIcon(task.taskType),
-            color: TaskTypeUtils.getColor(task.taskType),
-          ),
-          title: Text(
-            task.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${task.date.month}/${task.date.day} • "
-                "${task.timeOfDay != null ? task.timeOfDay!.format(context) : "All day"}",
-              ),
-              if (assignedName.isNotEmpty && assignedName != "Unassigned")
-                Text("👤 $assignedName"),
-            ],
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => _editTask(task),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _removeTask(task),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildTaskListForDay(DateTime day) {
-    final events = _eventController.getEventsOnDay(day);
-    if (events.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text("No tasks for this day"),
-      );
-    }
-    final tasks = events.map((e) => e.event!).toList()
-      ..sort((a, b) {
-        if (a.timeOfDay != null && b.timeOfDay != null) {
-          final aMins = a.timeOfDay!.hour * 60 + a.timeOfDay!.minute;
-          final bMins = b.timeOfDay!.hour * 60 + b.timeOfDay!.minute;
-          return aMins.compareTo(bMins);
-        }
-        if (a.timeOfDay != null) return -1;
-        if (b.timeOfDay != null) return 1;
-        return a.name.compareTo(b.name);
-      });
-
-    return Column(
-      children: tasks.map((task) {
-        final assignedName = task.assignedPatientId != null
-            ? patientNames[task.assignedPatientId] ?? "Unknown Patient"
-            : "Unassigned";
-        return ListTile(
-          leading: Icon(
-            TaskTypeUtils.getIcon(task.taskType),
-            color: TaskTypeUtils.getColor(task.taskType),
-          ),
-          title: Text(
-            task.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.timeOfDay != null
-                    ? task.timeOfDay!.format(context)
-                    : "All day",
-              ),
-              if (assignedName.isNotEmpty && assignedName != "Unassigned")
-                Text("👤 $assignedName"),
-            ],
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => _editTask(task),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _removeTask(task),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
   // ==========================
   // TASK CRUD HANDLERS
   // ==========================
