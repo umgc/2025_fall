@@ -69,7 +69,7 @@ public class AIChatController {
         @ApiResponse(responseCode = "403", description = "Access denied"),
         @ApiResponse(responseCode = "404", description = "Patient not found")
     })
-    // @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
     public ResponseEntity<List<ChatConversationSummary>> getPatientConversations(
             @Parameter(description = "Patient ID") @PathVariable Long patientId) {
         
@@ -94,7 +94,7 @@ public class AIChatController {
         @ApiResponse(responseCode = "403", description = "Access denied"),
         @ApiResponse(responseCode = "404", description = "Conversation not found")
     })
-    // @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
     public ResponseEntity<List<ChatMessageSummary>> getConversationMessages(
             @Parameter(description = "Conversation ID") @PathVariable String conversationId) {
         
@@ -119,7 +119,7 @@ public class AIChatController {
         @ApiResponse(responseCode = "403", description = "Access denied"),
         @ApiResponse(responseCode = "404", description = "Conversation not found")
     })
-    // @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER')")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER')")
     public ResponseEntity<Void> deactivateConversation(
             @Parameter(description = "Conversation ID") @PathVariable String conversationId) {
         

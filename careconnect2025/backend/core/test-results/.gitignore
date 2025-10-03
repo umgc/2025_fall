@@ -1,0 +1,5 @@
+# Test results are generated files - exclude from version control
+*.txt
+*.xml
+# Keep the README for documentation
+!README.md

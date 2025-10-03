@@ -2,6 +2,7 @@ package com.careconnect.config;
 
 import com.careconnect.security.JwtAuthenticationFilter;
 import com.careconnect.security.JwtTokenProvider;
+import com.careconnect.security.RateLimitingFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +22,8 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(HttpSecurity http,
                                     JwtTokenProvider jwt,
                                     UserDetailsService uds,
-                                    CorsConfigurationSource corsConfigurationSource) throws Exception {
+                                    CorsConfigurationSource corsConfigurationSource,
+                                    RateLimitingFilter rateLimitingFilter) throws Exception {
 
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwt, uds);
 
@@ -33,6 +35,7 @@ public class SecurityConfig {
             .httpBasic(basic -> basic
                 .authenticationEntryPoint((req, res, e) ->
                     res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Basic Authentication Required")))
+            .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) ->
