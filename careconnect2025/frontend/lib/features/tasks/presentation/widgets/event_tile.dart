@@ -3,16 +3,29 @@ import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:flutter/material.dart';
 
-/// A styled tile for events in Day/Week views.
+/// =============================
+/// EventTile Widget
+/// =============================
+///
+/// A styled tile representing a single task event.
+/// - Used in [WeekView] and [DayView] to display scheduled tasks.
+/// - Shows a colored border and background tint based on task type.
+/// - Displays a small dot + task name.
+///
+/// Only the first event in the list is displayed (assumes no overlap).
 class EventTile extends StatelessWidget {
+  /// The list of events that occur in the same time slot.
+  /// - If multiple, only the first one is displayed.
   final List<CalendarEventData<Task>> events;
 
   const EventTile({super.key, required this.events});
 
   @override
   Widget build(BuildContext context) {
+    // Nothing to show if no events in this slot
     if (events.isEmpty) return const SizedBox.shrink();
 
+    // Pick the first event and get its task + color
     final task = events.first.event;
     final color = TaskTypeUtils.getColor(task?.taskType);
 

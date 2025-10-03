@@ -3,13 +3,33 @@ import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:flutter/material.dart';
 
-/// A single day cell in the MonthView calendar.
+/// =============================
+/// CalendarCell Widget
+/// =============================
+///
+/// Represents a single day cell in the [MonthView] calendar.
+/// - Displays the day number.
+/// - Shows up to 4 dots, each representing a task for that day.
+/// - Highlights today or the currently selected day.
+///
+/// Used by the Calendar Assistant screen for the monthly view.
 class CalendarCell extends StatelessWidget {
+  /// The calendar day this cell represents.
   final DateTime date;
+
+  /// List of tasks scheduled for this day.
   final List<CalendarEventData<Task>> events;
+
+  /// Whether this day is the current day (today).
   final bool isToday;
+
+  /// Whether this day is within the current month.
   final bool isInMonth;
+
+  /// Whether this day falls on a weekend.
   final bool isWeekend;
+
+  /// Whether this day is the currently selected day.
   final bool isSelected;
 
   const CalendarCell({

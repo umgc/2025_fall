@@ -3,16 +3,45 @@ import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Panel with filter chips for Task Types and Patients.
+/// =============================
+/// FiltersPanel Widget
+/// =============================
+///
+/// Collapsible panel that lets the user filter calendar tasks:
+/// - By task type (Medication, Appointment, etc.).
+/// - By assigned patient (only if current user is a caregiver).
+///
+/// Also provides:
+/// - A "Clear" button to reset filters.
+/// - A "Today" button to jump back to the current date.
+///
+/// Used at the top of the Calendar Assistant screen.
 class FiltersPanel extends StatelessWidget {
+  /// Whether the panel is expanded (shows filters) or collapsed.
   final bool expanded;
+
+  /// Map of patient IDs to display names (used for caregiver filters).
   final Map<int, String> patientNames;
+
+  /// Currently selected task types.
   final Set<String> selectedTypes;
+
+  /// Currently selected patient IDs.
   final Set<int> selectedPatients;
+
+  /// Callback when the "Clear" button is pressed.
   final VoidCallback onClear;
+
+  /// Callback when a task type chip is toggled.
   final ValueChanged<String> onTypeToggled;
+
+  /// Callback when a patient chip is toggled.
   final ValueChanged<int> onPatientToggled;
+
+  /// Callback when the expand/collapse icon is pressed.
   final VoidCallback onToggleExpanded;
+
+  /// Callback when the "Today" button is pressed.
   final VoidCallback onTodayPressed;
 
   const FiltersPanel({
@@ -39,6 +68,9 @@ class FiltersPanel extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // -----------------------
+          // Left side: filter card
+          // -----------------------
           Flexible(
             fit: FlexFit.tight,
             child: Card(
@@ -128,6 +160,9 @@ class FiltersPanel extends StatelessWidget {
               ),
             ),
           ),
+          // -----------------------
+          // Right side: "Today" button
+          // -----------------------
           ElevatedButton.icon(
             icon: const Icon(Icons.today),
             label: const Text("Today"),

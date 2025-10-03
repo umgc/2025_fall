@@ -3,11 +3,27 @@ import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:flutter/material.dart';
 
-/// Task list view for a single day.
+/// =============================
+/// TaskListDay Widget
+/// =============================
+///
+/// Displays all tasks scheduled for a single day as a vertical list of [ListTile]s.
+/// - Shows task icon, name, time, and assigned patient.
+/// - Provides edit and delete actions through callbacks.
+/// - Tasks are sorted by time (if present), then by name.
+///
+/// Used in the Calendar Assistant screen when the "Daily" view is active.
 class TaskListDay extends StatelessWidget {
+  /// Events from the calendar controller (converted into tasks).
   final List<CalendarEventData<Task>> events;
+
+  /// Map of patient IDs to display names (used for "assigned to" labels).
   final Map<int, String> patientNames;
+
+  /// Callback when the user taps the edit button on a task.
   final void Function(Task) onEdit;
+
+  /// Callback when the user taps the delete button on a task.
   final void Function(Task) onDelete;
 
   const TaskListDay({
@@ -27,6 +43,8 @@ class TaskListDay extends StatelessWidget {
       );
     }
 
+    // Extract Task objects from the calendar events
+    // and sort them by time first, then by name.
     final tasks = events.map((e) => e.event!).toList()
       ..sort((a, b) {
         if (a.timeOfDay != null && b.timeOfDay != null) {
@@ -38,7 +56,7 @@ class TaskListDay extends StatelessWidget {
         if (b.timeOfDay != null) return 1;
         return a.name.compareTo(b.name);
       });
-
+    // Render a vertical column of ListTiles, one per task.
     return Column(
       children: tasks.map((task) {
         final assignedName = task.assignedPatientId != null

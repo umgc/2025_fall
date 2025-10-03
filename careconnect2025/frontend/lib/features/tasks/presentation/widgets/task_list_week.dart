@@ -3,11 +3,27 @@ import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:flutter/material.dart';
 
-/// Task list view for a full week.
+/// =============================
+/// TaskListWeek Widget
+/// =============================
+///
+/// Displays all tasks scheduled within a week as a vertical list of [ListTile]s.
+/// - Groups tasks by day (implicitly by sorting).
+/// - Shows task icon, name, time, and assigned patient.
+/// - Provides edit and delete actions through callbacks.
+///
+/// Used in the Calendar Assistant screen when the "Weekly" view is active.
 class TaskListWeek extends StatelessWidget {
+  /// Events from the calendar controller (converted into tasks).
   final List<CalendarEventData<Task>> events;
+
+  /// Map of patient IDs to display names (used for "assigned to" labels).
   final Map<int, String> patientNames;
+
+  /// Callback when the user taps the edit button on a task.
   final void Function(Task) onEdit;
+
+  /// Callback when the user taps the delete button on a task.
   final void Function(Task) onDelete;
 
   const TaskListWeek({
@@ -26,7 +42,8 @@ class TaskListWeek extends StatelessWidget {
         child: Text("No tasks this week"),
       );
     }
-
+    // Extract Task objects from the calendar events
+    // and sort them by date, then by time, then by name.
     final tasks = events.map((e) => e.event!).toList()
       ..sort((a, b) {
         final cmpDate = a.date.compareTo(b.date);
@@ -40,7 +57,7 @@ class TaskListWeek extends StatelessWidget {
         if (b.timeOfDay != null) return 1;
         return a.name.compareTo(b.name);
       });
-
+    // Render a vertical column of ListTiles, one per task.
     return Column(
       children: tasks.map((task) {
         final assignedName = task.assignedPatientId != null
