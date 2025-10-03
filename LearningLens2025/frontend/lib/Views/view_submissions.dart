@@ -42,8 +42,6 @@ class SubmissionListState extends State<SubmissionList> {
   late Future<List<Participant>> futureParticipants =
       api.getCourseParticipants(widget.courseId);
 
-  final LlmType defaultLlm = LlmType.PERPLEXITY;
-
   final perplexityApiKey = LocalStorageService.getPerplexityKey();
   final openApiKey = LocalStorageService.getOpenAIKey();
   final grokApiKey = LocalStorageService.getGrokKey();
@@ -79,6 +77,26 @@ class SubmissionListState extends State<SubmissionList> {
           api.getSubmissionsWithGrades(widget.assignmentId);
       futureParticipants = api.getCourseParticipants(widget.courseId);
     });
+  }
+
+  LlmType getDefaultLlm() {
+    final openApiKey = LocalStorageService.getOpenAIKey();
+    final grokApiKey = LocalStorageService.getGrokKey();
+    final deepseekApiKey = LocalStorageService.getDeepseekKey();
+    final perplexityApiKey = LocalStorageService.getPerplexityKey();
+
+    if (openApiKey != null && openApiKey.isNotEmpty) {
+      return LlmType.CHATGPT;
+    } else if (grokApiKey != null && grokApiKey.isNotEmpty) {
+      return LlmType.GROK;
+    } else if (deepseekApiKey != null && deepseekApiKey.isNotEmpty) {
+      return LlmType.DEEPSEEK;
+    } else if (perplexityApiKey != null && perplexityApiKey.isNotEmpty) {
+      return LlmType.PERPLEXITY;
+    } else {
+      // fallback if none are available
+      return LlmType.CHATGPT;
+    }
   }
 
   void _handleLLMChanged(int participantId, LlmType? newValue) {
@@ -291,7 +309,7 @@ class SubmissionListState extends State<SubmissionList> {
                                       isLoadingMap[participant.id] ?? false;
                                   LlmType selectedLLM =
                                       llmSelectionMap[participant.id] ??
-                                          defaultLlm;
+                                          getDefaultLlm();
                                   return SizedBox(
                                     width:
                                         MediaQuery.of(context).size.width < 450
