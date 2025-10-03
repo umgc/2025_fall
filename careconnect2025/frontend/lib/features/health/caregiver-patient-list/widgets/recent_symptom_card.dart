@@ -138,12 +138,34 @@ class _SymptomEntryTile extends StatelessWidget {
                   theme.colorScheme.outline.withValues(alpha: 0.25),
                 ),
               ),
-              child: Text(
-                entry.name,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child: (() {
+                final isNoSymptoms =
+                    entry.name.trim().toLowerCase() == 'no symptoms reported';
+                if (isNoSymptoms) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle,
+                          size: 16, color: Colors.green.shade600),
+                      const SizedBox(width: 6),
+                      Text(
+                        entry.name,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.green.shade600, // green text
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Text(
+                    entry.name,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                }
+              })(),
             ),
             const SizedBox(height: 8),
           ],
@@ -167,11 +189,14 @@ class _SymptomEntryTile extends StatelessWidget {
       String raw,
       ) {
     final s = raw.toLowerCase().trim();
-    if (s == 'severe') return (cs.error, cs.onError, 'severe');
-    if (s == 'moderate') return (cs.tertiary.withValues(alpha: 0.90), cs.onTertiary, 'moderate');
-    // mild / default
-    return (cs.primary.withValues(alpha: 0.15), cs.primary, 'mild');
-  }
+    if (s == 'severe') {
+    return (cs.error, cs.onError, 'severe');
+    }
+    if (s == 'moderate') {
+    return (Colors.orange.shade600, Colors.white, 'moderate');
+    }
+    return (Colors.green.shade600, Colors.white, 'mild');
+    }
 
   static String _fmtDate(DateTime d) {
     const mm = [

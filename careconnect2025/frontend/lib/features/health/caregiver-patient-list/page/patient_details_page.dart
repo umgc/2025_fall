@@ -19,7 +19,7 @@ import '../widgets/current_medications_card.dart';
 // Notes tab
 import '../models/care_note.dart';
 import '../widgets/add_care_notes_card.dart';
-import '../widgets/caren_notes_history_card.dart';
+import '../widgets/care_notes_history_card.dart';
 
 class PatientDetailsPage extends StatelessWidget {
   final String patientId;
@@ -257,14 +257,14 @@ class PatientDetailsPage extends StatelessWidget {
   }
 }
 
-/// Compact app bar that mirrors the mock (title + small subtitle).
+/// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _DetailsAppBar({required this.title, required this.subtitle});
   final String title;
   final String subtitle;
-  const _DetailsAppBar({required this.title, required this.subtitle});
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
@@ -273,23 +273,25 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       backgroundColor: cs.surface,
       foregroundColor: cs.onSurface,
+      leading: const BackButton(),            // ← back arrow
       titleSpacing: 0,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
           Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: .6),
-            ),
+            title,                             // e.g. "Sarah Johnson"
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          Text(
+            subtitle,                          // e.g. "Patient Details • MRN-2024-0156"
+            style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ),
     );
   }
 }
+
 
 /// The tab buttons row (Info • Mood • Health • Notes) styled like your mock.
 class _TabsStrip extends StatelessWidget {
