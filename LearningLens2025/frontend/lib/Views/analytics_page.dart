@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
-import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
@@ -658,10 +657,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   // Optionally clear dependent tables if needed.
                   _studentBreakdown.clear();
                   _questionBreakdown.clear();
-                _aiAnalysisSuccess.clear();
-                _aiAnalysisFail.clear();
-                _aiAnalysisAi.clear();
-                _aiAnalysisCourse.clear();
+                  _aiAnalysisSuccess.clear();
+                  _aiAnalysisFail.clear();
+                  _aiAnalysisAi.clear();
+                  _aiAnalysisCourse.clear();
                   _selectedStudent = null;
                 });
               },
@@ -1274,36 +1273,51 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     // Build a summary string from the student breakdown data.
     if (_selectedAssessment?.type == "essay") {
-    String studentSummary;
-    String essayPrompt = (_selectedAssessment!.assessment as Assignment).description;
-    List<Submission> submissions = await lmsService.getAssignmentSubmissions(_selectedAssessment!.id);
-    List<AiLog> aiLogs = await AILoggingSingleton().getLogs(_selectedCourse!, _selectedAssessment!.assessment, _participantsData.firstWhereOrNull((p) => p.id == _selectedStudent?["id"]), LocalStorageService.getSelectedClassroom().index, DateTime(2025, 9), DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day));
+      String studentSummary;
+      String essayPrompt =
+          (_selectedAssessment!.assessment as Assignment).description;
+      List<Submission> submissions =
+          await lmsService.getAssignmentSubmissions(_selectedAssessment!.id);
+      List<AiLog> aiLogs = await AILoggingSingleton().getLogs(
+          _selectedCourse!,
+          _selectedAssessment!.assessment,
+          _participantsData
+              .firstWhereOrNull((p) => p.id == _selectedStudent?["id"]),
+          LocalStorageService.getSelectedClassroom().index,
+          DateTime(2025, 9),
+          DateTime(
+              DateTime.now().year, DateTime.now().month, DateTime.now().day));
 
-    // Whole course
-    if (_selectedStudent == null) {
-      studentSummary = _studentBreakdown.map((student) {
-        return "Name: ${student['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == student["id"])?.onlineText}";
+      // Whole course
+      if (_selectedStudent == null) {
+        studentSummary = _studentBreakdown.map((student) {
+          return "Name: ${student['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == student["id"])?.onlineText}";
+        }).join("\n");
+      }
+      // Single student
+      else {
+        studentSummary =
+            "Name: ${_selectedStudent!['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == _selectedStudent!["id"])?.onlineText}";
+      }
+
+      String aiSummary = aiLogs.map((logEntry) {
+        return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
       }).join("\n");
-    }
-    // Single student
-    else {
-      studentSummary =
-          "Name: ${_selectedStudent!['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == _selectedStudent!["id"])?.onlineText}";
-    }
 
-    String aiSummary = aiLogs.map((logEntry) {
-      return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
-    }).join("\n");   
+      await _analyzeSuccess(assessmentName, essayPrompt, studentSummary);
+      await _analyzeFailure(assessmentName, essayPrompt, studentSummary);
+      await _analyzeAiUse(assessmentName, essayPrompt, aiSummary);
+      await _analyzeAssignmentImprovements(
+          assessmentName,
+          essayPrompt,
+          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
+    }
+  }
 
-    await _analyzeSuccess(assessmentName, essayPrompt, studentSummary);
-    await _analyzeFailure(assessmentName, essayPrompt, studentSummary);
-    await _analyzeAiUse(assessmentName, essayPrompt, aiSummary);
-    await _analyzeAssignmentImprovements(assessmentName, essayPrompt, _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"], _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
-  }
-  }
-  Future<void> _analyzeSuccess(String assessmentName, String essayPrompt, String studentSummary) async {
-    String successPrompt = 
-    """
+  Future<void> _analyzeSuccess(
+      String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = """
     Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
     Student Assignment Submissions:
     $studentSummary
@@ -1311,7 +1325,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
     Provide a textual summary as well as the top three submission topics that match the provided prompt, each with a brief description and a percentage.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the top three areas of understanding are an object with keys 'Area' and 'Percentage'.
+    the top three areas of understanding are an object named 'Data' with keys 'Area' and 'Percentage'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1320,9 +1334,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeFailure(String assessmentName, String essayPrompt, String studentSummary) async {
-    String successPrompt = 
-    """
+  Future<void> _analyzeFailure(
+      String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = """
     Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
     Student Assignment Submissions:
     $studentSummary
@@ -1330,7 +1344,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
     Provide a textual summary as well as the top three submission topics that or either missing or do not match the provided prompt, each with a brief description and a percentage.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the top three struggle areas are an object with keys 'Area' and 'Percentage'.
+    the top three struggle areas are an object named 'Data' with keys 'Area' and 'Percentage'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1339,9 +1353,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeAiUse(String assessmentName, String essayPrompt, String aiSummary) async {
-    String successPrompt = 
-    """
+  Future<void> _analyzeAiUse(
+      String assessmentName, String essayPrompt, String aiSummary) async {
+    String successPrompt = """
     Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt'.
     Student AI Interactions:
     $aiSummary
@@ -1349,7 +1363,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     To perform your analysis, summarize the student prompts and reflections on AI use.
     Provide a textual summary as well as the top three AI use cases, each with a brief description and a percentage.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the top three AI use areas are an object with keys 'Area' and 'Percentage'.
+    the top three AI use areas are an object named 'Data' with keys 'Area' and 'Percentage'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1358,9 +1372,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeAssignmentImprovements(String assessmentName, String essayPrompt, String successes, String failures) async {
-  String successPrompt = 
-    """
+  Future<void> _analyzeAssignmentImprovements(String assessmentName,
+      String essayPrompt, String successes, String failures) async {
+    String successPrompt = """
     Recommend improvements that could be made to my course and to essay name '$assessmentName' with prompt '$essayPrompt'.
     Areas of Success:
     $successes
@@ -1369,7 +1383,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the summaries of student success and student failure, recommend ways I can improve the essay assignment and my course materials overall.
     Provide a textual summary as well as three references I could provide to students to help them better understand the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the recommended references are an object with keys 'Description' and 'URL'.
+    the recommended references are an object named 'Data' with keys 'Description' and 'URL'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1410,8 +1424,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       print(normalizedResult);
 
       var jsonData = json.decode(normalizedResult);
-      if (jsonData is List) { 
-          return List<Map<String, dynamic>>.from(jsonData);
+      if (jsonData is List) {
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
