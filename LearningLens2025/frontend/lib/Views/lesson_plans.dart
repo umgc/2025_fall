@@ -13,6 +13,8 @@ import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 // Define a constant for grade levels
@@ -33,6 +35,9 @@ class _LessonPlanState extends State<LessonPlans> {
   bool isSubmitDisabled = false;
   String? selectedGradeLevel;
   bool isSubmitting = false;
+
+  // disable local LLM for a web build for now.
+  bool _localLlmAvail = !kIsWeb;
 
   //final ScrollController _scrollController = ScrollController();
   List<ScrollController> _scrollControllers = [];
@@ -99,13 +104,15 @@ class _LessonPlanState extends State<LessonPlans> {
 
   Future<void> generateLessonPlanWithAI() async {
     try {
-      final LLM aiModel;
+      final aiModel;
       if (selectedLLM == LlmType.CHATGPT) {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       } else if (selectedLLM == LlmType.GROK) {
         aiModel = GrokLLM(LocalStorageService.getGrokKey());
       } else if (selectedLLM == LlmType.DEEPSEEK) {
         aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+      } else if (selectedLLM == LlmType.LOCAL) {
+        aiModel = LocalLLMService();
       } else {
         aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
       }
@@ -293,13 +300,22 @@ class _LessonPlanState extends State<LessonPlans> {
                                     items: LlmType.values.map((LlmType llm) {
                                       return DropdownMenuItem<LlmType>(
                                         value: llm,
-                                        enabled:
+                                        enabled: (llm == LlmType.LOCAL &&
+                                                LocalStorageService
+                                                        .getLocalLLMPath() !=
+                                                    "" &&
+                                                _localLlmAvail) ||
                                             LocalStorageService.userHasLlmKey(
                                                 llm),
                                         child: Text(llm.displayName,
                                             style: TextStyle(
-                                              color: LocalStorageService
-                                                      .userHasLlmKey(llm)
+                                              color: (llm == LlmType.LOCAL &&
+                                                          LocalStorageService
+                                                                  .getLocalLLMPath() !=
+                                                              "" &&
+                                                          _localLlmAvail) ||
+                                                      LocalStorageService
+                                                          .userHasLlmKey(llm)
                                                   ? Colors.black87
                                                   : Colors.grey,
                                             )),

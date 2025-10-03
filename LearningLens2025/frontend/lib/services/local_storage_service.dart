@@ -228,6 +228,21 @@ class LocalStorageService {
     _prefs.remove('deepseekKey');
   }
 
+  // saves path to the selected local llm model
+  static void saveLocalLLMPath(String path) {
+    _prefs.setString('LOCAL_LLM_PATH', path);
+  }
+
+  // Retrieves the path to the selected local llm model from storage or dotenv
+  static String getLocalLLMPath() {
+    return _prefs.getString('LOCAL_LLM_PATH') ?? dotenv.env['LOCAL_LLM_PATH'] ?? '';
+  }
+
+  // returns whether or not the local LLM has a path
+  static hasLocalLLMPath() {
+    return getLocalLLMPath().isNotEmpty;
+  }
+
   static String getGoogleClientId() {
     return _prefs.getString('GOOGLE_CLIENT_ID') ??
         dotenv.env['GOOGLE_CLIENT_ID'] ??

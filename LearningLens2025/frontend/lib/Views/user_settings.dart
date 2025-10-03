@@ -6,6 +6,10 @@ import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class UserSettings extends StatefulWidget {
   @override
@@ -13,6 +17,8 @@ class UserSettings extends StatefulWidget {
 }
 
 class UserSettingsState extends State<UserSettings> {
+  String? _ggufModelPath;
+
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _moodleUrlController = TextEditingController();
@@ -25,11 +31,27 @@ class UserSettingsState extends State<UserSettings> {
 
   final TextEditingController _googleClientIdController =
       TextEditingController();
+  
+  Map<String, String> modelMap = {};
+  Set<String> downloadedModels = {};
+  String? selectedModel;
+  bool isDownloading = false;
+  http.Client? _httpClient;
+  bool _isCancelled = false;
+  String? _currentDownloadPath;
+  bool _modelsLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadStoredValues();
+    _initCycle();
+    //_checkSelectedModelDownloaded();
+  }
+
+  Future <void> _initCycle() async{
+    await _loadStoredValues();
+    await _fetchModelsCsv();
+    await _loadStoredModel();
   }
 
   Future<void> _loadStoredValues() async {
@@ -41,6 +63,7 @@ class UserSettingsState extends State<UserSettings> {
     final grokKey = LocalStorageService.getGrokKey();
     final googleClientId = LocalStorageService.getGoogleClientId();
     final deepSeekKey = LocalStorageService.getDeepseekKey();
+    final localLLMPath = LocalStorageService.getLocalLLMPath();
 
     setState(() {
       _usernameController.text = username;
@@ -51,6 +74,7 @@ class UserSettingsState extends State<UserSettings> {
       _grokKeyController.text = grokKey;
       _deepSeekKeyController.text = deepSeekKey;
       _googleClientIdController.text = googleClientId;
+      _ggufModelPath = localLLMPath;
     });
   }
 
@@ -86,6 +110,8 @@ class UserSettingsState extends State<UserSettings> {
 
               // API Key Block
               _buildApiKeyBlock(loginNotifier),
+
+              _buildGGUFModelPicker(),
 
               const SizedBox(height: 20),
               const Divider(),
@@ -293,6 +319,268 @@ class UserSettingsState extends State<UserSettings> {
           ),
           child: Text('Save'),
         ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Future<void> _loadStoredModel() async {
+  // Load previously saved GGUF path
+  final storedPath = LocalStorageService.getLocalLLMPath();
+  String? modelName;
+
+  if (storedPath.isNotEmpty) {
+    // Find the model name in the modelMap that matches the stored path
+    modelMap.forEach((key, url) {
+      final fileName = url.split('/').last; // assuming file name matches
+      if (storedPath.endsWith(fileName)) {
+        modelName = key;
+      }
+    });
+  }
+
+  setState(() {
+    _ggufModelPath = storedPath;
+    selectedModel = modelName; // set default selection
+  });
+}
+
+  // Get the writable models folder
+  Future<String> getModelsDirectory() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final modelsDir = Directory('${dir.path}/models');
+    if (!await modelsDir.exists()) {
+      await modelsDir.create(recursive: true);
+    }
+    return modelsDir.path;
+  }
+
+// Get full file path for a model
+  Future<String> getModelFilePath(String modelName) async {
+    final modelsDir = await getModelsDirectory();
+    return '$modelsDir/$modelName.gguf';
+  }
+
+// Check if model has already been downloaded
+  Future<bool> isModelDownloaded(String modelName) async {
+    final path = await getModelFilePath(modelName);
+    return File(path).existsSync();
+  }
+
+  Future<void> _setDownloadedModelPath(String model) async {
+    final path = await getModelFilePath(model);
+    final downloaded = await isModelDownloaded(model);
+
+    if (downloaded) {
+      setState(() {
+        _ggufModelPath = path;
+        LocalStorageService.saveLocalLLMPath(path);
+      });
+    }
+  }
+
+  Future<void> downloadModel(String modelName, String url) async {
+    setState(() {
+      isDownloading = true;
+    });
+
+    _httpClient = http.Client();
+    
+    try {
+      final response =
+          await _httpClient!.send(http.Request('GET', Uri.parse(url)));
+      final dir = await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/models/$modelName.gguf';
+      _currentDownloadPath = filePath; // track path
+      final file = File(filePath);
+      final sink = file.openWrite();
+      await response.stream.pipe(sink);
+      await sink.close();
+
+      setState(() {
+        isDownloading = false;
+        _currentDownloadPath = null; // clear when done
+        _ggufModelPath = filePath;
+        LocalStorageService.saveLocalLLMPath(filePath);
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isDownloading = false;
+          _currentDownloadPath = null;
+        });
+      }
+      if (_isCancelled) {
+        debugPrint("Download cancelled by user.");
+      } else {
+        debugPrint("Download failed: $e");
+      }
+    } finally {
+      _httpClient?.close();
+      _httpClient = null;
+    }
+  }
+
+  void cancelDownload() async {
+    if (_httpClient != null) {
+      _httpClient!.close(); // aborts the request
+      _httpClient = null;
+
+      // Clean up partial file if it exists
+      if (_currentDownloadPath != null) {
+        final file = File(_currentDownloadPath!);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint("Partial download deleted: $_currentDownloadPath");
+        }
+      }
+
+      setState(() {
+        isDownloading = false;
+        _currentDownloadPath = null;
+      });
+    }
+  }
+
+// Fetch CSV from GitHub
+  Future<void> _fetchModelsCsv() async {
+    final url = Uri.parse(
+      'https://raw.githubusercontent.com/ssung13/SWEN670F2025/main/models.csv',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final csvContent = response.body;
+        final Map<String, String> tempMap = {};
+        for (var line in LineSplitter.split(csvContent)) {
+          if (line.trim().isEmpty) continue;
+          final parts = line.split(',');
+          if (parts.length >= 2) tempMap[parts[0].trim()] = parts[1].trim();
+        }
+        setState(() {
+          modelMap = tempMap;
+          if (modelMap.isNotEmpty) {
+            selectedModel = modelMap.keys.first;
+          }
+          _modelsLoading = false;
+        });
+      } else {
+        print('Failed to fetch CSV: ${response.statusCode}');
+        setState(() => _modelsLoading = false);
+      }
+    } catch (e) {
+      print('Error fetching CSV: $e');
+      setState(() => _modelsLoading = false);
+    }
+  }
+
+// Updated GGUF Model Picker
+  Widget _buildGGUFModelPicker() {
+    if (_modelsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Local LLM Model:',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButton<String>(
+                value: selectedModel,
+                isExpanded: true,
+                hint: const Text('Select a model'),
+                onChanged: (value) async {
+                  setState(() {
+                    selectedModel = value;
+                  });
+                  if (value != null) {
+                    final downloaded = await isModelDownloaded(value);
+                    if (downloaded) {
+                      _setDownloadedModelPath(value); // ✅ safe here, not inside build
+                    }
+                  }
+                },
+                items: modelMap.keys.map((key) {
+                  return DropdownMenuItem(
+                    value: key,
+                    child: FutureBuilder<bool>(
+                      future: isModelDownloaded(key),
+                      builder: (context, snapshot) {
+                        final downloaded = snapshot.data ?? false;
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(key),
+                            if (downloaded)
+                              const Icon(Icons.check,
+                                  color: Colors.green, size: 18),
+                          ],
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            if (selectedModel != null)
+              FutureBuilder<bool>(
+                future: isModelDownloaded(selectedModel!),
+                builder: (context, snapshot) {
+                  final downloaded = snapshot.data ?? false;
+
+                  if (downloaded) {
+                    return const Text('Downloaded',
+                        style: TextStyle(color: Colors.green));
+                  } else if (isDownloading) {
+                    return Row(
+                      children: [
+                        const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: cancelDownload,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ],
+                    );
+                  } else {
+                    final url = modelMap[selectedModel!];
+                    return ElevatedButton(
+                      onPressed: () {
+                        if (url != null) downloadModel(selectedModel!, url);
+                      },
+                      child: const Text('Download'),
+                    );
+                  }
+                },
+              ),
+          ],
+        ),
+        if (_ggufModelPath != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Selected: $_ggufModelPath',
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
+          ),
         const Divider(),
       ],
     );
