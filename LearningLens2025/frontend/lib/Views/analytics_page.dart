@@ -1,9 +1,14 @@
 import 'dart:io' show File; // For non-web file I/O
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
+import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
+import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
 
@@ -105,7 +110,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   late ScrollController _horizontalQuestionController;
 
   // AI Analysis data.
-  List<Map<String, dynamic>> _aiAnalysisData = [];
+  List<Map<String, dynamic>> _aiAnalysisSuccess = [];
+  List<Map<String, dynamic>> _aiAnalysisFail = [];
+  List<Map<String, dynamic>> _aiAnalysisAi = [];
+  List<Map<String, dynamic>> _aiAnalysisCourse = [];
   bool _isAnalyzingAI = false;
 
   LlmType? selectedLLM;
@@ -532,13 +540,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     pdf.addPage(
       pw.MultiPage(
         build: (pw.Context context) {
-          if (_aiAnalysisData.isEmpty) {
+          if (_aiAnalysisSuccess.isEmpty) {
             return [
               pw.Center(child: pw.Text("No AI Analysis Data available."))
             ];
           }
           final headers = ['Student', 'Status', 'Comments'];
-          final data = _aiAnalysisData
+          final data = _aiAnalysisSuccess
               .map((row) => [
                     row['Student']?.toString() ?? '',
                     row['Status']?.toString() ?? '',
@@ -559,7 +567,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     var excel = Excel.createExcel();
     Sheet sheet = excel['AI Analysis'];
     sheet.appendRow(['Student', 'Status', 'Comments']);
-    for (var row in _aiAnalysisData) {
+    for (var row in _aiAnalysisSuccess) {
       sheet.appendRow([
         row['Student']?.toString() ?? '',
         row['Status']?.toString() ?? '',
@@ -604,7 +612,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 // Clear dependent tables when course changes.
                 _studentBreakdown.clear();
                 _questionBreakdown.clear();
-                _aiAnalysisData.clear();
+                _aiAnalysisSuccess.clear();
+                _aiAnalysisFail.clear();
+                _aiAnalysisAi.clear();
+                _aiAnalysisCourse.clear();
                 _selectedStudent = null;
               });
               if (_selectedCourse != null) {
@@ -647,7 +658,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   // Optionally clear dependent tables if needed.
                   _studentBreakdown.clear();
                   _questionBreakdown.clear();
-                  _aiAnalysisData.clear();
+                _aiAnalysisSuccess.clear();
+                _aiAnalysisFail.clear();
+                _aiAnalysisAi.clear();
+                _aiAnalysisCourse.clear();
                   _selectedStudent = null;
                 });
               },
@@ -669,7 +683,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 // Clear question breakdown, student breakdown and AI analysis when assessment changes.
                 _questionBreakdown.clear();
                 _studentBreakdown.clear();
-                _aiAnalysisData.clear();
+                _aiAnalysisSuccess.clear();
+                _aiAnalysisFail.clear();
+                _aiAnalysisAi.clear();
+                _aiAnalysisCourse.clear();
                 _selectedStudent = null;
               });
             },
@@ -1141,7 +1158,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           // 2x2 grid view.
           _buildMainGrid(),
           // AI Analysis table below the grid with an export button.
-          if (_aiAnalysisData.isNotEmpty) ...[
+          if (_aiAnalysisSuccess.isNotEmpty) ...[
             const SizedBox(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1190,14 +1207,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
   Widget _buildAIAnalysisTable() {
-    if (_aiAnalysisData.isEmpty) return const SizedBox.shrink();
+    if (_aiAnalysisSuccess.isEmpty) return const SizedBox.shrink();
     return DataTable(
       columns: const [
         DataColumn(label: Text('Student')),
         DataColumn(label: Text('Status')),
         DataColumn(label: Text('Comments')),
       ],
-      rows: _aiAnalysisData.map((row) {
+      rows: _aiAnalysisSuccess.map((row) {
         return DataRow(
           cells: [
             DataCell(Text(row['Student']?.toString() ?? '')),
@@ -1256,26 +1273,112 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     String assessmentName = _selectedAssessment?.name ?? "Unknown Assessment";
 
     // Build a summary string from the student breakdown data.
+    if (_selectedAssessment?.type == "essay") {
     String studentSummary;
+    String essayPrompt = (_selectedAssessment!.assessment as Assignment).description;
+    List<Submission> submissions = await lmsService.getAssignmentSubmissions(_selectedAssessment!.id);
+    List<AiLog> aiLogs = await AILoggingSingleton().getLogs(_selectedCourse!, _selectedAssessment!.assessment, _participantsData.firstWhereOrNull((p) => p.id == _selectedStudent?["id"]), LocalStorageService.getSelectedClassroom().index, DateTime(2025, 9), DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day));
+
     // Whole course
     if (_selectedStudent == null) {
       studentSummary = _studentBreakdown.map((student) {
-        return "Name: ${student['studentName']}, Avg Grade: ${student['avgGrade']}, Rank: ${student['classRank']}";
+        return "Name: ${student['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == student["id"])?.onlineText}";
       }).join("\n");
     }
     // Single student
     else {
       studentSummary =
-          "Name: ${_selectedStudent!['studentName']}, Avg Grade: ${_selectedStudent!['avgGrade']}, Rank: ${_selectedStudent!['classRank']}";
+          "Name: ${_selectedStudent!['studentName']}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == _selectedStudent!["id"])?.onlineText}";
     }
 
-    String prompt =
-        "Analyze the following analytics data for course '$courseName' and assignment '$assessmentName'.\n"
-        "Student Breakdown Data:\n$studentSummary\n"
-        "Based on this data, provide a thorough analysis indicating which students are excelling, "
-        "which are struggling, and which may not have completed the assignment. "
-        "Return your analysis as a JSON array where each element is an object with keys 'Student', 'Status', and 'Comments'.";
+    String aiSummary = aiLogs.map((logEntry) {
+      return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
+    }).join("\n");   
 
+    await _analyzeSuccess(assessmentName, essayPrompt, studentSummary);
+    await _analyzeFailure(assessmentName, essayPrompt, studentSummary);
+    await _analyzeAiUse(assessmentName, essayPrompt, aiSummary);
+    await _analyzeAssignmentImprovements(assessmentName, essayPrompt, _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"], _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
+  }
+  }
+  Future<void> _analyzeSuccess(String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = 
+    """
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student Assignment Submissions:
+    $studentSummary
+    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students understood.
+    To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    Provide a textual summary as well as the top three submission topics that match the provided prompt, each with a brief description and a percentage.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three areas of understanding are an object with keys 'Area' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisSuccess = response;
+    });
+  }
+
+  Future<void> _analyzeFailure(String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = 
+    """
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student Assignment Submissions:
+    $studentSummary
+    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students struggled with.
+    To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    Provide a textual summary as well as the top three submission topics that or either missing or do not match the provided prompt, each with a brief description and a percentage.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three struggle areas are an object with keys 'Area' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisFail = response;
+    });
+  }
+
+  Future<void> _analyzeAiUse(String assessmentName, String essayPrompt, String aiSummary) async {
+    String successPrompt = 
+    """
+    Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student AI Interactions:
+    $aiSummary
+    Based on the student AI interactions, provide a thorough analysis on how students used and reflected on AI use throughout the assignment.
+    To perform your analysis, summarize the student prompts and reflections on AI use.
+    Provide a textual summary as well as the top three AI use cases, each with a brief description and a percentage.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three AI use areas are an object with keys 'Area' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisAi = response;
+    });
+  }
+
+  Future<void> _analyzeAssignmentImprovements(String assessmentName, String essayPrompt, String successes, String failures) async {
+  String successPrompt = 
+    """
+    Recommend improvements that could be made to my course and to essay name '$assessmentName' with prompt '$essayPrompt'.
+    Areas of Success:
+    $successes
+    Areas of Failure:
+    $failures
+    Based on the summaries of student success and student failure, recommend ways I can improve the essay assignment and my course materials overall.
+    Provide a textual summary as well as three references I could provide to students to help them better understand the topic.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the recommended references are an object with keys 'Description' and 'URL'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisCourse = response;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _doAiQuery(String prompt) async {
     // Select the AI model based on the available credentials.
     dynamic aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
@@ -1304,16 +1407,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             normalizedResult.substring(0, normalizedResult.length - 3);
       }
       normalizedResult = normalizedResult.trim();
+      print(normalizedResult);
 
       var jsonData = json.decode(normalizedResult);
-      if (jsonData is List) {
-        setState(() {
-          _aiAnalysisData = List<Map<String, dynamic>>.from(jsonData);
-        });
+      if (jsonData is List) { 
+          return List<Map<String, dynamic>>.from(jsonData);
       } else {
-        setState(() {
-          _aiAnalysisData = [];
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text("AI analysis did not return a valid JSON array.")),
@@ -1328,5 +1427,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingAI = false;
       });
     }
+    return [];
   }
 }
