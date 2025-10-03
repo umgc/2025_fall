@@ -148,7 +148,7 @@ class DeepseekLLM implements LLM {
     final response = await http.post(url, headers: headers, body: body);
     if (response.statusCode != 200) {
       throw Exception(
-          'OpenAI API error: ${response.statusCode} - ${response.body}');
+          'DeepSeek API error: ${response.statusCode} - ${response.body}');
     }
 
     final data = jsonDecode(response.body);
