@@ -19,6 +19,7 @@ import 'package:provider/provider.dart';
 import 'widgets/calendar_cell.dart';
 import 'widgets/event_tile.dart';
 import 'widgets/filters_panel.dart';
+import 'widgets/import_ics_button.dart';
 import 'widgets/legend.dart';
 import 'widgets/task_form_dialog.dart';
 import 'widgets/task_list_day.dart';
@@ -254,6 +255,10 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                 style: TextStyle(color: Colors.white),
               ),
               onPressed: _addTask,
+            ),
+            ImportIcsButton(
+              onTasksImported: _loadTasksFromDb,
+              patientNames: patientNames, //refresh calendar after import
             ),
           ],
         ),
