@@ -147,6 +147,9 @@ flutter:
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
+    - assets/sherpa-onnx-streaming-zipformer-en-2023-06-26/
+    - assets/sherpa-onnx-pyannote-segmentation-3-0/
+    - assets/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
     - .env
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
