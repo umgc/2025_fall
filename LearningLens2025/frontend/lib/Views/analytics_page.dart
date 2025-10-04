@@ -1323,9 +1323,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     $studentSummary
     Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students understood.
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
-    Provide a textual summary as well as the top three submission topics that match the provided prompt, each with a brief description and a percentage.
+    Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students understood,
+    based on the number of students who discussed that topic in their essay submission.
+    For each area, provide the topic name and the percentage of student submissions that discussed the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the top three areas of understanding are an object named 'Data' with keys 'Area' and 'Percentage'.
+    the top three discussed topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1340,11 +1342,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
     Student Assignment Submissions:
     $studentSummary
-    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students struggled with.
+    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students did not understand.
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
-    Provide a textual summary as well as the top three submission topics that or either missing or do not match the provided prompt, each with a brief description and a percentage.
+    Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students did not understand,
+    based on the number of students who failed to discuss that topic in their essay submission.
+    For each area, provide the topic name and the percentage of student submissions that did not discuss the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the top three struggle areas are an object named 'Data' with keys 'Area' and 'Percentage'.
+    the top three topics that were not discussed are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
