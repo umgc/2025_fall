@@ -94,7 +94,9 @@ public class RateLimitingFilter implements Filter {
             try {
                 processableRequest = new CachedBodyHttpServletRequest(httpRequest);
             } catch (IOException e) {
-                logger.warn("Failed to cache request body for rate limiting, falling back to IP-based: {}", e.getMessage());
+                logger.warn("Failed to cache request body for rate limiting, rejecting request: {}", e.getMessage());
+                httpResponse.sendError(HttpServletResponse.SC_BAD_REQUEST, "Unable to process request body for rate limiting.");
+                return;
             }
         }
 
