@@ -56,6 +56,7 @@ public class RateLimitingFilterUnitTest {
         MockitoAnnotations.openMocks(this);
         rateLimitingFilter = new RateLimitingFilter();
         rateLimitingFilter.setLoginResetWindowSeconds(30); // Set explicit value for testing
+        rateLimitingFilter.clearAllRateLimits(); // Clear cache before each test
         responseWriter = new StringWriter();
 
         when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
@@ -350,5 +351,192 @@ public class RateLimitingFilterUnitTest {
             verify(filterChain, times(1)).doFilter(any(), any());
             verify(response, never()).setStatus(429);
         }
+    }
+
+    @Test
+    public void testPatientProfileRateLimiting() throws ServletException, IOException {
+        // Test patient profile endpoint rate limiting
+        when(request.getRequestURI()).thenReturn("/v1/api/patients/me");
+        when(request.getMethod()).thenReturn("GET");
+        
+        // Create patient authentication
+        Authentication patientAuth = mock(Authentication.class);
+        when(patientAuth.isAuthenticated()).thenReturn(true);
+        when(patientAuth.getName()).thenReturn("patient@test.com");
+        when(patientAuth.getPrincipal()).thenReturn("patient@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_PATIENT")))
+            .when(patientAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(patientAuth);
+
+        // Make 30 requests (should pass for patient profile GET limit)
+        for (int i = 0; i < 30; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // 31st request should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testPatientProfileWriteOperationRateLimiting() throws ServletException, IOException {
+        // Test patient profile write operation rate limiting (stricter limits)
+        when(request.getRequestURI()).thenReturn("/v1/api/patients/me");
+        when(request.getMethod()).thenReturn("PUT");
+        
+        // Create patient authentication
+        Authentication patientAuth = mock(Authentication.class);
+        when(patientAuth.isAuthenticated()).thenReturn(true);
+        when(patientAuth.getName()).thenReturn("patient@test.com");
+        when(patientAuth.getPrincipal()).thenReturn("patient@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_PATIENT")))
+            .when(patientAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(patientAuth);
+
+        // Make 10 requests (should pass for patient profile PUT limit)
+        for (int i = 0; i < 10; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // 11th request should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testCaregiverProfileRateLimiting() throws ServletException, IOException {
+        // Test caregiver profile endpoint rate limiting
+        when(request.getRequestURI()).thenReturn("/v1/api/caregivers/123");
+        when(request.getMethod()).thenReturn("GET");
+        
+        // Create caregiver authentication
+        Authentication caregiverAuth = mock(Authentication.class);
+        when(caregiverAuth.isAuthenticated()).thenReturn(true);
+        when(caregiverAuth.getName()).thenReturn("caregiver@test.com");
+        when(caregiverAuth.getPrincipal()).thenReturn("caregiver@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_CAREGIVER")))
+            .when(caregiverAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(caregiverAuth);
+
+        // Make 50 requests (should pass for caregiver profile GET limit)
+        for (int i = 0; i < 50; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(any(), any());
+            verify(response, never()).setStatus(429);
+        }
+
+        // 51st request should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testCaregiverProfileWriteOperationRateLimiting() throws ServletException, IOException {
+        // Test caregiver profile write operation rate limiting
+        when(request.getRequestURI()).thenReturn("/v1/api/caregivers/123");
+        when(request.getMethod()).thenReturn("PUT");
+        
+        // Create caregiver authentication
+        Authentication caregiverAuth = mock(Authentication.class);
+        when(caregiverAuth.isAuthenticated()).thenReturn(true);
+        when(caregiverAuth.getName()).thenReturn("caregiver@test.com");
+        when(caregiverAuth.getPrincipal()).thenReturn("caregiver@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_CAREGIVER")))
+            .when(caregiverAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(caregiverAuth);
+
+        // Make 15 requests (should pass for caregiver profile PUT limit)
+        for (int i = 0; i < 15; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // 16th request should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testFamilyMemberProfileRateLimiting() throws ServletException, IOException {
+        // Test family member profile endpoint rate limiting
+        when(request.getRequestURI()).thenReturn("/v1/api/family-members/patients");
+        when(request.getMethod()).thenReturn("GET");
+        
+        // Create family member authentication
+        Authentication familyMemberAuth = mock(Authentication.class);
+        when(familyMemberAuth.isAuthenticated()).thenReturn(true);
+        when(familyMemberAuth.getName()).thenReturn("family@test.com");
+        when(familyMemberAuth.getPrincipal()).thenReturn("family@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_FAMILY_MEMBER")))
+            .when(familyMemberAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(familyMemberAuth);
+
+        // Make 30 requests (should pass for family member profile GET limit)
+        for (int i = 0; i < 30; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(any(), any());
+            verify(response, never()).setStatus(429);
+        }
+
+        // 31st request should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testRoleSpecificRateLimitHeaders() throws ServletException, IOException {
+        // Test that rate limit headers include role information
+        when(request.getRequestURI()).thenReturn("/v1/api/patients/me");
+        when(request.getMethod()).thenReturn("GET");
+        
+        // Create patient authentication
+        Authentication patientAuth = mock(Authentication.class);
+        when(patientAuth.isAuthenticated()).thenReturn(true);
+        when(patientAuth.getName()).thenReturn("patient@test.com");
+        when(patientAuth.getPrincipal()).thenReturn("patient@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_PATIENT")))
+            .when(patientAuth).getAuthorities();
+        when(securityContext.getAuthentication()).thenReturn(patientAuth);
+
+        rateLimitingFilter.doFilter(request, response, filterChain);
+
+        verify(response).addHeader("X-RateLimit-Limit", "30");
+        verify(response).addHeader("X-RateLimit-Remaining", "29");
+        verify(response).addHeader("X-RateLimit-Role", "PATIENT");
     }
 }

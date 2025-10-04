@@ -51,12 +51,18 @@ public class RateLimitingFilter implements Filter {
             "/v1/api/auth/login", 5, // limit login attempts to 5 per minute
             "/v1/api/ai-chat/", 10, // limit AI chat requests to 10 per minute
             "/v1/api/notetaker/ai/", 5, // limit note taker AI requests to 5 per minute
+            "/v1/api/patients/", 30, // limit patient profile requests to 30 per minute
+            "/v1/api/caregivers/", 40, // limit caregiver profile requests to 40 per minute
+            "/v1/api/family-members/", 25, // limit family member requests to 25 per minute
             "default", 60 // default limit for all other endpoints: 60 requests per minute
     );
 
     private static final Map<String, ExtendedLimitConfig> EXTENDED_LIMITS = Map.of(
             "/v1/api/ai-chat/", new ExtendedLimitConfig(100, 15),
-            "/v1/api/notetaker/ai/", new ExtendedLimitConfig(50, 15)
+            "/v1/api/notetaker/ai/", new ExtendedLimitConfig(50, 15),
+            "/v1/api/patients/", new ExtendedLimitConfig(200, 15), // 200 patient requests per 15 minutes
+            "/v1/api/caregivers/", new ExtendedLimitConfig(300, 15), // 300 caregiver requests per 15 minutes
+            "/v1/api/family-members/", new ExtendedLimitConfig(150, 15) // 150 family member requests per 15 minutes
     );
 
     private final Cache<String, RateLimitBucket> perMinuteCache = Caffeine.newBuilder()
@@ -95,9 +101,9 @@ public class RateLimitingFilter implements Filter {
         String userId = getUserIdentifier(processableRequest);
         String endpoint = processableRequest.getRequestURI();
         String normalizedEndpoint = normalizeEndpoint(endpoint);
+        String method = processableRequest.getMethod();
 
-
-        if (!checkPerMinuteLimit(userId, normalizedEndpoint, httpResponse)) {
+        if (!checkPerMinuteLimit(userId, normalizedEndpoint, method, httpResponse)) {
             return;
         }
 
@@ -105,20 +111,23 @@ public class RateLimitingFilter implements Filter {
             return;
         }
 
-        addRateLimitHeaders(httpResponse, userId, normalizedEndpoint);
+        addRateLimitHeaders(httpResponse, userId, normalizedEndpoint, method);
         chain.doFilter(processableRequest, response);
     }
 
-    private boolean checkPerMinuteLimit(String userId, String endpoint, HttpServletResponse response)
+    private boolean checkPerMinuteLimit(String userId, String endpoint, String method, HttpServletResponse response)
             throws IOException {
 
-        int limit = getRateLimitForEndpoint(endpoint);
+        // Extract role from userId for role-specific rate limiting
+        String role = extractRoleFromUserId(userId);
+        int limit = getRoleSpecificRateLimit(endpoint, role, method);
         long windowSeconds = getResetWindowForEndpoint(endpoint);
         String key = buildCacheKey(userId, endpoint);
         RateLimitBucket bucket = perMinuteCache.get(key, k -> new RateLimitBucket(limit, windowSeconds));
 
         if (!bucket.tryConsume()) {
-            logger.warn("Rate limit exceeded for user: {} on endpoint: {} (window: {} seconds)", userId, endpoint, windowSeconds);
+            logger.warn("Rate limit exceeded for user: {} on endpoint: {} with method: {} (window: {} seconds, limit: {})", 
+                       userId, endpoint, method, windowSeconds, limit);
             sendRateLimitResponse(response,
                 String.format("Rate limit exceeded. Please try again in %d seconds.", windowSeconds));
             return false;
@@ -151,9 +160,10 @@ public class RateLimitingFilter implements Filter {
         return true;
     }
 
-    private void addRateLimitHeaders(HttpServletResponse response, String userId, String endpoint) {
+    private void addRateLimitHeaders(HttpServletResponse response, String userId, String endpoint, String method) {
         try {
-            int limit = getRateLimitForEndpoint(endpoint);
+            String role = extractRoleFromUserId(userId);
+            int limit = getRoleSpecificRateLimit(endpoint, role, method);
             long windowSeconds = getResetWindowForEndpoint(endpoint);
             String key = buildCacheKey(userId, endpoint);
             RateLimitBucket bucket = perMinuteCache.getIfPresent(key);
@@ -163,6 +173,7 @@ public class RateLimitingFilter implements Filter {
                 response.addHeader("X-RateLimit-Limit", String.valueOf(limit));
                 response.addHeader("X-RateLimit-Remaining", String.valueOf(remaining));
                 response.addHeader("X-RateLimit-Reset", String.valueOf(windowSeconds));
+                response.addHeader("X-RateLimit-Role", role);
             }
 
             ExtendedLimitConfig extendedConfig = getExtendedLimitForEndpoint(endpoint);
@@ -180,6 +191,17 @@ public class RateLimitingFilter implements Filter {
         } catch (Exception e) {
             logger.error("Error adding rate limit headers: {}", e.getMessage());
         }
+    }
+
+    private String extractRoleFromUserId(String userId) {
+        // Extract role from userId format: "user:email:role:ROLE" or "login:email:role:ROLE"
+        if (userId.contains(":role:")) {
+            String[] parts = userId.split(":role:");
+            if (parts.length > 1) {
+                return parts[1];
+            }
+        }
+        return "UNKNOWN";
     }
 
     private void sendRateLimitResponse(HttpServletResponse response, String message) throws IOException {
@@ -218,6 +240,49 @@ public class RateLimitingFilter implements Filter {
             }
         }
         return RATE_LIMITS.get("default");
+    }
+
+    private int getRoleSpecificRateLimit(String endpoint, String role, String method) {
+        int baseLimit = getRateLimitForEndpoint(endpoint);
+        
+        // Apply role-specific adjustments and operation-specific limits
+        if (endpoint.startsWith("/v1/api/patients/")) {
+            return getPatientSpecificLimit(baseLimit, method, role);
+        } else if (endpoint.startsWith("/v1/api/caregivers/")) {
+            return getCaregiverSpecificLimit(baseLimit, method, role);
+        } else if (endpoint.startsWith("/v1/api/family-members/")) {
+            return getFamilyMemberSpecificLimit(baseLimit, method, role);
+        }
+        
+        return baseLimit;
+    }
+
+    private int getPatientSpecificLimit(int baseLimit, String method, String role) {
+        // Patients have stricter limits for write operations
+        if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+            return 10; // Max 10 write operations per minute for patients
+        }
+        return baseLimit; // Use the base limit for GET operations (30)
+    }
+
+    private int getCaregiverSpecificLimit(int baseLimit, String method, String role) {
+        // Caregivers can have higher limits for read operations (they manage multiple patients)
+        if ("GET".equalsIgnoreCase(method)) {
+            return 50; // 50 read operations per minute for caregivers
+        } else if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+            return 15; // Max 15 write operations per minute for caregivers
+        }
+        return baseLimit;
+    }
+
+    private int getFamilyMemberSpecificLimit(int baseLimit, String method, String role) {
+        // Family members have read-only access with moderate limits
+        if ("GET".equalsIgnoreCase(method)) {
+            return 30; // 30 read operations per minute for family members
+        } else if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+            return 5; // Max 5 write operations per minute for family members
+        }
+        return baseLimit;
     }
 
     private ExtendedLimitConfig getExtendedLimitForEndpoint(String endpoint) {
@@ -347,6 +412,12 @@ public class RateLimitingFilter implements Filter {
         extendedCache.asMap().keySet().removeIf(key ->
             key.startsWith("user:" + userId + ":") || key.equals("user:" + userId));
         logger.info("Rate limits reset for user: {}", userId);
+    }
+
+    public void clearAllRateLimits() {
+        perMinuteCache.invalidateAll();
+        extendedCache.invalidateAll();
+        logger.info("All rate limits cleared");
     }
 
     public CacheStats getCacheStats() {
