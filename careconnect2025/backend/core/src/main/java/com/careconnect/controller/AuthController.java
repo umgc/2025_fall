@@ -263,6 +263,29 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/password/setup")
+    @Operation(
+        summary = "🔐 Set up password for new account",
+        description = """
+            Set up initial password for a patient account using verification token.
+            This is typically used when a caregiver creates a patient account and the patient needs to set their own password.
+
+            **Usage:**
+            1. Patient receives verification token when account is created
+            2. Use this endpoint to set initial password with the token
+            3. After setup, patient can login normally with email/password
+            """,
+        tags = {"🔑 Authentication"},
+        security = {} // No authentication required for password setup
+    )
+    public ResponseEntity<?> setupPassword(@RequestBody SetupPasswordRequest request) {
+        try {
+            return authService.setupPassword(request.verificationToken(), request.newPassword());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
     private String extractTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

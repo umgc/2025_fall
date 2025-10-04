@@ -9,12 +9,24 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.Collection;
+import java.util.List;
+
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -43,6 +55,7 @@ public class RateLimitingFilterUnitTest {
     void setUp() throws IOException {
         MockitoAnnotations.openMocks(this);
         rateLimitingFilter = new RateLimitingFilter();
+        rateLimitingFilter.setLoginResetWindowSeconds(30); // Set explicit value for testing
         responseWriter = new StringWriter();
 
         when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
@@ -51,23 +64,27 @@ public class RateLimitingFilterUnitTest {
 
     @Test
     public void testLoginRateLimit() throws ServletException, IOException {
-        // Mock request for login endpoint
+        // Mock request for login endpoint - but this test uses IP-based limiting
+        // since it doesn't provide POST method or JSON body
         when(request.getRequestURI()).thenReturn("/v1/api/auth/login");
         when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(securityContext.getAuthentication()).thenReturn(null);
 
         // Simulate 5 requests (should pass)
         for (int i = 0; i < 5; i++) {
-            reset(filterChain);
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
             rateLimitingFilter.doFilter(request, response, filterChain);
-            verify(filterChain, times(1)).doFilter(request, response);
+            verify(filterChain, times(1)).doFilter(any(), any());
             verify(response, never()).setStatus(429);
         }
 
         // 6th request should be rate limited
-        reset(filterChain);
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
         rateLimitingFilter.doFilter(request, response, filterChain);
-        verify(filterChain, never()).doFilter(request, response);
+        verify(filterChain, never()).doFilter(any(), any());
         verify(response).setStatus(429);
 
         String responseContent = responseWriter.toString();
@@ -131,7 +148,7 @@ public class RateLimitingFilterUnitTest {
 
         verify(response).addHeader("X-RateLimit-Limit", "5");
         verify(response).addHeader("X-RateLimit-Remaining", "4");
-        verify(response).addHeader("X-RateLimit-Reset", "60");
+        verify(response).addHeader("X-RateLimit-Reset", "30"); // Login endpoint uses 30 seconds
     }
 
     @Test
@@ -145,5 +162,193 @@ public class RateLimitingFilterUnitTest {
         verify(response).addHeader("X-RateLimit-Extended-Limit", "100");
         verify(response).addHeader("X-RateLimit-Extended-Remaining", "99");
         verify(response).addHeader("X-RateLimit-Extended-Window", "15 minutes");
+    }
+
+    @Test
+    public void testSeparateRateLimitsForPatientAndCaregiver() throws ServletException, IOException {
+        // Test that patients and caregivers have separate rate limiting buckets
+        when(request.getRequestURI()).thenReturn("/v1/api/ai-chat/message");
+
+        // Create patient authentication
+        Authentication patientAuth = mock(Authentication.class);
+        when(patientAuth.isAuthenticated()).thenReturn(true);
+        when(patientAuth.getName()).thenReturn("patient@test.com");
+        when(patientAuth.getPrincipal()).thenReturn("patient@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_PATIENT")))
+            .when(patientAuth).getAuthorities();
+
+        // Create caregiver authentication
+        Authentication caregiverAuth = mock(Authentication.class);
+        when(caregiverAuth.isAuthenticated()).thenReturn(true);
+        when(caregiverAuth.getName()).thenReturn("caregiver@test.com");
+        when(caregiverAuth.getPrincipal()).thenReturn("caregiver@test.com");
+        doReturn(List.of(new SimpleGrantedAuthority("ROLE_CAREGIVER")))
+            .when(caregiverAuth).getAuthorities();
+
+        // Make 10 requests as patient (should all pass for AI chat endpoint limit)
+        when(securityContext.getAuthentication()).thenReturn(patientAuth);
+        for (int i = 0; i < 10; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // Make 10 requests as caregiver (should also all pass since they have separate buckets)
+        when(securityContext.getAuthentication()).thenReturn(caregiverAuth);
+        for (int i = 0; i < 10; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // 11th request as patient should be rate limited
+        when(securityContext.getAuthentication()).thenReturn(patientAuth);
+        reset(filterChain, response);
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+
+        // 11th request as caregiver should also be rate limited (separate bucket)
+        when(securityContext.getAuthentication()).thenReturn(caregiverAuth);
+        reset(filterChain, response);
+        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+    }
+
+    @Test
+    public void testConfigurableLoginResetWindow() throws ServletException, IOException {
+        // Mock request for login endpoint
+        when(request.getRequestURI()).thenReturn("/v1/api/auth/login");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        // Verify that the response message includes the configured reset window
+        // Simulate 5 requests (should pass)
+        for (int i = 0; i < 5; i++) {
+            reset(filterChain);
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(request, response);
+            verify(response, never()).setStatus(429);
+        }
+
+        // 6th request should be rate limited with custom message
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(request, response);
+        verify(response).setStatus(429);
+
+        String responseContent = responseWriter.toString();
+        assertTrue(responseContent.contains("Rate limit exceeded"));
+        // Should show the configured reset window (default 30 seconds for development)
+        assertTrue(responseContent.contains("30"));
+    }
+
+    @Test
+    public void testSeparateRateLimitsForLoginByRole() throws ServletException, IOException {
+        // Test that login attempts with different roles have separate rate limiting
+        when(request.getRequestURI()).thenReturn("/v1/api/auth/login");
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        // Make 5 login attempts as PATIENT (should all pass)
+        String patientLoginJson = "{\"email\":\"patient@test.com\",\"password\":\"password\",\"role\":\"PATIENT\"}";
+        for (int i = 0; i < 5; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            mockRequestWithBody(patientLoginJson);
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(any(), any());
+            verify(response, never()).setStatus(429);
+        }
+
+        // Make 5 login attempts as CAREGIVER (should also all pass since separate bucket)
+        String caregiverLoginJson = "{\"email\":\"caregiver@test.com\",\"password\":\"password\",\"role\":\"CAREGIVER\"}";
+        for (int i = 0; i < 5; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            mockRequestWithBody(caregiverLoginJson);
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(any(), any());
+            verify(response, never()).setStatus(429);
+        }
+
+        // 6th attempt as PATIENT should be rate limited
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        mockRequestWithBody(patientLoginJson);
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(429);
+
+        String responseContent = responseWriter.toString();
+        assertTrue(responseContent.contains("Rate limit exceeded"));
+
+        // 6th attempt as CAREGIVER should also be rate limited (separate bucket)
+        reset(filterChain, response);
+        responseWriter = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(responseWriter));
+        mockRequestWithBody(caregiverLoginJson);
+        rateLimitingFilter.doFilter(request, response, filterChain);
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(429);
+    }
+
+    private void mockRequestWithBody(String json) throws IOException {
+        byte[] bodyBytes = json.getBytes(StandardCharsets.UTF_8);
+        ServletInputStream inputStream = new ServletInputStream() {
+            private final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bodyBytes);
+
+            @Override
+            public int read() throws IOException {
+                return byteArrayInputStream.read();
+            }
+
+            @Override
+            public boolean isFinished() {
+                return byteArrayInputStream.available() == 0;
+            }
+
+            @Override
+            public boolean isReady() {
+                return true;
+            }
+
+            @Override
+            public void setReadListener(ReadListener readListener) {
+                throw new UnsupportedOperationException();
+            }
+        };
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+        when(request.getInputStream()).thenReturn(inputStream);
+        when(request.getReader()).thenReturn(reader);
+    }
+
+    @Test
+    public void testOptionsRequestsSkipRateLimiting() throws ServletException, IOException {
+        // Test that OPTIONS (CORS preflight) requests are not rate limited
+        when(request.getRequestURI()).thenReturn("/v1/api/auth/login");
+        when(request.getMethod()).thenReturn("OPTIONS");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+
+        // Make many OPTIONS requests - none should be rate limited
+        for (int i = 0; i < 20; i++) {
+            reset(filterChain, response);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            rateLimitingFilter.doFilter(request, response, filterChain);
+            verify(filterChain, times(1)).doFilter(any(), any());
+            verify(response, never()).setStatus(429);
+        }
     }
 }

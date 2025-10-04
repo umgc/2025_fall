@@ -7,22 +7,45 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.Order;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 
 @Component
+@Order(0)
 public class RateLimitingFilter implements Filter {
 
     private static final Logger logger = LoggerFactory.getLogger(RateLimitingFilter.class);
     private static final int SC_TOO_MANY_REQUESTS = 429;
+
+    @Value("${careconnect.rate-limit.login.reset-window-seconds:30}")
+    private long loginResetWindowSeconds;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Setter for testing purposes
+    public void setLoginResetWindowSeconds(long loginResetWindowSeconds) {
+        this.loginResetWindowSeconds = loginResetWindowSeconds;
+    }
 
     private static final Map<String, Integer> RATE_LIMITS = Map.of(
             "/v1/api/auth/login", 5, // limit login attempts to 5 per minute
@@ -37,7 +60,7 @@ public class RateLimitingFilter implements Filter {
     );
 
     private final Cache<String, RateLimitBucket> perMinuteCache = Caffeine.newBuilder()
-            .expireAfterWrite(2, TimeUnit.MINUTES)
+            .expireAfterWrite(35, TimeUnit.MINUTES) // Extended to handle 30-minute login window + buffer
             .maximumSize(10000)
             .build();
 
@@ -58,9 +81,21 @@ public class RateLimitingFilter implements Filter {
             return;
         }
 
-        String userId = getUserIdentifier(httpRequest);
-        String endpoint = httpRequest.getRequestURI();
+        // For login requests, wrap the request to allow reading the body multiple times
+        HttpServletRequest processableRequest = httpRequest;
+        if (httpRequest.getRequestURI().startsWith("/v1/api/auth/login") &&
+            "POST".equalsIgnoreCase(httpRequest.getMethod())) {
+            try {
+                processableRequest = new CachedBodyHttpServletRequest(httpRequest);
+            } catch (IOException e) {
+                logger.warn("Failed to cache request body for rate limiting, falling back to IP-based: {}", e.getMessage());
+            }
+        }
+
+        String userId = getUserIdentifier(processableRequest);
+        String endpoint = processableRequest.getRequestURI();
         String normalizedEndpoint = normalizeEndpoint(endpoint);
+
 
         if (!checkPerMinuteLimit(userId, normalizedEndpoint, httpResponse)) {
             return;
@@ -71,19 +106,21 @@ public class RateLimitingFilter implements Filter {
         }
 
         addRateLimitHeaders(httpResponse, userId, normalizedEndpoint);
-        chain.doFilter(request, response);
+        chain.doFilter(processableRequest, response);
     }
 
     private boolean checkPerMinuteLimit(String userId, String endpoint, HttpServletResponse response)
             throws IOException {
 
         int limit = getRateLimitForEndpoint(endpoint);
+        long windowSeconds = getResetWindowForEndpoint(endpoint);
         String key = buildCacheKey(userId, endpoint);
-        RateLimitBucket bucket = perMinuteCache.get(key, k -> new RateLimitBucket(limit, 60));
+        RateLimitBucket bucket = perMinuteCache.get(key, k -> new RateLimitBucket(limit, windowSeconds));
 
         if (!bucket.tryConsume()) {
-            logger.warn("Per-minute rate limit exceeded for user: {} on endpoint: {}", userId, endpoint);
-            sendRateLimitResponse(response, "Per-minute rate limit exceeded. Please try again in 60 seconds.");
+            logger.warn("Rate limit exceeded for user: {} on endpoint: {} (window: {} seconds)", userId, endpoint, windowSeconds);
+            sendRateLimitResponse(response,
+                String.format("Rate limit exceeded. Please try again in %d seconds.", windowSeconds));
             return false;
         }
 
@@ -117,6 +154,7 @@ public class RateLimitingFilter implements Filter {
     private void addRateLimitHeaders(HttpServletResponse response, String userId, String endpoint) {
         try {
             int limit = getRateLimitForEndpoint(endpoint);
+            long windowSeconds = getResetWindowForEndpoint(endpoint);
             String key = buildCacheKey(userId, endpoint);
             RateLimitBucket bucket = perMinuteCache.getIfPresent(key);
 
@@ -124,7 +162,7 @@ public class RateLimitingFilter implements Filter {
                 int remaining = Math.max(0, limit - bucket.getCount());
                 response.addHeader("X-RateLimit-Limit", String.valueOf(limit));
                 response.addHeader("X-RateLimit-Remaining", String.valueOf(remaining));
-                response.addHeader("X-RateLimit-Reset", "60");
+                response.addHeader("X-RateLimit-Reset", String.valueOf(windowSeconds));
             }
 
             ExtendedLimitConfig extendedConfig = getExtendedLimitForEndpoint(endpoint);
@@ -191,15 +229,68 @@ public class RateLimitingFilter implements Filter {
         return null;
     }
 
+    private long getResetWindowForEndpoint(String endpoint) {
+        // Use configured login reset window for login endpoint, default 60 seconds for others
+        if (endpoint.startsWith("/v1/api/auth/login")) {
+            return loginResetWindowSeconds;
+        }
+        return 60; // Default 60 seconds for other endpoints
+    }
+
     private String getUserIdentifier(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
-            return "user:" + authentication.getName();
+
+            // Extract role from authorities for role-specific rate limiting
+            String role = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(authority -> authority.startsWith("ROLE_"))
+                    .map(authority -> authority.substring(5)) // Remove "ROLE_" prefix
+                    .findFirst()
+                    .orElse("UNKNOWN");
+
+            return "user:" + authentication.getName() + ":role:" + role;
+        }
+
+        // For login requests, try to extract user info from request body
+        if (request.getRequestURI().startsWith("/v1/api/auth/login") &&
+            "POST".equalsIgnoreCase(request.getMethod())) {
+            try {
+                String loginInfo = extractLoginInfo(request);
+                if (loginInfo != null) {
+                    return loginInfo;
+                }
+            } catch (Exception e) {
+                logger.debug("Failed to extract login info from request body: {}", e.getMessage());
+            }
         }
 
         return "ip:" + getClientIpAddress(request);
+    }
+
+    private String extractLoginInfo(HttpServletRequest request) throws IOException {
+        if (!(request instanceof CachedBodyHttpServletRequest)) {
+            return null;
+        }
+
+        try {
+            String body = ((CachedBodyHttpServletRequest) request).getBody();
+            if (body != null && !body.trim().isEmpty()) {
+                JsonNode jsonNode = objectMapper.readTree(body);
+                String email = jsonNode.has("email") ? jsonNode.get("email").asText() : null;
+                String role = jsonNode.has("role") ? jsonNode.get("role").asText() : "UNKNOWN";
+
+                if (email != null && !email.trim().isEmpty()) {
+                    return "login:" + email + ":role:" + role.toUpperCase();
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("Error parsing login request JSON: {}", e.getMessage());
+        }
+
+        return null;
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
@@ -218,6 +309,12 @@ public class RateLimitingFilter implements Filter {
 
     private boolean shouldSkipRateLimiting(HttpServletRequest request) {
         String path = request.getRequestURI();
+        String method = request.getMethod();
+
+        // Skip rate limiting for CORS preflight requests
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
 
         return path.startsWith("/swagger-ui") ||
                 path.startsWith("/v3/api-docs") ||
@@ -232,9 +329,10 @@ public class RateLimitingFilter implements Filter {
     public RateLimitStats getRateLimitStats(String userId) {
         long totalBuckets = perMinuteCache.estimatedSize() + extendedCache.estimatedSize();
         Map<String, Integer> userLimits = new ConcurrentHashMap<>();
-        
+
+        // Handle both old format (user:email) and new format (user:email:role:ROLE)
         perMinuteCache.asMap().forEach((key, bucket) -> {
-            if (key.startsWith(userId)) {
+            if (key.startsWith("user:" + userId + ":") || key.equals("user:" + userId)) {
                 userLimits.put(key, bucket.getCount());
             }
         });
@@ -243,8 +341,11 @@ public class RateLimitingFilter implements Filter {
     }
 
     public void resetRateLimit(String userId) {
-        perMinuteCache.asMap().keySet().removeIf(key -> key.startsWith(userId));
-        extendedCache.asMap().keySet().removeIf(key -> key.startsWith(userId));
+        // Handle both old format (user:email) and new format (user:email:role:ROLE)
+        perMinuteCache.asMap().keySet().removeIf(key ->
+            key.startsWith("user:" + userId + ":") || key.equals("user:" + userId));
+        extendedCache.asMap().keySet().removeIf(key ->
+            key.startsWith("user:" + userId + ":") || key.equals("user:" + userId));
         logger.info("Rate limits reset for user: {}", userId);
     }
 
@@ -364,6 +465,66 @@ public class RateLimitingFilter implements Filter {
 
         public com.github.benmanes.caffeine.cache.stats.CacheStats getExtendedStats() {
             return extendedStats;
+        }
+    }
+
+    // Request wrapper to cache request body for multiple reads
+    private static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
+        private final String body;
+
+        public CachedBodyHttpServletRequest(HttpServletRequest request) throws IOException {
+            super(request);
+            StringBuilder bodyBuilder = new StringBuilder();
+            try (BufferedReader reader = request.getReader()) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    bodyBuilder.append(line);
+                }
+            }
+            body = bodyBuilder.toString();
+        }
+
+        @Override
+        public ServletInputStream getInputStream() throws IOException {
+            return new CachedBodyServletInputStream(body);
+        }
+
+        @Override
+        public BufferedReader getReader() throws IOException {
+            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
+        }
+
+        public String getBody() {
+            return body;
+        }
+    }
+
+    // ServletInputStream implementation for cached body
+    private static class CachedBodyServletInputStream extends ServletInputStream {
+        private final ByteArrayInputStream inputStream;
+
+        public CachedBodyServletInputStream(String body) {
+            this.inputStream = new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public int read() throws IOException {
+            return inputStream.read();
+        }
+
+        @Override
+        public boolean isFinished() {
+            return inputStream.available() == 0;
+        }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public void setReadListener(ReadListener readListener) {
+            throw new UnsupportedOperationException();
         }
     }
 }
