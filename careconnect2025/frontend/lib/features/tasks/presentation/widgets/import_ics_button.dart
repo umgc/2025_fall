@@ -63,7 +63,7 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
       );
 
       final taskJson = jsonEncode(task.toJson());
-      await ApiService.createTaskV2(_selectedPatientId, taskJson);
+      await ApiService.createTaskV2(_selectedPatientId!, taskJson);
     }
 
     if (mounted) {
