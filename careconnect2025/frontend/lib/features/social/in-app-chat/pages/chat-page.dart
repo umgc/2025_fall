@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:uuid/uuid.dart';
-import '../../../widgets/ai_chat_improved.dart';
+import '../../../../widgets/ai_chat_improved.dart';
 
 class ChatPage extends StatefulWidget {
   final String contactName;
