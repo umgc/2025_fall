@@ -1305,39 +1305,49 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
       }).join("\n");
 
-      await _analyzeEssaySuccess(assessmentName, assignmentDescription, studentSummary);
-      await _analyzeEssayMisunderstanding(assessmentName, assignmentDescription, studentSummary);
-      await _analyzeEssayAiUse(assessmentName, assignmentDescription, aiSummary);
-    }
-    else {
+      await _analyzeEssaySuccess(
+          assessmentName, assignmentDescription, studentSummary);
+      await _analyzeEssayMisunderstanding(
+          assessmentName, assignmentDescription, studentSummary);
+      await _analyzeEssayAiUse(
+          assessmentName, assignmentDescription, aiSummary);
+    } else {
       String studentSummary;
       assignmentDescription =
           (_selectedAssessment!.assessment as Quiz).description ?? "";
       if (_selectedStudent != null) {
         List studentData = await (lmsService as moodle.MoodleLmsService)
             .getQuizStatsForStudent(
-                (_selectedAssessment?.assessment as Quiz).id!.toString(), _selectedStudent!['id']);
+                (_selectedAssessment?.assessment as Quiz).id!.toString(),
+                _selectedStudent!['id']);
         print(studentData);
         studentSummary = studentData.map((question) {
-          return "Question: ${question['questiontext']}, Correctness: ${question['qstate'] == 'gradedright' ? 'Correct' : (question['qstate'] == 'gradedwrong' ? 'Incorrect' : 'Partially Correct')}";
+          return "Question: ${question['questiontext']}, Type: ${question['qtype']}, State: ${question['qstate']}";
         }).join("\n");
-        await _analyzeStudentQuizSuccess(assessmentName, assignmentDescription, studentSummary, _selectedStudent!['studentName']);
-        await _analyzeStudentQuizMisunderstanding(assessmentName, assignmentDescription, studentSummary, _selectedStudent!['studentName']);
-      }
-      else {
+        await _analyzeStudentQuizSuccess(assessmentName, assignmentDescription,
+            studentSummary, _selectedStudent!['studentName']);
+        await _analyzeStudentQuizMisunderstanding(
+            assessmentName,
+            assignmentDescription,
+            studentSummary,
+            _selectedStudent!['studentName']);
+      } else {
         studentSummary = _questionBreakdown.map((q) {
-          return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";}).join("\n");
-        await _analyzeCourseQuizSuccess(assessmentName, assignmentDescription, studentSummary);
-        await _analyzeCourseQuizMisunderstanding(assessmentName, assignmentDescription, studentSummary);
+          return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
+        }).join("\n");
+        await _analyzeCourseQuizSuccess(
+            assessmentName, assignmentDescription, studentSummary);
+        await _analyzeCourseQuizMisunderstanding(
+            assessmentName, assignmentDescription, studentSummary);
       }
       print(studentSummary);
     }
-      await _analyzeAssignmentImprovements(
-          assessmentName,
-          courseName,
-          assignmentDescription,
-          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
+    await _analyzeAssignmentImprovements(
+        assessmentName,
+        courseName,
+        assignmentDescription,
+        _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+        _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
   }
 
   Future<void> _analyzeEssaySuccess(
@@ -1390,7 +1400,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     $aiSummary
     Based on the student AI interactions, provide a thorough analysis on how students used and reflected on AI use throughout the assignment.
     To perform your analysis, summarize the student prompts and reflections on AI use.
-    Provide a textual summary as well as the top three AI use cases, each with a brief description and a percentage.
+    If there is no AI use on this essay, then there is nothing to summarize.
+    Provide a textual summary. Additionally, determine the top three AI use cases, each with a brief description and a percentage. If there was no AI use on this essay, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three AI use areas are an object named 'Data' with keys 'Area' and 'Percentage'.
     """;
@@ -1401,8 +1412,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeAssignmentImprovements(String courseName, String assessmentName,
-      String essayPrompt, String successes, String failures) async {
+  Future<void> _analyzeAssignmentImprovements(
+      String courseName,
+      String assessmentName,
+      String essayPrompt,
+      String successes,
+      String failures) async {
     String successPrompt = """
     Recommend improvements that could be made to course '$courseName' and to assignment '$assessmentName' with description '$essayPrompt'.
     Areas of Success:
@@ -1422,8 +1437,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-    Future<void> _analyzeStudentQuizSuccess(
-      String quizName, String quizDescription, String studentSummary, String studentName) async {
+  Future<void> _analyzeStudentQuizSuccess(String quizName,
+      String quizDescription, String studentSummary, String studentName) async {
     String successPrompt = """
     Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
     Student Quiz Results:
@@ -1431,9 +1446,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student understood.
     To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly
     and compare them against the quiz name and description.
+    If the student answered all questions incorrectly, then there are no topics on this quiz that the student understood.
+    Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
+    A question that the student answered correctly will have a 'State' value of 'gradedright'.
+    A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
+    A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that student understood,
-    based on number of questions about that topic the student answered correctly.
-    For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly.
+    based on number of questions about that topic the student answered correctly. If the student answered all questions incorrectly, then this list should be empty.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially correctly.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;
@@ -1444,8 +1464,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-    Future<void> _analyzeStudentQuizMisunderstanding(
-      String quizName, String quizDescription, String studentSummary, String studentName) async {
+  Future<void> _analyzeStudentQuizMisunderstanding(String quizName,
+      String quizDescription, String studentSummary, String studentName) async {
     String successPrompt = """
     Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
     Student Quiz Results:
@@ -1453,9 +1473,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student did not understand.
     To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly
     and compare them against the quiz name and description.
-    Provide a textual summary. Additionally, determine the top three topics from the quiz that student did not understand,
-    based on number of questions about that topic the student answered incorrectly.
-    For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.
+    If the student answered all questions correctly, then there are no topics on this quiz that the student did not understand.
+    Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
+    A question that the student answered correctly will have a 'State' value of 'gradedright'.
+    A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
+    A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
+    Provide a textual summary.
+    Additionally, determine the top three topics from the quiz that student did not understand,
+    based on number of questions about that topic the student answered incorrectly. If the student answered all questions correctly, then this list should be empty.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially incorrectly.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;
@@ -1466,7 +1492,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-      Future<void> _analyzeCourseQuizSuccess(
+  Future<void> _analyzeCourseQuizSuccess(
       String quizName, String quizDescription, String studentSummary) async {
     String successPrompt = """
     Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
@@ -1475,9 +1501,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class understood.
     To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
     and compare the question text against the quiz name and description.
+    If all questions have an 0% correctness rate, then there are no topics on this quiz that the course understood.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that the course understood,
     based on number of questions about that topic the course answered correctly.
-    For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly. If all questions have a 0% correctness rate, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;
@@ -1488,7 +1515,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-      Future<void> _analyzeCourseQuizMisunderstanding(
+  Future<void> _analyzeCourseQuizMisunderstanding(
       String quizName, String quizDescription, String studentSummary) async {
     String successPrompt = """
     Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
@@ -1497,9 +1524,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class did not understand.
     To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
     and compare the question text against the quiz name and description.
+    If all questions have a 100% correctness rate, then there are no topics on this quiz that the course did not understand.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that the course did not understand,
     based on number of questions about that topic the course answered incorrectly.
-    For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.  If all questions have a 100% correctness rate, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
     """;

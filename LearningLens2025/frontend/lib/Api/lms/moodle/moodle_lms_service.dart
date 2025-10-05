@@ -1255,23 +1255,21 @@ class MoodleLmsService implements LmsInterface {
 
   Future<dynamic> getQuizStatsForStudent(String quizId, int userId) async {
     final allAttempts = await ApiService().httpPost(
-        Uri.parse(apiURL + serverUrl),
-        body: {
-          'wstoken': _userToken!,
-          'wsfunction': 'local_learninglens_get_quiz_stats_for_student',
-          'moodlewsrestformat': 'json',
-          'quizid': quizId.toString(),
-          'userid': userId.toString(),
-        },
-      );
-      if (allAttempts.statusCode != 200) {
-        print(
-            'Failed to get attempts for user $userId. Status: ${allAttempts.statusCode}');
-      }
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'local_learninglens_get_quiz_stats_for_student',
+        'moodlewsrestformat': 'json',
+        'quizid': quizId.toString(),
+        'userid': userId.toString(),
+      },
+    );
+    if (allAttempts.statusCode != 200) {
+      print(
+          'Failed to get attempts for user $userId. Status: ${allAttempts.statusCode}');
+    }
 
-      final allAttemptsResponse = jsonDecode(allAttempts.body);
-      print(allAttemptsResponse);
-    return [];
+    return jsonDecode(allAttempts.body);
   }
 
   Future<List<Participant>> getEssayGradesForParticipants(

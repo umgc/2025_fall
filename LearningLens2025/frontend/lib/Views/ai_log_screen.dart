@@ -392,8 +392,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectStartDate,
                         child: startDate == null
-                            ? Text("Select Start Date", maxLines: 3, textAlign: TextAlign.center)
-                            : Text("Start Date: ${getDateString(startDate!)}", maxLines: 3, textAlign: TextAlign.center),
+                            ? Text("Select Start Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("Start Date: ${getDateString(startDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       Expanded(
@@ -401,8 +403,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectEndDate,
                         child: endDate == null
-                            ? Text("Select End Date", maxLines: 3, textAlign: TextAlign.center)
-                            : Text("End Date: ${getDateString(endDate!)}", maxLines: 3, textAlign: TextAlign.center),
+                            ? Text("Select End Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("End Date: ${getDateString(endDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       ElevatedButton(
@@ -414,7 +418,8 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       ElevatedButton(
                         onPressed:
                             logSource.sortedData.isEmpty ? null : _exportLogs,
-                        child: const Text('Export Logs', maxLines: 2, textAlign: TextAlign.center),
+                        child: const Text('Export Logs',
+                            maxLines: 2, textAlign: TextAlign.center),
                       ),
                     ]))
               ],
