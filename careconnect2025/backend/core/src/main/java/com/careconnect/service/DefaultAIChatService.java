@@ -86,7 +86,7 @@ public class DefaultAIChatService implements AIChatService {
                 .includeMoodPainByDefault(true)
                 .includeAllergiesByDefault(true)
                 .isActive(true)
-                .systemPrompt("You are a helpful AI assistant for patients. Be conversational and ask how you can help. Only provide medical information when specifically asked. Do not give unsolicited medical summaries or analysis.")
+                .systemPrompt("You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.")
                 .build();
         return userAIConfigRepository.save(config);
     }
@@ -165,7 +165,7 @@ public class DefaultAIChatService implements AIChatService {
         // System prompt as system message
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are a helpful AI assistant for patients. Be conversational and ask how you can help. Only provide medical information when specifically asked. Do not give unsolicited medical summaries or analysis.";
+            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.";
         messages.add(dev.langchain4j.data.message.SystemMessage.from(prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
@@ -442,11 +442,11 @@ public class DefaultAIChatService implements AIChatService {
                 } catch (Exception ignore) {}
             }
             if (systemPrompt == null) {
-                systemPrompt = "You are a helpful AI assistant for patients. Be conversational and ask how you can help. Only provide medical information when specifically asked. Do not give unsolicited medical summaries or analysis.";
+                systemPrompt = "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.";
             }
 
-            // Create ChatMemory for this conversation
-            ChatMemory chatMemory = chatMemoryFactory.createDatabaseChatMemory(conversation, aiConfig);
+            // Create ChatMemory for this conversation (session-based for healthcare safety)
+            ChatMemory chatMemory = chatMemoryFactory.createSessionBasedChatMemory(conversation, aiConfig);
             
             // Add system prompt and medical context to memory if not already present
             if (chatMemory.messages().isEmpty()) {

@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 /**
  * Factory for creating ChatMemory instances with different strategies
  * 
- * Provides both in-memory and database-persistent chat memory options
- * based on configuration and requirements.
+ * Provides session-based (recommended for healthcare), in-memory, and database-persistent 
+ * chat memory options based on configuration and requirements.
+ * 
+ * Healthcare Safety: Session-based memory is recommended to prevent cross-conversation
+ * connections and maintain clear boundaries between interactions.
  */
 @Service
 @RequiredArgsConstructor
@@ -59,6 +62,43 @@ public class ChatMemoryFactory {
      */
     public ChatMemory createInMemoryChatMemory(ChatConversation conversation, UserAIConfig aiConfig) {
         return createChatMemory(conversation, aiConfig, false);
+    }
+    
+    /**
+     * Create a session-based ChatMemory (RECOMMENDED for healthcare applications)
+     * 
+     * This provides the safest approach for healthcare:
+     * - Limited context window (10-20 messages)
+     * - Session timeout (15-30 minutes)
+     * - No cross-conversation memory retention
+     * - Clear boundaries between sessions
+     */
+    public ChatMemory createSessionBasedChatMemory(ChatConversation conversation, UserAIConfig aiConfig) {
+        int maxMessages = getMaxMessages(aiConfig);
+        // Limit to healthcare-safe message count
+        int safeMaxMessages = Math.min(maxMessages, 15);
+        
+        // Use conversation ID as session ID for consistency
+        String sessionId = conversation.getConversationId();
+        
+        log.debug("Creating session-based ChatMemory for conversation {} with {} max messages and 20-minute timeout", 
+            sessionId, safeMaxMessages);
+        
+        return new SessionBasedChatMemory(sessionId, safeMaxMessages, 20); // 20-minute timeout
+    }
+    
+    /**
+     * Create a session-based ChatMemory with custom timeout
+     */
+    public ChatMemory createSessionBasedChatMemory(ChatConversation conversation, UserAIConfig aiConfig, long timeoutMinutes) {
+        int maxMessages = getMaxMessages(aiConfig);
+        int safeMaxMessages = Math.min(maxMessages, 15);
+        String sessionId = conversation.getConversationId();
+        
+        log.debug("Creating session-based ChatMemory for conversation {} with {} max messages and {} minute timeout", 
+            sessionId, safeMaxMessages, timeoutMinutes);
+        
+        return new SessionBasedChatMemory(sessionId, safeMaxMessages, timeoutMinutes);
     }
     
     /**

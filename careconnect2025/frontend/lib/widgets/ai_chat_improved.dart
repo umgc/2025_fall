@@ -70,6 +70,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final List<UploadedFile> _uploadedFiles = [];
   bool _isLoading = false;
+  bool _isLoadingHistory = false;
   bool _isFilePickerOpen = false;
   final double _chatWidth = 320.0;
   final double _chatHeight = 500.0;
@@ -82,6 +83,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+    // Session-based memory: each conversation starts fresh
+    // No history loading to maintain healthcare safety boundaries
   }
 
   @override
@@ -89,6 +92,46 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     _controller.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  /// Load conversation history from the backend
+  Future<void> _loadConversationHistory() async {
+    if (widget.userId == null) return;
+    
+    setState(() {
+      _isLoadingHistory = true;
+    });
+    
+    try {
+      final history = await AIChatService.getConversationHistory(
+        userId: widget.userId.toString(),
+        conversationId: _conversationId.isNotEmpty ? _conversationId : null,
+        limit: 20, // Load last 20 messages
+      );
+      
+      if (mounted) {
+        setState(() {
+          _messages.clear();
+          for (final messageData in history) {
+            final message = ChatMessage(
+              text: messageData['content'] ?? '',
+              isUser: messageData['messageType'] == 'USER',
+              timestamp: DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now(),
+            );
+            _messages.add(message);
+          }
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading conversation history: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingHistory = false;
+        });
+      }
+      // Don't show error to user, just start with empty chat
+    }
   }
 
   Future<void> _pickFiles() async {
