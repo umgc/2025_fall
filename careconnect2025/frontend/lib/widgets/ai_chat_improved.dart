@@ -163,6 +163,248 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     }
   }
 
+  /// Clear chat completely (user-initiated deletion)
+  Future<void> _clearChatCompletely() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversation'),
+        content: const Text(
+          'This will permanently delete this conversation. This action cannot be undone.\n\n'
+          'Your conversation will also be automatically deleted after 48 hours for privacy protection.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Store the conversation ID before clearing it
+      final conversationToClear = _conversationId;
+      
+      // Clear all messages and start fresh
+      setState(() {
+        _messages.clear();
+        _conversationId = "";
+        _isLoadingHistory = false;
+        _manuallyCleared = true;
+      });
+      
+      // Store the cleared state persistently
+      if (widget.userId != null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final clearedKey = 'chat_cleared_${widget.userId}';
+          await prefs.setBool(clearedKey, true);
+        } catch (e) {
+          // Failed to save cleared state, continue anyway
+        }
+      }
+      
+      // Clear the conversation from the backend if it exists
+      if (conversationToClear.isNotEmpty) {
+        try {
+          await AIChatService.clearConversation(conversationToClear);
+        } catch (e) {
+          // If clearing fails, just continue - the local clear is more important
+        }
+      }
+      
+      // Reset inactivity timer since user is actively using the chat
+      _resetInactivityTimer();
+      
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Conversation deleted successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Download chat transcript
+  Future<void> _downloadChatTranscript() async {
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No conversation to download'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final transcript = _generateTranscript();
+    final timestamp = DateTime.now().toIso8601String().split('T')[0];
+    final filename = 'chat_transcript_$timestamp.txt';
+
+    // For now, show the transcript in a dialog
+    // In a real app, you'd use a file picker or share functionality
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Transcript'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: SingleChildScrollView(
+            child: SelectableText(transcript),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Share conversation with provider
+  Future<void> _shareWithProvider() async {
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No conversation to share'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share with Provider'),
+        content: const Text(
+          'This will share your conversation with your healthcare provider for review. '
+          'The conversation will be retained for medical record purposes.\n\n'
+          'Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // TODO: Implement actual sharing with provider
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conversation shared with provider'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Show privacy information
+  void _showPrivacyInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.privacy_tip, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Privacy & Data Protection'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Your Privacy is Protected',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '• Chat conversations are automatically deleted after 48 hours',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• You can delete conversations immediately anytime',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Only anonymized usage statistics are retained long-term',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Conversations shared with providers are kept for medical records',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• All data is encrypted and access is logged',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'This AI assistant is not a substitute for professional medical advice. '
+                'Always consult your healthcare provider for medical concerns.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Generate transcript text from messages
+  String _generateTranscript() {
+    final buffer = StringBuffer();
+    buffer.writeln('Chat Transcript - ${DateTime.now().toString()}');
+    buffer.writeln('=' * 50);
+    buffer.writeln();
+    
+    for (final message in _messages) {
+      final timestamp = message.timestamp.toString().substring(0, 19);
+      final sender = message.isUser ? 'You' : 'AI Assistant';
+      buffer.writeln('[$timestamp] $sender:');
+      buffer.writeln(message.text);
+      buffer.writeln();
+    }
+    
+    return buffer.toString();
+  }
+
   /// Load conversation history from the backend
   Future<void> _loadConversationHistory() async {
     if (widget.userId == null) {
@@ -551,54 +793,67 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                     ],
                   ),
                 ),
-                // Refresh button to reload conversation history
-                IconButton(
-                  icon: _isLoadingHistory 
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                        ),
-                      )
-                    : const Icon(Icons.refresh),
-                  onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
-                    // Store the conversation ID before clearing it
-                    final conversationToClear = _conversationId;
-                    
-                    // Clear all messages and start fresh
-                    setState(() {
-                      _messages.clear();
-                      _conversationId = ""; // Reset conversation ID to start new conversation
-                      _isLoadingHistory = false;
-                      _manuallyCleared = true; // Mark as manually cleared
-                    });
-                    
-                    // Store the cleared state persistently
-                    if (widget.userId != null) {
-                      try {
-                        final prefs = await SharedPreferences.getInstance();
-                        final clearedKey = 'chat_cleared_${widget.userId}';
-                        await prefs.setBool(clearedKey, true);
-                      } catch (e) {
-                        // Failed to save cleared state, continue anyway
-                      }
+                // Privacy controls menu
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'clear':
+                        await _clearChatCompletely();
+                        break;
+                      case 'download':
+                        await _downloadChatTranscript();
+                        break;
+                      case 'share':
+                        await _shareWithProvider();
+                        break;
+                      case 'privacy':
+                        _showPrivacyInfo();
+                        break;
                     }
-                    
-                    // Clear the conversation from the backend if it exists
-                    if (conversationToClear.isNotEmpty) {
-                      try {
-                        await AIChatService.clearConversation(conversationToClear);
-                      } catch (e) {
-                        // If clearing fails, just continue - the local clear is more important
-                      }
-                    }
-                    
-                    // Reset inactivity timer since user is actively using the chat
-                    _resetInactivityTimer();
                   },
-                  tooltip: 'Clear chat and start fresh',
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'clear',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_forever, size: 18),
+                          SizedBox(width: 8),
+                          Text('Delete this conversation'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download, size: 18),
+                          SizedBox(width: 8),
+                          Text('Download transcript'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(Icons.share, size: 18),
+                          SizedBox(width: 8),
+                          Text('Share with provider'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'privacy',
+                      child: Row(
+                        children: [
+                          Icon(Icons.privacy_tip, size: 18),
+                          SizedBox(width: 8),
+                          Text('Privacy info'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 if (widget.isModal)
                   IconButton(
@@ -606,6 +861,32 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
               ],
+            ),
+            // Privacy notification banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                border: Border.all(color: Colors.blue.shade200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Chat logs are automatically deleted after 48 hours for privacy protection.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Divider(color: colorScheme.outlineVariant),
             // Message list

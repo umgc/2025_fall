@@ -40,6 +40,7 @@ public class DefaultAIChatService implements AIChatService {
     private final MedicalContextService medicalContextService;
     private final PatientContextRetrievalService patientContextRetrievalService;
     private final ChatMemoryFactory chatMemoryFactory;
+    private final ChatAuditService chatAuditService;
 
     @Autowired
     public DefaultAIChatService(ChatModel chatModel,
@@ -49,9 +50,10 @@ public class DefaultAIChatService implements AIChatService {
                               PatientRepository patientRepository,
                               @Autowired(required = false) OpenAIService openAIService,
                               @Autowired(required = false) DeepSeekService deepSeekService,
-                              MedicalContextService medicalContextService,
-                              PatientContextRetrievalService patientContextRetrievalService,
-                              ChatMemoryFactory chatMemoryFactory) {
+                                       MedicalContextService medicalContextService,
+                                       PatientContextRetrievalService patientContextRetrievalService,
+                                       ChatMemoryFactory chatMemoryFactory,
+                                       ChatAuditService chatAuditService) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
@@ -62,6 +64,7 @@ public class DefaultAIChatService implements AIChatService {
         this.medicalContextService = medicalContextService;
         this.patientContextRetrievalService = patientContextRetrievalService;
         this.chatMemoryFactory = chatMemoryFactory;
+        this.chatAuditService = chatAuditService;
     }
     // Helper: Get or create patient AI config
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
@@ -342,6 +345,14 @@ public class DefaultAIChatService implements AIChatService {
         ChatConversation conversation = chatConversationRepository
                 .findByConversationIdAndIsActiveTrue(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+        
+        // Log conversation deletion
+        chatAuditService.logConversationDeleted(
+            conversation.getUserId(),
+            conversationId,
+            "user_initiated"
+        );
+        
         conversation.setIsActive(false);
         chatConversationRepository.save(conversation);
     }
@@ -436,11 +447,21 @@ public class DefaultAIChatService implements AIChatService {
             // Get or create user AI configuration
             UserAIConfig aiConfig = getOrCreateUserAIConfig(request.getUserId(), request.getPatientId());
 
-            // Get or create conversation
-            ChatConversation conversation = getOrCreateConversation(request, aiConfig);
+                   // Get or create conversation
+                   ChatConversation conversation = getOrCreateConversation(request, aiConfig);
 
-            log.info("AIChatService (LangChain4j + DeepSeek) - Using model: {} for patient: {}, user: {}", 
-                aiConfig.getDeepseekModel(), request.getPatientId(), request.getUserId());
+                   // Log chat session start if new conversation
+                   if (conversation.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(1))) {
+                       chatAuditService.logChatSessionStart(
+                           request.getUserId(), 
+                           conversation.getConversationId(),
+                           "mobile_app", // Would get from request headers in real implementation
+                           "127.0.0.1"   // Would get from request in real implementation
+                       );
+                   }
+
+                   log.info("AIChatService (LangChain4j + DeepSeek) - Using model: {} for patient: {}, user: {}",
+                       aiConfig.getDeepseekModel(), request.getPatientId(), request.getUserId());
 
             // Build medical context
             String medicalContext = medicalContextService.buildPatientContext(
@@ -476,25 +497,57 @@ public class DefaultAIChatService implements AIChatService {
                 }
             }
             
-            // Add user message to memory
-            chatMemory.add(dev.langchain4j.data.message.UserMessage.from(request.getMessage()));
+                   // Add user message to memory
+                   chatMemory.add(dev.langchain4j.data.message.UserMessage.from(request.getMessage()));
 
-            String aiResponse;
-            try {
-                // Use ChatMemory to get AI response
-                var response = chatModel.chat(chatMemory.messages());
-                // Extract the actual text content from the LangChain4j response
-                if (response != null) {
-                    aiResponse = response.aiMessage().text();
-                    // Add AI response to memory
-                    chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
-                } else {
-                    aiResponse = "Sorry, I couldn't process your request.";
-                }
-            } catch (Exception e) {
-                log.error("LangChain4j chat error", e);
-                aiResponse = "Sorry, I couldn't process your request.";
-            }
+                   // Log user message sent
+                   chatAuditService.logMessageSent(
+                       request.getUserId(),
+                       conversation.getConversationId(),
+                       request.getMessage().length(),
+                       0 // Response time will be calculated after AI response
+                   );
+
+                   String aiResponse;
+                   long processingTimeMs = 0;
+                   try {
+                       long aiStartTime = System.currentTimeMillis();
+                       // Use ChatMemory to get AI response
+                       var response = chatModel.chat(chatMemory.messages());
+                       processingTimeMs = System.currentTimeMillis() - aiStartTime;
+                       
+                       // Extract the actual text content from the LangChain4j response
+                       if (response != null) {
+                           aiResponse = response.aiMessage().text();
+                           // Add AI response to memory
+                           chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
+                           
+                           // Log AI response
+                           chatAuditService.logAiResponse(
+                               request.getUserId(),
+                               conversation.getConversationId(),
+                               aiResponse.length(),
+                               processingTimeMs
+                           );
+                       } else {
+                           aiResponse = "Sorry, I couldn't process your request.";
+                           chatAuditService.logSystemError(
+                               request.getUserId(),
+                               conversation.getConversationId(),
+                               "AI_RESPONSE_NULL",
+                               "ai_service_error"
+                           );
+                       }
+                   } catch (Exception e) {
+                       log.error("LangChain4j chat error", e);
+                       aiResponse = "Sorry, I couldn't process your request.";
+                       chatAuditService.logSystemError(
+                           request.getUserId(),
+                           conversation.getConversationId(),
+                           "AI_PROCESSING_ERROR",
+                           "ai_service_exception"
+                       );
+                   }
 
             // Build and return ChatResponse
             int totalMessages = chatMessageRepository.countByConversation(conversation);
