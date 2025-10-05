@@ -25,9 +25,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-@Primary
 @Service
-@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = false)
 public class LangChainAIChatService implements AIChatService {
     private final ChatModel chatModel;
     private final String modelProvider;
