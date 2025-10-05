@@ -18,11 +18,11 @@ class AIChatService {
     String preferredModel = 'deepseek-chat',
     double temperature = 0.7,
     int maxTokens = 1000,
-    bool includeVitals = false,
-    bool includeMedications = false,
-    bool includeNotes = false,
-    bool includeMoodPainLogs = false,
-    bool includeAllergies = false,
+    bool includeVitals = true,
+    bool includeMedications = true,
+    bool includeNotes = true,
+    bool includeMoodPainLogs = true,
+    bool includeAllergies = true,
     List<Map<String, dynamic>>? uploadedFiles,
   }) async {
     try {

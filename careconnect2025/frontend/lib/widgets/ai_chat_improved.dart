@@ -263,6 +263,12 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         userId: currentUserId,
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         uploadedFiles: uploadedFilesJson,
+        // Include all medical context data
+        includeVitals: true,
+        includeMedications: true,
+        includeNotes: true,
+        includeMoodPainLogs: true,
+        includeAllergies: true,
       );
       final aiText = response['aiResponse'] ?? 'No response.';
       final errorMsg =
