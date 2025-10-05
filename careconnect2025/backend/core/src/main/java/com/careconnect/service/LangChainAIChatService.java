@@ -73,6 +73,11 @@ public class LangChainAIChatService implements AIChatService {
     }
 
     @Override
+    public List<com.careconnect.dto.ChatMessageSummary> getRecentMessagesForUser(Long userId, int limit) {
+        throw new UnsupportedOperationException("Not implemented in LangChainAIChatService");
+    }
+
+    @Override
     public void deactivateConversation(String conversationId) {
         throw new UnsupportedOperationException("Not implemented in LangChainAIChatService");
     }

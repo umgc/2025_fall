@@ -4,6 +4,7 @@ import com.careconnect.dto.*;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.service.AIChatService;
 import com.careconnect.service.UserAIConfigService;
+import com.careconnect.repository.ChatConversationRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,6 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v1/api/ai-chat")
@@ -24,6 +29,7 @@ import java.util.List;
 public class AIChatController {
     private final AIChatService aiChatService;
     private final UserAIConfigService userAIConfigService;
+    private final ChatConversationRepository chatConversationRepository;
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIChatController.class);
 
     @PostMapping("/chat")
@@ -109,6 +115,71 @@ public class AIChatController {
         }
     }
     
+    @GetMapping("/history")
+    @Operation(
+        summary = "Get conversation history",
+        description = "Retrieve conversation history for a user, optionally filtered by conversation ID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "History retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    public ResponseEntity<Map<String, Object>> getConversationHistory(
+            @RequestParam Long userId,
+            @RequestParam(required = false) String conversationId,
+            @RequestParam(defaultValue = "50") int limit) {
+        
+        log.info("Retrieving conversation history for user: {}, conversation: {}, limit: {}", 
+            userId, conversationId, limit);
+        
+        try {
+            List<ChatMessageSummary> messages;
+            
+            if (conversationId != null && !conversationId.trim().isEmpty()) {
+                // Get messages for specific conversation
+                messages = aiChatService.getConversationMessages(conversationId);
+            } else {
+                // Get recent messages from the most recent active conversation for the user
+                messages = aiChatService.getRecentMessagesForUser(userId, limit);
+            }
+            
+            // Convert to the format expected by frontend
+            List<Map<String, Object>> messageList = messages.stream()
+                .map(msg -> {
+                    Map<String, Object> messageMap = new HashMap<>();
+                    messageMap.put("content", msg.getContent());
+                    messageMap.put("messageType", msg.getMessageType());
+                    messageMap.put("createdAt", msg.getCreatedAt());
+                    return messageMap;
+                })
+                .collect(Collectors.toList());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("messages", messageList);
+            
+            // If we loaded recent messages (no specific conversationId), include the conversationId
+            if (conversationId == null || conversationId.trim().isEmpty()) {
+                if (!messages.isEmpty()) {
+                    // Get the conversationId from the first message (they're all from the same conversation)
+                    ChatMessageSummary firstMessage = messages.get(0);
+                    // We need to get the conversationId from the message - let me check if it's available
+                    // For now, we'll get it from the most recent conversation
+                    List<ChatConversation> conversations = chatConversationRepository
+                        .findByUserIdAndIsActiveTrueOrderByUpdatedAtDesc(userId);
+                    if (!conversations.isEmpty()) {
+                        response.put("conversationId", conversations.get(0).getConversationId());
+                    }
+                }
+            }
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving conversation history for user {}: ", userId, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PostMapping("/conversation/{conversationId}/deactivate")
     @Operation(
         summary = "Deactivate conversation",

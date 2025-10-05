@@ -65,26 +65,23 @@ public class ChatMemoryFactory {
     }
     
     /**
-     * Create a session-based ChatMemory (RECOMMENDED for healthcare applications)
+     * Create a session-based ChatMemory with database persistence and timeout
      * 
-     * This provides the safest approach for healthcare:
+     * This provides the best user experience:
+     * - Database persistence for chat history
+     * - Session timeout (15 minutes of inactivity)
+     * - Automatic cleanup after timeout
      * - Limited context window (10-20 messages)
-     * - Session timeout (15-30 minutes)
-     * - No cross-conversation memory retention
-     * - Clear boundaries between sessions
      */
     public ChatMemory createSessionBasedChatMemory(ChatConversation conversation, UserAIConfig aiConfig) {
         int maxMessages = getMaxMessages(aiConfig);
         // Limit to healthcare-safe message count
         int safeMaxMessages = Math.min(maxMessages, 15);
         
-        // Use conversation ID as session ID for consistency
-        String sessionId = conversation.getConversationId();
+        log.debug("Creating session-based ChatMemory for conversation {} with {} max messages and 15-minute timeout", 
+            conversation.getConversationId(), safeMaxMessages);
         
-        log.debug("Creating session-based ChatMemory for conversation {} with {} max messages and 20-minute timeout", 
-            sessionId, safeMaxMessages);
-        
-        return new SessionBasedChatMemory(sessionId, safeMaxMessages, 20); // 20-minute timeout
+        return new SessionBasedChatMemory(chatMessageRepository, conversation, safeMaxMessages, 15); // 15-minute timeout
     }
     
     /**
@@ -93,12 +90,11 @@ public class ChatMemoryFactory {
     public ChatMemory createSessionBasedChatMemory(ChatConversation conversation, UserAIConfig aiConfig, long timeoutMinutes) {
         int maxMessages = getMaxMessages(aiConfig);
         int safeMaxMessages = Math.min(maxMessages, 15);
-        String sessionId = conversation.getConversationId();
         
         log.debug("Creating session-based ChatMemory for conversation {} with {} max messages and {} minute timeout", 
-            sessionId, safeMaxMessages, timeoutMinutes);
+            conversation.getConversationId(), safeMaxMessages, timeoutMinutes);
         
-        return new SessionBasedChatMemory(sessionId, safeMaxMessages, timeoutMinutes);
+        return new SessionBasedChatMemory(chatMessageRepository, conversation, safeMaxMessages, timeoutMinutes);
     }
     
     /**

@@ -86,7 +86,7 @@ public class DefaultAIChatService implements AIChatService {
                 .includeMoodPainByDefault(true)
                 .includeAllergiesByDefault(true)
                 .isActive(true)
-                .systemPrompt("You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.")
+                .systemPrompt("You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.")
                 .build();
         return userAIConfigRepository.save(config);
     }
@@ -165,7 +165,7 @@ public class DefaultAIChatService implements AIChatService {
         // System prompt as system message
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.";
+            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
         messages.add(dev.langchain4j.data.message.SystemMessage.from(prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
@@ -316,6 +316,26 @@ public class DefaultAIChatService implements AIChatService {
                 .collect(Collectors.toList());
     }
 
+    // Helper: Get recent messages for user (from most recent active conversation)
+    public List<ChatMessageSummary> getRecentMessagesForUser(Long userId, int limit) {
+        // Find the most recent active conversation for the user
+        List<ChatConversation> conversations = chatConversationRepository
+                .findByUserIdAndIsActiveTrueOrderByUpdatedAtDesc(userId);
+        
+        if (conversations.isEmpty()) {
+            return new ArrayList<>(); // No active conversations
+        }
+        
+        // Get messages from the most recent conversation
+        ChatConversation mostRecentConversation = conversations.get(0);
+        List<ChatMessage> messages = chatMessageRepository
+                .findTopNByConversationOrderByCreatedAtAsc(mostRecentConversation, limit);
+        
+        return messages.stream()
+                .map(this::convertToMessageSummary)
+                .collect(Collectors.toList());
+    }
+
     // Helper: Deactivate conversation
     @Transactional
     public void deactivateConversation(String conversationId) {
@@ -442,10 +462,10 @@ public class DefaultAIChatService implements AIChatService {
                 } catch (Exception ignore) {}
             }
             if (systemPrompt == null) {
-                systemPrompt = "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment. IMPORTANT: You can access the patient's stored health data, but you do not remember previous conversations. Each session is independent.";
+                systemPrompt = "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
             }
 
-            // Create ChatMemory for this conversation (session-based for healthcare safety)
+            // Create ChatMemory for this conversation (session-based with 15-minute timeout)
             ChatMemory chatMemory = chatMemoryFactory.createSessionBasedChatMemory(conversation, aiConfig);
             
             // Add system prompt and medical context to memory if not already present

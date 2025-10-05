@@ -87,7 +87,7 @@ class AIChatService {
   }
 
   /// Get conversation history
-  static Future<List<Map<String, dynamic>>> getConversationHistory({
+  static Future<Map<String, dynamic>> getConversationHistory({
     required String userId,
     String? conversationId,
     int limit = 50,
@@ -109,7 +109,7 @@ class AIChatService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return List<Map<String, dynamic>>.from(data['messages'] ?? []);
+        return Map<String, dynamic>.from(data);
       } else {
         throw Exception(
           'Failed to get conversation history: ${response.statusCode}',
@@ -117,7 +117,7 @@ class AIChatService {
       }
     } catch (e) {
       print('❌ Error getting conversation history: $e');
-      return [];
+      return {'messages': []};
     }
   }
 

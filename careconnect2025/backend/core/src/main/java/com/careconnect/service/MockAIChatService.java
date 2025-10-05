@@ -69,6 +69,12 @@ public class MockAIChatService implements AIChatService {
     }
 
     @Override
+    public List<ChatMessageSummary> getRecentMessagesForUser(Long userId, int limit) {
+        log.info("Mock AI Chat Service: Getting recent messages for user {}", userId);
+        return List.of(); // Return empty list in dev mode
+    }
+
+    @Override
     public void deactivateConversation(String conversationId) {
         log.info("Mock AI Chat Service: Deactivating conversation {}", conversationId);
         // No-op in dev mode

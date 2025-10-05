@@ -18,6 +18,11 @@ public class ClassicAIChatService implements AIChatService {
     }
 
     @Override
+    public List<com.careconnect.dto.ChatMessageSummary> getRecentMessagesForUser(Long userId, int limit) {
+        throw new UnsupportedOperationException("Not implemented in ClassicAIChatService");
+    }
+
+    @Override
     public void deactivateConversation(String conversationId) {
         throw new UnsupportedOperationException("Not implemented in ClassicAIChatService");
     }

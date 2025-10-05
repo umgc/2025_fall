@@ -83,8 +83,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    // Session-based memory: each conversation starts fresh
-    // No history loading to maintain healthcare safety boundaries
+    _loadConversationHistory(); // Load history on startup
   }
 
   @override
@@ -103,7 +102,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     });
     
     try {
-      final history = await AIChatService.getConversationHistory(
+      final response = await AIChatService.getConversationHistory(
         userId: widget.userId.toString(),
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         limit: 20, // Load last 20 messages
@@ -112,7 +111,18 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       if (mounted) {
         setState(() {
           _messages.clear();
+          
+          // Extract messages from response
+          final history = response['messages'] as List<dynamic>? ?? [];
+          
           for (final messageData in history) {
+            // CRITICAL SECURITY: Filter out system messages to prevent governance prompts from showing
+            // System messages contain AI instructions, governance rules, and medical context
+            // These must NEVER be visible to users in the chat UI
+            if (messageData['messageType'] == 'SYSTEM') {
+              continue; // Skip system messages - they contain sensitive governance instructions
+            }
+            
             final message = ChatMessage(
               text: messageData['content'] ?? '',
               isUser: messageData['messageType'] == 'USER',
@@ -120,6 +130,13 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
             );
             _messages.add(message);
           }
+          
+          // Update conversationId if provided (for recent messages without specific conversationId)
+          if (response['conversationId'] != null && _conversationId.isEmpty) {
+            _conversationId = response['conversationId'];
+            print('🔄 Loaded conversationId from history: $_conversationId');
+          }
+          
           _isLoadingHistory = false;
         });
       }
@@ -320,8 +337,12 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           ? response['errorMessage']
           : null;
       // Update conversationId for next request
+      bool isNewConversation = false;
       if (response['conversationId'] != null &&
           response['conversationId'] is String) {
+        if (_conversationId.isEmpty) {
+          isNewConversation = true;
+        }
         _conversationId = response['conversationId'];
       }
       setState(() {
@@ -336,6 +357,12 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         _isLoading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      
+      // If this was a new conversation, load any existing history
+      if (isNewConversation) {
+        print('🔄 New conversation created, loading history...');
+        await _loadConversationHistory();
+      }
     } catch (e) {
       setState(() {
         _messages.add(
@@ -407,7 +434,35 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                 Icon(Icons.smart_toy, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('AI Chat', style: theme.textTheme.titleMedium),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('AI Chat', style: theme.textTheme.titleMedium),
+                      if (_messages.isNotEmpty)
+                        Text(
+                          '${_messages.length} messages',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Refresh button to reload conversation history
+                IconButton(
+                  icon: _isLoadingHistory 
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                        ),
+                      )
+                    : const Icon(Icons.refresh),
+                  onPressed: (_isLoading || _isLoadingHistory) ? null : _loadConversationHistory,
+                  tooltip: 'Refresh conversation history',
                 ),
                 if (widget.isModal)
                   IconButton(
