@@ -474,11 +474,27 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                         ),
                       )
                     : const Icon(Icons.refresh),
-                  onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
+                  onPressed: () async {
+                    print('🔄 Refresh button pressed - _isLoading: $_isLoading, _isLoadingHistory: $_isLoadingHistory');
+                    if (_isLoading || _isLoadingHistory) {
+                      print('🔄 Button is disabled due to loading state');
+                      return;
+                    }
+                    
                     print('🔄 Manual refresh triggered');
                     print('🔄 Current conversationId: $_conversationId');
                     print('🔄 Current userId: ${widget.userId}');
                     print('🔄 Current message count: ${_messages.length}');
+                    
+                    // Test if button is working at all
+                    setState(() {
+                      _messages.add(ChatMessage(
+                        text: '🔄 Refresh button clicked at ${DateTime.now()}',
+                        isUser: false,
+                        timestamp: DateTime.now(),
+                      ));
+                    });
+                    
                     await _loadConversationHistory();
                   },
                   tooltip: 'Refresh conversation history',
