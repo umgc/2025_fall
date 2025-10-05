@@ -95,41 +95,23 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
 
   /// Load conversation history from the backend
   Future<void> _loadConversationHistory() async {
-    if (widget.userId == null) {
-      print('❌ Cannot load history: userId is null');
-      return;
-    }
-    
-    print('🔄 Starting to load conversation history...');
-    print('🔄 Parameters: userId=${widget.userId}, conversationId=$_conversationId');
-    
-    setState(() {
-      _isLoadingHistory = true;
-    });
+    if (widget.userId == null) return;
     
     try {
       final response = await AIChatService.getConversationHistory(
         userId: widget.userId.toString(),
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
-        limit: 20, // Load last 20 messages
+        limit: 20,
       );
-      
-      print('🔄 Received response from backend: ${response.toString()}');
       
       if (mounted) {
         setState(() {
-          _messages.clear();
-          
           // Extract messages from response
           final history = response['messages'] as List<dynamic>? ?? [];
           
           for (final messageData in history) {
-            // CRITICAL SECURITY: Filter out system messages to prevent governance prompts from showing
-            // System messages contain AI instructions, governance rules, and medical context
-            // These must NEVER be visible to users in the chat UI
-            if (messageData['messageType'] == 'SYSTEM') {
-              continue; // Skip system messages - they contain sensitive governance instructions
-            }
+            // Skip system messages for security
+            if (messageData['messageType'] == 'SYSTEM') continue;
             
             final message = ChatMessage(
               text: messageData['content'] ?? '',
@@ -139,28 +121,23 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
             _messages.add(message);
           }
           
-          // Update conversationId if provided (for recent messages without specific conversationId)
+          // Update conversationId if provided
           if (response['conversationId'] != null && _conversationId.isEmpty) {
             _conversationId = response['conversationId'];
-            print('🔄 Loaded conversationId from history: $_conversationId');
           }
           
           _isLoadingHistory = false;
         });
         
-        // Scroll to bottom after loading history to show latest messages
+        // Scroll to bottom after loading
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
-        
-        print('🔄 Conversation history refreshed: ${_messages.length} messages loaded');
       }
     } catch (e) {
-      print('❌ Error loading conversation history: $e');
       if (mounted) {
         setState(() {
           _isLoadingHistory = false;
         });
       }
-      // Don't show error to user, just start with empty chat
     }
   }
 
@@ -474,27 +451,14 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                         ),
                       )
                     : const Icon(Icons.refresh),
-                  onPressed: () async {
-                    print('🔄 Refresh button pressed - _isLoading: $_isLoading, _isLoadingHistory: $_isLoadingHistory');
-                    if (_isLoading || _isLoadingHistory) {
-                      print('🔄 Button is disabled due to loading state');
-                      return;
-                    }
-                    
-                    print('🔄 Manual refresh triggered');
-                    print('🔄 Current conversationId: $_conversationId');
-                    print('🔄 Current userId: ${widget.userId}');
-                    print('🔄 Current message count: ${_messages.length}');
-                    
-                    // Test if button is working at all
+                  onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
+                    // Clear current messages immediately for visual feedback
                     setState(() {
-                      _messages.add(ChatMessage(
-                        text: '🔄 Refresh button clicked at ${DateTime.now()}',
-                        isUser: false,
-                        timestamp: DateTime.now(),
-                      ));
+                      _messages.clear();
+                      _isLoadingHistory = true;
                     });
                     
+                    // Load fresh conversation history
                     await _loadConversationHistory();
                   },
                   tooltip: 'Refresh conversation history',
