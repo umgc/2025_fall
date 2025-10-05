@@ -85,7 +85,7 @@ public class DefaultAIChatService implements AIChatService {
                 .includeMoodPainByDefault(true)
                 .includeAllergiesByDefault(true)
                 .isActive(true)
-                .systemPrompt("You are a helpful healthcare AI assistant. Respond naturally to user questions without forced greetings. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive. Clearly state what the data shows about the patient's current health when prompted. Do not make up information. If the answer is not in the data, say you do not know.")
+                .systemPrompt("You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.")
                 .build();
         return userAIConfigRepository.save(config);
     }
@@ -139,7 +139,7 @@ public class DefaultAIChatService implements AIChatService {
         // Use prompt from request if available, else fallback to default
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are a helpful healthcare AI assistant. Respond naturally to user questions without forced greetings. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive.";
+            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
         messages.add(createMessage("system", prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(createMessage("system", medicalContext));
@@ -164,7 +164,7 @@ public class DefaultAIChatService implements AIChatService {
         // System prompt as system message
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are a helpful healthcare AI assistant. Respond naturally to user questions without forced greetings. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive.";
+            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
         messages.add(dev.langchain4j.data.message.SystemMessage.from(prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
