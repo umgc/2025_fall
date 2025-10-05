@@ -30,8 +30,6 @@ public class DefaultAIChatService implements AIChatService {
 
     // LangChain4j components (inject or configure as needed)
     private final ChatModel chatModel; // Should be configured for OpenAI or DeepSeek
-    // Use a message window memory for demo (20 messages)
-    private final ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(20);
 
     private final UserAIConfigRepository userAIConfigRepository;
     private final ChatConversationRepository chatConversationRepository;
@@ -41,6 +39,7 @@ public class DefaultAIChatService implements AIChatService {
     private final DeepSeekService deepSeekService;
     private final MedicalContextService medicalContextService;
     private final PatientContextRetrievalService patientContextRetrievalService;
+    private final ChatMemoryFactory chatMemoryFactory;
 
     @Autowired
     public DefaultAIChatService(ChatModel chatModel,
@@ -51,7 +50,8 @@ public class DefaultAIChatService implements AIChatService {
                               @Autowired(required = false) OpenAIService openAIService,
                               @Autowired(required = false) DeepSeekService deepSeekService,
                               MedicalContextService medicalContextService,
-                              PatientContextRetrievalService patientContextRetrievalService) {
+                              PatientContextRetrievalService patientContextRetrievalService,
+                              ChatMemoryFactory chatMemoryFactory) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
@@ -61,6 +61,7 @@ public class DefaultAIChatService implements AIChatService {
         this.deepSeekService = deepSeekService;
         this.medicalContextService = medicalContextService;
         this.patientContextRetrievalService = patientContextRetrievalService;
+        this.chatMemoryFactory = chatMemoryFactory;
     }
     // Helper: Get or create patient AI config
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
@@ -444,17 +445,29 @@ public class DefaultAIChatService implements AIChatService {
                 systemPrompt = "You are a helpful AI assistant for patients. Be conversational and ask how you can help. Only provide medical information when specifically asked. Do not give unsolicited medical summaries or analysis.";
             }
 
-            // Prepare messages for AI (as List<ChatMessage> for LangChain4j)
-            List<dev.langchain4j.data.message.ChatMessage> messagesForAI = prepareChatMessagesForAI(conversation, request.getMessage(), medicalContext, systemPrompt);
-            // Debug logging removed for cleaner logs
+            // Create ChatMemory for this conversation
+            ChatMemory chatMemory = chatMemoryFactory.createDatabaseChatMemory(conversation, aiConfig);
+            
+            // Add system prompt and medical context to memory if not already present
+            if (chatMemory.messages().isEmpty()) {
+                chatMemory.add(dev.langchain4j.data.message.SystemMessage.from(systemPrompt));
+                if (medicalContext != null && !medicalContext.trim().isEmpty()) {
+                    chatMemory.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
+                }
+            }
+            
+            // Add user message to memory
+            chatMemory.add(dev.langchain4j.data.message.UserMessage.from(request.getMessage()));
 
             String aiResponse;
             try {
-                var response = chatModel.chat(messagesForAI);
+                // Use ChatMemory to get AI response
+                var response = chatModel.chat(chatMemory.messages());
                 // Extract the actual text content from the LangChain4j response
                 if (response != null) {
-                    // The response is a ChatResponse, get the text from aiMessage
                     aiResponse = response.aiMessage().text();
+                    // Add AI response to memory
+                    chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
                 } else {
                     aiResponse = "Sorry, I couldn't process your request.";
                 }
