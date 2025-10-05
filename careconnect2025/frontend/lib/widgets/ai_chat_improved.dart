@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Message model for chat
 class ChatMessage {
@@ -75,6 +77,13 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   final double _chatWidth = 320.0;
   final double _chatHeight = 500.0;
   late AnimationController _animationController;
+  
+  // Inactivity timer for 15-minute auto-clear
+  Timer? _inactivityTimer;
+  DateTime? _lastActivity;
+  
+  // Flag to track if user manually cleared the chat
+  bool _manuallyCleared = false;
 
   @override
   void initState() {
@@ -83,19 +92,90 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _loadConversationHistory(); // Load history on startup
+    
+    // Check if chat was manually cleared and load history accordingly
+    _checkAndLoadHistory();
+    
+    _startInactivityTimer(); // Start 15-minute inactivity timer
+  }
+
+  /// Check if chat was manually cleared and load history if not
+  Future<void> _checkAndLoadHistory() async {
+    if (widget.userId == null) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final clearedKey = 'chat_cleared_${widget.userId}';
+      final wasCleared = prefs.getBool(clearedKey) ?? false;
+      
+      if (!wasCleared) {
+        await _loadConversationHistory();
+      } else {
+        // Chat was manually cleared, start with empty chat
+        setState(() {
+          _manuallyCleared = true;
+        });
+      }
+    } catch (e) {
+      // If there's an error, just load history normally
+      await _loadConversationHistory();
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _animationController.dispose();
+    _inactivityTimer?.cancel();
     super.dispose();
+  }
+
+  /// Start the 15-minute inactivity timer
+  void _startInactivityTimer() {
+    _lastActivity = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(const Duration(minutes: 15), () {
+      _clearChatDueToInactivity();
+    });
+  }
+
+  /// Reset the inactivity timer (call this on any user activity)
+  void _resetInactivityTimer() {
+    _lastActivity = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(const Duration(minutes: 15), () {
+      _clearChatDueToInactivity();
+    });
+  }
+
+  /// Clear chat due to 15 minutes of inactivity
+  void _clearChatDueToInactivity() {
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _conversationId = "";
+        _messages.add(ChatMessage(
+          text: '⏰ Chat cleared due to 15 minutes of inactivity',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+    }
   }
 
   /// Load conversation history from the backend
   Future<void> _loadConversationHistory() async {
-    if (widget.userId == null) return;
+    if (widget.userId == null) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: '❌ Cannot load history: userId is null',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isLoadingHistory = false;
+      });
+      return;
+    }
     
     try {
       final response = await AIChatService.getConversationHistory(
@@ -106,19 +186,31 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       
       if (mounted) {
         setState(() {
+          // Clear existing messages and replace with fresh history
+          _messages.clear();
+          
           // Extract messages from response
           final history = response['messages'] as List<dynamic>? ?? [];
           
-          for (final messageData in history) {
-            // Skip system messages for security
-            if (messageData['messageType'] == 'SYSTEM') continue;
-            
-            final message = ChatMessage(
-              text: messageData['content'] ?? '',
-              isUser: messageData['messageType'] == 'USER',
-              timestamp: DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now(),
-            );
-            _messages.add(message);
+          
+          if (history.isEmpty) {
+            _messages.add(ChatMessage(
+              text: '📭 No conversation history found',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          } else {
+            for (final messageData in history) {
+              // Skip system messages for security
+              if (messageData['messageType'] == 'SYSTEM') continue;
+              
+              final message = ChatMessage(
+                text: messageData['content'] ?? '',
+                isUser: messageData['messageType'] == 'USER',
+                timestamp: DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now(),
+              );
+              _messages.add(message);
+            }
           }
           
           // Update conversationId if provided
@@ -135,6 +227,11 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         setState(() {
+          _messages.add(ChatMessage(
+            text: '❌ Error loading history: $e',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
           _isLoadingHistory = false;
         });
       }
@@ -269,12 +366,28 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     if (_controller.text.trim().isEmpty) return;
     final userMessage = _controller.text.trim();
     _controller.clear();
+    
+    // Reset inactivity timer on user activity
+    _resetInactivityTimer();
+    
     setState(() {
       _messages.add(
         ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
       );
       _isLoading = true;
+      _manuallyCleared = false; // Reset manual clear flag when user starts new conversation
     });
+    
+    // Clear the persistent cleared state when starting new conversation
+    if (widget.userId != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final clearedKey = 'chat_cleared_${widget.userId}';
+        await prefs.setBool(clearedKey, false);
+      } catch (e) {
+        print('Failed to clear persistent state: $e');
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     try {
       final userProvider = mounted
@@ -452,16 +565,70 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                       )
                     : const Icon(Icons.refresh),
                   onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
-                    // Clear current messages immediately for visual feedback
+                    // Store the conversation ID before clearing it
+                    final conversationToClear = _conversationId;
+                    
+                    // Clear all messages and start fresh
                     setState(() {
                       _messages.clear();
-                      _isLoadingHistory = true;
+                      _conversationId = ""; // Reset conversation ID to start new conversation
+                      _isLoadingHistory = false;
+                      _manuallyCleared = true; // Mark as manually cleared
                     });
                     
-                    // Load fresh conversation history
-                    await _loadConversationHistory();
+                    // Store the cleared state persistently
+                    if (widget.userId != null) {
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        final clearedKey = 'chat_cleared_${widget.userId}';
+                        await prefs.setBool(clearedKey, true);
+                      } catch (e) {
+                        print('Failed to save cleared state: $e');
+                      }
+                    }
+                    
+                    // Clear the conversation from the backend if it exists
+                    if (conversationToClear.isNotEmpty) {
+                      try {
+                        await AIChatService.clearConversation(conversationToClear);
+                        print('✅ Successfully cleared conversation: $conversationToClear');
+                        
+                        // Add visual confirmation that conversation was cleared
+                        setState(() {
+                          _messages.add(ChatMessage(
+                            text: '✅ Conversation cleared from server',
+                            isUser: false,
+                            timestamp: DateTime.now(),
+                          ));
+                        });
+                      } catch (e) {
+                        // If clearing fails, just continue - the local clear is more important
+                        print('❌ Failed to clear conversation from backend: $e');
+                        
+                        // Add error message
+                        setState(() {
+                          _messages.add(ChatMessage(
+                            text: '⚠️ Failed to clear conversation from server',
+                            isUser: false,
+                            timestamp: DateTime.now(),
+                          ));
+                        });
+                      }
+                    } else {
+                      // No conversation to clear
+                      setState(() {
+                        _messages.add(ChatMessage(
+                          text: 'ℹ️ No conversation to clear',
+                          isUser: false,
+                          timestamp: DateTime.now(),
+                        ));
+                      });
+                    }
+                    
+                    // Reset inactivity timer since user is actively using the chat
+                    _resetInactivityTimer();
                   },
-                  tooltip: 'Refresh conversation history',
+                  tooltip: 'Clear chat and start fresh',
                 ),
                 if (widget.isModal)
                   IconButton(

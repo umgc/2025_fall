@@ -86,6 +86,25 @@ class AIChatService {
     }
   }
 
+  /// Clear a conversation from the backend
+  static Future<void> clearConversation(String conversationId) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/conversation/$conversationId/deactivate'),
+        headers: authHeaders,
+      );
+      
+      if (response.statusCode != 200) {
+        throw Exception('Failed to clear conversation: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error clearing conversation: $e');
+      rethrow;
+    }
+  }
+
   /// Get conversation history
   static Future<Map<String, dynamic>> getConversationHistory({
     required String userId,
