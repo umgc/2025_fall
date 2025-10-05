@@ -9,21 +9,40 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 
 @Configuration
-@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class AIChatServiceConfig {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIChatServiceConfig.class);
 
-    @Value("${openai.api.key:}")
-    private String openAiApiKey;
+    public AIChatServiceConfig() {
+        log.info("🔧 AIChatServiceConfig initialized - DeepSeek ChatModel configuration ACTIVE");
+    }
 
-    @Value("${openai.model.name:gpt-4}")
-    private String openAiModelName;
+    @Value("${deepseek.api.key:}")
+    private String deepSeekApiKey;
+
+    @Value("${deepseek.api.url:https://api.deepseek.com/v1}")
+    private String deepSeekApiUrl;
+
+    @Value("${ai.model.provider:deepseek}")
+    private String modelProvider;
 
     @Bean
     public ChatModel chatModel() {
-        return OpenAiChatModel.builder()
-                .apiKey(openAiApiKey)
-                .modelName(openAiModelName)
-                .build();
+        log.info("🚀 Creating ChatModel bean with DeepSeek configuration:");
+        log.info("  - API Key: {}...", deepSeekApiKey.substring(0, Math.min(10, deepSeekApiKey.length())));
+        log.info("  - Base URL: {}", deepSeekApiUrl);
+        log.info("  - Model: deepseek-chat");
+
+        try {
+            return OpenAiChatModel.builder()
+                    .apiKey(deepSeekApiKey)
+                    .baseUrl(deepSeekApiUrl)
+                    .modelName("deepseek-chat")
+                    .build();
+        } catch (Exception e) {
+            log.warn("DeepSeek configuration failed, this may be due to insufficient balance: {}", e.getMessage());
+            throw e;
+        }
     }
 }

@@ -395,17 +395,14 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // MarkdownBody(
-                          //   data: msg.text,
-                          //   shrinkWrap: true,
-                          //   styleSheet: MarkdownStyleSheet(
-                          //     p: msg.isUser
-                          //         ? theme.textTheme.bodyMedium?.copyWith(
-                          //             color: AppTheme.chatTextOnPrimary,
-                          //           )
-                          //         : theme.textTheme.bodyMedium,
-                          //   ),
-                          // ),
+                          Text(
+                            msg.text,
+                            style: msg.isUser
+                                ? theme.textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.chatTextOnPrimary,
+                                  )
+                                : theme.textTheme.bodyMedium,
+                          ),
                           if (msg.errorMessage != null)
                             Text(
                               msg.errorMessage!,

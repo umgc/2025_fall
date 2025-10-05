@@ -49,18 +49,30 @@ class AIChatService {
           'uploadedFiles': uploadedFiles,
       };
 
-      print('🤖 Sending AI chat message: ${requestBody['message']}');
-
       final response = await http.post(
         Uri.parse('$_baseUrl/chat'),
         headers: authHeaders,
         body: jsonEncode(requestBody),
       );
 
-      print('🤖 AI chat response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+        // Handle the response structure from our backend ChatResponse
+        if (responseData['success'] == true) {
+          return {
+            'success': true,
+            'aiResponse': responseData['aiResponse'],
+            'conversationId': responseData['conversationId'],
+            'modelUsed': responseData['modelUsed'],
+            'processingTimeMs': responseData['processingTimeMs'],
+          };
+        } else {
+          return {
+            'success': false,
+            'errorMessage': responseData['errorMessage'] ?? responseData['error'] ?? 'Unknown error',
+            'aiResponse': 'Sorry, I encountered an error. Please try again.',
+          };
+        }
       } else {
         throw Exception('Failed to send message: ${response.statusCode}');
       }

@@ -11,6 +11,7 @@ import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.langchain4j.memory.ChatMemory;
@@ -22,7 +23,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@ConditionalOnProperty(name = "careconnect.openai.enabled", havingValue = "true", matchIfMissing = true)
+@Primary
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class DefaultAIChatService implements AIChatService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultAIChatService.class);
 
@@ -416,7 +418,8 @@ public class DefaultAIChatService implements AIChatService {
             // Get or create conversation
             ChatConversation conversation = getOrCreateConversation(request, aiConfig);
 
-            log.info("AIChatService (LangChain4j only) - Using model: {} for patient: {}, user: {}", aiConfig.getOpenaiModel(), request.getPatientId(), request.getUserId());
+            log.info("AIChatService (LangChain4j + DeepSeek) - Using model: {} for patient: {}, user: {}", 
+                aiConfig.getDeepseekModel(), request.getPatientId(), request.getUserId());
 
             // Build medical context
             String medicalContext = medicalContextService.buildPatientContext(
@@ -447,7 +450,14 @@ public class DefaultAIChatService implements AIChatService {
 
             String aiResponse;
             try {
-                aiResponse = chatModel.chat(messagesForAI).toString();
+                var response = chatModel.chat(messagesForAI);
+                // Extract the actual text content from the LangChain4j response
+                if (response != null) {
+                    // The response is a ChatResponse, get the text from aiMessage
+                    aiResponse = response.aiMessage().text();
+                } else {
+                    aiResponse = "Sorry, I couldn't process your request.";
+                }
             } catch (Exception e) {
                 log.error("LangChain4j chat error", e);
                 aiResponse = "Sorry, I couldn't process your request.";
@@ -460,8 +470,8 @@ public class DefaultAIChatService implements AIChatService {
             resp.setConversationId(conversation.getConversationId());
             resp.setMessage(request.getMessage());
             resp.setAiResponse(aiResponse);
-            resp.setAiProvider("LANGCHAIN4J");
-            resp.setModelUsed(aiConfig.getOpenaiModel());
+            resp.setAiProvider("DEEPSEEK_VIA_LANGCHAIN4J");
+            resp.setModelUsed(aiConfig.getDeepseekModel());
             resp.setTokensUsed(0);
             resp.setProcessingTimeMs(System.currentTimeMillis() - startTime);
             resp.setTemperatureUsed(request.getTemperature() != null ? request.getTemperature() : 0.1);
