@@ -53,6 +53,10 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
   late EventController<Task> _eventController;
 
+  final _monthKey = GlobalKey<MonthViewState>();
+  final _weekKey = GlobalKey<WeekViewState>();
+  final _dayKey = GlobalKey<DayViewState>();
+
   // Current view state
   CalendarViewType _currentView = CalendarViewType.month;
 
@@ -303,6 +307,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                   setState(() {
                     _selectedDay = DateTime.now();
                   });
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _animateToSelected(),
+                  );
                 },
               ),
               // ------------------
@@ -330,6 +337,9 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                               );
                             }
                           });
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => _animateToSelected(),
+                          );
                         }
                       },
                       items: const [
@@ -364,6 +374,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                       switch (_currentView) {
                         case CalendarViewType.month:
                           return MonthView<Task>(
+                            key: _monthKey,
                             controller: _eventController,
                             initialMonth: _selectedDay,
                             cellAspectRatio: 1.5,
@@ -431,6 +442,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
                         case CalendarViewType.week:
                           return WeekView<Task>(
+                            key: _weekKey,
                             controller: _eventController,
                             initialDay: _selectedDay,
                             onPageChange: (date, _) {
@@ -542,6 +554,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
                         case CalendarViewType.day:
                           return DayView<Task>(
+                            key: _dayKey,
                             controller: _eventController,
                             initialDay: _selectedDay,
                             onPageChange: (date, _) {
@@ -642,6 +655,24 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         ),
       ),
     );
+  }
+
+  void _animateToSelected() {
+    final target = _selectedDay ?? DateTime.now();
+    switch (_currentView) {
+      case CalendarViewType.month:
+        _monthKey.currentState?.animateToMonth(
+          DateTime(target.year, target.month),
+        );
+        break;
+      case CalendarViewType.week:
+        // Use start-of-week so the page index lines up
+        _weekKey.currentState?.animateToWeek(TaskUtils.getStartOfWeek(target));
+        break;
+      case CalendarViewType.day:
+        _dayKey.currentState?.animateToDate(target);
+        break;
+    }
   }
 
   // ==========================
