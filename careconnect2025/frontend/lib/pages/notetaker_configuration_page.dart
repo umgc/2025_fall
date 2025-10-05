@@ -79,7 +79,10 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notetaker Configuration'),
+        title: Row(
+            children: [
+              const Text('Notetaker Configuration'),
+            ]),
         actions: [
           TextButton(
             onPressed: (_isLoading || _isSaving)
@@ -109,7 +112,6 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
         ],
       ),
-      drawer: const CommonDrawer(currentRoute: '/ai-configuration'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildConfigForm(),
@@ -141,7 +143,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         )
     ).toList();
   }
-  
+
   List<DataRow> generateRows() {
     List<DataRow> rowList = [];
     keyword_Event.forEach((key, value)=>
