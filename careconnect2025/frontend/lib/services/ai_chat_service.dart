@@ -99,6 +99,7 @@ class AIChatService {
         'userId': userId,
         if (conversationId != null) 'conversationId': conversationId,
         'limit': limit.toString(),
+        'timestamp': DateTime.now().millisecondsSinceEpoch.toString(), // Prevent caching
       };
 
       final uri = Uri.parse(

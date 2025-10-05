@@ -139,6 +139,11 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           
           _isLoadingHistory = false;
         });
+        
+        // Scroll to bottom after loading history to show latest messages
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        
+        print('🔄 Conversation history refreshed: ${_messages.length} messages loaded');
       }
     } catch (e) {
       print('❌ Error loading conversation history: $e');
@@ -461,7 +466,10 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                         ),
                       )
                     : const Icon(Icons.refresh),
-                  onPressed: (_isLoading || _isLoadingHistory) ? null : _loadConversationHistory,
+                  onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
+                    print('🔄 Manual refresh triggered');
+                    await _loadConversationHistory();
+                  },
                   tooltip: 'Refresh conversation history',
                 ),
                 if (widget.isModal)
