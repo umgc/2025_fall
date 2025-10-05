@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:uuid/uuid.dart';
+import '../../../widgets/ai_chat_improved.dart';
 
 class ChatPage extends StatefulWidget {
   final String contactName;
@@ -281,18 +282,31 @@ class _ChatPageState extends State<ChatPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('AI Service'),
-          content: const Text('Would you like to enable AI assistance for this conversation?'),
+          content: const Text('Would you like to open the AI chat assistant?'),
           actions: [
             TextButton(
               child: const Text('Cancel'),
               onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
-              child: const Text('Enable'),
+              child: const Text('Open AI Chat'),
               onPressed: () {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI Service enabled')),
+                // Navigate to AI chat widget
+                showModalBottomSheet(
+                  isScrollControlled: true,
+                  context: context,
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (context) => SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.75,
+                    child: const AIChat(
+                      role: 'patient',
+                      isModal: true,
+                    ),
+                  ),
                 );
               },
             ),
