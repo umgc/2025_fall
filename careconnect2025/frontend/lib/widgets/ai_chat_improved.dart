@@ -247,8 +247,6 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     }
 
     final transcript = _generateTranscript();
-    final timestamp = DateTime.now().toIso8601String().split('T')[0];
-    final filename = 'chat_transcript_$timestamp.txt';
 
     // For now, show the transcript in a dialog
     // In a real app, you'd use a file picker or share functionality
@@ -507,25 +505,26 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     }
     String content;
     try {
-      if (fileType == 'pdf' || fileType == 'document') {
-        content =
-            '[This is a ${fileType.toUpperCase()} file. Content extraction not yet implemented for this file type. File name: ${file.name}]';
-      } else {
-        if (file.bytes != null) {
+      // For all file types, we'll let the backend handle content extraction
+      // The frontend just needs to prepare the file for upload
+      if (file.bytes != null) {
+        // For binary files (PDF, DOC, etc.), we'll send the raw bytes
+        // The backend will handle the content extraction
+        content = '[File ready for backend processing: ${file.name}]';
+      } else if (file.path != null) {
+        // For text files, we can still read them directly
+        try {
+          content = await File(file.path!).readAsString(encoding: utf8);
+        } catch (e) {
           try {
-            content = utf8.decode(file.bytes!);
-          } catch (e) {
-            content = latin1.decode(file.bytes!);
-          }
-        } else if (file.path != null) {
-          try {
-            content = await File(file.path!).readAsString(encoding: utf8);
-          } catch (e) {
             content = await File(file.path!).readAsString(encoding: latin1);
+          } catch (e2) {
+            // If we can't read it as text, let the backend handle it
+            content = '[File ready for backend processing: ${file.name}]';
           }
-        } else {
-          throw Exception('Unable to read file content');
         }
+      } else {
+        throw Exception('Unable to read file content');
       }
       if (content.length > 50000) {
         content =
@@ -604,7 +603,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   }
 
   void _sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+    // Allow sending if there's a message OR uploaded files
+    if (_controller.text.trim().isEmpty && _uploadedFiles.isEmpty) return;
     final userMessage = _controller.text.trim();
     _controller.clear();
     
@@ -612,9 +612,26 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     _resetInactivityTimer();
     
     setState(() {
+      // Add user message (either text or file upload indication)
+      String displayMessage = userMessage.isNotEmpty 
+          ? userMessage 
+          : '📎 Uploaded ${_uploadedFiles.length} file${_uploadedFiles.length > 1 ? 's' : ''}';
+      
       _messages.add(
-        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(text: displayMessage, isUser: true, timestamp: DateTime.now()),
       );
+      
+      // Add file processing message if files are uploaded
+      if (_uploadedFiles.isNotEmpty) {
+        _messages.add(
+          ChatMessage(
+            text: '📎 Analyzing ${_uploadedFiles.length} uploaded file${_uploadedFiles.length > 1 ? 's' : ''}...',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+      
       _isLoading = true;
       _manuallyCleared = false; // Reset manual clear flag when user starts new conversation
     });
@@ -662,7 +679,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
 
       // Only these fields are dynamic for the request
       final response = await AIChatService.sendMessage(
-        message: userMessage,
+        message: userMessage.isNotEmpty ? userMessage : 'Please analyze the uploaded files',
         patientId: currentPatientId, // Pass only if explicitly provided
         userId: currentUserId,
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
@@ -699,12 +716,13 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           ),
         );
         _isLoading = false;
+        // Clear uploaded files after successful processing
+        _uploadedFiles.clear();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
       
       // If this was a new conversation, load any existing history
       if (isNewConversation) {
-        print('🔄 New conversation created, loading history...');
         await _loadConversationHistory();
       }
     } catch (e) {
@@ -717,6 +735,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           ),
         );
         _isLoading = false;
+        // Clear uploaded files even on error to prevent confusion
+        _uploadedFiles.clear();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
@@ -957,11 +977,37 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Files to upload:',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Files to upload:',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (_isLoading)
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Processing...',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     ..._uploadedFiles.asMap().entries.map((entry) {

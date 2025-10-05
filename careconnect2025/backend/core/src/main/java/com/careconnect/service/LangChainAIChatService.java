@@ -156,11 +156,10 @@ public class LangChainAIChatService implements AIChatService {
                     try {
                         userAIConfigService.saveUserAIConfig(userAIConfigService.convertToDTO(aiConfig));
                     } catch (Exception saveEx) {
-                        System.out.println("[AIChat] Failed to persist default config: " + saveEx.getMessage());
+                        // Failed to persist default config
                     }
                 }
             } catch (Exception ex) {
-                System.out.println("[AIChat] No valid user AI config found, using default config.");
                 aiConfig = UserAIConfig.builder()
                     .userId(userId)
                     .patientId(patientId)
@@ -179,13 +178,9 @@ public class LangChainAIChatService implements AIChatService {
                 try {
                     userAIConfigService.saveUserAIConfig(userAIConfigService.convertToDTO(aiConfig));
                 } catch (Exception saveEx) {
-                    System.out.println("[AIChat] Failed to persist default config: " + saveEx.getMessage());
+                    // Failed to persist default config
                 }
             }
-            final String CYAN = "\u001B[36;1m";
-            final String RESET = "\u001B[0m";
-            System.out.println(CYAN + "[DEBUG] Using patientId: " + patientId + RESET);
-            System.out.println(CYAN + "[DEBUG] Patient entity: " + patient + RESET);
 
             // Get enhanced patient profile with all medical data
             String medicalContext = "";
@@ -197,19 +192,14 @@ public class LangChainAIChatService implements AIChatService {
                     EnhancedPatientProfileDTO profile = enhancedProfileOpt.get();
                     medicalContext = buildMedicalContextFromProfile(profile, aiConfig);
                     isGeneral = medicalContext.isEmpty();
-                    System.out.println(CYAN + "[DEMO] Enhanced profile retrieved successfully" + RESET);
-                    System.out.println(CYAN + "[DEMO] Medical context built:\n" + medicalContext + RESET);
-                } else {
-                    System.out.println(CYAN + "[DEMO] No enhanced profile found for patient" + RESET);
                 }
             } catch (Exception e) {
-                System.out.println(CYAN + "[DEMO] Error getting enhanced profile: " + e.getMessage() + RESET);
+                // Error getting enhanced profile
             }
 
             // Chat memory support: always use conversationId (now always present)
             String memoryKey = request.getConversationId();
             ChatMemory memory = chatMemories.computeIfAbsent(memoryKey.hashCode() * 1L, id -> MessageWindowChatMemory.withMaxMessages(20));
-            System.out.println(CYAN + "[DEMO] Chat memory before user message: " + memory.messages() + RESET);
             // Add user message to memory
             memory.add(new UserMessage(request.getMessage()));
 
@@ -250,19 +240,15 @@ public class LangChainAIChatService implements AIChatService {
             }
             promptBuilder.append("USER QUESTION: ").append(request.getMessage());
             String prompt = promptBuilder.toString();
-            System.out.println(CYAN + "[AIChat] Prompt sent to LLM:\n" + prompt + RESET);
 
             String aiResponse;
             try {
                 var response = chatModel.chat(prompt);
                 aiResponse = response != null ? response.toString() : null;
-                System.out.println(CYAN + "[AIChat] AI response: " + aiResponse + RESET);
             } catch (Exception e) {
-                System.out.println(CYAN + "[AIChat] LLM call failed: " + e.getMessage() + RESET);
                 throw new IllegalStateException("LLM call failed: " + e.getMessage(), e);
             }
             if (aiResponse == null || aiResponse.trim().isEmpty()) {
-                System.out.println("[AIChat] AI response was empty");
                 throw new IllegalStateException("AI response was empty");
             }
             // Always append the healthcare provider reminder if not present
@@ -272,7 +258,6 @@ public class LangChainAIChatService implements AIChatService {
             }
             // Add AI response to memory
             memory.add(new AiMessage(aiResponse));
-            System.out.println(CYAN + "[AIChat] Chat memory after AI response: " + memory.messages() + RESET);
 
             // Populate response fields
             java.time.LocalDateTime timestamp = java.time.LocalDateTime.now();
