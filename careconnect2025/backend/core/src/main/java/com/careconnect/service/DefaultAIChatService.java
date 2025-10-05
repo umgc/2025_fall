@@ -427,7 +427,7 @@ public class DefaultAIChatService implements AIChatService {
                     request,
                     aiConfig
             );
-            log.info("[AIChat] medicalContext: {}", medicalContext);
+            // Debug logging removed for cleaner logs
 
             // System prompt
             String systemPrompt = null;
@@ -446,7 +446,7 @@ public class DefaultAIChatService implements AIChatService {
 
             // Prepare messages for AI (as List<ChatMessage> for LangChain4j)
             List<dev.langchain4j.data.message.ChatMessage> messagesForAI = prepareChatMessagesForAI(conversation, request.getMessage(), medicalContext, systemPrompt);
-            log.info("[AIChat] messagesForAI (sent to AI): {}", messagesForAI);
+            // Debug logging removed for cleaner logs
 
             String aiResponse;
             try {
