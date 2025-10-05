@@ -878,6 +878,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     setState(() {
                       _selectedStudent = student;
                     });
+                     if (isQuiz()) {
+                        (lmsService as moodle.MoodleLmsService).getBestAttemptQuestionForUser(_selectedAssessment!.id.toString(), _selectedStudent!['id']);
+                      }
                   },
                   cells: [
                     DataCell(
@@ -1270,11 +1273,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     String courseName = _selectedCourse?.fullName ?? "Unknown Course";
     String assessmentName = _selectedAssessment?.name ?? "Unknown Assessment";
+    String assignmentDescription;
 
     // Build a summary string from the student breakdown data.
     if (_selectedAssessment?.type == "essay") {
       String studentSummary;
-      String essayPrompt =
+      assignmentDescription =
           (_selectedAssessment!.assessment as Assignment).description;
       List<Submission> submissions =
           await lmsService.getAssignmentSubmissions(_selectedAssessment!.id);
@@ -1304,18 +1308,26 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
       }).join("\n");
 
-      await _analyzeSuccess(assessmentName, essayPrompt, studentSummary);
-      await _analyzeFailure(assessmentName, essayPrompt, studentSummary);
-      await _analyzeAiUse(assessmentName, essayPrompt, aiSummary);
+      await _analyzeEssaySuccess(assessmentName, assignmentDescription, studentSummary);
+      await _analyzeEssayMisunderstanding(assessmentName, assignmentDescription, studentSummary);
+      await _analyzeEssayAiUse(assessmentName, assignmentDescription, aiSummary);
+    }
+    else {
+      String studentSummary;
+      assignmentDescription =
+          (_selectedAssessment!.assessment as Quiz).description ?? "";
+      List<Submission> submissions =
+          await lmsService.getAssignmentSubmissions(_selectedAssessment!.id);
+    }
       await _analyzeAssignmentImprovements(
           assessmentName,
-          essayPrompt,
+          courseName,
+          assignmentDescription,
           _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
           _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
-    }
   }
 
-  Future<void> _analyzeSuccess(
+  Future<void> _analyzeEssaySuccess(
       String assessmentName, String essayPrompt, String studentSummary) async {
     String successPrompt = """
     Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
@@ -1336,7 +1348,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeFailure(
+  Future<void> _analyzeEssayMisunderstanding(
       String assessmentName, String essayPrompt, String studentSummary) async {
     String successPrompt = """
     Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
@@ -1357,7 +1369,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeAiUse(
+  Future<void> _analyzeEssayAiUse(
       String assessmentName, String essayPrompt, String aiSummary) async {
     String successPrompt = """
     Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt'.
@@ -1376,18 +1388,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeAssignmentImprovements(String assessmentName,
+  Future<void> _analyzeAssignmentImprovements(String courseName, String assessmentName,
       String essayPrompt, String successes, String failures) async {
     String successPrompt = """
-    Recommend improvements that could be made to my course and to essay name '$assessmentName' with prompt '$essayPrompt'.
+    Recommend improvements that could be made to course '$courseName' and to assignment '$assessmentName' with description '$essayPrompt'.
     Areas of Success:
     $successes
     Areas of Failure:
     $failures
-    Based on the summaries of student success and student failure, recommend ways I can improve the essay assignment and my course materials overall.
-    Provide a textual summary as well as three references I could provide to students to help them better understand the topic.
-    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
-    the recommended references are an object named 'Data' with keys 'Description' and 'URL'.
+    Based on the summaries of student success and student failure, recommend ways I can improve the assignment and my course materials overall.
+    Provide a textual summary for both course and assignment improvements, as well as three references I could provide to students to help them better understand the topic.
+    Return your analysis as a JSON array where the textual summary on course improvments is an object with key 'Course Improvements',
+    the summary on assignment improvements is an object with key 'Assignment Improvements', and
+    the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);

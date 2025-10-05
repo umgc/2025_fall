@@ -1253,6 +1253,27 @@ class MoodleLmsService implements LmsInterface {
     return students;
   }
 
+  Future<dynamic> getBestAttemptQuestionForUser(String quizId, int userId) async {
+    final allAttempts = await ApiService().httpPost(
+        Uri.parse(apiURL + serverUrl),
+        body: {
+          'wstoken': _userToken!,
+          'wsfunction': 'local_learninglens_get_quiz_stats_for_student',
+          'moodlewsrestformat': 'json',
+          'quizid': quizId.toString(),
+          'userid': userId.toString(),
+        },
+      );
+      if (allAttempts.statusCode != 200) {
+        print(
+            'Failed to get attempts for user $userId. Status: ${allAttempts.statusCode}');
+      }
+
+      final allAttemptsResponse = jsonDecode(allAttempts.body);
+      print(allAttemptsResponse);
+    return [];
+  }
+
   Future<List<Participant>> getEssayGradesForParticipants(
       String courseId, int assignmentId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
