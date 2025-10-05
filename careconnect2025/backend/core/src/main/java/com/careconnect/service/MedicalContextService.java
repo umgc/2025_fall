@@ -31,9 +31,7 @@ public class MedicalContextService {
             return "";
         }
         
-        context.append("You are providing healthcare support for ")
-                .append(patient.getFirstName()).append(" ").append(patient.getLastName())
-                .append(". Please provide helpful, informative responses while always reminding the patient to consult with healthcare professionals for medical decisions.\n\n");
+        // Removed old system prompt - now handled by the main system prompt
         
         // Add system prompt if configured
         if (aiConfig.getSystemPrompt() != null && !aiConfig.getSystemPrompt().trim().isEmpty()) {
