@@ -11,8 +11,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Session-based ChatMemory implementation for healthcare applications
@@ -31,7 +29,6 @@ public class SessionBasedChatMemory implements ChatMemory {
     private final String sessionId;
     private final int maxMessages;
     private final long sessionTimeoutMinutes;
-    private final ConcurrentMap<String, SessionData> sessions;
     
     private Instant lastActivity;
     private List<ChatMessage> currentSessionMessages;
@@ -40,7 +37,6 @@ public class SessionBasedChatMemory implements ChatMemory {
         this.sessionId = sessionId;
         this.maxMessages = maxMessages;
         this.sessionTimeoutMinutes = sessionTimeoutMinutes;
-        this.sessions = new ConcurrentHashMap<>();
         this.currentSessionMessages = new ArrayList<>();
         this.lastActivity = Instant.now();
         
