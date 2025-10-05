@@ -9,13 +9,25 @@ class DeepseekLLM implements LLM {
   final String apiKey;
   @override
   final String url = 'https://api.deepseek.com';
-
+  @override
+  final double tokenCount = 0.25;
+  @override
+  final int contextSize;
+  @override
+  final int maxOutputTokens;
   //Uri Object for HTTP requests
   final parsedUrl = Uri.parse('https://api.deepseek.com/v1/chat/completions');
 
   @override
   final String model = 'deepseek-chat';
-  DeepseekLLM(this.apiKey);
+
+DeepseekLLM(
+  this.apiKey, {
+  int? contextSize,
+  int? maxOutputTokens,
+})  : contextSize = contextSize ?? 4000,
+      maxOutputTokens = maxOutputTokens ?? 500;
+    
 
   /// Converts the HTTP response string to a JSON object.
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
@@ -148,7 +160,7 @@ class DeepseekLLM implements LLM {
     final response = await http.post(url, headers: headers, body: body);
     if (response.statusCode != 200) {
       throw Exception(
-          'OpenAI API error: ${response.statusCode} - ${response.body}');
+          'DeepSeek API error: ${response.statusCode} - ${response.body}');
     }
 
     final data = jsonDecode(response.body);

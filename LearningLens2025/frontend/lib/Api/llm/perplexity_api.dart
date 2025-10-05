@@ -11,8 +11,20 @@ class PerplexityLLM implements LLM {
   final String url = 'https://api.perplexity.ai/chat/completions';
   @override
   final String model = 'llama-3.1-sonar-large-128k-online';
+  @override
+  final double tokenCount = 0.25;
+  @override
+  final int contextSize;
+  @override
+  final int maxOutputTokens;
 
-  PerplexityLLM(this.apiKey);
+  PerplexityLLM(
+    this.apiKey, {
+    int? contextSize,
+    int? maxOutputTokens,
+  })  : contextSize = contextSize ?? 4000,
+        maxOutputTokens = maxOutputTokens ?? 500;
+    
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);

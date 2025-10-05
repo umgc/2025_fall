@@ -11,8 +11,19 @@ class GrokLLM implements LLM {
   final String url = 'https://api.x.ai/v1/chat/completions';
   @override
   final String model = 'grok-2-latest';
+  @override
+  final double tokenCount = 0.25;
+  @override
+  final int contextSize;
+    @override
+  final int maxOutputTokens;
 
-  GrokLLM(this.apiKey);
+  GrokLLM(  this.apiKey, {
+  int? contextSize,
+  int? maxOutputTokens,
+})  : contextSize = contextSize ?? 4000,
+      maxOutputTokens = maxOutputTokens ?? 500;
+    
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);

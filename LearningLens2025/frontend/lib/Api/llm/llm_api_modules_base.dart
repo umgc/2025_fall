@@ -1,5 +1,7 @@
 // TODO: Put public facing types in this file.
 
+//import 'dart:ffi';
+
 /// Checks if you are awesome. Spoiler: you are.
 class Awesome {
   bool get isAwesome => true;
@@ -11,6 +13,9 @@ abstract class LLM {
   final String apiKey;
   String get url;
   String get model;
+  double get tokenCount;
+  int get contextSize;
+  int get maxOutputTokens;
 
   LLM(this.apiKey);
 

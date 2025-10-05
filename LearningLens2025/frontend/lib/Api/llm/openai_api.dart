@@ -11,7 +11,17 @@ class OpenAiLLM implements LLM {
   final String url = 'https://api.openai.com/v1/chat/completions';
   @override
   final String model = 'gpt-4o-mini';
-  OpenAiLLM(this.apiKey);
+  @override
+  final double tokenCount = 0.25;
+  @override
+  final int contextSize;
+  @override
+  final int maxOutputTokens;
+  OpenAiLLM(  this.apiKey, {
+  int? contextSize,
+  int? maxOutputTokens,
+})  : contextSize = contextSize ?? 4000,
+      maxOutputTokens = maxOutputTokens ?? 1000;
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);
