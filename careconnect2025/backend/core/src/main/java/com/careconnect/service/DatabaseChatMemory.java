@@ -6,7 +6,6 @@ import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.memory.ChatMemory;
 import com.careconnect.model.ChatConversation;
-import com.careconnect.model.ChatMessage as DbChatMessage;
 import com.careconnect.model.ChatMessage.MessageType;
 import com.careconnect.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,6 @@ import java.util.List;
  * LangChain4j ChatMemory interface for seamless integration.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class DatabaseChatMemory implements ChatMemory {
     
@@ -48,7 +46,7 @@ public class DatabaseChatMemory implements ChatMemory {
     public void add(ChatMessage message) {
         try {
             // Convert LangChain4j ChatMessage to database ChatMessage
-            DbChatMessage dbMessage = convertToDbMessage(message);
+            com.careconnect.model.ChatMessage dbMessage = convertToDbMessage(message);
             chatMessageRepository.save(dbMessage);
             
             // Clean up old messages if we exceed the limit
@@ -66,12 +64,12 @@ public class DatabaseChatMemory implements ChatMemory {
     public List<ChatMessage> messages() {
         try {
             // Get recent messages from database
-            List<DbChatMessage> dbMessages = chatMessageRepository
+            List<com.careconnect.model.ChatMessage> dbMessages = chatMessageRepository
                 .findTopNByConversationOrderByCreatedAtAsc(conversation, maxMessages);
             
             // Convert to LangChain4j ChatMessage objects
             List<ChatMessage> langchainMessages = new ArrayList<>();
-            for (DbChatMessage dbMsg : dbMessages) {
+            for (com.careconnect.model.ChatMessage dbMsg : dbMessages) {
                 ChatMessage langchainMsg = convertToLangchainMessage(dbMsg);
                 if (langchainMsg != null) {
                     langchainMessages.add(langchainMsg);
@@ -91,7 +89,8 @@ public class DatabaseChatMemory implements ChatMemory {
     @Override
     public void clear() {
         try {
-            chatMessageRepository.deleteByConversation(conversation);
+            List<com.careconnect.model.ChatMessage> messages = chatMessageRepository.findByConversationOrderByCreatedAtAsc(conversation);
+            chatMessageRepository.deleteAll(messages);
             log.info("Cleared all messages for conversation {}", 
                 conversation.getConversationId());
         } catch (Exception e) {
@@ -103,7 +102,7 @@ public class DatabaseChatMemory implements ChatMemory {
     /**
      * Convert LangChain4j ChatMessage to database ChatMessage
      */
-    private DbChatMessage convertToDbMessage(ChatMessage message) {
+    private com.careconnect.model.ChatMessage convertToDbMessage(ChatMessage message) {
         MessageType messageType;
         String content;
         
@@ -114,14 +113,14 @@ public class DatabaseChatMemory implements ChatMemory {
             messageType = MessageType.USER;
             content = ((UserMessage) message).singleText();
         } else if (message instanceof AiMessage) {
-            messageType = MessageType.AI;
+            messageType = MessageType.ASSISTANT;
             content = ((AiMessage) message).text();
         } else {
             messageType = MessageType.USER; // fallback
             content = message.toString();
         }
         
-        return DbChatMessage.builder()
+        return com.careconnect.model.ChatMessage.builder()
             .conversation(conversation)
             .messageType(messageType)
             .content(content)
@@ -131,13 +130,13 @@ public class DatabaseChatMemory implements ChatMemory {
     /**
      * Convert database ChatMessage to LangChain4j ChatMessage
      */
-    private ChatMessage convertToLangchainMessage(DbChatMessage dbMessage) {
+    private ChatMessage convertToLangchainMessage(com.careconnect.model.ChatMessage dbMessage) {
         String content = dbMessage.getContent();
         
         return switch (dbMessage.getMessageType()) {
             case SYSTEM -> SystemMessage.from(content);
             case USER -> UserMessage.from(content);
-            case AI -> AiMessage.from(content);
+            case ASSISTANT -> AiMessage.from(content);
             default -> {
                 log.warn("Unknown message type: {}", dbMessage.getMessageType());
                 yield null;
@@ -150,12 +149,12 @@ public class DatabaseChatMemory implements ChatMemory {
      */
     private void cleanupOldMessages() {
         try {
-            List<DbChatMessage> allMessages = chatMessageRepository
+            List<com.careconnect.model.ChatMessage> allMessages = chatMessageRepository
                 .findByConversationOrderByCreatedAtAsc(conversation);
             
             if (allMessages.size() > maxMessages) {
-                int messagesToDelete = allMessages.size() - maxMessages;
-                List<DbChatMessage> messagesToDelete = allMessages.subList(0, messagesToDelete);
+                int messagesToDeleteCount = allMessages.size() - maxMessages;
+                List<com.careconnect.model.ChatMessage> messagesToDelete = allMessages.subList(0, messagesToDeleteCount);
                 
                 chatMessageRepository.deleteAll(messagesToDelete);
                 
