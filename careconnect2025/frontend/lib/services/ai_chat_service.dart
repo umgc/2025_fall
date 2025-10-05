@@ -93,7 +93,10 @@ class AIChatService {
     int limit = 50,
   }) async {
     try {
+      print('🔄 AIChatService: Getting conversation history for userId=$userId, conversationId=$conversationId');
+      
       final authHeaders = await ApiService.getAuthHeaders();
+      print('🔄 AIChatService: Auth headers: ${authHeaders.keys.join(', ')}');
 
       final params = {
         'userId': userId,
@@ -105,8 +108,13 @@ class AIChatService {
       final uri = Uri.parse(
         '$_baseUrl/history',
       ).replace(queryParameters: params);
+      
+      print('🔄 AIChatService: Making request to: $uri');
 
       final response = await http.get(uri, headers: authHeaders);
+      
+      print('🔄 AIChatService: Response status: ${response.statusCode}');
+      print('🔄 AIChatService: Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

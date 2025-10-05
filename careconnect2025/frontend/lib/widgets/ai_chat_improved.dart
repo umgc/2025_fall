@@ -95,7 +95,13 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
 
   /// Load conversation history from the backend
   Future<void> _loadConversationHistory() async {
-    if (widget.userId == null) return;
+    if (widget.userId == null) {
+      print('❌ Cannot load history: userId is null');
+      return;
+    }
+    
+    print('🔄 Starting to load conversation history...');
+    print('🔄 Parameters: userId=${widget.userId}, conversationId=$_conversationId');
     
     setState(() {
       _isLoadingHistory = true;
@@ -107,6 +113,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         limit: 20, // Load last 20 messages
       );
+      
+      print('🔄 Received response from backend: ${response.toString()}');
       
       if (mounted) {
         setState(() {
@@ -468,6 +476,9 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                     : const Icon(Icons.refresh),
                   onPressed: (_isLoading || _isLoadingHistory) ? null : () async {
                     print('🔄 Manual refresh triggered');
+                    print('🔄 Current conversationId: $_conversationId');
+                    print('🔄 Current userId: ${widget.userId}');
+                    print('🔄 Current message count: ${_messages.length}');
                     await _loadConversationHistory();
                   },
                   tooltip: 'Refresh conversation history',
