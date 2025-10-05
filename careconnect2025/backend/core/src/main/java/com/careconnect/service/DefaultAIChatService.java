@@ -85,7 +85,7 @@ public class DefaultAIChatService implements AIChatService {
                 .includeMoodPainByDefault(true)
                 .includeAllergiesByDefault(true)
                 .isActive(true)
-                .systemPrompt("You are a healthcare AI assistant. Carefully analyze and summarize the provided patient data (vitals, labs, medications, allergies, and notes). Clearly state what the data shows about the patient's current health. Do not make up information. If the answer is not in the data, say you do not know. Always recommend consulting a healthcare professional for medical decisions.")
+                .systemPrompt("You are a helpful healthcare AI assistant. Start conversations warmly and ask how you can help. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive.")
                 .build();
         return userAIConfigRepository.save(config);
     }
@@ -139,7 +139,7 @@ public class DefaultAIChatService implements AIChatService {
         // Use prompt from request if available, else fallback to default
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are a healthcare AI assistant. Base your response strictly on the provided patient data (vitals, labs, medications, allergies, and notes) below. Do not make up information. Do not provide any medical advice. When asked, share the pertinent information found in the associated data, and definitely respond that the user should contact their physician to get the answer to the question. If the answer is not in the data, say you do not know. Always recommend consulting a healthcare professional for medical decisions.";
+            : "You are a helpful healthcare AI assistant. Start conversations warmly and ask how you can help. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive.";
         messages.add(createMessage("system", prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(createMessage("system", medicalContext));
@@ -164,7 +164,7 @@ public class DefaultAIChatService implements AIChatService {
         // System prompt as system message
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are a healthcare AI assistant. Base your response strictly on the provided patient data (vitals, labs, medications, allergies, and notes) below. Do not make up information. Do not provide any medical advice. When asked, share the pertinent information found in the associated data, and definitely respond that the user should contact their physician to get the answer to the question. If the answer is not in the data, say you do not know. Always recommend consulting a healthcare professional for medical decisions.";
+            : "You are a helpful healthcare AI assistant. Start conversations warmly and ask how you can help. When users ask specific questions about their health data, provide accurate information based on their medical records. Always remind users to consult with healthcare professionals for medical decisions. Be conversational, empathetic, and supportive.";
         messages.add(dev.langchain4j.data.message.SystemMessage.from(prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
