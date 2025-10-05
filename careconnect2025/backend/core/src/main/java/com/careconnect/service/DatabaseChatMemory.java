@@ -8,9 +8,7 @@ import dev.langchain4j.memory.ChatMemory;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.model.ChatMessage.MessageType;
 import com.careconnect.repository.ChatMessageRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +18,10 @@ import java.util.List;
  * 
  * This implementation stores chat history in the database while providing
  * LangChain4j ChatMemory interface for seamless integration.
+ * 
+ * Note: This class is not a Spring @Service because it requires manual instantiation
+ * with specific ChatConversation objects via ChatMemoryFactory.
  */
-@Service
 @Slf4j
 public class DatabaseChatMemory implements ChatMemory {
     
