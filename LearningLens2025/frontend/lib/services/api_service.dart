@@ -95,6 +95,8 @@ class ApiService {
     final url = response.request?.url;
     final ms = duration.inMilliseconds;
 
+    
+
     if (statusCode == 200) {
       _logger.i(
         '[$method] $url -> SUCCESS ($statusCode) in ${ms}ms',

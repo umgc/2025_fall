@@ -36,6 +36,7 @@ class LoginNotifier with ChangeNotifier {
   UserRole? get role => _role;
   // Constructor
   LoginNotifier() {
+    print("notifier");
     _loadLoginState(); // Load any saved login state on creation
   }
 

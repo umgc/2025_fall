@@ -1253,7 +1253,7 @@ class MoodleLmsService implements LmsInterface {
     return students;
   }
 
-  Future<dynamic> getBestAttemptQuestionForUser(String quizId, int userId) async {
+  Future<dynamic> getQuizStatsForStudent(String quizId, int userId) async {
     final allAttempts = await ApiService().httpPost(
         Uri.parse(apiURL + serverUrl),
         body: {
