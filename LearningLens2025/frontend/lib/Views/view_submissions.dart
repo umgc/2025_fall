@@ -85,13 +85,13 @@ class SubmissionListState extends State<SubmissionList> {
     final deepseekApiKey = LocalStorageService.getDeepseekKey();
     final perplexityApiKey = LocalStorageService.getPerplexityKey();
 
-    if (openApiKey != null && openApiKey.isNotEmpty) {
+    if (openApiKey.isNotEmpty) {
       return LlmType.CHATGPT;
-    } else if (grokApiKey != null && grokApiKey.isNotEmpty) {
+    } else if (grokApiKey.isNotEmpty) {
       return LlmType.GROK;
-    } else if (deepseekApiKey != null && deepseekApiKey.isNotEmpty) {
+    } else if (deepseekApiKey.isNotEmpty) {
       return LlmType.DEEPSEEK;
-    } else if (perplexityApiKey != null && perplexityApiKey.isNotEmpty) {
+    } else if (perplexityApiKey.isNotEmpty) {
       return LlmType.PERPLEXITY;
     } else {
       // fallback if none are available
