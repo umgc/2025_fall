@@ -240,6 +240,40 @@ final GoRouter appRouter = GoRouter(
         return MainScreen(config: config);
       },
     ),
+    // Direct caregiver dashboard route (for specific caregiver dashboard view)
+    GoRoute(
+      path: '/caregiver-dashboard',
+      builder: (context, state) {
+        final caregiverIdStr = state.uri.queryParameters['caregiverId'];
+        final patientIdStr = state.uri.queryParameters['patientId'];
+
+        final caregiverId = caregiverIdStr != null ? int.tryParse(caregiverIdStr) : null;
+        final patientId = patientIdStr != null ? int.tryParse(patientIdStr) : null;
+
+        if (caregiverId == null || caregiverId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid caregiver ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return CaregiverDashboard(
+          caregiverId: caregiverId,
+          patientId: patientId,
+        );
+      },
+    ),
     // Add a redirect route for authenticated users going to root
     GoRoute(
       path: '/home',

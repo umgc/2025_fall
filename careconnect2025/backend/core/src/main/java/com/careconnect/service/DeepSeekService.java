@@ -9,7 +9,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class DeepSeekService {
 
     @Value("${deepseek.api.key:}")
@@ -25,9 +25,32 @@ public class DeepSeekService {
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IllegalStateException("DeepSeek API key is not configured");
         }
+
         log.info("Sending chat request to DeepSeek with model: {}", request.getModel());
-        // TODO: Replace with synchronous HTTP client logic (e.g., using HttpURLConnection, HttpClient, or RestTemplate)
-        throw new UnsupportedOperationException("Synchronous DeepSeek call not yet implemented");
+
+        try {
+            // Use RestTemplate for HTTP communication
+            var restTemplate = new org.springframework.web.client.RestTemplate();
+            var headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
+
+            var entity = new org.springframework.http.HttpEntity<>(request, headers);
+            var response = restTemplate.postForEntity(
+                apiUrl + "/chat/completions",
+                entity,
+                DeepSeekResponse.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return response.getBody();
+            } else {
+                throw new DeepSeekException("DeepSeek API request failed with status: " + response.getStatusCode(), null);
+            }
+        } catch (Exception e) {
+            log.error("Error calling DeepSeek API", e);
+            throw new DeepSeekException("Failed to call DeepSeek API: " + e.getMessage(), e);
+        }
     }
 
     // DTO Classes

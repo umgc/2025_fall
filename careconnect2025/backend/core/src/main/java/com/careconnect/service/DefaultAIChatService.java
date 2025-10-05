@@ -295,6 +295,15 @@ public class DefaultAIChatService implements AIChatService {
         resp.setErrorMessage(errorMessage);
         resp.setErrorCode("PROCESSING_ERROR");
         resp.setTimestamp(LocalDateTime.now());
+
+        // Add a user-friendly response message
+        resp.setAiResponse("I apologize, but I encountered an error while processing your request. Please try again or contact support if the issue persists.");
+
+        // Include basic response structure for consistency
+        resp.setAiProvider("DEEPSEEK_VIA_LANGCHAIN4J");
+        resp.setTokensUsed(0);
+        resp.setProcessingTimeMs(0L);
+
         return resp;
     }
 
@@ -440,6 +449,16 @@ public class DefaultAIChatService implements AIChatService {
         long startTime = System.currentTimeMillis();
 
         try {
+            // Validate required fields
+            if (request.getUserId() == null) {
+                log.error("Chat request missing userId");
+                return buildErrorResponse(request, "Authentication required: User ID is missing");
+            }
+
+            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
+                log.error("Chat request missing message content");
+                return buildErrorResponse(request, "Message content is required");
+            }
             // Validate patient exists and user has access
             Patient patient = patientRepository.findById(request.getPatientId())
                     .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
@@ -515,13 +534,13 @@ public class DefaultAIChatService implements AIChatService {
                        // Use ChatMemory to get AI response
                        var response = chatModel.chat(chatMemory.messages());
                        processingTimeMs = System.currentTimeMillis() - aiStartTime;
-                       
+
                        // Extract the actual text content from the LangChain4j response
-                       if (response != null) {
+                       if (response != null && response.aiMessage() != null && response.aiMessage().text() != null) {
                            aiResponse = response.aiMessage().text();
                            // Add AI response to memory
                            chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
-                           
+
                            // Log AI response
                            chatAuditService.logAiResponse(
                                request.getUserId(),
@@ -530,7 +549,8 @@ public class DefaultAIChatService implements AIChatService {
                                processingTimeMs
                            );
                        } else {
-                           aiResponse = "Sorry, I couldn't process your request.";
+                           log.warn("Received null or empty response from AI model for conversation {}", conversation.getConversationId());
+                           aiResponse = "I'm sorry, but I'm having trouble processing your request right now. Please try again in a moment, or rephrase your question.";
                            chatAuditService.logSystemError(
                                request.getUserId(),
                                conversation.getConversationId(),
@@ -538,9 +558,49 @@ public class DefaultAIChatService implements AIChatService {
                                "ai_service_error"
                            );
                        }
+                   } catch (IllegalStateException e) {
+                       log.error("DeepSeek API key not configured properly", e);
+                       aiResponse = "I'm sorry, but the AI service is currently unavailable. Please contact support if this issue persists.";
+                       chatAuditService.logSystemError(
+                           request.getUserId(),
+                           conversation.getConversationId(),
+                           "AI_CONFIG_ERROR",
+                           "configuration_error"
+                       );
+                   } catch (RuntimeException e) {
+                       // Handle specific HTTP errors that might be wrapped in RuntimeException
+                       String errorMessage = e.getMessage().toLowerCase();
+                       if (errorMessage.contains("503") || errorMessage.contains("service unavailable")) {
+                           log.error("AI service unavailable", e);
+                           aiResponse = "The AI service is temporarily unavailable. Please try again in a few minutes.";
+                           chatAuditService.logSystemError(
+                               request.getUserId(),
+                               conversation.getConversationId(),
+                               "AI_SERVICE_UNAVAILABLE",
+                               "service_unavailable"
+                           );
+                       } else if (errorMessage.contains("429") || errorMessage.contains("rate limit")) {
+                           log.error("AI service rate limit exceeded", e);
+                           aiResponse = "I'm currently receiving a high volume of requests. Please wait a moment and try again.";
+                           chatAuditService.logSystemError(
+                               request.getUserId(),
+                               conversation.getConversationId(),
+                               "AI_RATE_LIMIT",
+                               "rate_limit_error"
+                           );
+                       } else {
+                           log.error("AI service runtime error: {}", e.getMessage(), e);
+                           aiResponse = "I encountered an error while processing your request. Please try again.";
+                           chatAuditService.logSystemError(
+                               request.getUserId(),
+                               conversation.getConversationId(),
+                               "AI_RUNTIME_ERROR",
+                               "runtime_error"
+                           );
+                       }
                    } catch (Exception e) {
-                       log.error("LangChain4j chat error", e);
-                       aiResponse = "Sorry, I couldn't process your request.";
+                       log.error("Unexpected error in AI chat processing for conversation {}: {}", conversation.getConversationId(), e.getMessage(), e);
+                       aiResponse = "I apologize, but I encountered an unexpected error. Please try rephrasing your question or contact support if the issue continues.";
                        chatAuditService.logSystemError(
                            request.getUserId(),
                            conversation.getConversationId(),

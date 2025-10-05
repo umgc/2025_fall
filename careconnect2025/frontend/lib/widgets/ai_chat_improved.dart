@@ -651,7 +651,22 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       final userProvider = mounted
           ? Provider.of<UserProvider>(context, listen: false)
           : null;
-      final currentUserId = widget.userId ?? userProvider?.user?.id ?? 1;
+
+      // Better userId validation - avoid defaulting to 1
+      final currentUserId = widget.userId ?? userProvider?.user?.id;
+      if (currentUserId == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        _messages.add(ChatMessage(
+          text: 'Authentication error: Please log in to use the chat feature.',
+          isUser: false,
+          timestamp: DateTime.now(),
+          errorMessage: 'User ID not found',
+        ));
+        return;
+      }
+
       // Only use patientId if explicitly provided, never default to user ID
       final currentPatientId = widget.patientId;
 
@@ -691,12 +706,22 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         includeMoodPainLogs: true,
         includeAllergies: true,
       );
-      final aiText = response['aiResponse'] ?? 'No response.';
-      final errorMsg =
-          (response['errorMessage'] != null &&
-              (response['errorMessage'] as String).isNotEmpty)
-          ? response['errorMessage']
-          : null;
+      // Better error handling - show actual error messages instead of generic "No response"
+      String aiText;
+      String? errorMsg;
+
+      if (response['success'] == false) {
+        // If backend explicitly failed, show the error message
+        errorMsg = response['errorMessage'] ?? response['error'] ?? 'Unknown error occurred';
+        aiText = response['response'] ?? response['aiResponse'] ?? 'Sorry, I encountered an error. Please try again.';
+      } else {
+        // Success case - get AI response or provide helpful fallback
+        aiText = response['aiResponse'];
+        if (aiText == null || aiText.isEmpty) {
+          aiText = 'I apologize, but I was unable to generate a response. Please try rephrasing your question or check your connection.';
+          errorMsg = 'Empty response received from AI service';
+        }
+      }
       // Update conversationId for next request
       bool isNewConversation = false;
       if (response['conversationId'] != null &&

@@ -17,12 +17,15 @@ public class Question {
   @Column(nullable = false, length = 32)
   private QuestionType type; // TEXT | YES_NO | TRUE_FALSE | NUMBER
 
+  @Builder.Default
   @Column(nullable = false)
   private boolean required = false;
 
+  @Builder.Default
   @Column(nullable = false)
   private boolean active = true;
 
+  @Builder.Default
   @Column(nullable = false)
   private int ordinal = 0;
 }

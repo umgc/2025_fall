@@ -73,9 +73,49 @@ class AIChatService {
             'aiResponse': 'Sorry, I encountered an error. Please try again.',
           };
         }
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Authentication failed. Please log in again.',
+          'response': 'Your session has expired. Please log in again to continue chatting.',
+        };
+      } else if (response.statusCode == 403) {
+        return {
+          'success': false,
+          'error': 'Access denied.',
+          'response': 'You don\'t have permission to access this chat feature.',
+        };
+      } else if (response.statusCode == 429) {
+        return {
+          'success': false,
+          'error': 'Rate limit exceeded.',
+          'response': 'You\'re sending messages too quickly. Please wait a moment and try again.',
+        };
+      } else if (response.statusCode >= 500) {
+        return {
+          'success': false,
+          'error': 'Server error: ${response.statusCode}',
+          'response': 'The AI service is temporarily unavailable. Please try again in a few minutes.',
+        };
       } else {
-        throw Exception('Failed to send message: ${response.statusCode}');
+        return {
+          'success': false,
+          'error': 'Unexpected error: ${response.statusCode}',
+          'response': 'An unexpected error occurred. Please try again.',
+        };
       }
+    } on http.ClientException catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: $e',
+        'response': 'Unable to connect to the AI service. Please check your internet connection and try again.',
+      };
+    } on FormatException catch (e) {
+      return {
+        'success': false,
+        'error': 'Invalid response format: $e',
+        'response': 'Received an unexpected response from the server. Please try again.',
+      };
     } catch (e) {
       return {
         'success': false,
