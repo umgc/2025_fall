@@ -192,7 +192,6 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           // Extract messages from response
           final history = response['messages'] as List<dynamic>? ?? [];
           
-          
           if (history.isEmpty) {
             _messages.add(ChatMessage(
               text: '📭 No conversation history found',
@@ -385,7 +384,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         final clearedKey = 'chat_cleared_${widget.userId}';
         await prefs.setBool(clearedKey, false);
       } catch (e) {
-        print('Failed to clear persistent state: $e');
+        // Failed to clear persistent state, continue anyway
       }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -583,7 +582,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                         final clearedKey = 'chat_cleared_${widget.userId}';
                         await prefs.setBool(clearedKey, true);
                       } catch (e) {
-                        print('Failed to save cleared state: $e');
+                        // Failed to save cleared state, continue anyway
                       }
                     }
                     
@@ -591,38 +590,9 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                     if (conversationToClear.isNotEmpty) {
                       try {
                         await AIChatService.clearConversation(conversationToClear);
-                        print('✅ Successfully cleared conversation: $conversationToClear');
-                        
-                        // Add visual confirmation that conversation was cleared
-                        setState(() {
-                          _messages.add(ChatMessage(
-                            text: '✅ Conversation cleared from server',
-                            isUser: false,
-                            timestamp: DateTime.now(),
-                          ));
-                        });
                       } catch (e) {
                         // If clearing fails, just continue - the local clear is more important
-                        print('❌ Failed to clear conversation from backend: $e');
-                        
-                        // Add error message
-                        setState(() {
-                          _messages.add(ChatMessage(
-                            text: '⚠️ Failed to clear conversation from server',
-                            isUser: false,
-                            timestamp: DateTime.now(),
-                          ));
-                        });
                       }
-                    } else {
-                      // No conversation to clear
-                      setState(() {
-                        _messages.add(ChatMessage(
-                          text: 'ℹ️ No conversation to clear',
-                          isUser: false,
-                          timestamp: DateTime.now(),
-                        ));
-                      });
                     }
                     
                     // Reset inactivity timer since user is actively using the chat
