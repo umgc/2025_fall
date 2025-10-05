@@ -84,6 +84,7 @@ class get_quiz_stats_for_student extends external_api {
                 qa.questionid,
                 quiza.userid,
                 qs.state,
+                qa.rightanswer,
                 qa.responsesummary
               FROM {quiz_attempts} quiza
               JOIN {question_usages} qu ON qu.id = quiza.uniqueid
@@ -106,11 +107,13 @@ class get_quiz_stats_for_student extends external_api {
     
             // Default empty
             $state   = '';
+            $right = '';
             $answer = '';
     
             if (isset($statsrecords[$qid])) {
                 $record    = $statsrecords[$qid];
                 $state     = $record->state;
+                $right     = $record->rightanswer;
                 $answer    = $record->responsesummary;
             }
     
@@ -120,6 +123,7 @@ class get_quiz_stats_for_student extends external_api {
                 'questiontext' => $q->questiontext,
                 'qtype'        => $q->qtype,
                 'qstate'       => $state,
+                'qright'       => $right,
                 'qanswer'      => $answer,
             ];
         }
@@ -139,7 +143,8 @@ class get_quiz_stats_for_student extends external_api {
                 'questiontext'  => new external_value(PARAM_RAW, 'Question text'),
                 'qtype'         => new external_value(PARAM_ALPHANUMEXT, 'Question type'),
                 'qstate'        => new external_value(PARAM_TEXT, 'Question attempt state'),
-                'qanswer'       => new external_value(PARAM_RAW, 'Question text'),
+                'qright'       => new external_value(PARAM_RAW, 'Correct answer text'),
+                'qanswer'       => new external_value(PARAM_RAW, 'Selected answer text'),
             ])
         );
     }

@@ -1361,7 +1361,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 (selectedAssessment.assessment as Quiz).id!.toString(),
                 selectedParticipant.id);
         studentSummary = studentData.map((question) {
-          return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Answer: ${question['qanswer']}, State: ${question['qstate']}";
+          return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
         }).join("\n");
         await _analyzeStudentQuizSuccess(
             selectedAssessment.name,
@@ -1489,8 +1489,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student understood.
-    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly
-    and compare them and the selected answers against the quiz name and description.
+    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly.
+    Compare each question's state, correct answer, and selected answer against the quiz name and description.
     If the student answered all questions incorrectly, then there are no topics on this quiz that the student understood.
     Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
     A question that the student answered correctly will have a 'State' value of 'gradedright'.
@@ -1516,8 +1516,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student did not understand.
-    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly
-    and compare them and the selected answers against the quiz name and description.
+    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly.
+    Compare each question's state, correct answer, and selected answer against the quiz name and description.
     If the student answered all questions correctly, then there are no topics on this quiz that the student did not understand.
     Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
     A question that the student answered correctly will have a 'State' value of 'gradedright'.
