@@ -2,9 +2,9 @@
 // CalendarAssistantScreen
 // =============================
 
-import 'dart:collection';
 import 'dart:convert';
 
+import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/recurrence_utils.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
@@ -15,9 +15,17 @@ import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
 
+import 'widgets/calendar_cell.dart';
+import 'widgets/event_tile.dart';
+import 'widgets/filters_panel.dart';
+import 'widgets/legend.dart';
 import 'widgets/task_form_dialog.dart';
+import 'widgets/task_list_day.dart';
+import 'widgets/task_list_week.dart';
+
+// View type enum
+enum CalendarViewType { month, week, day }
 
 /// =============================
 /// Calendar Assistant Screen
@@ -36,110 +44,29 @@ class CalendarAssistantScreen extends StatefulWidget {
 class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
   bool isLoading = true;
   String? error;
-  late DateTime _focusedDay;
-  DateTime? _selectedDay;
   bool _filtersExpanded = false;
   Set<String> _selectedTypes = {};
   Set<int> _selectedPatients = {};
   Map<int, String> patientNames = {};
+  DateTime? _selectedDay;
 
-  Map<DateTime, List<Task>> _filteredTasks = {};
+  late EventController<Task> _eventController;
 
-  Map<DateTime, List<Task>> tasks = LinkedHashMap(
-    equals: isSameDay,
-    hashCode: (date) => date.day * 1000000 + date.month * 10000 + date.year,
-  );
-
-  /// Apply current filters (task types, patients) to the full task set
-  void _applyFilters() {
-    setState(() {
-      _filteredTasks = {};
-      tasks.forEach((day, dayTasks) {
-        final keepers = dayTasks.where((task) {
-          if (_selectedTypes.isNotEmpty &&
-              !_selectedTypes.contains(task.taskType ?? "general")) {
-            return false;
-          }
-          if (_selectedPatients.isNotEmpty &&
-              (task.assignedPatientId == null ||
-                  !_selectedPatients.contains(task.assignedPatientId))) {
-            return false;
-          }
-          return true;
-        }).toList();
-
-        if (keepers.isNotEmpty) {
-          _filteredTasks[day] = keepers;
-        }
-      });
-    });
-  }
-
-  /// Build a small colored dot + label for the legend
-  Widget _buildLegendDot(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        ),
-        const SizedBox(width: 4),
-        Text(label),
-      ],
-    );
-  }
-
-  /// Render a day cell with border + colored dots for tasks
-  Widget _buildDayCell(DateTime day, List<Task> dayTasks, Color borderColor) {
-    const maxVisibleDots = 5;
-    final displayTasks = dayTasks.take(maxVisibleDots).toList();
-
-    final taskDots = [
-      for (var task in displayTasks)
-        Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: TaskTypeUtils.getColor(task.taskType ?? "general"),
-          ),
-        ),
-      if (dayTasks.length > maxVisibleDots)
-        Text(
-          '+${dayTasks.length - maxVisibleDots}',
-          style: const TextStyle(fontSize: 8),
-        ),
-    ];
-
-    return SizedBox(
-      height: 90,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          border: Border.all(color: borderColor, width: 1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        alignment: Alignment.topCenter,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Text("${day.day}"),
-            const SizedBox(height: 4),
-            Wrap(spacing: 2, runSpacing: 2, children: taskDots),
-          ],
-        ),
-      ),
-    );
-  }
+  // Current view state
+  CalendarViewType _currentView = CalendarViewType.month;
 
   @override
   void initState() {
     super.initState();
-    _focusedDay = DateTime.now();
+    _eventController = EventController<Task>();
+    _selectedDay = DateTime.now();
     _loadTasksFromDb();
+  }
+
+  @override
+  void dispose() {
+    _eventController.dispose();
+    super.dispose();
   }
 
   ///This function is used across the assistant to query task information from the DB
@@ -188,10 +115,55 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           }
         }
       }
+      // Apply filters
+      final filtered = allTasks.where((task) {
+        if (_selectedTypes.isNotEmpty &&
+            !_selectedTypes.contains(task.taskType ?? "general")) {
+          return false;
+        }
+        if (_selectedPatients.isNotEmpty &&
+            (task.assignedPatientId == null ||
+                !_selectedPatients.contains(task.assignedPatientId))) {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      // Build CalendarEventData list
+      final events = filtered.map((task) {
+        return CalendarEventData<Task>(
+          title: task.name,
+          description: task.description,
+          date: TaskUtils.normalizeDate(task.date),
+          startTime: task.timeOfDay != null
+              ? DateTime(
+                  task.date.year,
+                  task.date.month,
+                  task.date.day,
+                  task.timeOfDay!.hour,
+                  task.timeOfDay!.minute,
+                )
+              : TaskUtils.normalizeDate(task.date),
+          endTime: task.timeOfDay != null
+              ? DateTime(
+                  task.date.year,
+                  task.date.month,
+                  task.date.day,
+                  task.timeOfDay!.hour,
+                  task.timeOfDay!.minute + 30,
+                )
+              : TaskUtils.normalizeDate(
+                  task.date,
+                ).add(const Duration(hours: 1)),
+          event: task,
+        );
+      }).toList();
+
+      _eventController
+        ..removeWhere((_) => true)
+        ..addAll(events);
 
       setState(() {
-        tasks = TaskUtils.groupTasksByDate(allTasks);
-        _filteredTasks = Map.from(tasks); // initialize filters with everything
         isLoading = false;
       });
     } catch (e) {
@@ -236,6 +208,24 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     return tasks;
   }
 
+  /// Render the timeline hour labels (respects theme & dark mode)
+  Widget _themedTimeLabel(DateTime date) {
+    final theme = Theme.of(context);
+    final hour12 = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final suffix = date.hour < 12 ? 'AM' : 'PM';
+    return Container(
+      color: theme.colorScheme.surface,
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 8),
+      child: Text(
+        '$hour12 $suffix',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+
   /// Main widget tree for the screen
   /// - Shows loading spinner while fetching
   /// - Renders filter panel, calendar, legend, and task list
@@ -249,345 +239,399 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       );
     }
 
-    return Scaffold(
-      drawer: const CommonDrawer(currentRoute: '/calendar'),
-      appBar: AppBarHelper.createAppBar(
-        context,
-        title: 'Calendar Assistant',
-        additionalActions: [
-          TextButton.icon(
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              "Add Task",
-              style: TextStyle(color: Colors.white),
+    return CalendarControllerProvider<Task>(
+      controller: _eventController,
+      child: Scaffold(
+        drawer: const CommonDrawer(currentRoute: '/calendar'),
+        appBar: AppBarHelper.createAppBar(
+          context,
+          title: 'Calendar Assistant',
+          additionalActions: [
+            TextButton.icon(
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                "Add Task",
+                style: TextStyle(color: Colors.white),
+              ),
+              onPressed: _addTask,
             ),
-            onPressed: _addTask,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+          ],
+        ),
+        body: SafeArea(
           child: Column(
             children: [
-              // Filters + Today button
+              // ------------------
+              // Filters Row
+              // ------------------
+              FiltersPanel(
+                expanded: _filtersExpanded,
+                patientNames: patientNames,
+                selectedTypes: _selectedTypes,
+                selectedPatients: _selectedPatients,
+                onClear: () {
+                  setState(() {
+                    _selectedTypes.clear();
+                    _selectedPatients.clear();
+                  });
+                  _loadTasksFromDb();
+                },
+                onTypeToggled: (type) {
+                  setState(() {
+                    _selectedTypes.contains(type)
+                        ? _selectedTypes.remove(type)
+                        : _selectedTypes.add(type);
+                  });
+                  _loadTasksFromDb();
+                },
+                onPatientToggled: (id) {
+                  setState(() {
+                    _selectedPatients.contains(id)
+                        ? _selectedPatients.remove(id)
+                        : _selectedPatients.add(id);
+                  });
+                  _loadTasksFromDb();
+                },
+                onToggleExpanded: () {
+                  setState(() => _filtersExpanded = !_filtersExpanded);
+                },
+                onTodayPressed: () {
+                  setState(() {
+                    _selectedDay = DateTime.now();
+                  });
+                },
+              ),
+              // ------------------
+              // View switcher
+              // ------------------
               Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // Collapsible Filter Panel
-                    Flexible(
-                      fit: FlexFit.tight,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.only(right: 12),
-                        child: Card(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Filters",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(
-                                          context,
-                                        ).textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(
-                                      _filtersExpanded
-                                          ? Icons.expand_more
-                                          : Icons.chevron_right,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _filtersExpanded = !_filtersExpanded;
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-
-                              if (_filtersExpanded) ...[
-                                const Divider(),
-                                // Filter by Type
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                  ),
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 4,
-                                    children: TaskTypeUtils.getSortedTypes()
-                                        .map((type) {
-                                          return FilterChip(
-                                            label: Text(
-                                              type[0].toUpperCase() +
-                                                  type.substring(1),
-                                            ),
-                                            selected: _selectedTypes.contains(
-                                              type,
-                                            ),
-                                            onSelected: (selected) {
-                                              setState(() {
-                                                if (selected) {
-                                                  _selectedTypes.add(type);
-                                                } else {
-                                                  _selectedTypes.remove(type);
-                                                }
-                                              });
-                                              _applyFilters();
-                                            },
-                                          );
-                                        })
-                                        .toList(),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                // Filter by Patient (only if caregiver)
-                                if (Provider.of<UserProvider>(
-                                      context,
-                                      listen: false,
-                                    ).user?.isCaregiver ??
-                                    false)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text("Patients"),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 4,
-                                          children: patientNames.entries.map((
-                                            entry,
-                                          ) {
-                                            return FilterChip(
-                                              label: Text(entry.value),
-                                              selected: _selectedPatients
-                                                  .contains(entry.key),
-                                              onSelected: (selected) {
-                                                setState(() {
-                                                  if (selected) {
-                                                    _selectedPatients.add(
-                                                      entry.key,
-                                                    );
-                                                  } else {
-                                                    _selectedPatients.remove(
-                                                      entry.key,
-                                                    );
-                                                  }
-                                                });
-                                                _applyFilters();
-                                              },
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const SizedBox(height: 12),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    icon: const Icon(Icons.clear),
-                                    label: const Text("Clear Filters"),
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedTypes.clear();
-                                        _selectedPatients.clear();
-                                      });
-                                      _applyFilters();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Today Button
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.today),
-                      label: const Text("Today"),
-                      onPressed: () {
-                        setState(() {
-                          _focusedDay = DateTime.now();
-                          _selectedDay = DateTime.now();
-                        });
+                    DropdownButton<CalendarViewType>(
+                      value: _currentView,
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _currentView = val;
+                            _selectedDay ??= DateTime.now();
+                            if (val == CalendarViewType.week &&
+                                _selectedDay != null) {
+                              _selectedDay = TaskUtils.getStartOfWeek(
+                                _selectedDay!,
+                              );
+                            }
+                          });
+                        }
                       },
+                      items: const [
+                        DropdownMenuItem(
+                          value: CalendarViewType.month,
+                          child: Text("Monthly"),
+                        ),
+                        DropdownMenuItem(
+                          value: CalendarViewType.week,
+                          child: Text("Weekly"),
+                        ),
+                        DropdownMenuItem(
+                          value: CalendarViewType.day,
+                          child: Text("Daily"),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
 
-              // ==========================
-              // CALENDAR
-              // ==========================
-              TableCalendar<Task>(
-                firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                eventLoader: (day) =>
-                    _filteredTasks[DateTime(day.year, day.month, day.day)] ??
-                    [],
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                },
-                rowHeight: 100,
-                calendarFormat: CalendarFormat.month,
-                availableCalendarFormats: const {CalendarFormat.month: 'Month'},
-                calendarStyle: const CalendarStyle(markersMaxCount: 0),
-                calendarBuilders: CalendarBuilders(
-                  defaultBuilder: (context, day, focusedDay) {
-                    final normalized = TaskUtils.normalizeDate(day);
-                    final dayTasks = _filteredTasks[normalized] ?? [];
-                    return _buildDayCell(day, dayTasks, Colors.grey);
-                  },
-                  todayBuilder: (context, day, focusedDay) {
-                    final normalized = TaskUtils.normalizeDate(day);
-                    final dayTasks = _filteredTasks[normalized] ?? [];
-                    return _buildDayCell(day, dayTasks, Colors.blue);
-                  },
-                  selectedBuilder: (context, day, focusedDay) {
-                    final normalized = TaskUtils.normalizeDate(day);
-                    final dayTasks = _filteredTasks[normalized] ?? [];
-                    return _buildDayCell(day, dayTasks, Colors.green);
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
+              // ------------------
+              // Calendar widget
+              // ------------------
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 500),
+                  child: Builder(
+                    builder: (context) {
+                      final theme = Theme.of(context);
 
-              // ==========================
-              // LEGEND (task type dots)
-              // ==========================
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Wrap(
-                  spacing: 16,
-                  children: TaskTypeUtils.taskTypeColors.entries
-                      .map(
-                        (e) => _buildLegendDot(
-                          e.value,
-                          e.key[0].toUpperCase() + e.key.substring(1),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ==========================
-              // TASK LIST (for selected day)
-              // ==========================
-              if (_selectedDay != null) ...[
-                Builder(
-                  builder: (_) {
-                    final normalized = TaskUtils.normalizeDate(_selectedDay!);
-                    final dayTasks = [...?_filteredTasks[normalized] ?? []];
-
-                    if (dayTasks.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Text("No tasks for this day"),
-                      );
-                    }
-
-                    // Sort chronologically by timeOfDay
-                    dayTasks.sort((a, b) {
-                      if (a.timeOfDay != null && b.timeOfDay != null) {
-                        final aMinutes =
-                            a.timeOfDay!.hour * 60 + a.timeOfDay!.minute;
-                        final bMinutes =
-                            b.timeOfDay!.hour * 60 + b.timeOfDay!.minute;
-                        return aMinutes.compareTo(bMinutes);
-                      }
-                      if (a.timeOfDay != null) return -1;
-                      if (b.timeOfDay != null) return 1;
-                      return a.name.compareTo(b.name);
-                    });
-
-                    return Column(
-                      children: dayTasks.map((task) {
-                        final assignedName = task.assignedPatientId != null
-                            ? patientNames[task.assignedPatientId] ??
-                                  "Unknown Patient"
-                            : "Unassigned";
-                        return ListTile(
-                          leading: Icon(
-                            TaskTypeUtils.getIcon(task.taskType),
-                            color: TaskTypeUtils.getColor(task.taskType),
-                          ),
-                          title: Text(
-                            task.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                      switch (_currentView) {
+                        case CalendarViewType.month:
+                          return MonthView<Task>(
+                            controller: _eventController,
+                            initialMonth: _selectedDay,
+                            cellAspectRatio: 1.5,
+                            cellBuilder:
+                                (date, events, isToday, isInMonth, isWeekend) {
+                                  return CalendarCell(
+                                    date: date,
+                                    events: events,
+                                    isToday: isToday,
+                                    isInMonth: isInMonth,
+                                    isWeekend: isWeekend,
+                                    isSelected: TaskUtils.isSameDay(
+                                      date,
+                                      _selectedDay,
+                                    ),
+                                  );
+                                },
+                            headerStyle: HeaderStyle(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                              ),
+                              headerTextStyle:
+                                  (theme.textTheme.titleMedium ??
+                                          const TextStyle(fontSize: 16))
+                                      .copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                              leftIcon: Icon(
+                                Icons.chevron_left,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              rightIcon: Icon(
+                                Icons.chevron_right,
+                                color: theme.colorScheme.onSurface,
+                              ),
                             ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                task.timeOfDay != null
-                                    ? " ${task.timeOfDay!.format(context)}"
-                                    : " All day",
-                              ),
-                              if (assignedName.isNotEmpty &&
-                                  assignedName != "Unassigned")
-                                Text("👤 $assignedName"),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
+                            weekDayBuilder: (day) {
+                              final labels = [
+                                "M",
+                                "T",
+                                "W",
+                                "T",
+                                "F",
+                                "S",
+                                "S",
+                              ];
+                              return Center(
+                                child: Text(
+                                  labels[day % 7],
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                tooltip: 'Edit Task',
-                                onPressed: () => _editTask(task),
+                              );
+                            },
+                            onCellTap: (events, date) {
+                              setState(() => _selectedDay = date);
+                            },
+                            onEventTap: (event, date) {
+                              final task = event.event;
+                              if (task != null) _editTask(task);
+                            },
+                          );
+
+                        case CalendarViewType.week:
+                          return WeekView<Task>(
+                            controller: _eventController,
+                            initialDay: _selectedDay,
+                            onPageChange: (date, _) {
+                              setState(() {
+                                _selectedDay = TaskUtils.getStartOfWeek(date);
+                              });
+                            },
+                            backgroundColor: theme.colorScheme.surface,
+                            hourIndicatorSettings: HourIndicatorSettings(
+                              color: theme.dividerColor,
+                              height: 1,
+                              lineStyle: LineStyle.solid,
+                            ),
+                            halfHourIndicatorSettings: HourIndicatorSettings(
+                              color: theme.dividerColor.withOpacity(0.4),
+                              height: 1,
+                              lineStyle: LineStyle.dashed,
+                            ),
+                            timeLineWidth: 56,
+                            timeLineBuilder: _themedTimeLabel,
+                            eventTileBuilder:
+                                (date, events, boundary, start, end) =>
+                                    EventTile(events: events),
+                            headerStyle: HeaderStyle(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
+                              headerTextStyle:
+                                  (theme.textTheme.titleMedium ??
+                                          const TextStyle(fontSize: 16))
+                                      .copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                              leftIcon: Icon(
+                                Icons.chevron_left,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              rightIcon: Icon(
+                                Icons.chevron_right,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            weekDayBuilder: (date) {
+                              final theme = Theme.of(context);
+
+                              final isSelected = TaskUtils.isSameDay(
+                                date,
+                                _selectedDay,
+                              );
+                              final isToday = TaskUtils.isSameDay(
+                                date,
+                                DateTime.now(),
+                              );
+
+                              final labels = [
+                                "M",
+                                "T",
+                                "W",
+                                "T",
+                                "F",
+                                "S",
+                                "S",
+                              ];
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedDay = date;
+                                  });
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.green
+                                          : (isToday
+                                                ? theme.colorScheme.primary
+                                                : theme.dividerColor),
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                    color: theme.colorScheme.surface,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      labels[date.weekday - 1],
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme.colorScheme.onSurface,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
                                 ),
-                                tooltip: 'Remove Task',
-                                onPressed: () => _removeTask(task),
+                              );
+                            },
+
+                            onEventTap: (events, date) {
+                              if (events.isNotEmpty) {
+                                final task = events.first.event;
+                                if (task != null) _editTask(task);
+                              }
+                            },
+                          );
+
+                        case CalendarViewType.day:
+                          return DayView<Task>(
+                            controller: _eventController,
+                            initialDay: _selectedDay,
+                            onPageChange: (date, _) {
+                              setState(() {
+                                _selectedDay = date;
+                              });
+                            },
+                            backgroundColor: theme.colorScheme.surface,
+                            hourIndicatorSettings: HourIndicatorSettings(
+                              color: theme.dividerColor,
+                              height: 1,
+                              lineStyle: LineStyle.solid,
+                            ),
+                            halfHourIndicatorSettings: HourIndicatorSettings(
+                              color: theme.dividerColor.withOpacity(0.4),
+                              height: 1,
+                              lineStyle: LineStyle.dashed,
+                            ),
+                            timeLineWidth: 56,
+                            timeLineBuilder: _themedTimeLabel,
+                            eventTileBuilder:
+                                (date, events, boundary, start, end) =>
+                                    EventTile(events: events),
+                            headerStyle: HeaderStyle(
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
+                              headerTextStyle:
+                                  (theme.textTheme.titleMedium ??
+                                          const TextStyle(fontSize: 16))
+                                      .copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                              leftIcon: Icon(
+                                Icons.chevron_left,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              rightIcon: Icon(
+                                Icons.chevron_right,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            onEventTap: (events, date) {
+                              if (events.isNotEmpty) {
+                                final task = events.first.event;
+                                if (task != null) _editTask(task);
+                              }
+                            },
+                          );
+                      }
+                    },
+                  ),
                 ),
-              ] else ...[
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text("Select a day to view tasks"),
-                ),
-              ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // ------------------
+              // Legend
+              // ------------------
+              Wrap(
+                spacing: 16,
+                children: TaskTypeUtils.taskTypeColors.entries
+                    .map((e) => LegendDot(color: e.value, label: e.key))
+                    .toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Task list changes depending on view
+              if (_selectedDay != null)
+                _currentView == CalendarViewType.week
+                    ? TaskListWeek(
+                        events: _eventController.events.where((e) {
+                          final weekStart = TaskUtils.getStartOfWeek(
+                            _selectedDay!,
+                          );
+                          final weekEnd = weekStart.add(
+                            const Duration(days: 7),
+                          );
+                          return e.date.isAfter(
+                                weekStart.subtract(const Duration(seconds: 1)),
+                              ) &&
+                              e.date.isBefore(weekEnd);
+                        }).toList(),
+                        patientNames: patientNames,
+                        onEdit: _editTask,
+                        onDelete: _removeTask,
+                      )
+                    : TaskListDay(
+                        events: _eventController.getEventsOnDay(_selectedDay!),
+                        patientNames: patientNames,
+                        onEdit: _editTask,
+                        onDelete: _removeTask,
+                      ),
             ],
           ),
         ),
