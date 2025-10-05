@@ -196,6 +196,77 @@ public class AuthController {
         return authService.verifyToken(token);
     }
 
+    @PostMapping("/resend-verification")
+    @Operation(
+        summary = "🔄 Resend verification email",
+        description = "Resend verification email to an unverified user",
+        tags = {"🔑 Authentication"},
+        security = {} // No authentication required for resending verification
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Verification email sent successfully",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(value = """
+                    {
+                        "message": "Verification email sent successfully! Please check your inbox."
+                    }
+                    """)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Email already verified",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(value = """
+                    {
+                        "error": "This email address is already verified."
+                    }
+                    """)
+            )
+        )
+    })
+    public ResponseEntity<?> resendVerification(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", "Email is required"));
+        }
+        return authService.resendVerificationEmail(email);
+    }
+
+    @GetMapping("/check-verification")
+    @Operation(
+        summary = "🔍 Check email verification status",
+        description = "Check if an email address is verified without sending any emails",
+        tags = {"🔑 Authentication"},
+        security = {} // No authentication required for checking verification status
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Verification status retrieved",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(value = """
+                    {
+                        "verified": true
+                    }
+                    """)
+            )
+        )
+    })
+    public ResponseEntity<?> checkVerification(@RequestParam String email) {
+        if (email == null || email.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", "Email is required"));
+        }
+        return authService.checkEmailVerificationStatus(email);
+    }
+
     @PostMapping("/password/forgot")
     @Operation(
         summary = "🔐 Request password reset",

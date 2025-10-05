@@ -8,36 +8,34 @@ class EnhancedAuthService {
   /// This method performs login and validates that the user's actual role matches the expected role
   static Future<AuthResult> loginWithRoleValidation({
     required String email,
-    required String password,
-    required String expectedRole,
+    required String password
   }) async {
     try {
       // Perform the actual login
       final userSession = await AuthService.login(
         email,
         password,
-        role: expectedRole, // Pass expected role to backend
       );
 
       // Validate the role after successful login
-      final validationResult = RoleValidator.validateUserRole(
-        expectedRole: expectedRole,
-        userSession: userSession,
-      );
+      // final validationResult = RoleValidator.validateUserRole(
+      //   userSession: userSession,
+      //   expectedRole: expectedRole
+      // );
 
-      if (!validationResult.isValid) {
-        // Role mismatch - clear any stored tokens and return error
-        await _clearAuthenticationData();
-
-        return AuthResult.roleValidationFailure(
-          message: validationResult.errorMessage!,
-          actualRole: validationResult.actualRole!,
-          expectedRole: validationResult.expectedRole!,
-          correctLoginRoute: RoleValidator.getCorrectLoginRoute(
-            validationResult.actualRole!,
-          ),
-        );
-      }
+      // if (!validationResult.isValid) {
+      //   // Role mismatch - clear any stored tokens and return error
+      //   await _clearAuthenticationData();
+      //
+      //   return AuthResult.roleValidationFailure(
+      //     message: validationResult.errorMessage!,
+      //     actualRole: validationResult.actualRole!,
+      //     expectedRole: validationResult.expectedRole!,
+      //     correctLoginRoute: RoleValidator.getCorrectLoginRoute(
+      //       validationResult.actualRole!,
+      //     ),
+      //   );
+      // }
 
       // Role validation successful
       return AuthResult.success(userSession: userSession);

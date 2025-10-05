@@ -11,26 +11,24 @@ import 'providers/theme_provider.dart';
 import 'config/router/app_router.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
-import 'services/video_call_service.dart';
 import 'config/theme/app_theme.dart';
 import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Global error handling for Flutter errors
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // Optionally log to a remote server
-    debugPrint(
-      'FlutterError: \\n${details.exceptionAsString()}\\n${details.stack}',
-    );
-  };
-
   // Global error handling for unhandled Dart errors
   runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Global error handling for Flutter errors
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        // Optionally log to a remote server
+        debugPrint(
+          'FlutterError: \\n${details.exceptionAsString()}\\n${details.stack}',
+        );
+      };
       // Performance optimization: Set preferred orientations
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -109,10 +107,13 @@ class _CareConnectAppWithErrorBoundaryState
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // Try to restart the app by popping all routes
-                      runApp(CareConnectAppWithErrorBoundary());
+                      // Navigate to home instead of calling runApp again
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/',
+                        (route) => false,
+                      );
                     },
-                    child: const Text('Restart App'),
+                    child: const Text('Go Home'),
                   ),
                 ],
               ),

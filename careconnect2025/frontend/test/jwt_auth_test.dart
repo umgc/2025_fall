@@ -56,8 +56,7 @@ void main() {
         try {
           await AuthService.login(
             'test@example.com',
-            'password123',
-            role: 'patient',
+            'password123'
           );
         } catch (e) {
           // Expected to fail in test environment without backend
