@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
-import 'package:learninglens_app/beans/chatLog.dart';
-import 'package:learninglens_app/services/ContextBuilder.dart';
 import 'package:learninglens_app/services/api_service.dart';
 
 class DeepseekLLM implements LLM {
@@ -170,6 +168,8 @@ class DeepseekLLM implements LLM {
 
   // New method for passing prompts to the AI model and getting responses.
   // Options for both chat context(List<Map<String, dynamic>>) and String prompts.
+  // Uses named parameters for flexibility and clarity. IE: chat(context: myContext) or chat(prompt: myPrompt)
+  // Set optional parameters to control generation behavior. IE: chat(prompt: myPrompt, temperature: 0.3, topP: 0.9)
   @override
   Future<String> chat({
     List<Map<String, dynamic>>? context,
@@ -277,7 +277,8 @@ class DeepseekLLM implements LLM {
     }
     // Parse and return the response content
     final data = jsonDecode(response.body);
-    print("Used Chat method in DeepSeek API");
+
+    // Adjust based on actual response structure
     return data['choices'][0]['message']['content'].toString().trim();
   }
 
