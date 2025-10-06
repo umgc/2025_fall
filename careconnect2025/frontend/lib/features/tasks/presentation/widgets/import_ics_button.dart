@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
+import 'package:care_connect_app/features/tasks/utils/recurrence_utils.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import 'package:flutter/material.dart';
 /// - Opens a dialog with a patient dropdown
 /// - Lets the user choose a .ics file
 /// - Parses VEVENT blocks and sends tasks to the backend
-/// - Calls [onTasksImported] after tasks are saved (to refresh UI)
+/// - Uses RecurrenceUtils to handle UNTIL → count conversions
 class ImportIcsButton extends StatefulWidget {
   final Map<int, String> patientNames; // patientId → name
   final VoidCallback? onTasksImported; // callback after import finishes
@@ -48,9 +49,33 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
 
     final content = utf8.decode(fileBytes);
     final events = _parseIcs(content);
+    int createdCount = 0;
 
     for (final ev in events) {
-      final task = Task(
+      final freq = ev['FREQ'] as String?;
+      final interval = ev['INTERVAL'] as int?;
+      final until = ev['UNTIL'] as DateTime?;
+      final count = ev['COUNT'] as int?;
+      final daysOfWeek =
+          (ev['DAYS_OF_WEEK'] as List<bool>?) ?? List.filled(7, false);
+
+      // Compute count if UNTIL provided but no explicit COUNT
+      int? computedCount = count;
+      if (freq != null &&
+          until != null &&
+          computedCount == null &&
+          ev['DTSTART'] != null) {
+        computedCount = RecurrenceUtils.calculateCount(
+          startDate: ev['DTSTART'],
+          endDate: until,
+          frequency: freq,
+          interval: interval ?? 1,
+          daysOfWeek: daysOfWeek,
+        );
+      }
+
+      // Build base Task
+      final baseTask = Task(
         name: ev['SUMMARY'] ?? "Untitled",
         description: ev['DESCRIPTION'] ?? "",
         date: ev['DTSTART'] ?? DateTime.now(),
@@ -62,36 +87,67 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
         taskType: _inferTaskType(ev['SUMMARY'] ?? "").toLowerCase(),
       );
 
-      final taskJson = jsonEncode(task.toJson());
-      await ApiService.createTaskV2(_selectedPatientId!, taskJson);
+      final effectiveFreq = (freq ?? '').toLowerCase();
+      final effectiveInterval = interval ?? 1;
+      final effectiveCount = computedCount ?? ev['COUNT'];
+      final normalizedUntil = until ?? ev['UNTIL'] ?? ev['DTEND'];
+
+      final finalTask = RecurrenceUtils.buildTask(
+        baseTask: baseTask,
+        isRecurring: effectiveFreq.isNotEmpty,
+        recurrenceType: effectiveFreq,
+        interval: effectiveInterval,
+        count: effectiveCount,
+        daysOfWeek: daysOfWeek,
+        startDate: ev['DTSTART'],
+        endDate: effectiveCount == null ? normalizedUntil : null,
+      );
+
+      try {
+        final response = await ApiService.createTaskV2(
+          finalTask.assignedPatientId!,
+          jsonEncode(finalTask.toJson()),
+        );
+
+        if (response.statusCode == 200) {
+          createdCount++;
+        } else {
+          debugPrint(
+            "Failed to import event ${ev['SUMMARY']}: ${response.statusCode}",
+          );
+        }
+      } catch (e) {
+        debugPrint("Error creating task: $e");
+      }
     }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Imported ${events.length} events")),
+        SnackBar(
+          content: Text(
+            "Imported $createdCount task${createdCount == 1 ? '' : 's'}",
+          ),
+        ),
       );
     }
 
-    // Trigger refresh after tasks are imported
-    if (widget.onTasksImported != null) {
-      widget.onTasksImported!();
-    }
+    widget.onTasksImported?.call();
   }
 
-  /// Very simple ICS parser for VEVENTS
+  /// Simple ICS parser supporting DTSTART, DTEND, RRULE, SUMMARY, DESCRIPTION.
   List<Map<String, dynamic>> _parseIcs(String ics) {
     final lines = ics.split(RegExp(r'\r?\n'));
     final events = <Map<String, dynamic>>[];
-    Map<String, dynamic>? currentEvent;
+    Map<String, dynamic>? current;
 
     for (var line in lines) {
       line = line.trim();
       if (line.startsWith('BEGIN:VEVENT')) {
-        currentEvent = {};
+        current = {};
       } else if (line.startsWith('END:VEVENT')) {
-        if (currentEvent != null) events.add(currentEvent);
-        currentEvent = null;
-      } else if (currentEvent != null) {
+        if (current != null) events.add(current);
+        current = null;
+      } else if (current != null) {
         final parts = line.split(':');
         if (parts.length < 2) continue;
         final key = parts[0].split(';')[0];
@@ -99,19 +155,40 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
 
         switch (key) {
           case 'SUMMARY':
-            currentEvent['SUMMARY'] = value;
+            current['SUMMARY'] = value;
             break;
           case 'DESCRIPTION':
-            currentEvent['DESCRIPTION'] = value;
+            current['DESCRIPTION'] = value;
             break;
           case 'DTSTART':
-            currentEvent['DTSTART'] = _parseDate(value);
+            current['DTSTART'] = _parseDate(value);
             break;
           case 'DTEND':
-            currentEvent['DTEND'] = _parseDate(value);
+            current['DTEND'] = _parseDate(value);
             break;
           case 'RRULE':
-            currentEvent['RRULE'] = value;
+            // Parse RRULE details into the event
+            _parseRrule(value, current);
+
+            // Compute COUNT if missing, using UNTIL and DTSTART
+            final freq = current['FREQ'] ?? current['freq'];
+            final until = current['UNTIL'];
+            final start = current['DTSTART'];
+            final days = current['DAYS_OF_WEEK'] ?? List.filled(7, false);
+
+            if (current['COUNT'] == null &&
+                freq != null &&
+                until != null &&
+                start != null) {
+              final computedCount = RecurrenceUtils.calculateCount(
+                startDate: start,
+                endDate: until,
+                frequency: freq,
+                interval: current['INTERVAL'] ?? 1,
+                daysOfWeek: days,
+              );
+              current['COUNT'] = computedCount;
+            }
             break;
         }
       }
@@ -119,13 +196,56 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
     return events;
   }
 
-  /// Parses YYYYMMDD or YYYYMMDDTHHMMSSZ formats
+  void _parseRrule(String rrule, Map<String, dynamic> event) {
+    final parts = rrule.split(';');
+    List<bool> daysOfWeek = List.filled(7, false);
+
+    for (final part in parts) {
+      final kv = part.split('=');
+      if (kv.length != 2) continue;
+      final key = kv[0].toUpperCase();
+      final val = kv[1];
+
+      switch (key) {
+        case 'FREQ':
+          event['FREQ'] = val.toLowerCase();
+          break;
+        case 'INTERVAL':
+          event['INTERVAL'] = int.tryParse(val);
+          break;
+        case 'COUNT':
+          event['COUNT'] = int.tryParse(val);
+          break;
+        case 'UNTIL':
+          event['UNTIL'] = _parseDate(val);
+          break;
+        case 'BYDAY':
+          final dayMap = {
+            'SU': 0,
+            'MO': 1,
+            'TU': 2,
+            'WE': 3,
+            'TH': 4,
+            'FR': 5,
+            'SA': 6,
+          };
+          for (final day in val.split(',')) {
+            final idx = dayMap[day.trim().toUpperCase()];
+            if (idx != null) daysOfWeek[idx] = true;
+          }
+          break;
+      }
+    }
+
+    // Always attach a full 7-length array
+    event['DAYS_OF_WEEK'] = daysOfWeek;
+  }
+
   DateTime? _parseDate(String raw) {
     try {
       if (raw.contains('T')) {
         return DateTime.parse(raw.replaceAll('Z', ''));
       } else {
-        // all-day event
         return DateTime.parse(
           '${raw.substring(0, 4)}-${raw.substring(4, 6)}-${raw.substring(6, 8)}',
         );
@@ -145,13 +265,10 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
           children: [
             DropdownButtonFormField<int>(
               decoration: const InputDecoration(labelText: "Assign to patient"),
-              value: _selectedPatientId,
+              initialValue: _selectedPatientId,
               items: widget.patientNames.entries
                   .map(
-                    (e) => DropdownMenuItem<int>(
-                      value: e.key,
-                      child: Text(e.value),
-                    ),
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
                   )
                   .toList(),
               onChanged: (val) => setState(() => _selectedPatientId = val),
