@@ -26,7 +26,7 @@ class DeepseekLLM implements LLM {
     int? contextSize,
     int? maxOutputTokens,
   })  : contextSize = contextSize ?? 4000,
-        maxOutputTokens = maxOutputTokens ?? 500;
+        maxOutputTokens = maxOutputTokens ?? 1000;
 
   /// Converts the HTTP response string to a JSON object.
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {

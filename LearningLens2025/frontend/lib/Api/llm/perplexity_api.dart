@@ -23,7 +23,7 @@ class PerplexityLLM implements LLM {
     int? contextSize,
     int? maxOutputTokens,
   })  : contextSize = contextSize ?? 4000,
-        maxOutputTokens = maxOutputTokens ?? 500;
+        maxOutputTokens = maxOutputTokens ?? 1000;
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);
