@@ -1,5 +1,4 @@
 name: careconnect_asl — Build & Deploy Flutter Web
-
 on:
   push:
     branches: [ main ]
@@ -33,7 +32,7 @@ jobs:
       - name: Tests
         run: flutter test
 
-      - name: Set base-href for 2025_fall repo
+      - name: Set base-href for monorepo
         run: echo "BASE_HREF=/2025_fall/" >> $GITHUB_ENV
 
       - name: Build web
