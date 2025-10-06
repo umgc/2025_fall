@@ -24,7 +24,6 @@ class PerplexityLLM implements LLM {
     int? maxOutputTokens,
   })  : contextSize = contextSize ?? 4000,
         maxOutputTokens = maxOutputTokens ?? 500;
-    
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);
@@ -170,5 +169,18 @@ class PerplexityLLM implements LLM {
     final responseString = await postMessage(url, postHeaders, postBody);
     final responseJson = jsonDecode(responseString);
     return responseJson['choices'][0]['message']['content'].trim();
+  }
+
+  @override
+  Future<String> chat({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+    double temperature = 0.7,
+    double topP = 1.0,
+    double frequencyPenalty = 0.0,
+    double presencePenalty = 0.0,
+    bool stream = false,
+  }) async {
+    return "Not implemented yet";
   }
 }

@@ -15,15 +15,15 @@ class GrokLLM implements LLM {
   final double tokenCount = 0.25;
   @override
   final int contextSize;
-    @override
+  @override
   final int maxOutputTokens;
 
-  GrokLLM(  this.apiKey, {
-  int? contextSize,
-  int? maxOutputTokens,
-})  : contextSize = contextSize ?? 4000,
-      maxOutputTokens = maxOutputTokens ?? 500;
-    
+  GrokLLM(
+    this.apiKey, {
+    int? contextSize,
+    int? maxOutputTokens,
+  })  : contextSize = contextSize ?? 4000,
+        maxOutputTokens = maxOutputTokens ?? 500;
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
     return (json.decode(httpResponseString) as Map<String, dynamic>);
@@ -198,5 +198,18 @@ class GrokLLM implements LLM {
     final data = jsonDecode(response.body);
     return data['choices'][0]['message']['content']
         .trim(); // Adjust based on actual response structure
+  }
+
+  @override
+  Future<String> chat({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+    double temperature = 0.7,
+    double topP = 1.0,
+    double frequencyPenalty = 0.0,
+    double presencePenalty = 0.0,
+    bool stream = false,
+  }) async {
+    return "Not implemented yet";
   }
 }

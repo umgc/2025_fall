@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
+import 'package:learninglens_app/beans/chatLog.dart';
+import 'package:learninglens_app/services/ContextBuilder.dart';
 import 'package:learninglens_app/services/api_service.dart';
 
 class DeepseekLLM implements LLM {
@@ -21,13 +23,12 @@ class DeepseekLLM implements LLM {
   @override
   final String model = 'deepseek-chat';
 
-DeepseekLLM(
-  this.apiKey, {
-  int? contextSize,
-  int? maxOutputTokens,
-})  : contextSize = contextSize ?? 4000,
-      maxOutputTokens = maxOutputTokens ?? 500;
-    
+  DeepseekLLM(
+    this.apiKey, {
+    int? contextSize,
+    int? maxOutputTokens,
+  })  : contextSize = contextSize ?? 4000,
+        maxOutputTokens = maxOutputTokens ?? 500;
 
   /// Converts the HTTP response string to a JSON object.
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
@@ -165,6 +166,119 @@ DeepseekLLM(
 
     final data = jsonDecode(response.body);
     return data['choices'][0]['message']['content'].trim();
+  }
+
+  // New method for passing prompts to the AI model and getting responses.
+  // Options for both chat context(List<Map<String, dynamic>>) and String prompts.
+  @override
+  Future<String> chat({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+
+    /// **Optional generation parameters:**
+
+    /// * [temperature] — Controls randomness / creativity.
+    ///   - Range: 0.0–2.0
+    ///   - Lower → more deterministic and focused.
+    ///   - Higher → more creative or “loose” output.
+    ///   - Default: 0.7
+
+    double temperature = 0.7,
+
+    /// * [topP] — Nucleus sampling threshold (diversity control).
+    ///   - Range: 0.0–1.0
+    ///   - Lower values limit how many words the model can choose from.
+    ///   - Use either `temperature` or `topP`, not both low at once.
+    ///   - Default: 1.0
+    ///
+    double topP = 1.0,
+
+    /// * [frequencyPenalty] — Reduces repetition of identical words/phrases.
+    ///   - Range: -2.0–2.0
+    ///   - Higher values discourage reusing the same words.
+    ///   - Useful for long explanations or summaries.
+    ///   - Default: 0.0
+    ///
+    double frequencyPenalty = 0.0,
+
+    /// * [presencePenalty] — Reduces repetition of ideas or topics.
+    ///   - Range: -2.0–2.0
+    ///   - Higher values push the model to introduce new ideas.
+    ///   - Too high can make the response drift off-topic.
+    ///   - Default: 0.0
+
+    double presencePenalty = 0.0,
+
+    /// * [stream] — Whether to stream tokens as they’re generated.
+    ///   - `false` → Wait for full response (simpler, default).
+    ///   - `true` → Receive partial chunks (useful for live chat UIs).
+    ///   - Default: false
+
+    bool stream = false,
+  }) async {
+    // Validate input
+    final hasContext = context != null && context.isNotEmpty;
+    final singlePromt = prompt != null && prompt.trim().isNotEmpty;
+    // Ensure only one of messages or prompt is provided
+    if (!hasContext && !singlePromt) {
+      throw ArgumentError('Either messages or prompt must be provided.');
+    }
+    if (hasContext && singlePromt) {
+      throw ArgumentError('Provide either messages or prompt, not both.');
+    }
+    // Build Headers
+    final headers = {
+      'Authorization': 'Bearer $apiKey',
+      'Content-Type': 'application/json',
+    };
+    // Build Body based on input type
+    Map<String, dynamic> body;
+
+    if (prompt != null) {
+      // Single prompt case
+      body = {
+        'model': model,
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are a helpful assistant. Be precise and concise.'
+          },
+          {'role': 'user', 'content': prompt},
+        ],
+        'temperature': temperature,
+        'top_p': topP,
+        'frequency_penalty': frequencyPenalty,
+        'presence_penalty': presencePenalty,
+        'max_tokens': maxOutputTokens,
+        'stream': stream,
+      };
+    } else {
+      // Context messages case
+      body = {
+        'model': model,
+        'messages': context,
+        'temperature': temperature,
+        'top_p': topP,
+        'frequency_penalty': frequencyPenalty,
+        'presence_penalty': presencePenalty,
+        'max_tokens': maxOutputTokens,
+        'stream': stream,
+      };
+    }
+    // Convert body to JSON
+    final bodyJson = jsonEncode(body);
+
+    //Send HTTP POST request
+    final response =
+        await http.post(parsedUrl, headers: headers, body: bodyJson);
+    if (response.statusCode != 200) {
+      throw Exception(
+          'DeepSeek API error: ${response.statusCode} - ${response.body}');
+    }
+    // Parse and return the response content
+    final data = jsonDecode(response.body);
+    print("Used Chat method in DeepSeek API");
+    return data['choices'][0]['message']['content'].toString().trim();
   }
 
   /// Method used in the Quiz feature to parse the AI response to extract quiz data in XML format.
