@@ -5,6 +5,7 @@ import 'package:care_connect_app/features/integrations/presentation/pages/medica
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/custom_task_screen.dart';
@@ -495,6 +496,11 @@ final GoRouter appRouter = GoRouter(
         final userRole = userProvider.user?.role;
         return '/dashboard?role=$userRole';
       },
+    ),
+    //Adding Calendar Assistant route 496
+    GoRoute(
+      path: '/calendar',
+      builder: (_, __) => const CalendarAssistantScreen(),
     ),
     GoRoute(
       path: '/chatandcalls',
