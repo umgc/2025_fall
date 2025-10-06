@@ -1,0 +1,58 @@
+name: careconnect_asl — Build & Deploy Flutter Web
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: careconnect_asl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install deps
+        run: flutter pub get
+
+      - name: Tests
+        run: flutter test
+
+      - name: Set base-href for 2025_fall repo
+        run: echo "BASE_HREF=/2025_fall/" >> $GITHUB_ENV
+
+      - name: Build web
+        run: flutter build web --release --base-href "$BASE_HREF"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: careconnect_asl/build/web
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
