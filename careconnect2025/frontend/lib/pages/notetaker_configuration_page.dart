@@ -7,9 +7,12 @@ import '../services/notetaker_config_service.dart';
 import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:record/record.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class NotetakerConfigurationPage extends StatefulWidget {
   const NotetakerConfigurationPage({super.key});
@@ -116,22 +119,26 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
-  List<Widget> piiToCard (List<String> piiList) {
-    return piiList.map((PIIString)=>
+  List<Widget> stringToCard (List<String> list, String type) {
+    return list.map((value)=>
         Card(
             child: Padding(
                 padding: EdgeInsets.all(10.0),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Text(PIIString),
+                      Text(value),
                       IconButton(
                           icon: new Icon(Icons.cancel),
-                          tooltip: 'delete PII term',
+                          tooltip: 'delete $type',
                           onPressed: () {
                             setState(() {
-                              _PIIList.remove(PIIString);
-                              _PIIWidgetList = piiToCard(piiList);
+                              if(type == 'PII') {
+                                _PIIList.remove(value);
+                                _PIIWidgetList = stringToCard(list, 'PII');
+                              } else {
+                                deleteVoiceSamples(value);
+                              }
                             });
                           }
                       )
@@ -185,21 +192,66 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
-  Future<void> _startListening() async {
+  void deleteVoiceSamples(String fileName) async {
+    // Specify the directory path
+    Directory? directory = await getExternalStorageDirectory();
+    if(directory != null) {
+      File sampleToDelete = File('${directory.path}/voice_samples/$fileName');
+      sampleToDelete.deleteSync();
+      loadVoiceSamples();
+      } else {
+        print('local storage directory does not exist.');
+      }
+  }
+
+  void loadVoiceSamples() async {
+    // Specify the directory path
+    Directory? directory = await getExternalStorageDirectory();
+    setState(() {
+      _files = [];
+    });
+    if(directory != null) {
+      final voiceSampleDirectory = Directory('${directory.path}/voice_samples');
+      // Check if the directory exists
+      if (await voiceSampleDirectory.exists()) {
+        // List all entities (files and subdirectories) in the directory
+        await for (var entity in voiceSampleDirectory.list(
+            recursive: false, followLinks: false)) {
+          if (entity is File) {
+            // Read the file content
+            setState(() {
+              _files.add(path.basename(entity.path));
+            });
+          }
+        }
+        setState(() {
+          _FileWidgetList = stringToCard(_files, 'Files');
+        });
+      } else {
+        print('Voice Sample Directory does not exist.');
+      }
+    }
+  }
+
+  Future<void> _startListening(String fileName) async {
     if(await recorder.hasPermission()) {
       setState(() {
         _isListening = true;
         voiceSamplePath = null;
       });
-      final File file = await File('../../assets/voice_samples/audio_sample.webm').create(recursive: true);
-      print(file.path);
-      await recorder.start(const RecordConfig(encoder: AudioEncoder.pcm16bits), path: file.path);
+      Directory? directory = await getExternalStorageDirectory();
+      if (directory != null) {
+        final File file = await File('${directory.path}/voice_samples/$fileName.wav').create(recursive: true);
+        print(file.path);
+        await recorder.start(const RecordConfig(encoder: AudioEncoder.pcm16bits), path: file.path);
+      }
     }
   }
 
   void _stopListening() async{
     String? filePath = await recorder.stop();
     if(filePath != null) {
+      loadVoiceSamples();
       setState(() {
         _isListening = false;
         voiceSamplePath = filePath;
@@ -228,12 +280,15 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
   bool _isEnabled = true;
   bool _permitCaregiverAccess = false;
   List<String>_PIIList = [];
-  late List<Widget> _PIIWidgetList = piiToCard(_PIIList);
+  List<String> _files = [];
+  late List<Widget> _PIIWidgetList = stringToCard(_PIIList, 'PII');
+  late List<Widget> _FileWidgetList = stringToCard(_files, 'File');
   Map<String, String> keyword_Event = {};
 
     // Form controllers
   final TextEditingController _keywordController = TextEditingController();
   final TextEditingController _PIIController = TextEditingController();
+  final TextEditingController _fileNameController = TextEditingController();
   String? _selectedDropdownValue;
 
   @override
@@ -256,8 +311,11 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           config.triggerKeywords.where((trigger)=> !trigger.keyword.contains("PII_")).forEach((trigger)=>
           keyword_Event[trigger.keyword] = trigger.event_type
           );
-          _PIIWidgetList = piiToCard(_PIIList);
+          _PIIWidgetList = stringToCard(_PIIList, 'PII');
         });
+        if(!kIsWeb) {
+          loadVoiceSamples();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -479,7 +537,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                             onPressed: () {
                               setState(() {
                                 _PIIList.add(_PIIController.text);
-                                _PIIWidgetList = piiToCard(_PIIList);
+                                _PIIWidgetList = stringToCard(_PIIList, 'PII');
                               });
                               Navigator.of(context).pop();
                               },
@@ -607,66 +665,144 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
   }
 
   Widget _buildVoiceSampleSection(ThemeData theme) {
-    return _buildSection(
-      theme,
-      'Upload Voice Sample',
-      Icons.voice_chat,
-      [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
+    if(kIsWeb) {
+      return _buildSection(
+          theme,
+          'Manage Voice Sample',
+          Icons.voice_chat,
+          [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme
+                      .of(context)
+                      .dividerColor,
+                  width: 2,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                color: Theme
+                    .of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withOpacity(0.1),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.cancel_outlined, color: theme.colorScheme.primary,
+                      size: 48),
+                  const SizedBox(width: 12),
+                  Text(
+                    'This feature is not available on the web application',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ]
+      );
+    } else {
+      return _buildSection(
+        theme,
+        'Manage Voice Sample',
+        Icons.voice_chat,
+        [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme
+                    .of(context)
+                    .dividerColor,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
               color: Theme
                   .of(context)
-                  .dividerColor,
-              width: 2,
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.1),
             ),
-            borderRadius: BorderRadius.circular(8),
-            color: Theme
-                .of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withOpacity(0.1),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.construction, color: theme.colorScheme.primary, size: 48),
-              const SizedBox(width: 12),
-              Text(
-                'Under Construction',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
+            child: Column(
+              children: [
+                Text('Tap the button below to start voice recognition and read the following message: \n' +
+                      'The dog fetches the ball',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14),
                 ),
-              ),
-              // Text('Tap the button below to start voice recognition and read the following message: \n' +
-              //       'The dog fetches the ball',
-              //   textAlign: TextAlign.center,
-              //   style: const TextStyle(fontSize: 14),
-              // ),
-              // const SizedBox(height: 16),
-              // ElevatedButton(
-              //   onPressed: () {
-              //     if (_isListening) {
-              //       _stopListening();
-              //     } else {
-              //       _startListening();
-              //     }
-              //   },
-              //   child: Text(
-              //       _isListening ? 'Stop Listening' : 'Start Listening'),
-              // ),
-              // const SizedBox(height: 8),
-              // ElevatedButton(
-              //   onPressed: _saveAudioSample,
-              //   child: const Text('Save Voice'),
-              // ),
-            ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_isListening) {
+                      _stopListening();
+                    } else {
+                        _fileNameController.clear();
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return Expanded(
+                              child: SimpleDialog(
+                                  title: Text("Enter your name"),
+                                  children: <Widget> [
+                                    Padding(
+                                      padding: EdgeInsets.all(10.0),
+                                      child: TextFormField(
+                                        controller: _fileNameController,
+                                        decoration: InputDecoration(labelText: 'Enter text'),
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'This field is required';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    SimpleDialogOption(
+                                      onPressed: () {
+                                        _startListening(_fileNameController.text);
+                                        if(_fileNameController.text.isNotEmpty) {
+                                          Navigator.of(context).pop();
+                                        };
+                                      },
+                                      child:const Text('Add'),
+                                    )
+                                  ]
+                              ),
+                            );
+                          },
+                        );
+                    }
+                  },
+                  child: Text(
+                      _isListening ? 'Stop Listening' : 'Start Listening'),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _saveAudioSample,
+                  child: const Text('Save Voice'),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: 24),
+          SizedBox(
+              height: 250,
+              child: ListView.builder(
+                itemCount: _FileWidgetList.length,
+                itemBuilder: (context, index) {
+                  return _FileWidgetList[index];
+                },
+              )
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildSection(

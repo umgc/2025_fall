@@ -122,7 +122,6 @@ dependencies:
   sherpa_onnx: ^1.12.14
   #for recording audio samples for speaker recognition
   record: ^6.1.1
-
   #The following is needed as the calendar for the Calendar Assisstant feature
   calendar_view: ^1.0.0
   
