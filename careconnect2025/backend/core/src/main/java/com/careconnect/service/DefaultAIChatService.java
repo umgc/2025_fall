@@ -35,8 +35,6 @@ public class DefaultAIChatService implements AIChatService {
     private final ChatConversationRepository chatConversationRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final PatientRepository patientRepository;
-    private final OpenAIService openAIService;
-    private final DeepSeekService deepSeekService;
     private final MedicalContextService medicalContextService;
     private final PatientContextRetrievalService patientContextRetrievalService;
     private final ChatMemoryFactory chatMemoryFactory;
@@ -48,19 +46,15 @@ public class DefaultAIChatService implements AIChatService {
                               ChatConversationRepository chatConversationRepository,
                               ChatMessageRepository chatMessageRepository,
                               PatientRepository patientRepository,
-                              @Autowired(required = false) OpenAIService openAIService,
-                              @Autowired(required = false) DeepSeekService deepSeekService,
-                                       MedicalContextService medicalContextService,
-                                       PatientContextRetrievalService patientContextRetrievalService,
-                                       ChatMemoryFactory chatMemoryFactory,
-                                       ChatAuditService chatAuditService) {
+                              MedicalContextService medicalContextService,
+                              PatientContextRetrievalService patientContextRetrievalService,
+                              ChatMemoryFactory chatMemoryFactory,
+                              ChatAuditService chatAuditService) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.patientRepository = patientRepository;
-        this.openAIService = openAIService;
-        this.deepSeekService = deepSeekService;
         this.medicalContextService = medicalContextService;
         this.patientContextRetrievalService = patientContextRetrievalService;
         this.chatMemoryFactory = chatMemoryFactory;
@@ -208,15 +202,7 @@ public class DefaultAIChatService implements AIChatService {
     // Disabled: All chat requests are now handled by LangChain4j chatModel. Direct OpenAI/DeepSeek calls are not used.
     // private Mono<ChatProcessingResult> callAIService(ChatProcessingContext context) { /* ...disabled... */ }
 
-    @SuppressWarnings("unchecked")
-    private List<OpenAIService.Message> castToOpenAIMessages(List<Object> messages) {
-        return (List<OpenAIService.Message>) (List<?>) messages;
-    }
 
-    @SuppressWarnings("unchecked")
-    private List<DeepSeekService.Message> castToDeepSeekMessages(List<Object> messages) {
-        return (List<DeepSeekService.Message>) (List<?>) messages;
-    }
 
     // Helper: Save and build response
     @Transactional
