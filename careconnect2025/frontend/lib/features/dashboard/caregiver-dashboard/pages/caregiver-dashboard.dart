@@ -1,12 +1,11 @@
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/careteam-performace-card.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/recent-patient-activity-widget.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/upcoming-checkins-widget.dart';
-import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/shared/widgets/dashboard_appheader_widget.dart';
-import 'package:care_connect_app/config/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../widgets/patient-stat-card.dart';
 
 class CaregiverDashboard extends StatelessWidget {

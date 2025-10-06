@@ -1,17 +1,13 @@
-import 'dart:convert';
-
-import 'package:care_connect_app/core/services/api_service.dart';
-import 'package:care_connect_app/models/patient_model.dart';
-import 'package:care_connect_app/models/role-enum.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../../services/enhanced_auth_service.dart';
-import '../../../../widgets/role_mismatch_dialog.dart';
-import '../../../../widgets/email_verification_dialog.dart';
-import '../../../../providers/user_provider.dart';
+
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
+import '../../../../providers/user_provider.dart';
+import '../../../../services/enhanced_auth_service.dart';
+import '../../../../widgets/email_verification_dialog.dart';
+import '../../../../widgets/role_mismatch_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   final String? userType;
