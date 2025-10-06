@@ -521,7 +521,6 @@ public class TaskServiceV2 {
         if (!newOnes.isEmpty()) {
             taskRepository.saveAll(newOnes);
             log.info("Added " + newOnes.size() + " new occurrences to series " + parentTask.getId());
->>>>>>> team_a
         }
     }
 
