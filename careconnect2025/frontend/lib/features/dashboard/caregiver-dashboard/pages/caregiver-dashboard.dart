@@ -19,12 +19,10 @@ class CaregiverDashboard extends StatelessWidget {
 
     return Scaffold(
       appBar: DashboardAppHeader(
-        // TODO - the conditional needs to be removed. There is a bug in the
-        //        backend where patient and caregiver data is not fetched.
         userName: user?.name ?? '',
         role: user?.role as String,
       ),
-      backgroundColor: AppTheme.backgroundSecondary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),

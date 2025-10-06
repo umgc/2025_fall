@@ -25,7 +25,7 @@ class RecentPatientActivity extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -101,7 +101,7 @@ class _ActivityItem extends StatelessWidget {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 16,
-                      color: Theme.of(context).primaryColor,
+                      color: Colors.teal[600],
                     ),
                     children: [
                       TextSpan(

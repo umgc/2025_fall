@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/models/patient_model.dart';
+import 'package:care_connect_app/models/role-enum.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -60,14 +65,18 @@ class _LoginPageState extends State<LoginPage> {
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
-            builder: (context) =>
-                EmailVerificationDialog(email: user.email),
+            builder: (context) => EmailVerificationDialog(email: user.email),
           );
           return; // Don't proceed with navigation
         }
 
         // Save user info to Provider
         Provider.of<UserProvider>(context, listen: false).setUser(user);
+        await Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).fetchUserDetails();
+        print('fetchUserDetails completed');
 
         // Add a small delay to ensure JWT token is fully saved before navigation
         await Future.delayed(const Duration(milliseconds: 100));

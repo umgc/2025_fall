@@ -11,6 +11,8 @@ class UserRoleStorageService {
   static const String _patientIdKey = 'patient_id';
   static const String _caregiverIdKey = 'caregiver_id';
   static const String _isLoggedInKey = 'is_logged_in';
+  static const String _patientModelKey = 'patient_model';
+  static const String _caregiverModelKey = 'caregiver_model';
 
   static UserRoleStorageService? _instance;
   SharedPreferences? _prefs;
@@ -110,6 +112,8 @@ class UserRoleStorageService {
       _prefs!.remove(_userIdKey),
       _prefs!.remove(_patientIdKey),
       _prefs!.remove(_caregiverIdKey),
+      _prefs!.remove(_patientModelKey),
+      _prefs!.remove(_caregiverModelKey),
       _prefs!.setBool(_isLoggedInKey, false),
     ]);
 
@@ -141,6 +145,38 @@ class UserRoleStorageService {
     if (kDebugMode) {
       print('UserRoleStorageService: Updated patient ID to: $patientId');
     }
+  }
+
+  /// Store patient model as JSON string
+  Future<void> storePatientModel(String patientModelJson) async {
+    await _ensureInitialized();
+    await _prefs!.setString(_patientModelKey, patientModelJson);
+
+    if (kDebugMode) {
+      print('UserRoleStorageService: Stored patient model');
+    }
+  }
+
+  /// Retrieve patient model JSON string
+  Future<String?> getPatientModel() async {
+    await _ensureInitialized();
+    return _prefs!.getString(_patientModelKey);
+  }
+
+  /// Store caregiver model as JSON string
+  Future<void> storeCaregiverModel(String caregiverModelJson) async {
+    await _ensureInitialized();
+    await _prefs!.setString(_caregiverModelKey, caregiverModelJson);
+
+    if (kDebugMode) {
+      print('UserRoleStorageService: Stored caregiver model');
+    }
+  }
+
+  /// Retrieve caregiver model JSON string
+  Future<String?> getCaregiverModel() async {
+    await _ensureInitialized();
+    return _prefs!.getString(_caregiverModelKey);
   }
 
   /// Helper method to ensure service is initialized
