@@ -218,12 +218,12 @@ class DeepseekLLM implements LLM {
   }) async {
     // Validate input
     final hasContext = context != null && context.isNotEmpty;
-    final singlePromt = prompt != null && prompt.trim().isNotEmpty;
+    final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
     // Ensure only one of messages or prompt is provided
-    if (!hasContext && !singlePromt) {
+    if (!hasContext && !singlePrompt) {
       throw ArgumentError('Either messages or prompt must be provided.');
     }
-    if (hasContext && singlePromt) {
+    if (hasContext && singlePrompt) {
       throw ArgumentError('Provide either messages or prompt, not both.');
     }
     // Build Headers
