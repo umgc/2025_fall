@@ -1,9 +1,10 @@
 class Token_Utils {
-  static int estimateTokenText(String text){
+  static int estimateTokenText(String text) {
     // A very rough estimate: 1 token ~= 4 characters in English
     final chars = text.length;
     return (chars / 4).ceil() + 8; // Adding some buffer
   }
+
   static int estimateMessages(List<Map<String, dynamic>> messages) {
     // Start with a token count of 0
     int totalTokens = 0;

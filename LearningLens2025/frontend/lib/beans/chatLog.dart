@@ -1,7 +1,8 @@
 // Represents permanent tokens for a chat session
 class PermTokens {
   final String core; // Perminant context. includes system role/instructions
-  final List<String> modules; // Optinal Perminant context. Meant to be dynamically added/removed
+  final List<String>
+      modules; // Optinal Perminant context. Meant to be dynamically added/removed
 
   // Constructor that sets a default core if none is provided
   PermTokens({
