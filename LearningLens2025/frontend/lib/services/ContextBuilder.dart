@@ -2,7 +2,7 @@ import 'package:learninglens_app/beans/chatLog.dart';
 import 'package:learninglens_app/services/Token_Utils.dart';
 
 // Builds the context for LLM requests by combining persistent context, chat history, and the user's current prompt.
-List<Map<String, String>> buildContext({
+List<Map<String, dynamic>> buildContext({
   required PermTokens permTokens,
   required List<ChatTurn> chatHistory,
   required String userPrompt,
@@ -23,7 +23,7 @@ List<Map<String, String>> buildContext({
   }
 
   //Creates the messages list starting with core persistant context.
-  final msgs = <Map<String, String>>[
+  final msgs = <Map<String,dynamic>>[
     {'role': 'system', 'content': permTokens.core},];
 
   // Gets the estimated token count of msgs

@@ -4,7 +4,7 @@ class Token_Utils {
     final chars = text.length;
     return (chars / 4).ceil() + 8; // Adding some buffer
   }
-  static int estimateMessages(List<Map<String, String>> messages) {
+  static int estimateMessages(List<Map<String, dynamic>> messages) {
     // Start with a token count of 0
     int totalTokens = 0;
 
