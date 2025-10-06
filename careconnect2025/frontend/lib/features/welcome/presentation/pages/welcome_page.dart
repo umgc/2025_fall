@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../../config/env_constant.dart';
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -10,18 +13,46 @@ class WelcomePage extends StatefulWidget {
 
 class _WelcomePageState extends State<WelcomePage> {
   bool _isLoading = true;
+  bool _isBackendHealthy = true;
 
   @override
   void initState() {
     super.initState();
-    // Show spinner for 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
+    _checkBackendHealth();
+  }
+
+  Future<void> _checkBackendHealth() async {
+    try {
+      final String baseUrl = getBackendBaseUrl();
+      final response = await http.get(
+        Uri.parse('$baseUrl/v1/api/test/health'),
+      ).timeout(const Duration(seconds: 5));
+
+      if (mounted) {
+        setState(() {
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            _isBackendHealthy = data['status'] == 'healthy';
+          } else {
+            _isBackendHealthy = false;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isBackendHealthy = false;
+        });
+      }
+    } finally {
+      // Show spinner for at least 5 seconds
+      await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    });
+    }
   }
 
   @override
@@ -159,6 +190,44 @@ class _WelcomePageState extends State<WelcomePage> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: isMobile ? 24 : 32),
+
+                  // Backend health warning
+                  if (!_isBackendHealthy) ...[
+                    Container(
+                      margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+                      padding: EdgeInsets.all(isMobile ? 12 : 16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.5),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.warning_rounded,
+                            color: Colors.orange[100],
+                            size: isMobile ? 20 : 24,
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              'Backend service is not healthy. The application has limited capabilities.',
+                              style: TextStyle(
+                                fontSize: isMobile ? 14 : 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Continue button
                   ElevatedButton(
