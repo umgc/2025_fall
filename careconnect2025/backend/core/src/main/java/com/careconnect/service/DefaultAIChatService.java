@@ -71,7 +71,7 @@ public class DefaultAIChatService implements AIChatService {
         UserAIConfig config = UserAIConfig.builder()
                 .userId(userId)
                 .patientId(patientId)
-                .preferredAiProvider(UserAIConfig.AIProvider.OPENAI)
+                .preferredAiProvider(UserAIConfig.AIProvider.DEEPSEEK)
                 .openaiModel("gpt-3.5-turbo")
                 .deepseekModel("deepseek-chat")
                 .maxTokens(1000)

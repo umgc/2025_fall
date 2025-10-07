@@ -48,7 +48,12 @@ fi
 # Start the application if all critical vars are present
 if [ ${#missing_vars[@]} -eq 0 ]; then
     echo "Starting CareConnect Backend..."
-    exec "$@"
+    # If no arguments provided, start with Maven
+    if [ $# -eq 0 ]; then
+        ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+    else
+        exec "$@"
+    fi
 else
     echo "Please set the missing environment variables before starting the application"
     exit 1
