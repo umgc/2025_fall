@@ -7,11 +7,15 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
   flutter_secure_storage_linux
   gtk
+  objectbox_flutter_libs
+  record_linux
   url_launcher_linux
   window_to_front
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
+  sherpa_onnx_linux
+  tflite_flutter
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

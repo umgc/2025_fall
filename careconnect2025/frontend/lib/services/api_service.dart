@@ -35,6 +35,8 @@ class ApiConstants {
   // AI Services endpoints
   static final String aiChat = '$_host/v1/api/ai-chat';
   static final String aiConfig = '$_host/v1/api/ai-chat/config';
+  // Invoices endpoints
+  static final String invoices = '$_host/v1/api/invoices';
 }
 
 class ApiService {

@@ -49,7 +49,7 @@ dependencies:
   path_provider: ^2.1.5
   mime: ^2.0.0
   image_picker: ^1.2.0  # image upload
-
+  connectivity_plus: ^6.0.5
   # Temporarily disabled for faster builds
   # jitsi_meet_flutter_sdk: ^11.4.0
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
@@ -129,7 +129,21 @@ dependencies:
 
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
-  
+#team -d additions
+  qr_flutter: ^4.1.0
+  llm_toolkit: ^0.0.4
+  llama_cpp_dart: 
+
+  # Required dependencies
+  flutter_gemma: ^0.9.0
+  tflite_flutter: ^0.11.0 
+  fftea: ^1.5.0
+  json_schema: ^5.2.1
+dependency_overrides:
+  llama_cpp_dart:
+    git:
+      url: https://github.com/netdur/llama_cpp_dart.git
+      ref: main
 dev_dependencies:
   flutter_test:
     sdk: flutter

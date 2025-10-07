@@ -1,8 +1,10 @@
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
-import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/model_manager_page.dart';
+import 'package:care_connect_app/features/invoices/screens/test_local_llm_chat_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -17,6 +19,7 @@ import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
@@ -42,7 +45,12 @@ import '../../features/payments/presentation/pages/payment_success_page.dart';
 import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
 import '../../providers/user_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:care_connect_app/features/invoices/screens/upload_invoice_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import '../../features/auth/presentation/pages/sign_up_screen.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
 Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
@@ -679,6 +687,51 @@ final GoRouter appRouter = GoRouter(
           patientName: patientName,
         );
       },
+    ),
+
+    GoRoute(
+      path: '/invoice-assistant',
+      redirect: (context, state) {
+        // redirect only if the path is exactly /invoice-assistant
+        if (state.uri.toString() == '/invoice-assistant') {
+          return '/invoice-assistant/upload';
+        }
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: 'upload',
+          name: 'invoiceUpload',
+          builder: (context, state) => const UploadInvoiceScreen(),
+        ),
+        GoRoute(
+          path: 'list',
+          name: 'invoiceList',
+          builder: (context, state) => const InvoiceListPage(),
+          routes: [
+            GoRoute(
+              path: ':filter',
+              name: 'invoiceListFiltered',
+              builder: (context, state) =>
+                  InvoiceListPage(quickFilter: state.pathParameters['filter']),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'detail/:id',
+          name: 'invoiceDetail',
+          builder: (context, state) {
+            final invoice = state.extra as Invoice;
+            return InvoiceDetailPage(invoice: invoice);
+          },
+        ),
+        GoRoute(
+          path: 'dashboard',
+          name: 'invoiceDashboard',
+          builder: (context, state) => const InvoiceDashboardPage(),
+        ),
+        
+      ],
     ),
   ],
 );
