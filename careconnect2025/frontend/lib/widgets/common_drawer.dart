@@ -265,19 +265,19 @@ class _CommonDrawerState extends State<CommonDrawer> {
                 isActive: widget.currentRoute == '/invoice-assistant/dashboard',
               ),
 
+              // _buildDrawerItem(
+              //   context,
+              //   icon: Icons.cloud_upload,
+              //   title: 'Upload Invoice',
+              //   route: '/invoice-assistant/upload',
+              //   isActive: widget.currentRoute == '/invoice-assistant/upload',
+              // ),
               _buildDrawerItem(
                 context,
                 icon: Icons.cloud_upload,
                 title: 'Upload Invoice',
                 route: '/invoice-assistant/upload',
                 isActive: widget.currentRoute == '/invoice-assistant/upload',
-              ),
-              _buildDrawerItem(
-                context,
-                icon: Icons.cloud_upload,
-                title: 'Upload Invoice2',
-                route: '/invoice-assistant/upload2',
-                isActive: widget.currentRoute == '/invoice-assistant/upload2',
               ),
               _buildDrawerItem(
                 context,

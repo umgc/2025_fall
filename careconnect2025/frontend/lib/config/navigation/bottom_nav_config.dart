@@ -3,6 +3,7 @@ import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/ca
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
+import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
@@ -101,6 +102,13 @@ class BottomNavConfig {
         routeName: 'messages',
         screen: MessagesListPage(),
       ),
+        BottomNavItem(
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu,
+        routeName: 'menupage',
+        screen: const MenuPage(),
+      ),
       BottomNavItem(
         label: 'More',
         icon: Icons.more_horiz_outlined,
@@ -142,19 +150,26 @@ class BottomNavConfig {
         routeName: 'tasks',
         screen: const CaregiverPatientList(),
       ),
-      BottomNavItem(
-        label: 'Analytics',
-        icon: Icons.analytics_outlined,
-        activeIcon: Icons.analytics,
-        routeName: 'analytics',
-        screen: const CaregiverAnalyticsTab(),
-      ),
+      // BottomNavItem(
+      //   label: 'Analytics',
+      //   icon: Icons.analytics_outlined,
+      //   activeIcon: Icons.analytics,
+      //   routeName: 'analytics',
+      //   screen: const CaregiverAnalyticsTab(),
+      // ),
       BottomNavItem(
         label: 'Messages',
         icon: Icons.message_outlined,
         activeIcon: Icons.message,
         routeName: 'messages',
         screen: const CaregiverMessagesTab(),
+      ),
+      BottomNavItem(
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu,
+        routeName: 'menupage',
+        screen: const MenuPage(),
       ),
       BottomNavItem(
         label: 'More',
