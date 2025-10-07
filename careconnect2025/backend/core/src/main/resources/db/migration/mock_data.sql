@@ -10,15 +10,15 @@
 
 -- Patient User
 INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('patient@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'PATIENT', 'ACTIVE', 'Mary Johnson', '2025-10-06 08:00:00', 'https://i.pravatar.cc/150?img=1', '2024-06-15 10:00:00');
+('patient@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'PATIENT', 'ACTIVE', 'Mary Johnson', '2024-06-01 08:00:00', 'https://i.pravatar.cc/150?img=1', '2024-06-15 10:00:00');
 
 -- Caregiver User
 INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('caregiver@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'CAREGIVER', 'ACTIVE', 'Jennifer Smith', '2025-10-06 07:45:00', 'https://i.pravatar.cc/150?img=20', '2024-05-01 09:00:00');
+('caregiver@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'CAREGIVER', 'ACTIVE', 'Jennifer Smith', '2024-05-31 07:45:00', 'https://i.pravatar.cc/150?img=20', '2024-05-01 09:00:00');
 
 -- Family Member User
 INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('family@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'FAMILY_MEMBER', 'ACTIVE', 'David Johnson', '2025-10-05 18:20:00', 'https://i.pravatar.cc/150?img=15', '2024-07-10 16:00:00');
+('family@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'FAMILY_MEMBER', 'ACTIVE', 'David Johnson', '2024-05-30 18:20:00', 'https://i.pravatar.cc/150?img=15', '2024-07-10 16:00:00');
 
 -- ============================================
 -- 2. PATIENT TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
