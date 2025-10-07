@@ -1,4 +1,3 @@
-// invoice_detail_page.dart
 import 'package:care_connect_app/features/invoices/services/invoice_file_service.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
@@ -12,7 +11,6 @@ import 'package:care_connect_app/features/invoices/widgets/sections/payment_sect
 import 'package:care_connect_app/features/invoices/widgets/sections/ai_section.dart';
 import 'package:care_connect_app/features/invoices/widgets/sections/history_section.dart';
 
-// REST service for create/update
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 
 class InvoiceDetailPage extends StatefulWidget {
@@ -38,20 +36,38 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
   bool _editing = false;
   bool _busy = false;
 
+  bool get _showAiTab => (_edited.aiSummary?.trim().isNotEmpty ?? false);
+
   @override
   void initState() {
     super.initState();
     _edited = widget.invoice;
     _editing = widget.isNew;
 
-    final tabCount = widget.isNew ? 3 : 5;
-    final safeIndex = widget.initialTabIndex.clamp(0, tabCount - 1);
-    _tab = TabController(length: tabCount, vsync: this, initialIndex: safeIndex)
+    final tabsLen = _buildTabs(widget.isNew).length;
+    final safeIndex = widget.initialTabIndex.clamp(0, tabsLen - 1);
+    _tab = TabController(length: tabsLen, vsync: this, initialIndex: safeIndex)
       ..addListener(() => setState(() {}));
+  }
+
+  // If _edited changes such that the number of tabs should change,
+  // rebuild the TabController to match the new length while preserving index.
+  void _ensureTabControllerSynced() {
+    final needed = _buildTabs(widget.isNew).length;
+    if (needed != _tab.length) {
+      final newIndex = _tab.index.clamp(0, needed - 1);
+      _tab.dispose();
+      _tab = TabController(length: needed, vsync: this, initialIndex: newIndex)
+        ..addListener(() => setState(() {}));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    _ensureTabControllerSynced();
+
+    final cs = Theme.of(context).colorScheme;
+    final dividerColor = Theme.of(context).dividerColor;
     final isNew = widget.isNew;
     final hasNumber = _edited.invoiceNumber.trim().isNotEmpty;
 
@@ -68,13 +84,12 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
           preferredSize: const Size.fromHeight(96),
           child: Column(
             children: [
-              // Scrollable toolbar so actions never overflow
               IgnorePointer(
                 ignoring: _busy,
                 child: InvoiceToolbar(
                   isEditing: _editing,
                   isNew: isNew,
-                  showPdf: !isNew, // hide PDF while creating
+                  showPdf: !isNew,
                   onEdit: () => setState(() => _editing = true),
                   onCancel: _cancel,
                   onSave: _save,
@@ -91,12 +106,36 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
                   onClose: () => Navigator.pop(context),
                 ),
               ),
-              if (_busy)
-                const LinearProgressIndicator(minHeight: 2),
-              TabBar(
-                controller: _tab,
-                isScrollable: true,
-                tabs: _tabs(isNew),
+              if (_busy) const LinearProgressIndicator(minHeight: 2),
+
+              // Tabs on light surface with classic underline indicator
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(top: BorderSide(color: dividerColor)),
+                ),
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    tabBarTheme: Theme.of(context).tabBarTheme.copyWith(
+                      labelColor: cs.primary,
+                      unselectedLabelColor: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tab,
+                    isScrollable: true,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+                    indicatorSize: TabBarIndicatorSize.label,
+                    indicator: UnderlineTabIndicator(
+                      borderSide: BorderSide(width: 3, color: cs.primary),
+                      insets: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    overlayColor: MaterialStateProperty.all(Colors.transparent),
+                    tabs: _buildTabs(isNew),
+                  ),
+                ),
               ),
             ],
           ),
@@ -107,7 +146,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
         absorbing: _busy,
         child: TabBarView(
           controller: _tab,
-          children: _views(isNew),
+          children: _buildViews(isNew),
         ),
       ),
       bottomNavigationBar: PrevNextBar(
@@ -125,21 +164,28 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
     );
   }
 
-  List<Widget> _tabs(bool isNew) {
-    final base = const [
-      Tab(text: 'Details'),
-      Tab(text: 'Services'),
-      Tab(text: 'Payment'),
+  // Tabs:
+  // - Always show Details, Services, Payment
+  // - If not new, also show AI Insights and History
+  // - If new but aiSummary exists, include AI Insights
+  List<Widget> _buildTabs(bool isNew) {
+    final tabs = <Widget>[
+      const Tab(text: 'Details'),
+      const Tab(text: 'Services'),
+      const Tab(text: 'Payment'),
     ];
-    if (isNew) return base;
-    return [
-      ...base,
-      const Tab(text: 'AI Insights'),
-      const Tab(text: 'History'),
-    ];
+    if (!isNew) {
+      tabs.addAll(const [
+        Tab(text: 'AI Insights'),
+        Tab(text: 'History'),
+      ]);
+    } else if (_showAiTab) {
+      tabs.add(const Tab(text: 'AI Insights'));
+    }
+    return tabs;
   }
 
-  List<Widget> _views(bool isNew) {
+  List<Widget> _buildViews(bool isNew) {
     final base = [
       DetailsSection(
         value: _edited,
@@ -157,12 +203,20 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
         onChanged: (v) => setState(() => _edited = v),
       ),
     ];
-    if (isNew) return base;
-    return [
-      ...base,
-      AiSection(value: _edited),
-      HistorySection(value: _edited),
-    ];
+
+    if (!isNew) {
+      return [
+        ...base,
+        AiSection(value: _edited),
+        HistorySection(value: _edited),
+      ];
+    } else if (_showAiTab) {
+      return [
+        ...base,
+        AiSection(value: _edited),
+      ];
+    }
+    return base;
   }
 
   void _cancel() {
@@ -193,7 +247,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
           const SnackBar(content: Text('Save failed. Please try again.')),
         );
         setState(() {
-          _editing = true; // keep editing so user can fix inputs
+          _editing = true;
         });
         return;
       }
@@ -202,6 +256,9 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
         _edited = saved;
         _editing = false;
       });
+
+      // Tabs might need to change if AI summary was populated on save
+      _ensureTabControllerSynced();
 
       if (isCreate) {
         Navigator.pop(context, saved);

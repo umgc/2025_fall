@@ -5,6 +5,7 @@ import 'package:care_connect_app/features/integrations/presentation/pages/smart_
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/model_manager_page.dart';
 import 'package:care_connect_app/features/invoices/screens/test_local_llm_chat_page.dart';
+import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -703,6 +704,11 @@ final GoRouter appRouter = GoRouter(
           path: 'upload',
           name: 'invoiceUpload',
           builder: (context, state) => const UploadInvoiceScreen(),
+        ),
+        GoRoute(
+          path: 'upload2',
+          name: 'invoiceUpload2',
+          builder: (context, state) => const UploadInvoicePage(),
         ),
         GoRoute(
           path: 'list',

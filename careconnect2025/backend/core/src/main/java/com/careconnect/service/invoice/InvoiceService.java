@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -236,6 +237,27 @@ public class InvoiceService {
 
         Invoice saved = repo.save(invoice);
         return InvoiceMapper.toDto(saved);
+    }
+    public Optional<Invoice> findDuplicateByProviderAndTotal(String providerName, Double total, String invoiceNumber) {
+        if (providerName == null || providerName.isBlank() || total == null) {
+            return Optional.empty();
+        }
+
+        BigDecimal center = BigDecimal.valueOf(total).setScale(2, RoundingMode.HALF_UP);
+
+        // Prefer strict match when invoiceNumber is present
+        if (invoiceNumber != null && !invoiceNumber.isBlank()) {
+            return repo.findTopByProviderNameIgnoreCaseAndTotalAndInvoiceNumberOrderByCreatedAtDesc(
+                    providerName, center, invoiceNumber
+            );
+        }
+
+        // Otherwise use a tiny window to tolerate rounding
+        BigDecimal min = center.subtract(new BigDecimal("0.01"));
+        BigDecimal max = center.add(new BigDecimal("0.01"));
+        return repo.findTopByProviderNameIgnoreCaseAndTotalBetweenOrderByCreatedAtDesc(
+                providerName, min, max
+        );
     }
 
     private static BigDecimal nvl(BigDecimal v, BigDecimal def) {
