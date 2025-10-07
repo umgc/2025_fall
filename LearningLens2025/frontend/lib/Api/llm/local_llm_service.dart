@@ -1,8 +1,7 @@
-import 'dart:io';
 
 import 'package:fllama/fllama.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'dart:async';
 
 import 'package:learninglens_app/services/local_storage_service.dart';
@@ -19,7 +18,7 @@ class ToolFunction {
 }
 
 // class to run LLM locally.
-class LocalLLMService {
+class LocalLLMService implements LLM {
   static final LocalLLMService _instance = LocalLLMService._internal();
   factory LocalLLMService() => _instance;
   LocalLLMService._internal();
@@ -27,37 +26,47 @@ class LocalLLMService {
   int? _runningRequestId;
   ToolFunction? _tool;
 
-  bool _loading = false;
-
   var _temperature = 0.5;
   var _topP = 1.0;
 
   // if longer than max tokens, output cuts off
-  int _maxTokens = 3000;
+  @override
+  int maxOutputTokens = 3000;
+  @override
+  int contextSize = 16000;
+  @override
+  double tokenCount = .25;
+  @override
+  String url = "";
+  @override
+  // Local LLM has no key
+  String apiKey = "";
 
-  bool _modelLoaded = false;
-  String _modelPath = LocalStorageService.getLocalLLMPath();
+  @override
+  String model = LocalStorageService.getLocalLLMPath();
 
   Completer<String> completer = Completer<String>();
 
   void configureToken({int? maxTokens}) {
-    if (maxTokens != null) _maxTokens = maxTokens;
+    if (maxTokens != null) maxOutputTokens = maxTokens;
   }
 
+  @override
   Future<String> getChatResponse(String prompt) async {
     return await runModel(prompt);
   }
 
+  @override
   Future<String> postToLlm(String prompt) async {
     return await runModel(prompt);
   }
 
   /// Run the model with a prompt and return the final response
   Future<String> runModel(String prompt) async {
-    _modelPath = LocalStorageService.getLocalLLMPath();
+    model = LocalStorageService.getLocalLLMPath();
 
-    print(_modelPath);
-    if (_modelPath == "") {
+    print(model);
+    if (model == "") {
       return "Please specify the model path";
     }
 
@@ -82,14 +91,14 @@ class LocalLLMService {
             jsonSchema: _tool!.parametersAsString,
           ),
       ],
-      maxTokens: _maxTokens.round(),
+      maxTokens: maxOutputTokens.round(),
       messages: [
         Message(Role.system, 'You are a chatbot.'),
         Message(Role.user, messageText),
       ],
       numGpuLayers: 99,
       /* this seems to have no adverse effects in environments w/o GPU support, ex. Android and web */
-      modelPath: kIsWeb ? mlcModelId : _modelPath,
+      modelPath: kIsWeb ? mlcModelId : model,
       mmprojPath: mmprojPath,
       frequencyPenalty: 0.0,
       // Don't use below 1.1, LLMs without a repeat penalty
@@ -98,7 +107,7 @@ class LocalLLMService {
       topP: _topP,
       // 22.9s for 249 input tokens with 20K context for SmolLM3.
       // 22.9s for 249 input tokens with 4K context for SmolLM3.
-      contextSize: 16000,
+      contextSize: contextSize,
       // Don't use 0.0, some models will repeat
       // the same token.
       temperature: _temperature,
@@ -121,7 +130,7 @@ class LocalLLMService {
 
     List<String> responseBuff = [];
 
-    final chatTemplate = await fllamaChatTemplateGet(_modelPath);
+    // final chatTemplate = await fllamaChatTemplateGet(_modelPath);
 
     int requestId = await fllamaChat(request, (response, responseJson, done) {
       responseBuff.add(response);
@@ -170,5 +179,17 @@ class LocalLLMService {
       fllamaCancelInference(_runningRequestId!);
       _runningRequestId = null;
     }
+  }
+  
+  @override
+  Future<String> chat({List<Map<String, dynamic>>? context, String? prompt, double temperature = 0.7, double topP = 1.0, double frequencyPenalty = 0.0, double presencePenalty = 0.0, bool stream = false}) {
+    // TODO: implement chat
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String> generate(String prompt) {
+    // TODO: implement generate
+    throw UnimplementedError();
   }
 }

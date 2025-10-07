@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:learninglens_app/Api/llm/DeepSeek_api.dart";
+import "package:learninglens_app/Api/llm/llm_api_modules_base.dart";
 import "package:learninglens_app/Api/lms/constants/learning_lens.constants.dart";
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
 import "package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart";
@@ -103,7 +104,7 @@ class _LessonPlanState extends State<LessonPlans> {
 
   Future<void> generateLessonPlanWithAI() async {
     try {
-      final Object aiModel;
+      final LLM aiModel;
       if (selectedLLM == LlmType.CHATGPT) {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       } else if (selectedLLM == LlmType.GROK) {
