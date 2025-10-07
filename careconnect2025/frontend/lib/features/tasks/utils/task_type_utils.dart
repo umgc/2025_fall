@@ -10,8 +10,9 @@ class TaskTypeUtils {
     'appointment': Colors.blue,
     'exercise': Colors.green,
     'general': Colors.deepOrange,
-    'lab': Colors.purple,
+    'lab': Colors.pink,
     'pharmacy': Colors.teal,
+    'imported': Colors.purple,
   };
 
   /// Map used to change icon used for certain types of task
@@ -22,6 +23,7 @@ class TaskTypeUtils {
     'general': Icons.task,
     'lab': Icons.science,
     'pharmacy': Icons.local_pharmacy,
+    'imported': Icons.file_upload,
   };
 
   /// Get a color safely with fallback
