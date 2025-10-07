@@ -527,17 +527,10 @@
             </list>
           </value>
         </entry>
-        <entry key="geoclue">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/geoclue-0.1.1/lib" />
-            </list>
-          </value>
-        </entry>
         <entry key="geolocator">
           <value>
             <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator-14.0.2/lib" />
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator-14.0.1/lib" />
             </list>
           </value>
         </entry>
@@ -552,13 +545,6 @@
           <value>
             <list>
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_apple-2.3.13/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="geolocator_linux">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_linux-0.2.3/lib" />
             </list>
           </value>
         </entry>
@@ -593,49 +579,7 @@
         <entry key="go_router">
           <value>
             <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/go_router-16.2.2/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps-8.2.0/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps_flutter">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter-2.13.1/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps_flutter_android">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.18.2/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps_flutter_ios">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.5/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps_flutter_platform_interface">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.14.0/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="google_maps_flutter_web">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_web-0.5.14+2/lib" />
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/go_router-16.2.4/lib" />
             </list>
           </value>
         </entry>
@@ -643,13 +587,6 @@
           <value>
             <list>
               <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/graphs-2.3.2/lib" />
-            </list>
-          </value>
-        </entry>
-        <entry key="gsettings">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/gsettings-0.2.8/lib" />
             </list>
           </value>
         </entry>
@@ -859,7 +796,7 @@
         <entry key="mobile_scanner">
           <value>
             <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/mobile_scanner-7.0.1/lib" />
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/mobile_scanner-7.1.2/lib" />
             </list>
           </value>
         </entry>
@@ -887,7 +824,7 @@
         <entry key="package_info_plus">
           <value>
             <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/package_info_plus-8.3.1/lib" />
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/package_info_plus-9.0.0/lib" />
             </list>
           </value>
         </entry>
@@ -1087,13 +1024,6 @@
             </list>
           </value>
         </entry>
-        <entry key="sanitize_html">
-          <value>
-            <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/sanitize_html-2.1.0/lib" />
-            </list>
-          </value>
-        </entry>
         <entry key="share_plus">
           <value>
             <list>
@@ -1118,7 +1048,7 @@
         <entry key="shared_preferences_android">
           <value>
             <list>
-              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.12/lib" />
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.13/lib" />
             </list>
           </value>
         </entry>
@@ -1547,24 +1477,15 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_web_auth_2-4.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_web_auth_2_platform_interface-4.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/frontend_server_client-4.0.0/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geoclue-0.1.1/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator-14.0.2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator-14.0.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_android-5.0.2/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_apple-2.3.13/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_linux-0.2.3/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_platform_interface-4.2.6/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_web-4.1.3/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/geolocator_windows-0.2.5/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/glob-2.1.3/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/go_router-16.2.2/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps-8.2.0/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter-2.13.1/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_android-2.18.2/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_ios-2.15.5/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.14.0/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/google_maps_flutter_web-0.5.14+2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/go_router-16.2.4/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/graphs-2.3.2/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/gsettings-0.2.8/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/gtk-2.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/health-13.2.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/html-0.15.6/lib" />
@@ -1594,11 +1515,11 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/material_color_utilities-0.11.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/meta-1.16.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/mime-2.0.0/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/mobile_scanner-7.0.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/mobile_scanner-7.1.2/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/mockito-5.5.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/nested-1.0.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/package_config-2.2.0/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/package_info_plus-8.3.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/package_info_plus-9.0.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/package_info_plus_platform_interface-3.2.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/path-1.9.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/path_parsing-1.1.0/lib" />
@@ -1627,11 +1548,10 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/pub_semver-2.2.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/pubspec_parse-1.5.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/qr-3.0.2/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/sanitize_html-2.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/share_plus-12.0.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/share_plus_platform_interface-6.1.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences-2.5.3/lib" />
-      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.12/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.13/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.4/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_platform_interface-2.4.1/lib" />

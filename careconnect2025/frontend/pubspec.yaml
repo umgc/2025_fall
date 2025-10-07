@@ -30,97 +30,55 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  file_picker: ^10.3.3
-  path: ^1.9.1
-  shared_preferences: ^2.5.3
-  dio: ^5.9.0
-  cookie_jar: ^4.0.8
-  dio_cookie_manager: ^3.3.0
-  confetti: ^0.8.0
-  url_launcher: ^6.3.2  # For OAuth redirects
-  crypto: ^3.0.6  # For generating state parameter
-  pointycastle: ^4.0.0  # For RSA key operations
-  app_links: ^6.4.1  # For handling deep links from OAuth callback (replaced uni_links)
-
-# -- Astha - start
-  path_provider: ^2.1.5
-  mime: ^2.0.0
-  image_picker: ^1.2.0  # image upload
-
-  # Temporarily disabled for faster builds
-  # jitsi_meet_flutter_sdk: ^11.4.0
-  permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
-  
-  intl: ^0.20.2 # data formatting
-  camera: ^0.11.1 # emotion detector use
-  pdf: ^3.11.3 # PDF generation
-  # emotion detector use
-
-  # Temporarily disabled due to iOS dependency conflicts
-  # google_mlkit_face_detection: ^0.11.0
-  # google_mlkit_text_recognition: ^0.13.1
-  # google_mlkit_barcode_scanning: ^0.12.0
-  # google_mlkit_image_labeling: ^0.12.0
-  # Temporarily disabled for faster builds
-  # firebase_core: ^4.1.0
-  # cloud_firestore: ^6.0.1
-  # firebase_messaging: ^16.0.1
-  # firebase_auth: ^6.0.2
-  
-  # Hybrid Video Calling Solution
-  # Agora for mobile platforms (iOS/Android) - Using only core engine to avoid namespace issues
-  # Note: While included in pubspec, conditional imports prevent web loading
-#  agora_rtc_engine: ^6.5.2
-  
-  # WebRTC for web glatform (fallback for web compatibility)
-#  flutter_webrtc: ^1.2.0
-#  socket_io_client: ^3.1.2  # For WebRTC signaling server
-  
-  # Keep existing packages for other functionality
-  
-  # SMS functionality - temporarily disabled due to namespace issue
-  # telephony: ^0.2.0+1  # For Android SMS - updated for namespace compatibility
-  
-  # Platform detection
-  platform: ^3.1.6
-# my key storage
-  flutter_dotenv: ^6.0.0
-  # Local storage for offline messaging
-  sqflite: ^2.4.2
-# -- Astha - start
-# ag
-  provider: ^6.1.5+1
-  go_router: ^16.2.1 
-#  flutter_stripe: ^10.2.0
-  geolocator: ^14.0.2
-  google_maps_flutter: ^2.13.1
-  fl_chart: ^1.1.0
-  
-  # AI Voice Commands 
-  # ag added as a fix
-  porcupine_flutter: ^3.0.5
-  speech_to_text: ^7.3.0
-
-  # device integration
-  fitbitter: ^2.0.6
-  health: ^13.1.4
-  mobile_scanner: ^7.0.1
-  share_plus: ^12.0.0
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  http: ^1.5.0
-  universal_html: ^2.2.4
-  flutter_secure_storage: ^9.2.4
   # Flutter SDK
   flutter:
     sdk: flutter
-
-  web: ^1.1.0
   flutter_web_plugins:
     sdk: flutter
+
+  # Core & Utility
+  app_links: any
+  cookie_jar: any
+  crypto: any
+  cupertino_icons: any
+  dio: any
+  dio_cookie_manager: any
+  file_picker: any
+  flutter_dotenv: any
+  geolocator: any
+  go_router: any
+  http: any
+  image_picker: any
+  intl: any
+  mime: any
+  package_info_plus: any
+  path: any
+  path_provider: any
+  permission_handler: any
+  platform: any
+  pointycastle: any
+  provider: any
+  shared_preferences: any
+  sqflite: any
+  universal_html: any
+  url_launcher: any
+  web: any
   web_socket_channel: any
+
+  # UI & Charts
+  confetti: ^0.8.0
+  fl_chart: ^1.1.1
+
+  # AI & Device Integration
+  camera: ^0.11.0+1
+  fitbitter: any
+  flutter_secure_storage: any
+  health: any
+  mobile_scanner: ^7.1.2
+  pdf: ^3.11.0
+  porcupine_flutter: ^3.0.5
+  share_plus: any
+  speech_to_text: ^7.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
