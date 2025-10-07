@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 class EnhancedSMSService {
-  static const String _baseUrl = 'http://192.168.1.173:8080'; // Your backend URL
+  static const String _baseUrl = 'http://localhost:8080'; // Your backend URL
 
   /// Send SMS through backend (production approach)
   /// This replaces opening the SMS app and actually sends the message

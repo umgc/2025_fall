@@ -2,20 +2,18 @@ package com.careconnect.service;
 
 import java.util.List;
 
-import com.careconnect.dto.AIChatConversationSummary;
-import com.careconnect.dto.AIChatMessageSummary;
-import com.careconnect.dto.AIChatRequest;
-import com.careconnect.dto.AIChatResponse;
+import com.careconnect.dto.ChatRequest;
+import com.careconnect.dto.ChatResponse;
 // import reactor.core.publisher.Mono; // Removed Mono import
-
+import org.springframework.stereotype.Service;
 public class ClassicAIChatService implements AIChatService {
     @Override
-    public List<AIChatConversationSummary> getPatientConversations(Long patientId) {
+    public List<com.careconnect.dto.ChatConversationSummary> getPatientConversations(Long patientId) {
         throw new UnsupportedOperationException("Not implemented in ClassicAIChatService");
     }
 
     @Override
-    public List<AIChatMessageSummary> getConversationMessages(String conversationId) {
+    public List<com.careconnect.dto.ChatMessageSummary> getConversationMessages(String conversationId) {
         throw new UnsupportedOperationException("Not implemented in ClassicAIChatService");
     }
 
@@ -24,8 +22,8 @@ public class ClassicAIChatService implements AIChatService {
         throw new UnsupportedOperationException("Not implemented in ClassicAIChatService");
     }
     @Override
-    public AIChatResponse processChat(AIChatRequest request) {
-        return AIChatResponse.builder()
+    public ChatResponse processChat(ChatRequest request) {
+        return ChatResponse.builder()
                 .success(true)
                 .aiResponse("Classic AI response")
                 .build();

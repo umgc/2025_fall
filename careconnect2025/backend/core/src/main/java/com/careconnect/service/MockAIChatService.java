@@ -1,9 +1,9 @@
 package com.careconnect.service;
 
-import com.careconnect.dto.AIChatRequest;
-import com.careconnect.dto.AIChatResponse;
-import com.careconnect.dto.AIChatConversationSummary;
-import com.careconnect.dto.AIChatMessageSummary;
+import com.careconnect.dto.ChatRequest;
+import com.careconnect.dto.ChatResponse;
+import com.careconnect.dto.ChatConversationSummary;
+import com.careconnect.dto.ChatMessageSummary;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -22,12 +22,12 @@ import java.util.UUID;
 public class MockAIChatService implements AIChatService {
 
     @Override
-    public AIChatResponse processChat(AIChatRequest request) {
+    public ChatResponse processChat(ChatRequest request) {
         log.info("Mock AI Chat Service: Processing chat request for user {}, patient {}",
                 request.getUserId(), request.getPatientId());
 
         // Create a mock response
-        AIChatResponse response = new AIChatResponse();
+        ChatResponse response = new ChatResponse();
         response.setConversationId(request.getConversationId() != null ?
             request.getConversationId() : UUID.randomUUID().toString());
         response.setMessage(request.getMessage());
@@ -57,13 +57,13 @@ public class MockAIChatService implements AIChatService {
     }
 
     @Override
-    public List<AIChatConversationSummary> getPatientConversations(Long patientId) {
+    public List<ChatConversationSummary> getPatientConversations(Long patientId) {
         log.info("Mock AI Chat Service: Getting conversations for patient {}", patientId);
         return List.of(); // Return empty list in dev mode
     }
 
     @Override
-    public List<AIChatMessageSummary> getConversationMessages(String conversationId) {
+    public List<ChatMessageSummary> getConversationMessages(String conversationId) {
         log.info("Mock AI Chat Service: Getting messages for conversation {}", conversationId);
         return List.of(); // Return empty list in dev mode
     }

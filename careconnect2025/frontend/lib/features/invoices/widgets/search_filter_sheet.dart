@@ -55,151 +55,6 @@ class _SearchFilterSheetContentState extends State<SearchFilterSheetContent> {
     amountRange = widget.initialAmountRange ?? const RangeValues(0, 2000);
   }
 
-<<<<<<< HEAD
-  @override
-  Widget build(BuildContext context) {
-    final providers = widget.invoices.map((e) => e.provider.name).toSet().toList()..sort();
-    final patients = widget.invoices.map((e) => e.patient.name).toSet().toList()..sort();
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 4,
-              width: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Search & Filter Invoices', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Sort and Search
-            Row(children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: sort,
-                  decoration: const InputDecoration(labelText: 'Sort by'),
-                  items: const [
-                    DropdownMenuItem(value: 'recently_added', child: Text('Recently Added')),
-                    DropdownMenuItem(value: 'service_date_desc', child: Text('Service Date (Newest)')),
-                    DropdownMenuItem(value: 'service_date_asc', child: Text('Service Date (Oldest)')),
-                    DropdownMenuItem(value: 'due_date_desc', child: Text('Due Date (Latest)')),
-                    DropdownMenuItem(value: 'due_date_asc', child: Text('Due Date (Earliest)')),
-                    DropdownMenuItem(value: 'amount_desc', child: Text('Amount (High to Low)')),
-                    DropdownMenuItem(value: 'amount_asc', child: Text('Amount (Low to High)')),
-                  ],
-                  onChanged: (v) => setState(() => sort = v ?? 'recently_added'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  initialValue: search,
-                  decoration: const InputDecoration(
-                    labelText: 'Search',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  onChanged: (v) => setState(() => search = v),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 12),
-
-            // Status
-            _Section(
-              title: 'Payment Status',
-              child: Wrap(
-                spacing: 8,
-                children: PaymentStatus.values.map((s) {
-                  final selected = status.contains(s);
-                  return FilterChip(
-                    label: Text(_label(s)),
-                    selected: selected,
-                    onSelected: (on) => setState(() {
-                      if (on) {
-                        status.add(s);
-                      } else {
-                        status.remove(s);
-                      }
-                    }),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            // Provider & Patient
-            _Section(
-              title: 'Provider & Patient',
-              child: Column(children: [
-                DropdownButtonFormField<String>(
-                  value: provider,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Provider'),
-                  items: providers.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                  onChanged: (v) => setState(() => provider = v),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: patient,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Patient'),
-                  items: patients.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                  onChanged: (v) => setState(() => patient = v),
-                ),
-              ]),
-            ),
-
-            // Dates
-            _Section(
-              title: 'Date Range',
-              child: Column(children: [
-                _RangePickerRow(
-                  label: 'Service Date',
-                  current: serviceRange,
-                  onPick: (r) => setState(() => serviceRange = r),
-                ),
-                const SizedBox(height: 8),
-                _RangePickerRow(
-                  label: 'Due Date',
-                  current: dueRange,
-                  onPick: (r) => setState(() => dueRange = r),
-                ),
-              ]),
-            ),
-
-            // Amount
-            _Section(
-              title: 'Amount Range',
-              child: Column(children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('\$${amountRange.start.round()}'),
-                  Text('\$${amountRange.end.round()}'),
-                ]),
-                RangeSlider(
-                  values: amountRange,
-                  min: 0,
-                  max: 5000,
-                  divisions: 100,
-                  onChanged: (v) => setState(() => amountRange = v),
-                ),
-              ]),
-            ),
-
-            const SizedBox(height: 12),
-            Row(children: [
-=======
  
 @override
 Widget build(BuildContext context) {
@@ -394,7 +249,6 @@ LayoutBuilder(
           // Pinned action buttons
           Row(
             children: [
->>>>>>> origin/team_d_ocr_textract
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.restart_alt),
@@ -432,14 +286,6 @@ LayoutBuilder(
                   },
                 ),
               ),
-<<<<<<< HEAD
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-=======
             ],
           ),
         ],
@@ -447,7 +293,6 @@ LayoutBuilder(
     ),
   );
 }
->>>>>>> origin/team_d_ocr_textract
 
   String _label(PaymentStatus s) {
     switch (s) {

@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
-/// Service to integrate with your Spring Boot backend at 192.168.1.173:8080
+/// Service to integrate with your Spring Boot backend at localhost:8080
 class BackendApiService {
-  static const String baseUrl = 'http://192.168.1.173:8080/v1/api';
+  static const String baseUrl = 'http://localhost:8080/v1/api';
 
   // This should be passed from your authentication system
   static String? _authToken;
@@ -19,8 +19,8 @@ class BackendApiService {
       'Accept': '*/*',
       'Accept-Language': 'en-US,en;q=0.9',
       'Connection': 'keep-alive',
-      'Origin': 'http://192.168.1.173:50030',
-      'Referer': 'http://192.168.1.173:50030/',
+      'Origin': 'http://localhost:50030',
+      'Referer': 'http://localhost:50030/',
       'Sec-Fetch-Dest': 'empty',
       'Sec-Fetch-Mode': 'cors',
       'Sec-Fetch-Site': 'same-site',

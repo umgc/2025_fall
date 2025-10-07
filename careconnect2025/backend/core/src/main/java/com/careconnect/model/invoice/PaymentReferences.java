@@ -1,11 +1,5 @@
 package com.careconnect.model.invoice;
 
-<<<<<<< HEAD
-import java.util.List;
-
-public record PaymentReferences(String paymentLink, String qrCodeUrl, String notes, List<String> supportedMethods) {}
-
-=======
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,4 +15,3 @@ public class PaymentReferences {
     private String notes;
     private List<String> supportedMethods;
 }
->>>>>>> origin/team_d_ocr_textract

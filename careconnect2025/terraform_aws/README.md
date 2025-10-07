@@ -29,39 +29,3 @@ _Unless you already have your own s3 bucket ready for the state.<br/>In that cas
 
 ## Follow through with the instructions inside of each folder. 
 You will find a README file under each main folder where you can follow through the rest of the process. But remember **`START WITH THE "s3_tfstate" FOLDER AT THE FIRST RUN`**
-
-
----
-## Set Env Variables
-```
-setx AWS_ACCESS_KEY_ID add_key_here
-setx AWS_SECRET_ACCESS_KEY add_secret_here
-setx AWS_REGION us-west-2
-```
-## Verify Variables
-```
-Get-ChildItem Env:AWS_* | Sort-Object Name
-```
-```
-aws configure list
-```
-## Start Terraforming
-```
-terraform init
-```
-### if redploying after change.
-```
-terraform init -reconfigure
-```
-```
-terraform plan
-```
-```
-terraform apply
-````
-
-### Verify the current state of resources
-```
-terraform show
-
-```

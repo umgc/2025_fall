@@ -52,9 +52,6 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
         </dependency>
-<<<<<<< HEAD
-
-=======
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
@@ -68,7 +65,6 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
         </dependency>
->>>>>>> origin/team_d_ocr_textract
 
         <!-- Spring Boot Starter Web -->
         <dependency>
@@ -288,13 +284,10 @@
             <artifactId>sendgrid-java</artifactId>
             <version>4.10.1</version>
         </dependency>
-<<<<<<< HEAD
-=======
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
->>>>>>> origin/team_d_ocr_textract
     </dependencies>
 
     <!-- Always-on build plugins -->
@@ -304,13 +297,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-<<<<<<< HEAD
-=======
                 <version>3.4.5</version>
                 <configuration>
                     <skip>true</skip>
                 </configuration>
->>>>>>> origin/team_d_ocr_textract
             </plugin>
 
             <!-- Compiler plugin with Lombok annotation processing -->

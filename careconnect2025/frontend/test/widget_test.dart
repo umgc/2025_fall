@@ -50,9 +50,9 @@ void main() {
     // Initialize DotEnv for tests
     dotenv.loadFromString(
       envString: '''
-CC_BASE_URL_WEB=http://192.168.1.173:8080/v1/api/
+CC_BASE_URL_WEB=http://localhost:8080/v1/api/
 CC_BASE_URL_ANDROID=http://10.0.2.2:8080/v1/api/
-CC_BASE_URL_OTHER=http://192.168.1.173:8080/v1/api/
+CC_BASE_URL_OTHER=http://localhost:8080/v1/api/
 CC_BACKEND_TOKEN=test_token
 deepSeek_uri=https://api.deepseek.com/v1/chat/completions
 deepSeek_key=test_key

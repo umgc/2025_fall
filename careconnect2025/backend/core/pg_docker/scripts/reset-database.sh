@@ -1,4 +1,4 @@
-cd #!/bin/bash
+#!/bin/bash
 # ================================
 # CareConnect Database Reset Script
 # ================================

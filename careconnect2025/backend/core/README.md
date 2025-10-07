@@ -81,10 +81,7 @@ Alternative (manual):
 chmod +x load-env.sh
 ./load-env.sh mvn spring-boot:run -Dspring.profiles.active=dev
 ```
-For windows
-```
-.\mvnw.cmd spring-boot:run "-Dspring.profiles.active=dev"
-```
+
 #### Windows
 - Option 1 (recommended): Use Git Bash and run the same commands as Linux/macOS:
 ```bash
@@ -95,11 +92,7 @@ chmod +x run-dev.sh
 ```cmd
 mvn spring-boot:run -Dspring.profiles.active=dev
 ```
-## Start docker container with careconnect backend
-```
-docker build -t careconnect-backend .
 
-```
 ## Development profile flags (application-dev.properties)
 
 The development profile disables external services to simplify local runs. Key flags in `src/main/resources/application-dev.properties`:

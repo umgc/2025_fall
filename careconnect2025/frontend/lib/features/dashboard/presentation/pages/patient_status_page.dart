@@ -59,6 +59,14 @@ class _PatientStatusPageState extends State<PatientStatusPage> {
         print('🔍 Using patientId from user object: $patientId');
       }
 
+      if (patientId == null) {
+        setState(() {
+          error = 'No patient ID available';
+          loading = false;
+        });
+        return;
+      }
+
       // Determine the appropriate API URL based on user role
       final authHeaders = await ApiService.getAuthHeaders();
       final String apiUrl;

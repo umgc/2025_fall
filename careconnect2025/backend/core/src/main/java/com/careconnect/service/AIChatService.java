@@ -2,16 +2,14 @@ package com.careconnect.service;
 
 import java.util.List;
 
-import com.careconnect.dto.AIChatConversationSummary;
-import com.careconnect.dto.AIChatMessageSummary;
-import com.careconnect.dto.AIChatRequest;
-import com.careconnect.dto.AIChatResponse;
+import com.careconnect.dto.ChatRequest;
+import com.careconnect.dto.ChatResponse;
 
 public interface AIChatService {
-    AIChatResponse processChat(AIChatRequest request);
+    ChatResponse processChat(ChatRequest request);
 
     // Conversation management
-    List<AIChatConversationSummary> getPatientConversations(Long patientId);
-    List<AIChatMessageSummary> getConversationMessages(String conversationId);
+    List<com.careconnect.dto.ChatConversationSummary> getPatientConversations(Long patientId);
+    List<com.careconnect.dto.ChatMessageSummary> getConversationMessages(String conversationId);
     void deactivateConversation(String conversationId);
 }

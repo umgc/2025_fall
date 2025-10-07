@@ -1,26 +1,5 @@
 package com.careconnect.model.invoice;
 
-<<<<<<< HEAD
-import java.util.List;
-public record Invoice(
-        String id,
-        String invoiceNumber,
-        ProviderInfo provider,
-        PatientInfo patient,
-        InvoiceDates dates,
-        List<ServiceLine> services,
-        PaymentStatus paymentStatus,
-        boolean billedToInsurance,
-        Amounts amounts,
-        PaymentReferences paymentReferences,
-        CheckPayableTo checkPayableTo,
-        String createdAt,
-        String updatedAt,
-        List<HistoryEntry> history,
-        String aiSummary,
-        List<String> recommendedActions
-) {}
-=======
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -153,4 +132,3 @@ public class Invoice {
         this.payments.removeIf(p -> p.getId().equals(paymentId));
     }
 }
->>>>>>> origin/team_d_ocr_textract

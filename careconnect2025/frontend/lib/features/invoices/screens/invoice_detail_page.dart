@@ -1,8 +1,5 @@
 // invoice_detail_page.dart
-<<<<<<< HEAD
-=======
 import 'package:care_connect_app/features/invoices/services/invoice_file_service.dart';
->>>>>>> origin/team_d_ocr_textract
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 
@@ -14,14 +11,10 @@ import 'package:care_connect_app/features/invoices/widgets/sections/services_sec
 import 'package:care_connect_app/features/invoices/widgets/sections/payment_section.dart';
 import 'package:care_connect_app/features/invoices/widgets/sections/ai_section.dart';
 import 'package:care_connect_app/features/invoices/widgets/sections/history_section.dart';
-<<<<<<< HEAD
- 
-=======
 
 // REST service for create/update
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 
->>>>>>> origin/team_d_ocr_textract
 class InvoiceDetailPage extends StatefulWidget {
   const InvoiceDetailPage({
     super.key,
@@ -43,10 +36,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
   late Invoice _edited;
   late TabController _tab;
   bool _editing = false;
-<<<<<<< HEAD
-=======
   bool _busy = false;
->>>>>>> origin/team_d_ocr_textract
 
   @override
   void initState() {
@@ -79,18 +69,6 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
           child: Column(
             children: [
               // Scrollable toolbar so actions never overflow
-<<<<<<< HEAD
-              InvoiceToolbar(
-                isEditing: _editing,
-                isNew: isNew,
-                showPdf: !isNew, // hide PDF while creating
-                onEdit: () => setState(() => _editing = true),
-                onCancel: _cancel,
-                onSave: _save,
-                onPdf: () {}, // hook up export
-                onClose: () => Navigator.pop(context),
-              ),
-=======
               IgnorePointer(
                 ignoring: _busy,
                 child: InvoiceToolbar(
@@ -115,7 +93,6 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
               ),
               if (_busy)
                 const LinearProgressIndicator(minHeight: 2),
->>>>>>> origin/team_d_ocr_textract
               TabBar(
                 controller: _tab,
                 isScrollable: true,
@@ -126,18 +103,12 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
         ),
       ),
       drawer: const CommonDrawer(currentRoute: '/invoice-assistant/detail'),
-<<<<<<< HEAD
-      body: TabBarView(
-        controller: _tab,
-        children: _views(isNew),
-=======
       body: AbsorbPointer(
         absorbing: _busy,
         child: TabBarView(
           controller: _tab,
           children: _views(isNew),
         ),
->>>>>>> origin/team_d_ocr_textract
       ),
       bottomNavigationBar: PrevNextBar(
         canPrev: _tab.index > 0,
@@ -205,11 +176,6 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
     });
   }
 
-<<<<<<< HEAD
-  void _save() {
-    setState(() => _editing = false);
-    Navigator.pop(context, _edited);
-=======
   Future<void> _save() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -256,7 +222,6 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
         setState(() => _busy = false);
       }
     }
->>>>>>> origin/team_d_ocr_textract
   }
 
   Widget _statusIcon(PaymentStatus s, BuildContext context) {

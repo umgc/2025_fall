@@ -1,9 +1,5 @@
 package com.careconnect.model.invoice;
 
-<<<<<<< HEAD
-public record ServiceLine(String description, String serviceCode, String serviceDate,
-                          Double charge, Double patientBalance, Double insuranceAdjustments) {}
-=======
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,4 +30,3 @@ public class ServiceLine {
     private BigDecimal patientBalance;
     private BigDecimal insuranceAdjustments;
 }
->>>>>>> origin/team_d_ocr_textract

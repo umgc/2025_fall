@@ -1,8 +1,5 @@
 package com.careconnect.model.invoice;
 
-<<<<<<< HEAD
-public record HistoryEntry(int version, String changes, String userId, String action, String details, String timestamp) {}
-=======
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,4 +34,3 @@ public class HistoryEntry {
 
     private OffsetDateTime timestamp;
 }
->>>>>>> origin/team_d_ocr_textract

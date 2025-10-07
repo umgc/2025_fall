@@ -1,6 +1,7 @@
 package com.careconnect.controller;
 
 import com.careconnect.dto.*;
+import com.careconnect.model.ChatConversation;
 import com.careconnect.service.AIChatService;
 import com.careconnect.service.UserAIConfigService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,7 +11,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -35,10 +38,10 @@ public class AIChatController {
         @ApiResponse(responseCode = "403", description = "Access denied"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<AIChatResponse> sendMessage(@Valid @RequestBody AIChatRequest request) {
+    public ResponseEntity<ChatResponse> sendMessage(@Valid @RequestBody ChatRequest request) {
         log.info("Processing chat request for patient: {}, user: {}. Uploaded files: {}", request.getPatientId(), request.getUserId(), request.getUploadedFiles());
         try {
-            AIChatResponse response = aiChatService.processChat(request);
+            ChatResponse response = aiChatService.processChat(request);
             if (response.getSuccess()) {
                 return ResponseEntity.ok(response);
             } else {
@@ -47,7 +50,7 @@ public class AIChatController {
         } catch (Exception e) {
             log.error("Error processing chat request", e);
             return ResponseEntity.status(500).body(
-                AIChatResponse.builder()
+                ChatResponse.builder()
                         .success(false)
                         .errorMessage("An unexpected error occurred")
                         .errorCode("INTERNAL_ERROR")
@@ -67,13 +70,13 @@ public class AIChatController {
         @ApiResponse(responseCode = "404", description = "Patient not found")
     })
     // @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
-    public ResponseEntity<List<AIChatConversationSummary>> getPatientConversations(
+    public ResponseEntity<List<ChatConversationSummary>> getPatientConversations(
             @Parameter(description = "Patient ID") @PathVariable Long patientId) {
         
         log.info("Retrieving conversations for patient: {}", patientId);
         
         try {
-            List<AIChatConversationSummary> conversations = aiChatService.getPatientConversations(patientId);
+            List<ChatConversationSummary> conversations = aiChatService.getPatientConversations(patientId);
             return ResponseEntity.ok(conversations);
         } catch (Exception e) {
             log.error("Error retrieving conversations for patient {}: ", patientId, e);
@@ -92,13 +95,13 @@ public class AIChatController {
         @ApiResponse(responseCode = "404", description = "Conversation not found")
     })
     // @PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER') or hasRole('FAMILY_MEMBER')")
-    public ResponseEntity<List<AIChatMessageSummary>> getConversationMessages(
+    public ResponseEntity<List<ChatMessageSummary>> getConversationMessages(
             @Parameter(description = "Conversation ID") @PathVariable String conversationId) {
         
         log.info("Retrieving messages for conversation: {}", conversationId);
         
         try {
-            List<AIChatMessageSummary> messages = aiChatService.getConversationMessages(conversationId);
+            List<ChatMessageSummary> messages = aiChatService.getConversationMessages(conversationId);
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
             log.error("Error retrieving messages for conversation {}: ", conversationId, e);

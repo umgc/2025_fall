@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-// sections/payment_section.dart
-import 'package:flutter/material.dart';
-import '../../models/invoice_models.dart';
-
-=======
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -16,7 +10,6 @@ const String kMethodCard = 'credit_card';
 const String kMethodOnline = 'online';
 const String kMethodTelephone = 'telephone';
 
->>>>>>> origin/team_d_ocr_textract
 class PaymentSection extends StatelessWidget {
   const PaymentSection({
     super.key,
@@ -31,9 +24,6 @@ class PaymentSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    final paid = value.paymentStatus == PaymentStatus.paid;
-=======
     final refs = value.paymentReferences;
     final methodsSet = refs.supportedMethods.toSet();
     final isPaid = value.paymentStatus == PaymentStatus.paid;
@@ -51,63 +41,10 @@ class PaymentSection extends StatelessWidget {
         methodsSet.contains(kMethodOnline) ||
         hasQrDataPreferred ||
         hasPaymentLink;
->>>>>>> origin/team_d_ocr_textract
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-<<<<<<< HEAD
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('Payment Options', style: Theme.of(context).textTheme.titleMedium),
-            Chip(
-              label: Text(_label(value.paymentStatus)),
-              backgroundColor: paid
-                  ? const Color(0xFF059669)
-                  : value.paymentStatus == PaymentStatus.rejectedInsurance
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.secondary,
-              labelStyle: const TextStyle(color: Colors.white),
-            ),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.attach_money),
-              label: const Text('Record Payment'),
-              onPressed: () async {
-                // Show your existing dialog here and update value via onChanged(...)
-                // Keep this section dumb. Let page own the dialog if you prefer.
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (value.paymentReferences.paymentLink != null)
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.link),
-              title: const Text('Online Payment Available'),
-              subtitle: const Text("Pay online using the provider's secure payment portal."),
-              trailing: FilledButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Pay Now'),
-              ),
-            ),
-          ),
-        if (value.checkPayableTo != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Check Payment Instructions', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text('Make check payable to: ${value.checkPayableTo!.name}'),
-                Text('Mail payment to: ${value.checkPayableTo!.address}'),
-                Text('Include invoice number: ${value.invoiceNumber}'),
-              ]),
-=======
         Text('Payment Options', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
 
@@ -558,16 +495,12 @@ class PaymentSection extends StatelessWidget {
                   ),
                 ],
               ),
->>>>>>> origin/team_d_ocr_textract
             ),
           ),
       ],
     );
   }
 
-<<<<<<< HEAD
-  String _label(PaymentStatus s) {
-=======
   Amounts _applyPayment(Invoice inv, _PaymentEntry entry) {
     final a = inv.amounts;
     final double due = (a.amountDue ?? a.total ?? 0).toDouble();
@@ -595,7 +528,6 @@ class PaymentSection extends StatelessWidget {
   }
 
   static String _label(PaymentStatus s) {
->>>>>>> origin/team_d_ocr_textract
     switch (s) {
       case PaymentStatus.pending:
         return 'Pending';
@@ -613,8 +545,6 @@ class PaymentSection extends StatelessWidget {
         return 'Rejected by Insurance';
     }
   }
-<<<<<<< HEAD
-=======
 
   static String _methodLabel(String key) {
     switch (key) {
@@ -950,5 +880,4 @@ extension AmountsCopy on Amounts {
       amountDue: amountDue ?? this.amountDue,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/env_constant.dart';
-import '../features/invoices/models/notification_settings.dart';
+import '../models/notification_settings.dart';
 import '../services/auth_token_manager.dart';
 
 class NotificationSettingsService {

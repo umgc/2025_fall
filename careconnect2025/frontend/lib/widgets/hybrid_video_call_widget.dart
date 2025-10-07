@@ -505,8 +505,8 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
                 style: TextStyle(
                   fontSize: 16,
                   color: Theme.of(context).brightness == Brightness.dark
-                     ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurface,
+                      ? AppTheme.textDarkThemeDark
+                      : AppTheme.textLight,
                 ),
               ),
             ),
@@ -525,8 +525,8 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
                 style: TextStyle(
                   fontSize: 16,
                   color: Theme.of(context).brightness == Brightness.dark
-                     ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurface,
+                      ? AppTheme.textDarkThemeDark
+                      : AppTheme.textLight,
                 ),
               ),
             ),

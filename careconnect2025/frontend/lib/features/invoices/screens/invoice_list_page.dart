@@ -1,13 +1,7 @@
-<<<<<<< HEAD
-import 'package:care_connect_app/features/invoices/models/filter_result.dart';
-import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
-import 'package:care_connect_app/features/invoices/widgets/search_filter_sheet.dart';   
-=======
 // invoice_list_page.dart
 import 'package:care_connect_app/features/invoices/models/filter_result.dart';
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'package:care_connect_app/features/invoices/widgets/search_filter_sheet.dart';
->>>>>>> origin/team_d_ocr_textract
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
@@ -30,11 +24,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
   Set<PaymentStatus> _statusFilter = {};
   String? _providerFilter;
   String? _patientFilter;
-<<<<<<< HEAD
-  DateTimeRange? _serviceRange;
-=======
   DateTimeRange? _statementRange;
->>>>>>> origin/team_d_ocr_textract
   DateTimeRange? _dueRange;
   RangeValues? _amountRange;
 
@@ -51,12 +41,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       search: _searchQuery,
       status: _statusFilter,
       providerName: _providerFilter,
-<<<<<<< HEAD
-      patientName: _patientFilter,
-      serviceRange: _serviceRange,
-=======
       patientName: _patientFilter, 
->>>>>>> origin/team_d_ocr_textract
       dueRange: _dueRange,
       amountRange: _amountRange,
       sort: _mapSort(_sort),
@@ -79,12 +64,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       case 'overdue':
         filtered = filtered.where((i) {
           final due = i.dates.dueDate;
-<<<<<<< HEAD
-          return i.paymentStatus != PaymentStatus.paid &&
-              due.isBefore(now);
-=======
           return i.paymentStatus != PaymentStatus.paid && due.isBefore(now);
->>>>>>> origin/team_d_ocr_textract
         }).toList();
         break;
       default:
@@ -118,8 +98,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     }
   }
 
-<<<<<<< HEAD
-=======
   Future<void> _openSearchSheet() async {
     final cfg = await showSearchFilterSheet(
       context: context,
@@ -149,7 +127,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     }
   }
 
->>>>>>> origin/team_d_ocr_textract
   @override
   Widget build(BuildContext context) {
     final total = _invoices.fold<double>(
@@ -157,55 +134,14 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       (sum, i) => sum + (i.amounts.amountDue ?? i.amounts.total ?? 0),
     );
 
-<<<<<<< HEAD
-    final pendingCount = _invoices
-        .where((i) => i.paymentStatus == PaymentStatus.pending)
-        .length;
-=======
     final pendingCount =
         _invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
->>>>>>> origin/team_d_ocr_textract
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice Management'),
         actions: [
-<<<<<<< HEAD
-          IconButton(
-            tooltip: 'Search & Filter',
-            onPressed: () async {
-              final cfg = await showSearchFilterSheet(
-                context: context,
-                invoices: _invoices,
-                initialSort: _sort,
-                initialSearch: _searchQuery,
-                initialStatus: _statusFilter,
-                initialProvider: _providerFilter,
-                initialPatient: _patientFilter,
-                initialServiceRange: _serviceRange,
-                initialDueRange: _dueRange,
-                initialAmountRange: _amountRange,
-              );
-
-              if (cfg != null) {
-                setState(() {
-                  _sort = cfg.sort;
-                  _searchQuery = cfg.search;
-                  _statusFilter = cfg.status;
-                  _providerFilter = cfg.provider;
-                  _patientFilter = cfg.patient;
-                  _serviceRange = cfg.serviceRange;
-                  _dueRange = cfg.dueRange;
-                  _amountRange = cfg.amountRange;
-                });
-                _fetch();
-              }
-            },
-            icon: const Icon(Icons.search),
-          ),
-=======
            
->>>>>>> origin/team_d_ocr_textract
         ],
       ),
       drawer: const CommonDrawer(currentRoute: '/invoice-assistant/list'),
@@ -214,25 +150,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-<<<<<<< HEAD
-                // results header
-                Card(
-                  child: ListTile(
-                    title: Row(
-                      children: [
-                        const Icon(Icons.description, size: 20),
-                        const SizedBox(width: 8),
-                        const Text('Invoice Results'),
-                        const SizedBox(width: 8),
-                        if (_invoices.isNotEmpty)
-                          Chip(label: Text('${_invoices.length} found')),
-                      ],
-                    ),
-                    subtitle: Text(
-                      'Total Amount: \$${total.toStringAsFixed(2)}'
-                      '${pendingCount > 0 ? ' • $pendingCount pending' : ''}',
-                    ),
-=======
                 // Top filter bar like the mock
                 _FilterBar(
                   sort: _sort,
@@ -294,16 +211,11 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                         ),
                       ],
                     ),
->>>>>>> origin/team_d_ocr_textract
                   ),
                 ),
                 const SizedBox(height: 12),
 
-<<<<<<< HEAD
-                // desktop or mobile
-=======
                 // Desktop or mobile layouts
->>>>>>> origin/team_d_ocr_textract
                 LayoutBuilder(
                   builder: (context, c) {
                     final isWide = c.maxWidth >= 720;
@@ -353,8 +265,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     );
   }
 }
-<<<<<<< HEAD
-=======
 
 /// Compact, Material 3 styled filter bar that matches the mock:
 /// left is the sort dropdown, right is a compact search button.
@@ -443,4 +353,3 @@ class _FilterBar extends StatelessWidget {
     );
   }
 }
->>>>>>> origin/team_d_ocr_textract

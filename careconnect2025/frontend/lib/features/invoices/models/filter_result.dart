@@ -69,33 +69,6 @@ class DesktopTable extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
-class MobileCard extends StatelessWidget {
-  final Invoice invoice;
-  final VoidCallback onView;
-  final VoidCallback onPay;
-
-  const MobileCard({
-    required this.invoice,
-    required this.onView,
-    required this.onPay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        title: Text(invoice.invoiceNumber),
-        subtitle: Text(
-          '${invoice.patient.name} • ${invoice.provider.name}\n'
-          'Amount: \$${invoice.amounts.amountDue?.toStringAsFixed(2) ?? "-"}',
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(icon: const Icon(Icons.visibility), onPressed: onView),
-            IconButton(icon: const Icon(Icons.payment), onPressed: onPay),
-=======
 
 
 class MobileCard extends StatelessWidget {
@@ -259,14 +232,11 @@ class MobileCard extends StatelessWidget {
                 ],
               ),
             ),
->>>>>>> origin/team_d_ocr_textract
           ],
         ),
       ),
     );
   }
-<<<<<<< HEAD
-=======
 
   // Helpers
 
@@ -436,5 +406,4 @@ class _DetailRow extends StatelessWidget {
 _DetailRow _kv(String label, String value,
     {Color? color, bool strong = false, IconData? icon}) {
   return _DetailRow(label, value, color: color, strong: strong, icon: icon);
->>>>>>> origin/team_d_ocr_textract
 }

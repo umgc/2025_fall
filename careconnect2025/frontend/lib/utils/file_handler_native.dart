@@ -31,6 +31,10 @@ class NativeFileHandler implements FileHandler {
         directory = await getDownloadsDirectory();
       }
 
+      if (directory == null) {
+        throw Exception('Could not access storage directory');
+      }
+
       final file = File('${directory.path}/$fileName');
       await file.writeAsBytes(bytes);
     } catch (e) {

@@ -2,7 +2,8 @@ package com.careconnect.service;
 
 import java.util.List;
 
-import com.careconnect.dto.*;
+import com.careconnect.dto.ChatRequest;
+import com.careconnect.dto.ChatResponse;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -17,6 +18,8 @@ import java.util.Map;
 import com.careconnect.model.Patient;
 import com.careconnect.model.UserAIConfig;
 import com.careconnect.repository.PatientRepository;
+import com.careconnect.service.PatientService;
+import com.careconnect.dto.EnhancedPatientProfileDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
@@ -61,12 +64,12 @@ public class LangChainAIChatService implements AIChatService {
     }
 
     @Override
-    public List<AIChatConversationSummary> getPatientConversations(Long patientId) {
+    public List<com.careconnect.dto.ChatConversationSummary> getPatientConversations(Long patientId) {
         throw new UnsupportedOperationException("Not implemented in LangChainAIChatService");
     }
 
     @Override
-    public List<AIChatMessageSummary> getConversationMessages(String conversationId) {
+    public List<com.careconnect.dto.ChatMessageSummary> getConversationMessages(String conversationId) {
         throw new UnsupportedOperationException("Not implemented in LangChainAIChatService");
     }
 
@@ -76,7 +79,7 @@ public class LangChainAIChatService implements AIChatService {
     }
 
     @Override
-    public AIChatResponse processChat(AIChatRequest request) {
+    public ChatResponse processChat(ChatRequest request) {
         // Normalize conversationId: treat empty string as null, and generate if missing
         if (request.getConversationId() != null && request.getConversationId().trim().isEmpty()) {
             request.setConversationId(null);
@@ -208,7 +211,7 @@ public class LangChainAIChatService implements AIChatService {
 
             // System prompt logic
             String systemPrompt = null;
-            if (request instanceof AIChatRequest) {
+            if (request instanceof com.careconnect.dto.ChatRequest) {
                 try {
                     java.lang.reflect.Method m = request.getClass().getMethod("getSystemPrompt");
                     Object val = m.invoke(request);
@@ -276,7 +279,7 @@ public class LangChainAIChatService implements AIChatService {
             Long messageId = null;
             String conversationTitle = (message != null && message.length() > 32) ? message.substring(0, 32) + "..." : message;
             Integer totalMessagesInConversation = memory.messages() != null ? memory.messages().size() : null;
-            return AIChatResponse.builder()
+            return ChatResponse.builder()
                 .success(true)
                 .aiResponse(aiResponse)
                 .modelUsed(modelUsed)
@@ -297,7 +300,7 @@ public class LangChainAIChatService implements AIChatService {
                 .approachingTokenLimit(null)
                 .build();
         } catch (Exception e) {
-            return AIChatResponse.builder()
+            return ChatResponse.builder()
                 .success(false)
                 .errorMessage(e.getMessage() != null ? e.getMessage() : "Unknown error")
                 .errorCode("LANGCHAIN_ERROR")

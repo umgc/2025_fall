@@ -13,7 +13,7 @@ void main() {
 
   test('API endpoint URLs should be valid', () {
     // Test that API endpoints form valid URLs
-    const baseUrl = 'http://192.168.1.173:8080'; // Default for testing
+    const baseUrl = 'http://localhost:8080'; // Default for testing
 
     expect(Uri.tryParse('$baseUrl/v1/api/auth'), isNotNull);
     expect(Uri.tryParse('$baseUrl/v1/api/analytics'), isNotNull);
@@ -71,7 +71,7 @@ void main() {
   group('API Service Health Tests', () {
     test('all API constants should form valid URLs', () {
       // Test that all API constants can form valid URLs
-      const testHost = 'http://192.168.1.173:8080';
+      const testHost = 'http://localhost:8080';
 
       expect(Uri.tryParse('$testHost/v1/api/auth'), isNotNull);
       expect(Uri.tryParse('$testHost/v1/api/analytics'), isNotNull);

@@ -1,12 +1,9 @@
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
-<<<<<<< HEAD
-=======
 /// Sentinel to allow nullable fields to be cleared via copyWith
 const Object _unset = Object();
 
->>>>>>> origin/team_d_ocr_textract
 @immutable
 class ProviderInfo {
   final String name;
@@ -25,16 +22,6 @@ class ProviderInfo {
     String? name,
     String? address,
     String? phone,
-<<<<<<< HEAD
-    String? email, // note: cannot clear to null with this signature
-  }) =>
-      ProviderInfo(
-        name: name ?? this.name,
-        address: address ?? this.address,
-        phone: phone ?? this.phone,
-        email: email ?? this.email,
-      );
-=======
     Object? email = _unset, // pass null to clear, omit to keep
   }) {
     return ProviderInfo(
@@ -44,7 +31,6 @@ class ProviderInfo {
       email: identical(email, _unset) ? this.email : email as String?,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
@@ -63,18 +49,6 @@ class PatientInfo {
 
   PatientInfo copyWith({
     String? name,
-<<<<<<< HEAD
-    String? address,
-    String? accountNumber,
-    String? billingAddress,
-  }) =>
-      PatientInfo(
-        name: name ?? this.name,
-        address: address ?? this.address,
-        accountNumber: accountNumber ?? this.accountNumber,
-        billingAddress: billingAddress ?? this.billingAddress,
-      );
-=======
     Object? address = _unset,
     Object? accountNumber = _unset,
     Object? billingAddress = _unset,
@@ -86,21 +60,10 @@ class PatientInfo {
       billingAddress: identical(billingAddress, _unset) ? this.billingAddress : billingAddress as String?,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
 class InvoiceDates {
-<<<<<<< HEAD
-  final DateTime serviceDate;   // yyyy-MM-dd
-  final DateTime billedDate;    // yyyy-MM-dd
-  final DateTime dueDate;       // yyyy-MM-dd
-  final DateTime? paidDate;     // yyyy-MM-dd, null if unpaid
-
-  const InvoiceDates({
-    required this.serviceDate,
-    required this.billedDate,
-=======
   // Stored as DateTime; format as yyyy-MM-dd at the edges if needed
   final DateTime statementDate;
   final DateTime dueDate;
@@ -108,25 +71,11 @@ class InvoiceDates {
 
   const InvoiceDates({
     required this.statementDate,
->>>>>>> origin/team_d_ocr_textract
     required this.dueDate,
     this.paidDate,
   });
 
   InvoiceDates copyWith({
-<<<<<<< HEAD
-    DateTime? serviceDate,
-    DateTime? billedDate,
-    DateTime? dueDate,
-    DateTime? paidDate, // cannot clear to null with this signature
-  }) =>
-      InvoiceDates(
-        serviceDate: serviceDate ?? this.serviceDate,
-        billedDate: billedDate ?? this.billedDate,
-        dueDate: dueDate ?? this.dueDate,
-        paidDate: paidDate ?? this.paidDate,
-      );
-=======
     DateTime? statementDate,
     DateTime? dueDate,
     Object? paidDate = _unset, // pass null to clear, omit to keep
@@ -137,7 +86,6 @@ class InvoiceDates {
       paidDate: identical(paidDate, _unset) ? this.paidDate : paidDate as DateTime?,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
@@ -157,8 +105,6 @@ class ServiceLine {
     this.patientBalance,
     this.insuranceAdjustments,
   });
-<<<<<<< HEAD
-=======
 
   ServiceLine copyWith({
     Object? description = _unset,
@@ -179,7 +125,6 @@ class ServiceLine {
           : insuranceAdjustments as double?,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
@@ -195,8 +140,6 @@ class Amounts {
     this.total,
     this.amountDue,
   });
-<<<<<<< HEAD
-=======
 
   Amounts copyWith({
     Object? totalCharges = _unset,
@@ -211,7 +154,6 @@ class Amounts {
       amountDue: identical(amountDue, _unset) ? this.amountDue : amountDue as double?,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 enum PaymentStatus {
@@ -237,8 +179,6 @@ class PaymentReferences {
     this.notes,
     required List<String> supportedMethods,
   }) : supportedMethods = UnmodifiableListView(List<String>.from(supportedMethods));
-<<<<<<< HEAD
-=======
 
   PaymentReferences copyWith({
     Object? paymentLink = _unset,
@@ -253,7 +193,6 @@ class PaymentReferences {
       supportedMethods: supportedMethods ?? this.supportedMethods,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
@@ -267,8 +206,6 @@ class CheckPayableTo {
     required this.address,
     required this.reference,
   });
-<<<<<<< HEAD
-=======
 
   CheckPayableTo copyWith({
     String? name,
@@ -281,7 +218,6 @@ class CheckPayableTo {
       reference: reference ?? this.reference,
     );
   }
->>>>>>> origin/team_d_ocr_textract
 }
 
 @immutable
@@ -291,11 +227,7 @@ class HistoryEntry {
   final String userId;
   final String action;
   final String details;
-<<<<<<< HEAD
-  final String timestamp; // consider DateTime if you’ll sort/filter often
-=======
   final String timestamp; // keep String if API returns it as String
->>>>>>> origin/team_d_ocr_textract
 
   const HistoryEntry({
     required this.userId,
@@ -326,33 +258,22 @@ class Invoice {
 
   final String createdAt;
   final String updatedAt;
-<<<<<<< HEAD
-=======
   final String createdBy;
   final String updatedBy;
 
   final String? documentLink;  
->>>>>>> origin/team_d_ocr_textract
   final UnmodifiableListView<HistoryEntry> history;
 
   final String? aiSummary;
   final UnmodifiableListView<String>? recommendedActions;
-<<<<<<< HEAD
-
-=======
   final UnmodifiableListView<PaymentRecord>? payments;  
->>>>>>> origin/team_d_ocr_textract
   Invoice({
     required this.id,
     required this.invoiceNumber,
     required this.provider,
     required this.patient,
     required this.dates,
-<<<<<<< HEAD
-    required List<ServiceLine> services,
-=======
     List<ServiceLine>? services,
->>>>>>> origin/team_d_ocr_textract
     required this.paymentStatus,
     required this.billedToInsurance,
     required this.amounts,
@@ -360,13 +281,6 @@ class Invoice {
     this.checkPayableTo,
     required this.createdAt,
     required this.updatedAt,
-<<<<<<< HEAD
-    required List<HistoryEntry> history,
-    this.aiSummary,
-    List<String>? recommendedActions,
-  })  : services = UnmodifiableListView(List<ServiceLine>.from(services)),
-        history = UnmodifiableListView(List<HistoryEntry>.from(history)),
-=======
     required this.createdBy,
     required this.updatedBy,
     this.documentLink,
@@ -378,7 +292,6 @@ class Invoice {
   })  : services = UnmodifiableListView(List<ServiceLine>.from(services ?? const [])),
         payments = UnmodifiableListView(List<PaymentRecord>.from(payments?? const [])),
         history = UnmodifiableListView(List<HistoryEntry>.from(history ?? const [])),
->>>>>>> origin/team_d_ocr_textract
         recommendedActions = recommendedActions == null
             ? null
             : UnmodifiableListView(List<String>.from(recommendedActions));
@@ -392,34 +305,6 @@ class Invoice {
     bool? billedToInsurance,
     Amounts? amounts,
     PaymentReferences? paymentReferences,
-<<<<<<< HEAD
-    CheckPayableTo? checkPayableTo,
-    String? updatedAt,
-    List<HistoryEntry>? history,
-    String? aiSummary,
-    List<String>? recommendedActions,
-  }) =>
-      Invoice(
-        id: id,
-        invoiceNumber: invoiceNumber,
-        provider: provider ?? this.provider,
-        patient: patient ?? this.patient,
-        dates: dates ?? this.dates,
-        services: services ?? this.services,
-        paymentStatus: paymentStatus ?? this.paymentStatus,
-        billedToInsurance: billedToInsurance ?? this.billedToInsurance,
-        amounts: amounts ?? this.amounts,
-        paymentReferences: paymentReferences ?? this.paymentReferences,
-        checkPayableTo: checkPayableTo ?? this.checkPayableTo,
-        createdAt: createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        history: history ?? this.history,
-        aiSummary: aiSummary ?? this.aiSummary,
-        recommendedActions: recommendedActions ?? this.recommendedActions,
-      );
-}
- 
-=======
     Object? checkPayableTo = _unset, // pass null to clear
     String? updatedAt,
     List<HistoryEntry>? history,
@@ -461,23 +346,15 @@ class Invoice {
     );
   }
 }
->>>>>>> origin/team_d_ocr_textract
 
 extension InvoiceFactories on Invoice {
   static Invoice empty() {
     final now = DateTime.now();
     String iso(DateTime d) => d.toIso8601String();
-<<<<<<< HEAD
-
-    return Invoice(
-      id: 'local-${now.millisecondsSinceEpoch}',     // temporary client id
-      invoiceNumber: '',                             // let server fill later
-=======
  
     return Invoice(
       id: 'local-${now.millisecondsSinceEpoch}', // temporary client id
       invoiceNumber: '',
->>>>>>> origin/team_d_ocr_textract
       provider: const ProviderInfo(
         name: '',
         address: '',
@@ -491,12 +368,7 @@ extension InvoiceFactories on Invoice {
         billingAddress: null,
       ),
       dates: InvoiceDates(
-<<<<<<< HEAD
-        serviceDate: now,
-        billedDate: now,
-=======
         statementDate: now,
->>>>>>> origin/team_d_ocr_textract
         dueDate: now.add(const Duration(days: 30)),
         paidDate: null,
       ),
@@ -513,23 +385,11 @@ extension InvoiceFactories on Invoice {
         paymentLink: null,
         qrCodeUrl: null,
         notes: null,
-<<<<<<< HEAD
-        supportedMethods: const <String>[],  
-=======
         supportedMethods: const <String>[],
->>>>>>> origin/team_d_ocr_textract
       ),
       checkPayableTo: null,
       createdAt: iso(now),
       updatedAt: iso(now),
-<<<<<<< HEAD
-      history: const <HistoryEntry>[],
-      aiSummary: null,
-      recommendedActions: const <String>[],
-    );
-  }
-}
-=======
       createdBy: 'system',
       updatedBy: 'system',
       documentLink: null, // not known until upload
@@ -599,4 +459,3 @@ class PaymentRecord {
     planDurationMonths: j['planDurationMonths'] as int?,
   );
 }
->>>>>>> origin/team_d_ocr_textract

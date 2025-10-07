@@ -3,7 +3,7 @@ package com.careconnect.service;
 import com.careconnect.model.Vital;
 import com.careconnect.model.ClinicalNote;
 import com.careconnect.model.UserAIConfig;
-import com.careconnect.dto.AIChatRequest;
+import com.careconnect.dto.ChatRequest;
 import com.careconnect.repository.VitalsRepository;
 import com.careconnect.repository.ClinicalNotesRepository;
 import com.careconnect.repository.UserRepository;
@@ -27,7 +27,7 @@ public class PrivacyAwareMedicalContextService {
     /**
      * Build anonymized patient context for AI consumption
      */
-    public String buildAnonymizedPatientContext(Long patientId, AIChatRequest request,
+    public String buildAnonymizedPatientContext(Long patientId, ChatRequest request, 
                                               UserAIConfig aiConfig) {
         StringBuilder context = new StringBuilder();
         

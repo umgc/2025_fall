@@ -36,7 +36,6 @@ if "%DB_PASSWORD%"=="" set "missing_vars=%missing_vars% DB_PASSWORD"
 if "%SECURITY_JWT_SECRET%"=="" set "missing_vars=%missing_vars% SECURITY_JWT_SECRET"
 if "%FIREBASE_PROJECT_ID%"=="" set "missing_vars=%missing_vars% FIREBASE_PROJECT_ID"
 if "%FIREBASE_SENDER_ID%"=="" set "missing_vars=%missing_vars% FIREBASE_SENDER_ID"
-if "%STRIPE_SECRET_KEY%"=="" set "missing_vars=%missing_vars% STRIPE_SECRET_KEY"
 
 if not "%missing_vars%"=="" (
     echo Warning: The following critical environment variables are not set:
