@@ -1,4 +1,3 @@
-
 import 'package:fllama/fllama.dart';
 import 'package:flutter/foundation.dart';
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
@@ -130,7 +129,8 @@ class LocalLLMService implements LLM {
 
     List<String> responseBuff = [];
 
-    // final chatTemplate = await fllamaChatTemplateGet(_modelPath);
+    // This is required, otherwise the fllama will crash if using fllamaChat
+    await fllamaChatTemplateGet(model);
 
     int requestId = await fllamaChat(request, (response, responseJson, done) {
       responseBuff.add(response);
@@ -180,9 +180,16 @@ class LocalLLMService implements LLM {
       _runningRequestId = null;
     }
   }
-  
+
   @override
-  Future<String> chat({List<Map<String, dynamic>>? context, String? prompt, double temperature = 0.7, double topP = 1.0, double frequencyPenalty = 0.0, double presencePenalty = 0.0, bool stream = false}) {
+  Future<String> chat(
+      {List<Map<String, dynamic>>? context,
+      String? prompt,
+      double temperature = 0.7,
+      double topP = 1.0,
+      double frequencyPenalty = 0.0,
+      double presencePenalty = 0.0,
+      bool stream = false}) {
     // TODO: implement chat
     throw UnimplementedError();
   }

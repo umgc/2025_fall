@@ -5,11 +5,13 @@ import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/services/download_manager.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 class UserSettings extends StatefulWidget {
   @override
@@ -41,10 +43,13 @@ class UserSettingsState extends State<UserSettings> {
   String? _currentDownloadPath;
   bool _modelsLoading = true;
 
+  double downloadProgress = 0.0;
+
   @override
   void initState() {
     super.initState();
     _initCycle();
+    DownloadManager().init();
     //_checkSelectedModelDownloaded();
   }
 
@@ -364,7 +369,7 @@ class UserSettingsState extends State<UserSettings> {
 // Check if model has already been downloaded
   Future<bool> isModelDownloaded(String modelName) async {
     final path = await getModelFilePath(modelName);
-    return File(path).existsSync();
+    return File(path).existsSync() && !isDownloading;
   }
 
   Future<void> _setDownloadedModelPath(String model) async {
@@ -382,34 +387,76 @@ class UserSettingsState extends State<UserSettings> {
   Future<void> downloadModel(String modelName, String url) async {
     setState(() {
       isDownloading = true;
+      downloadProgress = 0.0; // Reset progress
     });
 
     _httpClient = http.Client();
 
     try {
-      final response =
-          await _httpClient!.send(http.Request('GET', Uri.parse(url)));
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await _httpClient!.send(request);
+
+      final contentLength = response.contentLength ?? 0;
       final dir = await getApplicationDocumentsDirectory();
       final filePath = '${dir.path}/models/$modelName.gguf';
-      _currentDownloadPath = filePath; // track path
+      _currentDownloadPath = filePath;
       final file = File(filePath);
       final sink = file.openWrite();
-      await response.stream.pipe(sink);
+
+      int bytesReceived = 0;
+      final stopwatch = Stopwatch()..start();
+
+      await for (final chunk in response.stream) {
+        if (_isCancelled) {
+          await sink.close();
+          await file.delete(); // Clean up partial file
+          debugPrint("Download cancelled by user.");
+          setState(() {
+            isDownloading = false;
+            _currentDownloadPath = null;
+            downloadProgress = 0.0;
+          });
+          return;
+        }
+
+        bytesReceived += chunk.length;
+        sink.add(chunk);
+
+        // Only update UI every 1 second to reduce rebuild load
+        if (stopwatch.elapsedMilliseconds > 1000 && contentLength > 0) {
+          stopwatch.reset();
+          if (mounted) {
+            setState(() {
+              downloadProgress = bytesReceived / contentLength;
+            });
+          }
+        }
+      }
+
       await sink.close();
 
-      setState(() {
-        isDownloading = false;
-        _currentDownloadPath = null; // clear when done
-        _ggufModelPath = filePath;
-        LocalStorageService.saveLocalLLMPath(filePath);
-      });
-    } catch (e) {
       if (mounted) {
         setState(() {
           isDownloading = false;
           _currentDownloadPath = null;
+          downloadProgress = 1.0;
+          _ggufModelPath = filePath;
+          LocalStorageService.saveLocalLLMPath(filePath);
         });
       }
+
+      debugPrint("Download completed: $filePath");
+    } catch (e) {
+      if (!mounted) return;
+
+      if (mounted) {
+        setState(() {
+          isDownloading = false;
+          _currentDownloadPath = null;
+          downloadProgress = 0.0;
+        });
+      }
+
       if (_isCancelled) {
         debugPrint("Download cancelled by user.");
       } else {
@@ -493,66 +540,110 @@ class UserSettingsState extends State<UserSettings> {
         const SizedBox(height: 8),
         Row(
           children: [
+            // Dropdown with checkmark
             Expanded(
               child: DropdownButton<String>(
                 value: selectedModel,
                 isExpanded: true,
                 hint: const Text('Select a model'),
-                onChanged: (value) async {
+                onChanged: (value) {
                   setState(() {
                     selectedModel = value;
                   });
-                  if (value != null) {
-                    final downloaded = await isModelDownloaded(value);
-                    if (downloaded) {
-                      _setDownloadedModelPath(
-                          value); // ✅ safe here, not inside build
-                    }
-                  }
                 },
                 items: modelMap.keys.map((key) {
                   return DropdownMenuItem(
                     value: key,
-                    child: FutureBuilder<bool>(
-                      future: isModelDownloaded(key),
-                      builder: (context, snapshot) {
-                        final downloaded = snapshot.data ?? false;
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(key),
-                            if (downloaded)
-                              const Icon(Icons.check,
-                                  color: Colors.green, size: 18),
-                          ],
-                        );
-                      },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(key),
+                        ValueListenableBuilder<double>(
+                          valueListenable:
+                              DownloadManager().progressNotifier(key),
+                          builder: (context, progress, child) {
+                            final isDownloaded = progress >= 1.0 ||
+                                DownloadManager().isDownloaded(key);
+                            if (isDownloaded) {
+                              return Row(
+                                children: const [
+                                  Icon(Icons.check,
+                                      color: Colors.green, size: 18),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Downloaded',
+                                    style: TextStyle(
+                                        color: Colors.green, fontSize: 12),
+                                  ),
+                                ],
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
               ),
             ),
             const SizedBox(width: 10),
-            if (selectedModel != null)
-              FutureBuilder<bool>(
-                future: isModelDownloaded(selectedModel!),
-                builder: (context, snapshot) {
-                  final downloaded = snapshot.data ?? false;
 
-                  if (downloaded) {
-                    return const Text('Downloaded',
-                        style: TextStyle(color: Colors.green));
+            // Right-hand panel
+            if (selectedModel != null)
+              ValueListenableBuilder<double>(
+                valueListenable:
+                    DownloadManager().progressNotifier(selectedModel!),
+                builder: (context, progress, child) {
+                  final isDownloading =
+                      DownloadManager().isDownloading(selectedModel!);
+                  final isDownloaded = progress >= 1.0 ||
+                      DownloadManager().isDownloaded(selectedModel!);
+
+                  if (isDownloaded) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () async {
+                            final path = await DownloadManager()
+                                .getFilePath(selectedModel!);
+                            LocalStorageService.saveLocalLLMPath(path);
+                            setState(() {
+                              _ggufModelPath = path;
+                            });
+                            debugPrint('Model loaded: $path');
+                          },
+                          child: const Text('Load this model'),
+                        ),
+                      ],
+                    );
                   } else if (isDownloading) {
                     return Row(
                       children: [
-                        const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: CircularProgressIndicator(
+                                value: progress,
+                                strokeWidth: 3,
+                              ),
+                            ),
+                            Text(
+                              '${(progress * 100).toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                  fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: cancelDownload,
+                          onPressed: () {
+                            DownloadManager().cancelDownload(selectedModel!);
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
@@ -565,13 +656,46 @@ class UserSettingsState extends State<UserSettings> {
                     final url = modelMap[selectedModel!];
                     return ElevatedButton(
                       onPressed: () {
-                        if (url != null) downloadModel(selectedModel!, url);
+                        if (url != null) {
+                          DownloadManager().startDownload(selectedModel!, url);
+                        }
                       },
                       child: const Text('Download'),
                     );
                   }
                 },
               ),
+          ],
+        ),
+        // Pick GGUF
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ElevatedButton(
+              onPressed: () async {
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: ['gguf'],
+                );
+                if (result != null && result.files.single.path != null) {
+                  setState(() {
+                    _ggufModelPath = result.files.single.path!;
+                    LocalStorageService.saveLocalLLMPath(_ggufModelPath!);
+                    selectedModel = "User Selected LLM";
+
+                    if (!modelMap.containsKey(selectedModel)) {
+                      modelMap[selectedModel!] =
+                          ""; // URL is null since it’s local
+                    }
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Select GGUF Model From Device'),
+            ),
           ],
         ),
         if (_ggufModelPath != null)
