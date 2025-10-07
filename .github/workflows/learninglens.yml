@@ -34,8 +34,12 @@ jobs:
         run: flutter pub get
 
       # Uncomment this step to verify the use of 'dart format' on each commit.
-      - name: Verify formatting
+      - name: Verify lib formatting
         run: dart format --output=none --set-exit-if-changed ./LearningLens2025/frontend/lib
+
+      # Uncomment this step to verify the use of 'dart format' on each commit.
+      - name: Verify test formatting
+        run: dart format --output=none --set-exit-if-changed ./LearningLens2025/frontend/test
 
       # Consider passing '--fatal-infos' for slightly stricter analysis.
       - name: Analyze project source
