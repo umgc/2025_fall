@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../widgets/common_drawer.dart';
 import '../widgets/theme_toggle_switch.dart';
-import '../models/notification_settings.dart';
+import '../features/invoices/models/notification_settings.dart';
 import '../services/notification_settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -470,6 +470,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
               ],
+              _buildSectionHeader(context, 'Notetaker Assistant'),
+              _buildSettingsCard(
+                context,
+                icon: Icons.edit_note,
+                title: 'Notetaker Configuration',
+                subtitle: 'Customize your Notetaker assistant settings',
+                onTap: () => context.push('/notetaker-configuration'),
+              ),
+              const SizedBox(height: 24),
               _buildSectionHeader(context, 'General'),
               _buildSettingsCard(
                 context,

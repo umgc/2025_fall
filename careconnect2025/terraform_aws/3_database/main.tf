@@ -7,7 +7,7 @@ resource "aws_vpc" "aurora_vpc" {
   }
 }
 
-# At least two subnets in different Availability Zones are required
+# Subnets in different Availability Zones 
 resource "aws_subnet" "aurora_subnet_a" {
   vpc_id            = aws_vpc.aurora_vpc.id
   cidr_block        = "10.0.1.0/24"
@@ -69,9 +69,9 @@ resource "aws_rds_cluster" "careconnect_db" {
   cluster_identifier = "careconnect"
   engine             = "aurora-postgresql"
   
-  # NOTE: Aurora engine versions are specific. '16.2' is compatible with PostgreSQL 16.
-  # The version you specified, '16.6', is not a valid Aurora engine version.
-  engine_version     = "16.2"
+  # NOTE: Aurora engine versions are specific for auto-puase, the database engine must be running at least version 16.3, 15.7, 14.12, or 13.15.
+ 
+  engine_version     = "16.3"
   
   database_name    = "careconnect"
   master_username  = var.rds_username
@@ -87,8 +87,8 @@ resource "aws_rds_cluster" "careconnect_db" {
   # Serverless v2 Scaling Configuration
   # NOTE: The minimum capacity for Serverless v2 is 0.5 ACUs, not 0.
   serverlessv2_scaling_configuration {
-    min_capacity = 0.5
-    max_capacity = 2.0
+    min_capacity = 0
+    max_capacity = 1.0
   }
 
   # Configuration for Dev/Test Environment

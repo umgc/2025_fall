@@ -27,8 +27,18 @@ android {
     }
 
     buildTypes {
+        
         release {
             signingConfig = signingConfigs.getByName("debug")
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            // Usually keep this off for faster dev builds
+          
         }
     }
 
@@ -69,7 +79,10 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-messaging")
-    implementation("com.google.firebase:firebase-common")
+    implementation("com.google.firebase:firebase-common") 
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
 }
 
 flutter {

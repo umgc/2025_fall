@@ -438,7 +438,7 @@ class CallIntegrationHelper {
       print('📡 Sending SOS request to API: $sosRequest');
 
       final response = await http.post(
-        Uri.parse('http://localhost:8080/api/websocket/sos-call'),
+        Uri.parse('http://192.168.1.173:8080/api/websocket/sos-call'),
         headers: {...authHeaders, 'Content-Type': 'application/json'},
         body: jsonEncode(sosRequest),
       );
