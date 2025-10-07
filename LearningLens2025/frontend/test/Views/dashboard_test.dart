@@ -12,7 +12,8 @@ void main() {
     await LocalStorageService.init();
   });
 
-  testWidgets('Buttons should be disabled when user cannot access the app', (WidgetTester tester) async {
+  testWidgets('Buttons should be disabled when user cannot access the app',
+      (WidgetTester tester) async {
     // Manually override static methods
 
     // except Local
@@ -32,12 +33,42 @@ void main() {
     final lessonPlanButton = find.text('Lesson Plan');
     final assessmentsButton = find.text('Assessments');
 
-    // Verify that all buttons are disabled, to verify this is working. change isNull to isNotNull. 
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: coursesButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: essaysButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: iepButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: analyticsButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: lessonPlanButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
-    expect(tester.widget<ElevatedButton>(find.ancestor(of: assessmentsButton, matching: find.byType(ElevatedButton))).onPressed, isNull);
+    // Verify that all buttons are disabled, to verify this is working. change isNull to isNotNull.
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: coursesButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: essaysButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: iepButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: analyticsButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: lessonPlanButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
+    expect(
+        tester
+            .widget<ElevatedButton>(find.ancestor(
+                of: assessmentsButton, matching: find.byType(ElevatedButton)))
+            .onPressed,
+        isNull);
   });
 }
