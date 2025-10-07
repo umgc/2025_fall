@@ -31,7 +31,7 @@ class LocalLLMService {
 
   var _temperature = 0.5;
   var _topP = 1.0;
-  
+
   // if longer than max tokens, output cuts off
   int _maxTokens = 3000;
 
@@ -44,31 +44,31 @@ class LocalLLMService {
     if (maxTokens != null) _maxTokens = maxTokens;
   }
 
-  Future<String> getChatResponse(String prompt) async{
+  Future<String> getChatResponse(String prompt) async {
     return await runModel(prompt);
   }
 
-  Future<String> postToLlm(String prompt) async{
+  Future<String> postToLlm(String prompt) async {
     return await runModel(prompt);
   }
-  
+
   /// Run the model with a prompt and return the final response
   Future<String> runModel(String prompt) async {
     _modelPath = LocalStorageService.getLocalLLMPath();
-    
+
     print(_modelPath);
-    if(_modelPath == ""){
+    if (_modelPath == "") {
       return "Please specify the model path";
     }
 
     String finalResponse = "";
-    
+
     // model id for the web build (DO NOT use WEB for now / WIP).
-    String _mlcModelId = MlcModelId.qwen05b;
+    String mlcModelId = MlcModelId.qwen05b;
 
     // model path for the desktop build.
 
-    String _mmprojPath = "";
+    String mmprojPath = "";
 
     var messageText = prompt;
 
@@ -89,8 +89,8 @@ class LocalLLMService {
       ],
       numGpuLayers: 99,
       /* this seems to have no adverse effects in environments w/o GPU support, ex. Android and web */
-      modelPath: kIsWeb ? _mlcModelId : _modelPath!,
-      mmprojPath: _mmprojPath,
+      modelPath: kIsWeb ? mlcModelId : _modelPath,
+      mmprojPath: mmprojPath,
       frequencyPenalty: 0.0,
       // Don't use below 1.1, LLMs without a repeat penalty
       // will repeat the same token.
@@ -121,7 +121,7 @@ class LocalLLMService {
 
     List<String> responseBuff = [];
 
-    final chatTemplate = await fllamaChatTemplateGet(_modelPath!);
+    final chatTemplate = await fllamaChatTemplateGet(_modelPath);
 
     int requestId = await fllamaChat(request, (response, responseJson, done) {
       responseBuff.add(response);
@@ -130,7 +130,7 @@ class LocalLLMService {
         _runningRequestId = null;
         finalResponse = _getFinalResponse(responseBuff);
 
-        if(completer.isCompleted){
+        if (completer.isCompleted) {
           completer = Completer<String>();
         }
         // strip thinking, if not using a chat model.
@@ -151,7 +151,7 @@ class LocalLLMService {
 
   bool get isRunning => _runningRequestId != null;
 
-  // method to make sure that the last repsonse wasn't a dummy 
+  // method to make sure that the last repsonse wasn't a dummy
   // (sometimes it returns a random Chinese characters if using Deepseek)
   String _getFinalResponse(List<String> responseBuff) {
     // Start from the end, find the last non-empty response

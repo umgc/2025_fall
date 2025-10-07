@@ -235,7 +235,9 @@ class LocalStorageService {
 
   // Retrieves the path to the selected local llm model from storage or dotenv
   static String getLocalLLMPath() {
-    return _prefs.getString('LOCAL_LLM_PATH') ?? dotenv.env['LOCAL_LLM_PATH'] ?? '';
+    return _prefs.getString('LOCAL_LLM_PATH') ??
+        dotenv.env['LOCAL_LLM_PATH'] ??
+        '';
   }
 
   // returns whether or not the local LLM has a path

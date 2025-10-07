@@ -31,7 +31,7 @@ class UserSettingsState extends State<UserSettings> {
 
   final TextEditingController _googleClientIdController =
       TextEditingController();
-  
+
   Map<String, String> modelMap = {};
   Set<String> downloadedModels = {};
   String? selectedModel;
@@ -48,7 +48,7 @@ class UserSettingsState extends State<UserSettings> {
     //_checkSelectedModelDownloaded();
   }
 
-  Future <void> _initCycle() async{
+  Future<void> _initCycle() async {
     await _loadStoredValues();
     await _fetchModelsCsv();
     await _loadStoredModel();
@@ -325,25 +325,25 @@ class UserSettingsState extends State<UserSettings> {
   }
 
   Future<void> _loadStoredModel() async {
-  // Load previously saved GGUF path
-  final storedPath = LocalStorageService.getLocalLLMPath();
-  String? modelName;
+    // Load previously saved GGUF path
+    final storedPath = LocalStorageService.getLocalLLMPath();
+    String? modelName;
 
-  if (storedPath.isNotEmpty) {
-    // Find the model name in the modelMap that matches the stored path
-    modelMap.forEach((key, url) {
-      final fileName = url.split('/').last; // assuming file name matches
-      if (storedPath.endsWith(fileName)) {
-        modelName = key;
-      }
+    if (storedPath.isNotEmpty) {
+      // Find the model name in the modelMap that matches the stored path
+      modelMap.forEach((key, url) {
+        final fileName = url.split('/').last; // assuming file name matches
+        if (storedPath.endsWith(fileName)) {
+          modelName = key;
+        }
+      });
+    }
+
+    setState(() {
+      _ggufModelPath = storedPath;
+      selectedModel = modelName; // set default selection
     });
   }
-
-  setState(() {
-    _ggufModelPath = storedPath;
-    selectedModel = modelName; // set default selection
-  });
-}
 
   // Get the writable models folder
   Future<String> getModelsDirectory() async {
@@ -385,7 +385,7 @@ class UserSettingsState extends State<UserSettings> {
     });
 
     _httpClient = http.Client();
-    
+
     try {
       final response =
           await _httpClient!.send(http.Request('GET', Uri.parse(url)));
@@ -505,7 +505,8 @@ class UserSettingsState extends State<UserSettings> {
                   if (value != null) {
                     final downloaded = await isModelDownloaded(value);
                     if (downloaded) {
-                      _setDownloadedModelPath(value); // ✅ safe here, not inside build
+                      _setDownloadedModelPath(
+                          value); // ✅ safe here, not inside build
                     }
                   }
                 },

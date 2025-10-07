@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
-import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/prompt_engine.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
@@ -99,7 +98,7 @@ class _AssessmentState extends State<CreateAssessment> {
       setState(() {
         _isLoading = true;
       });
-      final aiModel;
+      final Object aiModel;
       if (selectedLLM == LlmType.CHATGPT) {
         aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
       } else if (selectedLLM == LlmType.GROK) {
@@ -318,11 +317,19 @@ class _AssessmentState extends State<CreateAssessment> {
                       items: LlmType.values.map((LlmType llm) {
                         return DropdownMenuItem<LlmType>(
                           value: llm,
-                          enabled: (llm == LlmType.LOCAL && LocalStorageService.getLocalLLMPath() != "" && _localLlmAvail) ||LocalStorageService.userHasLlmKey(llm),
+                          enabled: (llm == LlmType.LOCAL &&
+                                  LocalStorageService.getLocalLLMPath() != "" &&
+                                  _localLlmAvail) ||
+                              LocalStorageService.userHasLlmKey(llm),
                           child: Text(
                             llm.displayName,
                             style: TextStyle(
-                              color: (llm == LlmType.LOCAL && LocalStorageService.getLocalLLMPath() != "" && _localLlmAvail) || LocalStorageService.userHasLlmKey(llm)
+                              color: (llm == LlmType.LOCAL &&
+                                          LocalStorageService
+                                                  .getLocalLLMPath() !=
+                                              "" &&
+                                          _localLlmAvail) ||
+                                      LocalStorageService.userHasLlmKey(llm)
                                   ? Colors.black87
                                   : Colors.grey,
                             ),
