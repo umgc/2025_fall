@@ -16,6 +16,8 @@ import 'Views/essay_generation.dart';
 import 'Views/quiz_generator.dart';
 import 'Views/gamification_view.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   await dotenv.load();
   // runApp(MyApp());
@@ -62,6 +64,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Learning Lens",
       home: home,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
             seedColor: Provider.of<ThemeNotifier>(context).primaryColor),

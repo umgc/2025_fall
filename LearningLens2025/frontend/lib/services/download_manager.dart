@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:learninglens_app/main.dart';
 
 class DownloadManager {
   static final DownloadManager _instance = DownloadManager._internal();
@@ -51,18 +52,18 @@ class DownloadManager {
 
   Future<String> _getFilePath(String modelName) async {
     final dir = await getApplicationDocumentsDirectory();
-    final modelsDir = Directory('${dir.path}/models');
+    final modelsDir = Directory('${dir.path}\\models');
     if (!await modelsDir.exists()) {
       await modelsDir.create(recursive: true);
     }
-    return '${modelsDir.path}/$modelName.gguf';
+    return '${modelsDir.path}\\$modelName.gguf';
   }
 
   Future<void> init() async {
     if (_initialized) return;
 
     final dir = await getApplicationDocumentsDirectory();
-    final modelsDir = Directory('${dir.path}/models');
+    final modelsDir = Directory('${dir.path}\\models');
     if (!await modelsDir.exists()) {
       await modelsDir.create(recursive: true);
     }
@@ -75,7 +76,7 @@ class DownloadManager {
     if (!_initialized || _baseDir == null) {
       throw StateError('DownloadManager not initialized.');
     }
-    return '$_baseDir/$modelName.gguf';
+    return '$_baseDir\\$modelName.gguf';
   }
 
   bool isDownloaded(String modelName) {
@@ -126,6 +127,9 @@ class DownloadManager {
       await sink.close();
 
       await _updateDownloadedState(modelName);
+      _showDownloadCompleteNotification(modelName);
+
+      await _updateDownloadedState(modelName);
     } catch (e) {
       debugPrint('Download failed for $modelName: $e');
       final filePath = await _getFilePath(modelName);
@@ -138,6 +142,18 @@ class DownloadManager {
       _progress[modelName] = 0.0;
       _cancelled[modelName] = false;
       progressNotifier(modelName).value = 0.0;
+    }
+  }
+
+  void _showDownloadCompleteNotification(String modelName) {
+    if (navigatorKey.currentContext != null) {
+      final context = navigatorKey.currentContext!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Model "$modelName" downloaded successfully!'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -165,6 +181,23 @@ class DownloadManager {
       progressNotifier(modelName).value = 0.0;
 
       debugPrint('Download cancelled: $modelName');
+    }
+  }
+
+  Future<void> deleteModel(String modelName) async {
+    try {
+      final path = await _getFilePath(modelName);
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+        progressNotifier(modelName).value = 0.0;
+        downloadedNotifier(modelName).value = false;
+        debugPrint('Model deleted: $path');
+      } else {
+        debugPrint('Delete skipped — file not found: $path');
+      }
+    } catch (e) {
+      debugPrint('Error deleting model $modelName: $e');
     }
   }
 

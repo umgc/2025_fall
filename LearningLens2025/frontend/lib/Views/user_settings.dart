@@ -9,8 +9,6 @@ import 'package:learninglens_app/services/download_manager.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 
 class UserSettings extends StatefulWidget {
@@ -350,146 +348,7 @@ class UserSettingsState extends State<UserSettings> {
     });
   }
 
-  // Get the writable models folder
-  Future<String> getModelsDirectory() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final modelsDir = Directory('${dir.path}/models');
-    if (!await modelsDir.exists()) {
-      await modelsDir.create(recursive: true);
-    }
-    return modelsDir.path;
-  }
-
-// Get full file path for a model
-  Future<String> getModelFilePath(String modelName) async {
-    final modelsDir = await getModelsDirectory();
-    return '$modelsDir/$modelName.gguf';
-  }
-
-// Check if model has already been downloaded
-  Future<bool> isModelDownloaded(String modelName) async {
-    final path = await getModelFilePath(modelName);
-    return File(path).existsSync() && !isDownloading;
-  }
-
-  Future<void> _setDownloadedModelPath(String model) async {
-    final path = await getModelFilePath(model);
-    final downloaded = await isModelDownloaded(model);
-
-    if (downloaded) {
-      setState(() {
-        _ggufModelPath = path;
-        LocalStorageService.saveLocalLLMPath(path);
-      });
-    }
-  }
-
-  Future<void> downloadModel(String modelName, String url) async {
-    setState(() {
-      isDownloading = true;
-      downloadProgress = 0.0; // Reset progress
-    });
-
-    _httpClient = http.Client();
-
-    try {
-      final request = http.Request('GET', Uri.parse(url));
-      final response = await _httpClient!.send(request);
-
-      final contentLength = response.contentLength ?? 0;
-      final dir = await getApplicationDocumentsDirectory();
-      final filePath = '${dir.path}/models/$modelName.gguf';
-      _currentDownloadPath = filePath;
-      final file = File(filePath);
-      final sink = file.openWrite();
-
-      int bytesReceived = 0;
-      final stopwatch = Stopwatch()..start();
-
-      await for (final chunk in response.stream) {
-        if (_isCancelled) {
-          await sink.close();
-          await file.delete(); // Clean up partial file
-          debugPrint("Download cancelled by user.");
-          setState(() {
-            isDownloading = false;
-            _currentDownloadPath = null;
-            downloadProgress = 0.0;
-          });
-          return;
-        }
-
-        bytesReceived += chunk.length;
-        sink.add(chunk);
-
-        // Only update UI every 1 second to reduce rebuild load
-        if (stopwatch.elapsedMilliseconds > 1000 && contentLength > 0) {
-          stopwatch.reset();
-          if (mounted) {
-            setState(() {
-              downloadProgress = bytesReceived / contentLength;
-            });
-          }
-        }
-      }
-
-      await sink.close();
-
-      if (mounted) {
-        setState(() {
-          isDownloading = false;
-          _currentDownloadPath = null;
-          downloadProgress = 1.0;
-          _ggufModelPath = filePath;
-          LocalStorageService.saveLocalLLMPath(filePath);
-        });
-      }
-
-      debugPrint("Download completed: $filePath");
-    } catch (e) {
-      if (!mounted) return;
-
-      if (mounted) {
-        setState(() {
-          isDownloading = false;
-          _currentDownloadPath = null;
-          downloadProgress = 0.0;
-        });
-      }
-
-      if (_isCancelled) {
-        debugPrint("Download cancelled by user.");
-      } else {
-        debugPrint("Download failed: $e");
-      }
-    } finally {
-      _httpClient?.close();
-      _httpClient = null;
-    }
-  }
-
-  void cancelDownload() async {
-    if (_httpClient != null) {
-      _httpClient!.close(); // aborts the request
-      _httpClient = null;
-
-      // Clean up partial file if it exists
-      if (_currentDownloadPath != null) {
-        final file = File(_currentDownloadPath!);
-        if (await file.exists()) {
-          await file.delete();
-          debugPrint("Partial download deleted: $_currentDownloadPath");
-        }
-      }
-
-      setState(() {
-        isDownloading = false;
-        _currentDownloadPath = null;
-      });
-    }
-  }
-
-// Fetch CSV from GitHub
+  // Fetch CSV from GitHub
   Future<void> _fetchModelsCsv() async {
     final url = Uri.parse(
       'https://raw.githubusercontent.com/ssung13/SWEN670F2025/main/models.csv',
@@ -564,20 +423,68 @@ class UserSettingsState extends State<UserSettings> {
                           builder: (context, progress, child) {
                             final isDownloaded = progress >= 1.0 ||
                                 DownloadManager().isDownloaded(key);
+
                             if (isDownloaded) {
                               return Row(
-                                children: const [
-                                  Icon(Icons.check,
+                                children: [
+                                  const Icon(Icons.check,
                                       color: Colors.green, size: 18),
-                                  SizedBox(width: 4),
-                                  Text(
+                                  const SizedBox(width: 4),
+                                  const Text(
                                     'Downloaded',
                                     style: TextStyle(
                                         color: Colors.green, fontSize: 12),
                                   ),
+                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red, size: 18),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    tooltip: 'Delete model',
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Delete Model'),
+                                          content: Text(
+                                              'Are you sure you want to delete "$key"?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        await DownloadManager()
+                                            .deleteModel(key);
+                                        LocalStorageService.saveLocalLLMPath(
+                                            "");
+                                        _ggufModelPath = "";
+
+                                        if (selectedModel == key) {
+                                          setState(() {
+                                            selectedModel = null;
+                                          });
+                                        }
+                                        // Rebuild to reflect change
+                                        (context as Element).markNeedsBuild();
+                                      }
+                                    },
+                                  ),
                                 ],
                               );
                             }
+
                             return const SizedBox.shrink();
                           },
                         ),
@@ -601,23 +508,41 @@ class UserSettingsState extends State<UserSettings> {
                       DownloadManager().isDownloaded(selectedModel!);
 
                   if (isDownloaded) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () async {
-                            final path = await DownloadManager()
-                                .getFilePath(selectedModel!);
-                            LocalStorageService.saveLocalLLMPath(path);
-                            setState(() {
-                              _ggufModelPath = path;
-                            });
-                            debugPrint('Model loaded: $path');
-                          },
-                          child: const Text('Load this model'),
-                        ),
-                      ],
-                    );
+                    final modelName = _ggufModelPath!
+                        .split('models\\')
+                        .last
+                        .split(".gguf")
+                        .first;
+                    print(modelName);
+                    if (modelName != selectedModel!) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () async {
+                              final path = await DownloadManager()
+                                  .getFilePath(selectedModel!);
+                              LocalStorageService.saveLocalLLMPath(path);
+                              setState(() {
+                                _ggufModelPath = path;
+                              });
+                              debugPrint('Model loaded: $path');
+                            },
+                            child: const Text('Load this model'),
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ElevatedButton(
+                            onPressed: null,
+                            child: const Text('Loaded'),
+                          ),
+                        ],
+                      );
+                    }
                   } else if (isDownloading) {
                     return Row(
                       children: [
@@ -679,9 +604,11 @@ class UserSettingsState extends State<UserSettings> {
                 );
                 if (result != null && result.files.single.path != null) {
                   setState(() {
-                    _ggufModelPath = result.files.single.path!;
-                    LocalStorageService.saveLocalLLMPath(_ggufModelPath!);
-                    selectedModel = "User Selected LLM";
+                    selectedModel = result.files.single.path!
+                        .split('\\')
+                        .last
+                        .split(".gguf")
+                        .first;
 
                     if (!modelMap.containsKey(selectedModel)) {
                       modelMap[selectedModel!] =
@@ -702,7 +629,7 @@ class UserSettingsState extends State<UserSettings> {
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
             child: Text(
-              'Selected: $_ggufModelPath',
+              'Currently Loaded Model: $_ggufModelPath',
               style: const TextStyle(fontStyle: FontStyle.italic),
             ),
           ),
