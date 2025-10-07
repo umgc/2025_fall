@@ -12,7 +12,8 @@ public record LoginResponse(
         Long patientId,      
         Long caregiverId,
         String name,
-        String status
+        String status,
+        boolean emailVerified
         ) {
 
     public static LoginResponseBuilder builder() {
@@ -28,6 +29,7 @@ public record LoginResponse(
         private Long caregiverId;
         private String name;
         private String status;
+        private boolean emailVerified;
 
         public LoginResponseBuilder name(String name) {
             this.name = name;
@@ -68,9 +70,14 @@ public record LoginResponse(
             this.token = token;
             return this;
         }
+        
+        public LoginResponseBuilder emailVerified(boolean emailVerified) {
+            this.emailVerified = emailVerified;
+            return this;
+        }
 
         public LoginResponse build() {
-            return new LoginResponse(id, email, role, token, patientId, caregiverId, name, status);
+            return new LoginResponse(id, email, role, token, patientId, caregiverId, name, status, emailVerified);
         }
     }
 }

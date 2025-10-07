@@ -21,6 +21,15 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
+<<<<<<< HEAD
+=======
+        },
+        {
+            "name": "mock-server",
+            "cwd": "mock-server",
+            "request": "launch",
+            "type": "dart"
+>>>>>>> origin/team_d_ocr_textract
         }
     ]
 }

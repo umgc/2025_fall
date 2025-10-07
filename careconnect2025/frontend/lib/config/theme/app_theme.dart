@@ -330,9 +330,189 @@ class AppTheme {
         borderRadius: BorderRadius.all(Radius.circular(_radius)),
         borderSide: BorderSide(color: _primaryLight, width: 1.6),
       ),
+<<<<<<< HEAD
       errorBorder: const OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(_radius)),
         borderSide: BorderSide(color: _errorLight),
+=======
+      scaffoldBackgroundColor: backgroundPrimary,
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: cardBackground,
+        contentTextStyle: TextStyle(color: textPrimary),
+        actionTextColor: primary,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primary, // Using our UX blue color
+        foregroundColor: textLight,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: textLight,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        iconTheme: IconThemeData(color: textLight),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        color: cardBackground,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(style: primaryButtonStyle),
+      textButtonTheme: TextButtonThemeData(style: textButtonStyle),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        fillColor: backgroundPrimary,
+        filled: true,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: headingLarge,
+        displayMedium: headingMedium,
+        displaySmall: headingSmall,
+        bodyLarge: bodyLarge,
+        bodyMedium: bodyMedium,
+        bodySmall: bodySmall,
+      ),
+      dividerTheme: const DividerThemeData(thickness: 1, color: borderColor),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return textSecondary.withOpacity(0.3);
+          }
+          return primary;
+        }),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+      ),
+      iconTheme: const IconThemeData(color: textPrimary),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: backgroundPrimary,
+        selectedItemColor: primary,
+        unselectedItemColor: textSecondary,
+      ),
+      useMaterial3: true,
+    );
+  }
+
+  // Generate dark theme data for MaterialApp
+  static ThemeData get darkTheme {
+    return ThemeData(
+      primaryColor: primaryDarkTheme,
+      colorScheme: const ColorScheme.dark(
+        primary: primaryDarkTheme,
+        secondary: accentDarkTheme,
+        error: errorDarkTheme,
+        surface: cardBackgroundDarkTheme,
+        onPrimary: textDarkThemeDark,
+        onSecondary: textDarkThemeDark,
+        onSurface: textPrimaryDarkTheme,
+        onError: textDarkThemeDark,
+        brightness: Brightness.dark,
+      ),
+      scaffoldBackgroundColor: backgroundPrimaryDarkTheme,
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: cardBackgroundDarkTheme,
+        contentTextStyle: TextStyle(color: textPrimaryDarkTheme),
+        actionTextColor: primaryDarkThemeLight,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryDarkTheme, // Using our primary dark theme color
+        foregroundColor: textDarkThemeDark,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: textDarkThemeDark,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        iconTheme: IconThemeData(color: textDarkThemeDark),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        color: cardBackgroundDarkTheme,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryDarkTheme,
+          foregroundColor: textDarkThemeDark,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: buttonText,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primaryDarkThemeLight,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: borderColorDarkTheme)
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: primaryDarkThemeLight, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        fillColor: backgroundSecondaryDarkTheme,
+        filled: true,
+        labelStyle: const TextStyle(color: textSecondaryDarkTheme),
+        hintStyle: const TextStyle(color: textSecondaryDarkTheme),
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: textPrimaryDarkTheme,
+        ),
+        displayMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: textPrimaryDarkTheme,
+        ),
+        displaySmall: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: textPrimaryDarkTheme,
+        ),
+        bodyLarge: TextStyle(fontSize: 16, color: textPrimaryDarkTheme),
+        bodyMedium: TextStyle(fontSize: 14, color: textPrimaryDarkTheme),
+        bodySmall: TextStyle(fontSize: 12, color: textSecondaryDarkTheme),
+      ),
+      dividerTheme: const DividerThemeData(
+        thickness: 1,
+        color: borderColorDarkTheme,
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return textSecondaryDarkTheme.withOpacity(0.3);
+          }
+          return primaryDarkTheme;
+        }),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+      ),
+      iconTheme: const IconThemeData(color: textPrimaryDarkTheme),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: backgroundPrimaryDarkTheme,
+        selectedItemColor: primaryDarkThemeLight,
+        unselectedItemColor: textSecondaryDarkTheme,
+      ),
+      useMaterial3: true,
+      dialogTheme: const DialogThemeData(
+        backgroundColor: cardBackgroundDarkTheme,
+>>>>>>> origin/team_d_ocr_textract
       ),
     );
   }

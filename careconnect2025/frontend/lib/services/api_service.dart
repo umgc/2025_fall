@@ -35,6 +35,8 @@ class ApiConstants {
   // AI Services endpoints
   static final String aiChat = '$_host/v1/api/ai-chat';
   static final String aiConfig = '$_host/v1/api/ai-chat/config';
+  // Invoices endpoints
+  static final String invoices = '$_host/v1/api/invoices';
 }
 
 class ApiService {
@@ -110,9 +112,7 @@ class ApiService {
 
   static Future<http.Response> login(
     String email,
-    String password, {
-    String role = 'patient',
-  }) async {
+    String password) async {
     return await _httpClient
         .post(
           Uri.parse('${ApiConstants.auth}/login'),
@@ -120,7 +120,6 @@ class ApiService {
           body: jsonEncode({
             'email': email,
             'password': password,
-            'role': role,
           }),
         )
         .timeout(const Duration(seconds: 30));
@@ -763,7 +762,7 @@ class ApiService {
     final headers = await AuthTokenManager.getAuthHeaders();
     return await http.get(
       Uri.parse(
-        '${ApiConstants._host}/v1/api/patients/$patientId/family-members',
+        '${ApiConstants._host}/v1/api/patients/$patientId',
       ),
       headers: headers,
     );
