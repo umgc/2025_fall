@@ -18,7 +18,10 @@ public class DeepSeekService {
     @Value("${deepseek.api.url:https://api.deepseek.com/v1}")
     private String apiUrl;
 
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
     public DeepSeekService() {
+        this.restTemplate = new org.springframework.web.client.RestTemplate();
     }
 
     public DeepSeekResponse sendChatRequest(DeepSeekChatRequest request) {
@@ -29,8 +32,7 @@ public class DeepSeekService {
         log.info("Sending chat request to DeepSeek with model: {}", request.getModel());
 
         try {
-            // Use RestTemplate for HTTP communication
-            var restTemplate = new org.springframework.web.client.RestTemplate();
+            // Use reusable RestTemplate instance for HTTP communication
             var headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
             headers.setBearerAuth(apiKey);

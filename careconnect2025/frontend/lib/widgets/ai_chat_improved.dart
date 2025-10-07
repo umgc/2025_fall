@@ -657,13 +657,13 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       if (currentUserId == null) {
         setState(() {
           _isLoading = false;
+          _messages.add(ChatMessage(
+            text: 'Authentication error: Please log in to use the chat feature.',
+            isUser: false,
+            timestamp: DateTime.now(),
+            errorMessage: 'User ID not found',
+          ));
         });
-        _messages.add(ChatMessage(
-          text: 'Authentication error: Please log in to use the chat feature.',
-          isUser: false,
-          timestamp: DateTime.now(),
-          errorMessage: 'User ID not found',
-        ));
         return;
       }
 

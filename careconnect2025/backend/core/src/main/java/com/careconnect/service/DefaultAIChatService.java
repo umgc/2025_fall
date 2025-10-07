@@ -441,9 +441,10 @@ public class DefaultAIChatService implements AIChatService {
                 return buildErrorResponse(request, "Authentication required: User ID is missing");
             }
 
-            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
-                log.error("Chat request missing message content");
-                return buildErrorResponse(request, "Message content is required");
+            if ((request.getMessage() == null || request.getMessage().trim().isEmpty())
+                    && (request.getUploadedFiles() == null || request.getUploadedFiles().isEmpty())) {
+                log.error("Chat request missing message content and files");
+                return buildErrorResponse(request, "Message content or at least one file is required");
             }
             // Validate patient exists and user has access
             Patient patient = patientRepository.findById(request.getPatientId())

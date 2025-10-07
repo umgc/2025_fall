@@ -8,15 +8,15 @@ set -e  # Exit on error
 echo "Loading CareConnect environment variables..."
 
 # Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "Error: .env file not found in current directory"
+if [ ! -f "../.env" ]; then
+    echo "Error: .env file not found in backend directory"
     echo "Please create a .env file based on the provided template"
     exit 1
 fi
 
 # Load environment variables from .env file
 set -a  # Automatically export all variables
-source .env
+source ../.env
 set +a  # Stop auto-exporting
 
 echo "Environment variables loaded successfully!"
@@ -25,11 +25,12 @@ echo "Database: $JDBC_URI"
 # Verify critical variables are set
 required_vars=(
     "JDBC_URI"
-    "DB_USER" 
+    "DB_USER"
     "DB_PASSWORD"
     "SECURITY_JWT_SECRET"
     "FIREBASE_PROJECT_ID"
     "FIREBASE_SENDER_ID"
+    "DEEPSEEK_API_KEY"
 )
 
 missing_vars=()
@@ -107,7 +108,8 @@ echo "----------------------------------------"
 echo "Development Configuration:"
 echo "- Database: PostgreSQL (Docker)"
 echo "- Profile: dev"
-echo "- API Keys: Mocked"
+echo "- DeepSeek AI: Real API (${DEEPSEEK_API_KEY:0:10}...)"
+echo "- Other API Keys: Mocked"
 echo "- Email: Console logging"
 echo "- File Storage: Local"
 echo "----------------------------------------"

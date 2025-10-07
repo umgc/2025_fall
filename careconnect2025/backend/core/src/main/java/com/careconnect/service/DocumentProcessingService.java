@@ -353,14 +353,24 @@ public class DocumentProcessingService {
         if (content == null || content.trim().isEmpty()) {
             return false;
         }
-        
+
         // Simple check - base64 strings are typically longer and contain only base64 characters
         if (content.length() < 100) {
             return false;
         }
-        
+
+        // Performance optimization: check only the first 1000 characters for base64 pattern
+        String sample = content.length() > 1000 ? content.substring(0, 1000) : content;
+
+        // Base64 characters: A-Z, a-z, 0-9, +, /, = (for padding)
+        // Also check for typical base64 characteristics
+        if (!sample.matches("^[A-Za-z0-9+/]*={0,2}$")) {
+            return false;
+        }
+
+        // Verify with actual decoding on small sample to be sure
         try {
-            Base64.getDecoder().decode(content);
+            Base64.getDecoder().decode(sample.replaceAll("=+$", "")); // Remove padding for test
             return true;
         } catch (Exception e) {
             return false;

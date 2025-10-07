@@ -4,7 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
@@ -165,13 +169,33 @@ public class ChatAuditService {
         logAuditEntry(entry);
     }
     
+    // Salt for user ID hashing - in production, this should be loaded from secure configuration
+    private static final String USER_ID_SALT = "CareConnect_UserAudit_Salt_2024";
+
     /**
-     * Hash user ID for privacy
+     * Hash user ID for privacy using SHA-256 with salt
      */
     private String hashUserId(Long userId) {
         if (userId == null) return "anonymous";
-        // Simple hash for demo - in production use proper cryptographic hashing
-        return "user_" + Math.abs(userId.hashCode());
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            // Combine userId with salt
+            String input = userId.toString() + USER_ID_SALT;
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+
+            // Convert to base64 for storage
+            String hashedId = Base64.getEncoder().encodeToString(hash);
+
+            // Take first 12 characters for readability while maintaining uniqueness
+            return "user_" + hashedId.substring(0, 12);
+
+        } catch (Exception e) {
+            log.error("Error hashing user ID: {}", e.getMessage());
+            // Fallback to secure random prefix if hashing fails
+            return "user_" + UUID.randomUUID().toString().substring(0, 8);
+        }
     }
     
     /**
