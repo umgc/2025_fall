@@ -27,8 +27,3 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
-
-# Terraform
-.terraform*
-*.tfstate*
-

@@ -296,6 +296,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       Expanded(
                           child: DropdownButtonFormField<Course?>(
                         value: selectedCourse,
+                        isExpanded: true,
                         items: List.empty(growable: true)
                           ..add(DropdownMenuItem<Course?>(
                               value: null, child: Text('Select Course')))
@@ -328,6 +329,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                     border: OutlineInputBorder(),
                                     disabledBorder: null,
                                     enabled: selectedCourse != null),
+                                isExpanded: true,
                                 value: selectedAssignment,
                                 items: selectedCourse == null
                                     ? null
@@ -360,6 +362,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                     disabledBorder: null,
                                     enabled: selectedCourse != null),
                                 value: selectedStudent,
+                                isExpanded: true,
                                 dropdownColor: selectedCourse == null
                                     ? Colors.grey.shade400
                                     : null,
@@ -389,8 +392,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectStartDate,
                         child: startDate == null
-                            ? Text("Select Start Date")
-                            : Text("Start Date: ${getDateString(startDate!)}"),
+                            ? Text("Select Start Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("Start Date: ${getDateString(startDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       Expanded(
@@ -398,20 +403,23 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectEndDate,
                         child: endDate == null
-                            ? Text("Select End Date")
-                            : Text("End Date: ${getDateString(endDate!)}"),
+                            ? Text("Select End Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("End Date: ${getDateString(endDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       ElevatedButton(
                         onPressed:
                             (selectedCourse == null) ? null : _queryDatabase,
-                        child: const Text('Filter'),
+                        child: const Text('Filter', maxLines: 1),
                       ),
                       Spacer(),
                       ElevatedButton(
                         onPressed:
                             logSource.sortedData.isEmpty ? null : _exportLogs,
-                        child: const Text('Export Logs'),
+                        child: const Text('Export Logs',
+                            maxLines: 2, textAlign: TextAlign.center),
                       ),
                     ]))
               ],

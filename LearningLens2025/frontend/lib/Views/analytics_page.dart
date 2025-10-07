@@ -1,9 +1,13 @@
 import 'dart:io' show File; // For non-web file I/O
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
+import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
+import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
 
@@ -105,7 +109,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   late ScrollController _horizontalQuestionController;
 
   // AI Analysis data.
-  List<Map<String, dynamic>> _aiAnalysisData = [];
+  List<Map<String, dynamic>> _aiAnalysisSuccess = [];
+  List<Map<String, dynamic>> _aiAnalysisFail = [];
+  List<Map<String, dynamic>> _aiAnalysisAi = [];
+  List<Map<String, dynamic>> _aiAnalysisCourse = [];
   bool _isAnalyzingAI = false;
 
   LlmType? selectedLLM;
@@ -532,13 +539,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     pdf.addPage(
       pw.MultiPage(
         build: (pw.Context context) {
-          if (_aiAnalysisData.isEmpty) {
+          if (_aiAnalysisSuccess.isEmpty) {
             return [
               pw.Center(child: pw.Text("No AI Analysis Data available."))
             ];
           }
           final headers = ['Student', 'Status', 'Comments'];
-          final data = _aiAnalysisData
+          final data = _aiAnalysisSuccess
               .map((row) => [
                     row['Student']?.toString() ?? '',
                     row['Status']?.toString() ?? '',
@@ -559,7 +566,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     var excel = Excel.createExcel();
     Sheet sheet = excel['AI Analysis'];
     sheet.appendRow(['Student', 'Status', 'Comments']);
-    for (var row in _aiAnalysisData) {
+    for (var row in _aiAnalysisSuccess) {
       sheet.appendRow([
         row['Student']?.toString() ?? '',
         row['Status']?.toString() ?? '',
@@ -604,7 +611,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 // Clear dependent tables when course changes.
                 _studentBreakdown.clear();
                 _questionBreakdown.clear();
-                _aiAnalysisData.clear();
+                _aiAnalysisSuccess.clear();
+                _aiAnalysisFail.clear();
+                _aiAnalysisAi.clear();
+                _aiAnalysisCourse.clear();
                 _selectedStudent = null;
               });
               if (_selectedCourse != null) {
@@ -647,7 +657,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   // Optionally clear dependent tables if needed.
                   _studentBreakdown.clear();
                   _questionBreakdown.clear();
-                  _aiAnalysisData.clear();
+                  _aiAnalysisSuccess.clear();
+                  _aiAnalysisFail.clear();
+                  _aiAnalysisAi.clear();
+                  _aiAnalysisCourse.clear();
                   _selectedStudent = null;
                 });
               },
@@ -669,48 +682,65 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 // Clear question breakdown, student breakdown and AI analysis when assessment changes.
                 _questionBreakdown.clear();
                 _studentBreakdown.clear();
-                _aiAnalysisData.clear();
+                _aiAnalysisSuccess.clear();
+                _aiAnalysisFail.clear();
+                _aiAnalysisAi.clear();
+                _aiAnalysisCourse.clear();
                 _selectedStudent = null;
               });
             },
           ),
           const SizedBox(height: 12),
+          Row(children: [
+            ElevatedButton(
+              onPressed: (_selectedCourse == null ||
+                      _selectedSubject == null ||
+                      _selectedAssessment == null)
+                  ? null
+                  : _generateReport,
+              child: const Text('Generate'),
+            ),
+            Spacer(),
+            DropdownButton<LlmType>(
+                value: selectedLLM,
+                onChanged: (LlmType? newValue) {
+                  setState(() {
+                    selectedLLM = newValue;
+                  });
+                },
+                items: LlmType.values.map((LlmType llm) {
+                  return DropdownMenuItem<LlmType>(
+                    value: llm,
+                    enabled: LocalStorageService.userHasLlmKey(llm),
+                    child: Text(
+                      llm.displayName,
+                      style: TextStyle(
+                        color: LocalStorageService.userHasLlmKey(llm)
+                            ? Colors.black87
+                            : Colors.grey,
+                      ),
+                    ),
+                  );
+                }).toList()),
+          ]),
           Row(
             children: [
-              ElevatedButton(
-                onPressed: _generateReport,
-                child: const Text('Generate'),
-              ),
-              const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: _studentBreakdown.isNotEmpty ? _saveReport : null,
                 child: const Text('Export'),
               ),
-              const SizedBox(width: 8),
-              DropdownButton<LlmType>(
-                  value: selectedLLM,
-                  onChanged: (LlmType? newValue) {
-                    setState(() {
-                      selectedLLM = newValue;
-                    });
-                  },
-                  items: LlmType.values.map((LlmType llm) {
-                    return DropdownMenuItem<LlmType>(
-                      value: llm,
-                      enabled: LocalStorageService.userHasLlmKey(llm),
-                      child: Text(
-                        llm.displayName,
-                        style: TextStyle(
-                          color: LocalStorageService.userHasLlmKey(llm)
-                              ? Colors.black87
-                              : Colors.grey,
-                        ),
-                      ),
-                    );
-                  }).toList()),
+              Spacer(),
               ElevatedButton(
-                onPressed: _studentBreakdown.isNotEmpty && selectedLLM != null
-                    ? _analyzeReport
+                onPressed: _studentBreakdown.isNotEmpty &&
+                            selectedLLM != null &&
+                            _selectedCourse != null ||
+                        _selectedAssessment != null
+                    ? () => _analyzeReport(
+                        _selectedCourse!,
+                        _selectedAssessment!,
+                        _participantsData,
+                        _selectedStudent?["id"],
+                        isEssay() ? null : _questionBreakdown.toList())
                     : null,
                 child: _isAnalyzingAI
                     ? const SizedBox(
@@ -718,7 +748,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         height: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('AI Analyze'),
+                    : Text(_selectedStudent == null
+                        ? 'AI Analyze Course'
+                        : 'AI Analyze Student'),
               ),
             ],
           ),
@@ -814,54 +846,64 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return SizedBox(
       height: 300,
       child: Scrollbar(
-        thumbVisibility: true,
-        controller: _verticalStudentController,
-        child: SingleChildScrollView(
+          thumbVisibility: true,
           controller: _verticalStudentController,
-          scrollDirection: Axis.vertical,
-          child: Scrollbar(
-            thumbVisibility: true,
-            controller: _horizontalStudentController,
-            notificationPredicate: (notification) => notification.depth == 2,
-            child: SingleChildScrollView(
-              controller: _horizontalStudentController,
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 12.0,
-                columns: const [
-                  DataColumn(label: Text('Student Name')),
-                  DataColumn(label: Text('Average Grade')),
-                  DataColumn(label: Text('Class Rank')),
-                ],
-                rows: _studentBreakdown.map((student) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedStudent = student;
-                            });
-                          },
-                          child: Text(
-                            student['studentName'].toString(),
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
+          child: SingleChildScrollView(
+            controller: _verticalStudentController,
+            child: DataTable(
+              showCheckboxColumn: false,
+              columnSpacing: 12.0,
+              columns: const [
+                DataColumn(label: Expanded(child: Text('Student Name'))),
+                DataColumn(label: Text('Average Grade')),
+                DataColumn(label: Text('Class Rank')),
+              ],
+              rows: _studentBreakdown.map((student) {
+                return DataRow(
+                  color: WidgetStateProperty.resolveWith<Color?>(
+                      (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.15);
+                    }
+                    if (states.contains(WidgetState.hovered)) {
+                      return Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.25);
+                    }
+                    return _studentBreakdown.indexOf(student) % 2 == 0
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(.55)
+                        : null; // Use the default value.
+                  }),
+                  selected: student == _selectedStudent,
+                  onSelectChanged: (val) {
+                    setState(() {
+                      _selectedStudent = student;
+                    });
+                  },
+                  cells: [
+                    DataCell(
+                      Text(
+                        student['studentName'].toString(),
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
                         ),
                       ),
-                      DataCell(Text(student['avgGrade'].toString())),
-                      DataCell(Text(student['classRank'].toString())),
-                    ],
-                  );
-                }).toList(),
-              ),
+                    ),
+                    DataCell(Text(student['avgGrade'].toString())),
+                    DataCell(Text(student['classRank'].toString())),
+                  ],
+                );
+              }).toList(),
             ),
-          ),
-        ),
-      ),
+          )),
     );
   }
 
@@ -1021,10 +1063,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               // Top-left: the report form
               _buildReportForm(),
               const SizedBox(height: 20),
-              const Text(
-                'Student Breakdown',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              Row(children: [
+                Text(
+                  'Student Breakdown',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Spacer(),
+                ElevatedButton(
+                    onPressed: _selectedStudent == null
+                        ? null
+                        : () => setState(() {
+                              _selectedStudent = null;
+                            }),
+                    child: Text("Clear Selection"))
+              ]),
               const SizedBox(height: 8),
               Container(
                 color: Colors.white,
@@ -1113,24 +1165,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           // 2x2 grid view.
           _buildMainGrid(),
           // AI Analysis table below the grid with an export button.
-          if (_aiAnalysisData.isNotEmpty) ...[
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'AI Analysis Summary',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                ElevatedButton(
-                  onPressed: _exportAIAnalysis,
-                  child: const Text('Export AI Analysis'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _buildAIAnalysisTable(),
-          ],
+          const SizedBox(height: 30),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'AI Analysis Summary',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton(
+                onPressed: _aiAnalysisSuccess.isNotEmpty ||
+                        _aiAnalysisFail.isNotEmpty ||
+                        _aiAnalysisCourse.isNotEmpty ||
+                        _aiAnalysisAi.isNotEmpty
+                    ? _exportAIAnalysis
+                    : null,
+                child: const Text('Export AI Analysis'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildAIAnalysisTable(),
           const SizedBox(height: 30),
         ],
       ),
@@ -1162,14 +1217,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
   Widget _buildAIAnalysisTable() {
-    if (_aiAnalysisData.isEmpty) return const SizedBox.shrink();
+    if (_aiAnalysisSuccess.isEmpty &&
+        _aiAnalysisFail.isEmpty &&
+        _aiAnalysisCourse.isEmpty &&
+        _aiAnalysisAi.isEmpty) {
+      return const Text("There is no AI analysis data.");
+    }
     return DataTable(
       columns: const [
         DataColumn(label: Text('Student')),
         DataColumn(label: Text('Status')),
         DataColumn(label: Text('Comments')),
       ],
-      rows: _aiAnalysisData.map((row) {
+      rows: _aiAnalysisSuccess.map((row) {
         return DataRow(
           cells: [
             DataCell(Text(row['Student']?.toString() ?? '')),
@@ -1213,32 +1273,317 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return (grandTotalAttempts / questionCount).round();
   }
 
-  Future<void> _analyzeReport() async {
-    if (_studentBreakdown.isEmpty) return;
+  Future<void> _analyzeReport(
+      Course selectedCourse,
+      Assessment selectedAssessment,
+      List<Participant> participantsData,
+      int? selectedStudentId,
+      List<QuestionStatsType>? questionBreakdown) async {
+    setState(() {
+      _isAnalyzingAI = true;
+    });
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
                 "No AI credentials found. Please log in to an AI platform.")),
       );
+      setState(() {
+        _isAnalyzingAI = false;
+      });
       return;
     }
 
-    String courseName = _selectedCourse?.fullName ?? "Unknown Course";
-    String assessmentName = _selectedAssessment?.name ?? "Unknown Assessment";
+    String assignmentDescription;
+    Participant? selectedParticipant =
+        participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
 
     // Build a summary string from the student breakdown data.
-    String studentSummary = _studentBreakdown.map((student) {
-      return "Name: ${student['studentName']}, Avg Grade: ${student['avgGrade']}, Rank: ${student['classRank']}";
-    }).join("\n");
+    if (selectedAssessment.type == "essay") {
+      String studentSummary;
+      assignmentDescription =
+          (selectedAssessment.assessment as Assignment).description;
+      List<Submission> submissions =
+          await lmsService.getAssignmentSubmissions(selectedAssessment.id);
+      List<AiLog> aiLogs = await AILoggingSingleton().getLogs(
+          selectedCourse,
+          selectedAssessment.assessment,
+          selectedParticipant,
+          LocalStorageService.getSelectedClassroom().index,
+          DateTime(2025, 9),
+          DateTime(
+              DateTime.now().year, DateTime.now().month, DateTime.now().day));
 
-    String prompt =
-        "Analyze the following analytics data for course '$courseName' and assignment '$assessmentName'.\n"
-        "Student Breakdown Data:\n$studentSummary\n"
-        "Based on this data, provide a thorough analysis indicating which students are excelling, "
-        "which are struggling, and which may not have completed the assignment. "
-        "Return your analysis as a JSON array where each element is an object with keys 'Student', 'Status', and 'Comments'.";
+      // Whole course
+      if (selectedParticipant == null) {
+        studentSummary = participantsData
+            .map((student) {
+              Submission? s =
+                  submissions.firstWhereOrNull((s) => s.userid == student.id);
+              if (s != null) {
+                return "Name: ${student.fullname}, Submission: ${s.onlineText}";
+              } else {
+                return "";
+              }
+            })
+            .where((result) => result.isNotEmpty)
+            .join("\n");
+      }
+      // Single student
+      else {
+        studentSummary =
+            "Name: ${selectedParticipant.fullname}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == selectedParticipant.id)?.onlineText}";
+      }
 
+      String aiSummary = aiLogs.map((logEntry) {
+        return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
+      }).join("\n");
+
+      await _analyzeEssaySuccess(
+          selectedAssessment.name, assignmentDescription, studentSummary);
+      await _analyzeEssayMisunderstanding(
+          selectedAssessment.name, assignmentDescription, studentSummary);
+      await _analyzeEssayAiUse(
+          selectedAssessment.name, assignmentDescription, aiSummary);
+    } else {
+      if (questionBreakdown == null) {
+        setState(() {
+          _isAnalyzingAI = false;
+        });
+        return;
+      }
+      String studentSummary;
+      assignmentDescription =
+          (selectedAssessment.assessment as Quiz).description ?? "";
+      if (selectedParticipant != null) {
+        List studentData = await (lmsService as moodle.MoodleLmsService)
+            .getQuizStatsForStudent(
+                (selectedAssessment.assessment as Quiz).id!.toString(),
+                selectedParticipant.id);
+        studentSummary = studentData.map((question) {
+          return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
+        }).join("\n");
+        await _analyzeStudentQuizSuccess(
+            selectedAssessment.name,
+            assignmentDescription,
+            studentSummary,
+            selectedParticipant.fullname);
+        await _analyzeStudentQuizMisunderstanding(
+            selectedAssessment.name,
+            assignmentDescription,
+            studentSummary,
+            selectedParticipant.fullname);
+      } else {
+        studentSummary = questionBreakdown.map((q) {
+          return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
+        }).join("\n");
+        await _analyzeCourseQuizSuccess(
+            selectedAssessment.name, assignmentDescription, studentSummary);
+        await _analyzeCourseQuizMisunderstanding(
+            selectedAssessment.name, assignmentDescription, studentSummary);
+      }
+      print(studentSummary);
+    }
+    await _analyzeAssignmentImprovements(
+        selectedAssessment.name,
+        selectedCourse.fullName,
+        assignmentDescription,
+        _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+        _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
+    setState(() {
+      _isAnalyzingAI = false;
+    });
+  }
+
+  Future<void> _analyzeEssaySuccess(
+      String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = """
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student Assignment Submissions:
+    $studentSummary
+    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students understood.
+    To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students understood,
+    based on the number of students who discussed that topic in their essay submission.
+    For each area, provide the topic name and the percentage of student submissions that discussed the topic.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three discussed topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisSuccess = response;
+    });
+  }
+
+  Future<void> _analyzeEssayMisunderstanding(
+      String assessmentName, String essayPrompt, String studentSummary) async {
+    String successPrompt = """
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student Assignment Submissions:
+    $studentSummary
+    Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students did not understand.
+    To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students did not understand,
+    based on the number of students who failed to discuss that topic in their essay submission.
+    For each area, provide the topic name and the percentage of student submissions that did not discuss the topic.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three topics that were not discussed are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisFail = response;
+    });
+  }
+
+  Future<void> _analyzeEssayAiUse(
+      String assessmentName, String essayPrompt, String aiSummary) async {
+    String successPrompt = """
+    Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Student AI Interactions:
+    $aiSummary
+    Based on the student AI interactions, provide a thorough analysis on how students used and reflected on AI use throughout the assignment.
+    To perform your analysis, summarize the student prompts and reflections on AI use.
+    If there is no AI use on this essay, then there is nothing to summarize.
+    Provide a textual summary. Additionally, determine the top three AI use cases, each with a brief description and a percentage. If there was no AI use on this essay, then this list should be empty.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three AI use areas are an object named 'Data' with keys 'Area' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisAi = response;
+    });
+  }
+
+  Future<void> _analyzeAssignmentImprovements(
+      String courseName,
+      String assessmentName,
+      String essayPrompt,
+      String successes,
+      String failures) async {
+    String successPrompt = """
+    Recommend improvements that could be made to course '$courseName' and to assignment '$assessmentName' with description '$essayPrompt'.
+    Areas of Success:
+    $successes
+    Areas of Failure:
+    $failures
+    Based on the summaries of student success and student failure, recommend ways I can improve the assignment and my course materials overall.
+    Provide a textual summary for both course and assignment improvements, as well as three references I could provide to students to help them better understand the topic.
+    Return your analysis as a JSON array where the textual summary on course improvments is an object with key 'Course Improvements',
+    the summary on assignment improvements is an object with key 'Assignment Improvements', and
+    the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisCourse = response;
+    });
+  }
+
+  Future<void> _analyzeStudentQuizSuccess(String quizName,
+      String quizDescription, String studentSummary, String studentName) async {
+    String successPrompt = """
+    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
+    Student Quiz Results:
+    $studentSummary
+    Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student understood.
+    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly.
+    Compare each question's state, correct answer, and selected answer against the quiz name and description.
+    If the student answered all questions incorrectly, then there are no topics on this quiz that the student understood.
+    Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
+    A question that the student answered correctly will have a 'State' value of 'gradedright'.
+    A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
+    A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
+    Provide a textual summary. Additionally, determine the top three topics from the quiz that student understood,
+    based on number of questions about that topic the student answered correctly. If the student answered all questions incorrectly, then this list should be empty.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially correctly.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisSuccess = response;
+    });
+  }
+
+  Future<void> _analyzeStudentQuizMisunderstanding(String quizName,
+      String quizDescription, String studentSummary, String studentName) async {
+    String successPrompt = """
+    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
+    Student Quiz Results:
+    $studentSummary
+    Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student did not understand.
+    To perform your analysis, determine which questions the user answered correctly, incorrectly, and partially correctly.
+    Compare each question's state, correct answer, and selected answer against the quiz name and description.
+    If the student answered all questions correctly, then there are no topics on this quiz that the student did not understand.
+    Determine if a student was correct, partially correct, or incorrect using only the 'State' value of each question.
+    A question that the student answered correctly will have a 'State' value of 'gradedright'.
+    A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
+    A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
+    Provide a textual summary.
+    Additionally, determine the top three topics from the quiz that student did not understand,
+    based on number of questions about that topic the student answered incorrectly. If the student answered all questions correctly, then this list should be empty.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially incorrectly.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisFail = response;
+    });
+  }
+
+  Future<void> _analyzeCourseQuizSuccess(
+      String quizName, String quizDescription, String studentSummary) async {
+    String successPrompt = """
+    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
+    Student Quiz Results:
+    $studentSummary
+    Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class understood.
+    To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
+    and compare the question text against the quiz name and description.
+    If all questions have an 0% correctness rate, then there are no topics on this quiz that the course understood.
+    Provide a textual summary. Additionally, determine the top three topics from the quiz that the course understood,
+    based on number of questions about that topic the course answered correctly.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly. If all questions have a 0% correctness rate, then this list should be empty.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisSuccess = response;
+    });
+  }
+
+  Future<void> _analyzeCourseQuizMisunderstanding(
+      String quizName, String quizDescription, String studentSummary) async {
+    String successPrompt = """
+    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
+    Student Quiz Results:
+    $studentSummary
+    Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class did not understand.
+    To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
+    and compare the question text against the quiz name and description.
+    If all questions have a 100% correctness rate, then there are no topics on this quiz that the course did not understand.
+    Provide a textual summary. Additionally, determine the top three topics from the quiz that the course did not understand,
+    based on number of questions about that topic the course answered incorrectly.
+    For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.  If all questions have a 100% correctness rate, then this list should be empty.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
+    the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisFail = response;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _doAiQuery(String prompt) async {
     // Select the AI model based on the available credentials.
     dynamic aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
@@ -1250,10 +1595,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     } else {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     }
-
-    setState(() {
-      _isAnalyzingAI = true;
-    });
 
     try {
       var result = await aiModel.postToLlm(prompt);
@@ -1267,16 +1608,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             normalizedResult.substring(0, normalizedResult.length - 3);
       }
       normalizedResult = normalizedResult.trim();
+      print(normalizedResult);
 
       var jsonData = json.decode(normalizedResult);
       if (jsonData is List) {
-        setState(() {
-          _aiAnalysisData = List<Map<String, dynamic>>.from(jsonData);
-        });
+        return List<Map<String, dynamic>>.from(jsonData);
       } else {
-        setState(() {
-          _aiAnalysisData = [];
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text("AI analysis did not return a valid JSON array.")),
@@ -1286,10 +1623,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error during AI analysis: $e")),
       );
-    } finally {
-      setState(() {
-        _isAnalyzingAI = false;
-      });
     }
+    return [];
   }
 }

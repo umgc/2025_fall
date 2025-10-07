@@ -41,3 +41,7 @@ frontend/assets/api-keys.json
 frontend/android/
 
 terraform/terraformout.txt
+
+# Terraform
+.terraform*
+*.tfstate*
