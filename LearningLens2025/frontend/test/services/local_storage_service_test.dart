@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // trigger github actions.
 
-
 void main() {
   setUpAll(() async {
     // Load the dotenv file before running any test
@@ -26,15 +25,18 @@ void main() {
   });
 
   test('getUsername defaults to dotenv if no stored credentials', () {
-    expect(LocalStorageService.getUsername(), dotenv.env['MOODLE_USERNAME'] ?? '');
+    expect(
+        LocalStorageService.getUsername(), dotenv.env['MOODLE_USERNAME'] ?? '');
   });
 
   test('clearCredentials removes stored credentials', () {
     LocalStorageService.saveCredentials('testUser', 'testPass');
     LocalStorageService.clearCredentials();
 
-    expect(LocalStorageService.getUsername(), dotenv.env['MOODLE_USERNAME'] ?? '');
-    expect(LocalStorageService.getPassword(), dotenv.env['MOODLE_PASSWORD'] ?? '');
+    expect(
+        LocalStorageService.getUsername(), dotenv.env['MOODLE_USERNAME'] ?? '');
+    expect(
+        LocalStorageService.getPassword(), dotenv.env['MOODLE_PASSWORD'] ?? '');
   });
 
   test('saveTheme and getTheme work correctly', () {
@@ -66,7 +68,8 @@ void main() {
     LocalStorageService.saveOpenAIKey('test-api-key');
     LocalStorageService.clearOpenAIKey();
 
-    expect(LocalStorageService.getOpenAIKey(), dotenv.env['openai_apikey'] ?? '');
+    expect(
+        LocalStorageService.getOpenAIKey(), dotenv.env['openai_apikey'] ?? '');
   });
 
   test('getMoodleUrl trims trailing /', () {
@@ -76,7 +79,11 @@ void main() {
   });
 
   test('getAILoggingUrl defaults to dotenv if no stored credentials', () {
-    expect(LocalStorageService.getAILoggingUrl(), dotenv.env['AI_LOGGING_URL'] ?? '');
+    String? actual = dotenv.env['AI_LOGGING_URL'];
+    if (actual != null && actual.endsWith("/")) {
+      actual = actual.substring(0, actual.length - 1);
+    }
+    expect(LocalStorageService.getAILoggingUrl(), actual ?? '');
   });
 
   test('getAILoggingUrl trims trailing /', () {
@@ -87,8 +94,12 @@ void main() {
 
   test('clearAiLoggingUrl removes logging URL', () {
     LocalStorageService.saveAILoggingUrl("testLoggingUrl");
-    LocalStorageService.clearCredentials();
+    LocalStorageService.clearAILoggingUrl();
+    String? actual = dotenv.env['AI_LOGGING_URL'];
+    if (actual != null && actual.endsWith("/")) {
+      actual = actual.substring(0, actual.length - 1);
+    }
 
-    expect(LocalStorageService.getAILoggingUrl(), dotenv.env['AI_LOGGING_URL'] ?? '');
+    expect(LocalStorageService.getAILoggingUrl(), actual ?? '');
   });
 }

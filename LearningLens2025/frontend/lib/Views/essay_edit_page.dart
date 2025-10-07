@@ -6,7 +6,8 @@ import 'dart:convert';
 import 'package:excel/excel.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-//import 'dart:html' as html;
+import 'package:learninglens_app/stub/html_stub.dart'
+    if (dart.library.html) 'dart:html' as html;
 
 import 'send_essay_to_moodle.dart'; // Import for JSON encoding
 
@@ -388,12 +389,12 @@ class EssayEditPageState extends State<EssayEditPage> {
     );
 
     final pdfBytes = await pdf.save();
-    // final blob = html.Blob([pdfBytes]);
-    // final url = html.Url.createObjectUrlFromBlob(blob);
-    // html.AnchorElement(href: url)
-    //   ..setAttribute('download', fileName)
-    //   ..click();
-    // html.Url.revokeObjectUrl(url);
+    final blob = html.Blob([pdfBytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..download = fileName
+      ..click();
+    html.Url.revokeObjectUrl(url);
   }
 
   // Excel Export Feature
@@ -420,12 +421,12 @@ class EssayEditPageState extends State<EssayEditPage> {
       }
 
       final excelBytes = excel.encode()!;
-      // final blob = html.Blob([excelBytes]);
-      // final url = html.Url.createObjectUrlFromBlob(blob);
-      // html.AnchorElement(href: url)
-      //   ..setAttribute('download', fileName)
-      //   ..click();
-      // html.Url.revokeObjectUrl(url);
+      final blob = html.Blob([excelBytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..download = fileName
+        ..click();
+      html.Url.revokeObjectUrl(url);
     } catch (e) {
       print('Error exporting Excel: $e');
     }
