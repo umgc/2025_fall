@@ -4,29 +4,23 @@
 module "main_api" {
   source = "./modules/api_gateway"
 
-  api_name            = "${var.project}-main-api"
-  protocol_type       = "HTTP"
-  description         = "Main API Gateway for CareConnect"
-  stage_name          = "$default"
-  auto_deploy         = true
-  create_log_group    = true
-  log_retention_days  = 60
-  cors_configuration = {
-    allow_credentials = true
-    allow_headers     = ["*"]
-    allow_methods     = ["*"]
-    allow_origins     = ["http://*", "https://*"]
-    expose_headers    = ["*"]
-    max_age           = 360
-  }
+  api_name            = var.api_gateway.api_name
+  protocol_type       = var.api_gateway.protocol_type
+  description         = var.api_gateway.description
+  stage_name          = var.api_gateway.stage_name
+  auto_deploy         = var.api_gateway.auto_deploy
+  create_log_group    = var.api_gateway.create_log_group
+  log_retention_days  = var.api_gateway.log_retention_days
+  cors_configuration  = var.api_gateway.cors_configuration
 
-  lambda_integrations = {
+  lambda_integrations = var.lambda.enabled ? {
     main = {
-      lambda_function_name = module.api_lambda.function_name
-      lambda_invoke_arn    = module.api_lambda.function_arn
-      route_key            = "ANY /{proxy+}"
+      lambda_function_name   = module.api_lambda[0].function_name
+      lambda_invoke_arn      = module.api_lambda[0].function_arn
+      route_key              = "ANY /{proxy+}"
+      payload_format_version = var.api_gateway.payload_format_version
     }
-  }
+  } : {}
 
   tags = local.default_tags
 }

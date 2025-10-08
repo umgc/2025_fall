@@ -161,6 +161,11 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
   tags = merge(local.default_tags, var.tags, {
     Name = "${var.vpc_name}-flow-logs"
   })
+  
+  # Handle existing log groups gracefully
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_iam_role" "flow_logs" {

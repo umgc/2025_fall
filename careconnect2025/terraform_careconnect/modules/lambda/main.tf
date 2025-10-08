@@ -9,15 +9,6 @@ locals {
   }
 }
 
-# Create deployment package (only if using local source)
-data "archive_file" "lambda_zip" {
-  count = var.use_s3_source ? 0 : 1
-  
-  type        = "zip"
-  source_dir  = var.source_path
-  output_path = var.output_path
-}
-
 # ================================================================
 # LAMBDA FUNCTION URL
 # ================================================================
@@ -39,17 +30,9 @@ resource "aws_lambda_function_url" "function_url" {
   }
 }
 
-# CloudWatch Log Group
-resource "aws_cloudwatch_log_group" "lambda_logs" {
-  count             = var.create_log_group ? 1 : 0
-  name              = "/aws/lambda/${var.function_name}"
-  retention_in_days = var.log_retention_in_days
-  tags              = merge(local.default_tags, var.tags, {
-    Name = "/aws/lambda/${var.function_name}"
-  })
-}
-
-# IAM Role for Lambda
+# ================================================================
+# IAM ROLE AND POLICIES
+# ================================================================
 resource "aws_iam_role" "lambda_role" {
   name = var.role_name
 
@@ -66,9 +49,7 @@ resource "aws_iam_role" "lambda_role" {
     ]
   })
 
-  tags = merge(local.default_tags, var.tags, {
-    Name = "${var.function_name}-role"
-  })
+  tags = merge(local.default_tags, var.tags)
 }
 
 # Attach managed policies to the role
@@ -93,13 +74,13 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-# Lambda Function
+# ================================================================
+# LAMBDA FUNCTION
+# ================================================================
 resource "aws_lambda_function" "this" {
-  # Use S3 or local file based on configuration
-  filename         = var.use_s3_source ? null : var.output_path
-  s3_bucket        = var.use_s3_source ? var.s3_bucket : null
-  s3_key           = var.use_s3_source ? var.s3_key : null
-  source_code_hash = var.use_s3_source ? null : (length(data.archive_file.lambda_zip) > 0 ? data.archive_file.lambda_zip[0].output_base64sha256 : null)
+  # S3 source configuration
+  s3_bucket = var.s3_bucket
+  s3_key    = var.s3_key
   
   function_name                  = var.function_name
   role                          = aws_iam_role.lambda_role.arn
@@ -135,34 +116,35 @@ resource "aws_lambda_function" "this" {
   }
 
   dynamic "tracing_config" {
-    for_each = var.tracing_config != null ? [var.tracing_config] : []
+    for_each = [var.tracing_config]
     content {
       mode = tracing_config.value.mode
     }
   }
 
   dynamic "snap_start" {
-    for_each = var.enable_snap_start && var.runtime == "java17" && var.publish ? [1] : []
+    for_each = var.runtime == "java17" && var.enable_snap_start ? [1] : []
     content {
       apply_on = "PublishedVersions"
     }
   }
 
-  dynamic "logging_config" {
-    for_each = var.create_log_group ? [1] : []
-    content {
-      log_group  = aws_cloudwatch_log_group.lambda_logs[0].name
-      log_format = "Text"
-    }
-  }
+  tags = merge(local.default_tags, var.tags)
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_policy,
     aws_iam_role_policy.lambda_custom_policy,
-    aws_cloudwatch_log_group.lambda_logs,
+    aws_cloudwatch_log_group.lambda_log_group,
   ]
+}
 
-  tags = merge(local.default_tags, var.tags, {
-    Name = var.function_name
-  })
+# ================================================================
+# CLOUDWATCH LOG GROUP
+# ================================================================
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  count             = var.create_log_group ? 1 : 0
+  name              = "/aws/lambda/${var.function_name}"
+  retention_in_days = var.log_retention_in_days
+
+  tags = merge(local.default_tags, var.tags)
 }

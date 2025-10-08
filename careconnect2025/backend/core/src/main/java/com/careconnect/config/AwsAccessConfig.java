@@ -22,7 +22,7 @@ public class AwsAccessConfig {
 
     @Bean
     public DefaultCredentialsProvider awsCredentialsProvider() {
-        return DefaultCredentialsProvider.builder().asyncCredentialUpdateEnabled(true).build();
+        return DefaultCredentialsProvider.create();
     }
 
     @Bean

@@ -5,6 +5,11 @@ resource "aws_cloudwatch_log_group" "this" {
   retention_in_days = var.log_retention_days
 
   tags = var.tags
+  
+  # Handle existing log groups gracefully
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_apigatewayv2_api" "this" {
@@ -52,9 +57,9 @@ resource "aws_apigatewayv2_integration" "lambda" {
   api_id           = aws_apigatewayv2_api.this.id
   integration_type = "AWS_PROXY"
 
-  integration_uri    = each.value.lambda_invoke_arn
-  integration_method = "POST"
-  payload_format_version = "2.0"
+  integration_uri        = each.value.lambda_invoke_arn
+  integration_method     = "POST"
+  payload_format_version = each.value.payload_format_version
 }
 
 resource "aws_apigatewayv2_route" "this" {

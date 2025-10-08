@@ -46,13 +46,6 @@ variable "github_token" {
 }
 
 # ================================================================
-# NOTE: Application secrets are now managed via SSM Parameter Store
-# See ssm.tf for all secret parameters
-# ================================================================
-
-
-
-# ================================================================
 # VPC CONFIGURATION
 # ================================================================
 variable "vpc_cidr" {
@@ -139,16 +132,14 @@ variable "rds" {
 variable "lambda" {
   description = "Lambda function configuration"
   type = object({
+    enabled                = optional(bool, true)
     function_name          = string
     runtime                = string
     handler                = string
     timeout                = number
     memory_size            = number
-    use_s3_source          = optional(bool, false)
-    s3_bucket              = optional(string)
-    s3_key                 = optional(string)
-    source_path            = optional(string, "")
-    output_path            = optional(string, "")
+    s3_bucket              = string
+    s3_key                 = string
     environment_variables  = map(string)
     cors_allowed_origins   = list(string)
     ingress_rules = list(object({
@@ -191,6 +182,31 @@ variable "s3" {
       expose_headers  = optional(list(string))
       max_age_seconds = optional(number)
     }))
+  })
+}
+
+# ================================================================
+# API GATEWAY CONFIGURATION
+# ================================================================
+variable "api_gateway" {
+  description = "API Gateway configuration"
+  type = object({
+    api_name               = string
+    protocol_type          = string
+    description            = string
+    stage_name             = string
+    auto_deploy            = bool
+    create_log_group       = bool
+    log_retention_days     = number
+    payload_format_version = optional(string, "1.0")
+    cors_configuration = object({
+      allow_credentials = bool
+      allow_headers     = list(string)
+      allow_methods     = list(string)
+      allow_origins     = list(string)
+      expose_headers    = list(string)
+      max_age           = number
+    })
   })
 }
 

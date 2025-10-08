@@ -21,34 +21,14 @@ variable "handler" {
   default     = "index.handler"
 }
 
-variable "use_s3_source" {
-  description = "Whether to use S3 as the source for Lambda code"
-  type        = bool
-  default     = false
-}
-
 variable "s3_bucket" {
-  description = "S3 bucket containing the Lambda deployment package (required if use_s3_source is true)"
+  description = "S3 bucket containing the Lambda deployment package"
   type        = string
-  default     = null
 }
 
 variable "s3_key" {
-  description = "S3 key of the Lambda deployment package (required if use_s3_source is true)"
+  description = "S3 key of the Lambda deployment package"
   type        = string
-  default     = null
-}
-
-variable "source_path" {
-  description = "Path to the source code directory or file (required if use_s3_source is false)"
-  type        = string
-  default     = ""
-}
-
-variable "output_path" {
-  description = "Path where the deployment package will be created (required if use_s3_source is false)"
-  type        = string
-  default     = ""
 }
 
 variable "timeout" {

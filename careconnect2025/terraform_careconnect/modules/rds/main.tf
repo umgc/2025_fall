@@ -37,10 +37,12 @@ resource "aws_db_instance" "this" {
 
   db_name  = var.db_name
   username = var.username
+  # Only set password when NOT using AWS managed password
   password = var.manage_master_user_password ? null : var.password
   port     = var.port
 
-  manage_master_user_password = var.manage_master_user_password
+  # Only set manage_master_user_password when it's true
+  manage_master_user_password = var.manage_master_user_password ? true : null
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = var.vpc_security_group_ids

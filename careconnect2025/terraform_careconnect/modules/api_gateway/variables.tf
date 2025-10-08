@@ -62,9 +62,10 @@ variable "cors_configuration" {
 variable "lambda_integrations" {
   description = "Map of Lambda integrations"
   type = map(object({
-    lambda_function_name = string
-    lambda_invoke_arn    = string
-    route_key            = string
+    lambda_function_name   = string
+    lambda_invoke_arn      = string
+    route_key              = string
+    payload_format_version = optional(string, "1.0")
   }))
   default = {}
 }

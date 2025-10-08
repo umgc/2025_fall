@@ -9,7 +9,11 @@ module "lambda_security_group" {
 }
 
 module "api_lambda" {
+  count  = var.lambda.enabled ? 1 : 0
   source = "./modules/lambda"
+  
+  # Ensure S3 bucket is created before checking for objects
+  depends_on = [module.internal_storage]
 
   function_name = var.lambda.function_name
   description   = "Main API Lambda function for CareConnect"
@@ -65,12 +69,9 @@ module "api_lambda" {
     })
   ]
 
-  # Use S3 source
-  use_s3_source = var.lambda.use_s3_source
-  s3_bucket     = var.lambda.s3_bucket
-  s3_key        = var.lambda.s3_key
-  source_path   = null
-  output_path   = null
+  # S3 source (required)
+  s3_bucket = var.lambda.s3_bucket
+  s3_key    = var.lambda.s3_key
 
   # Enable publishing and SnapStart
   publish = true
@@ -81,7 +82,7 @@ module "api_lambda" {
       # Infrastructure values
       AWS_S3_BUCKET         = module.internal_storage.bucket_id
       AWS_S3_BASE_URL       = "https://${module.internal_storage.bucket_id}.s3.${var.aws_region}.amazonaws.com"
-      CC_APP_ROLE           = module.api_lambda.role_arn
+      CC_APP_ROLE           = var.lambda.enabled ? module.api_lambda[0].role_arn : ""
       APP_FRONTEND_BASE_URL = "https://${module.frontend_app.default_domain}"
       BASE_URL              = module.main_api.stage_invoke_url
       CORS_ALLOWED_LIST     = join(",", var.lambda.cors_allowed_origins)

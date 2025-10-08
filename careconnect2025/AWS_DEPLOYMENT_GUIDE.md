@@ -17,40 +17,27 @@ Straightforward guide to deploy CareConnect on AWS.
 ## Deployment Overview
 
 1. Configure Terraform variables
-2. Deploy infrastructure (will fail on Lambda - expected)
-3. Build and upload Java backend to S3
-4. Update Lambda configuration
-5. Verify deployment
+2. Build and upload Java backend to S3
+3. Deploy infrastructure
+4. Verify deployment
+
+**S3-Only Lambda Deployment**
+The Lambda deployment now uses S3 exclusively:
+
+- Lambda function always deploys from S3 bucket
+- JAR file must be uploaded to S3 before deployment
+- Simplified deployment process with consistent S3 source
 
 ---
 
 ## Step 1: Configure Terraform Variables
 
-### 1.1 Create secrets.tfvars
-
-```bash
-cd careconnect2025/terraform_careconnect/environment
-```
-
-Create `secrets.tfvars`:
-
-```hcl
-# AWS Credentials
-access_key = "YOUR_AWS_ACCESS_KEY"
-secret_key = "YOUR_AWS_SECRET_KEY"
-
-# GitHub Token for Amplify
-github_token = "ghp_YOUR_GITHUB_TOKEN"
-
-# Amplify Basic Auth (optional)
-amplify_basic_auth_credentials = ""
-```
-
-### 1.2 Update prod.tfvars
+### Update prod.tfvars
 
 Edit `environment/prod.tfvars`:
 
 **Update S3 bucket name (must be globally unique):**
+
 ```hcl
 s3 = {
   bucket_name = "careconnect-storage-YOUR-UNIQUE-ID"  # Change this
@@ -59,6 +46,7 @@ s3 = {
 ```
 
 **Update Lambda S3 bucket to match:**
+
 ```hcl
 lambda = {
   # ...
@@ -69,6 +57,7 @@ lambda = {
 ```
 
 **Update CORS origins (optional):**
+
 ```hcl
 lambda = {
   # ...
@@ -79,51 +68,16 @@ lambda = {
 }
 ```
 
----
-
-## Step 2: Initial Infrastructure Deployment
-
-This will fail on Lambda deployment - that's expected because the JAR file doesn't exist yet.
-
-```bash
-cd careconnect2025/terraform_careconnect
-
-# Initialize Terraform
-terraform init -backend-config=backend/prod.tfvars
-
-# Deploy infrastructure
-terraform apply \
-  -var-file=environment/prod.tfvars \
-  -var-file=environment/secrets.tfvars
-```
-
-**Expected error:**
-```
-Error: Error putting S3 object: NoSuchKey: The specified key does not exist.
-```
-
-This is normal. The infrastructure (VPC, RDS, S3, API Gateway) will be created, but Lambda deployment will fail.
-
-**Save these outputs:**
-```bash
-# Get S3 bucket name
-terraform output s3_bucket_name
-
-# Get RDS endpoint
-terraform output rds_endpoint
-
-# Get API Gateway URL (will be created later)
-terraform output api_gateway_url
-```
+**Note:** All application secrets (JWT, API keys, etc.) are configured in `frontend/.env` and automatically read via `env_file_path`.
 
 ---
 
-## Step 3: Build and Upload Backend
+## Step 2: Build and Upload Backend
 
-### 3.1 Build Java Application
+### 2.1 Build Java Application
 
 ```bash
-cd ../../backend/core
+cd careconnect2025/backend/core
 
 # Build Spring Boot application
 mvn clean package
@@ -134,10 +88,12 @@ mvn clean package
 
 This creates: `target/careconnect-backend-0.0.1-SNAPSHOT.jar`
 
-### 3.2 Upload JAR to S3
+### 2.2 Upload JAR to S3
+
+**Important:** The JAR file must be uploaded to S3 before deploying infrastructure.
 
 ```bash
-# Upload JAR directly to S3 (replace with your bucket name from Step 2)
+# Upload JAR directly to S3 (replace with your bucket name from Step 1)
 aws s3 cp target/careconnect-backend-0.0.1-SNAPSHOT.jar \
   s3://careconnect-storage-YOUR-UNIQUE-ID/careconnect-backend-0.0.1-SNAPSHOT-lambda-package.zip
 
@@ -145,28 +101,65 @@ aws s3 cp target/careconnect-backend-0.0.1-SNAPSHOT.jar \
 aws s3 ls s3://careconnect-storage-YOUR-UNIQUE-ID/
 ```
 
-Note: We rename it to `.zip` during upload because Lambda expects that extension, but it's still just the JAR file.
+**Note:** We rename it to `.zip` during upload because Lambda expects that extension, but it's still just the JAR file.
 
 ---
 
-## Step 4: Complete Lambda Deployment
+## Step 3: Infrastructure Deployment
 
-Now that the JAR exists in S3, deploy Lambda:
+Deploy the infrastructure after uploading the JAR to S3:
 
 ```bash
-cd ../../../terraform_careconnect
+cd careconnect2025/terraform_careconnect
 
-# Deploy Lambda
+# Initialize Terraform
+terraform init -backend-config=backend/prod.tfvars
+
+# Deploy infrastructure
 terraform apply \
-  -var-file=environment/prod.tfvars \
-  -var-file=environment/secrets.tfvars
+  -var-file=environment/prod.tfvars
 ```
 
-This should succeed now.
+**What happens during deployment:**
 
-**Get API Gateway URL:**
+1. **S3 Bucket Creation**: Infrastructure creates the S3 bucket first
+2. **Lambda Deployment**: Lambda function deploys from the S3 object
+3. **Infrastructure Setup**: All AWS resources are created and configured
+
+**Save these outputs:**
+
 ```bash
+# Get S3 bucket name
+terraform output s3_bucket_name
+
+# Get RDS endpoint
+terraform output rds_endpoint
+
+# Get API Gateway URL
 terraform output api_gateway_url
+```
+
+---
+
+## Step 4: Verify Deployment
+
+**Get deployment information:**
+
+```bash
+cd careconnect2025/terraform_careconnect
+
+# Get API Gateway URL
+terraform output api_gateway_url
+
+# Get Lambda function details
+terraform output lambda_function_name
+terraform output lambda_function_arn
+
+# Get S3 bucket name
+terraform output s3_bucket_name
+
+# Get RDS endpoint
+terraform output rds_endpoint
 ```
 
 ---
@@ -178,11 +171,13 @@ terraform output api_gateway_url
 Lambda environment variables are configured in `environment/prod.tfvars` under `lambda.environment_variables`.
 
 **Variables that use SSM Parameter Store (sensitive):**
+
 - `JDBC_URI` → `/careconnect/prod/db/jdbc_uri`
 - `DB_USER` → `/careconnect/prod/db/username`
 - `DB_PASSWORD` → `/careconnect/prod/db/password`
 
 **Variables that are direct values (non-sensitive):**
+
 - `ENVIRONMENT` = "production"
 - `LOG_LEVEL` = "INFO"
 - `HIBERNATE_DDL_AUTO` = "update"
@@ -317,6 +312,7 @@ CC_BACKEND_TOKEN=
 ### 7.2 How Amplify Uses .env
 
 The Amplify configuration in `amplify.tf` automatically:
+
 1. Reads `frontend/.env` file
 2. Parses each line (format: `KEY=VALUE`)
 3. Sets each variable individually in Amplify environment
@@ -349,6 +345,7 @@ curl $API_URL/actuator/health
 ```
 
 Expected response:
+
 ```json
 {"status":"UP"}
 ```
@@ -405,15 +402,18 @@ Amplify auto-deploys on push.
 ### Update Environment Variables
 
 **For Lambda direct values:**
+
 1. Edit `terraform_careconnect/environment/prod.tfvars`
 2. Update values in `lambda.environment_variables`
 3. Run `terraform apply`
 
 **For SSM parameters:**
+
 1. Edit `terraform_careconnect/ssm.tf`
 2. Run `terraform apply`
 
 Or update directly via AWS CLI (faster):
+
 ```bash
 aws ssm put-parameter --name "/careconnect/prod/jwt/secret" \
   --value "NEW_VALUE" \
@@ -457,11 +457,13 @@ Internet
 ### Lambda Environment Variables (prod.tfvars)
 
 **SSM References (sensitive):**
+
 - `JDBC_URI` → SSM
 - `DB_USER` → SSM
 - `DB_PASSWORD` → SSM
 
 **Direct Values (non-sensitive):**
+
 - `ENVIRONMENT`, `LOG_LEVEL`
 - `HIBERNATE_DDL_AUTO`, `JWT_EXPIRATION`
 - `SECURITY_JWT_SECRET`
@@ -472,22 +474,26 @@ Internet
 ### SSM Parameters (ssm.tf)
 
 **Database:**
+
 - `/careconnect/prod/db/jdbc_uri`
 - `/careconnect/prod/db/username`
 - `/careconnect/prod/db/password`
 
 **Security:**
+
 - `/careconnect/prod/jwt/secret`
 - `/careconnect/prod/config/jwt_expiration`
 - `/careconnect/prod/config/hibernate_ddl_auto`
 
 **OAuth:**
+
 - `/careconnect/prod/google/client_id`
 - `/careconnect/prod/google/client_secret`
 - `/careconnect/prod/fitbit/client_id`
 - `/careconnect/prod/fitbit/client_secret`
 
 **Optional:**
+
 - `/careconnect/prod/stripe/*`
 - `/careconnect/prod/openai/*`
 - `/careconnect/prod/firebase/*`
@@ -496,6 +502,7 @@ Internet
 ### Frontend Environment Variables (frontend/.env)
 
 Automatically loaded by Amplify:
+
 - `CC_BASE_URL_WEB`
 - `CC_BASE_URL_ANDROID`
 - `CC_BASE_URL_OTHER`
@@ -511,6 +518,7 @@ Automatically loaded by Amplify:
 ## Cost Estimate
 
 **Monthly (us-east-1):**
+
 - RDS PostgreSQL db.t3.micro: ~$15-20
 - Lambda: ~$0-5 (1M requests free tier)
 - API Gateway: ~$1-3 (1M requests free tier)
@@ -523,17 +531,26 @@ Automatically loaded by Amplify:
 
 ---
 
+## Troubleshooting
+
+**Verification:**
+```bash
+terraform plan -var-file=environment/prod.tfvars
+# Should show 54 resources to add
+```
+
+---
+
 ## Cleanup
 
 ```bash
 cd terraform_careconnect
 
 terraform destroy \
-  -var-file=environment/prod.tfvars \
-  -var-file=environment/secrets.tfvars
+  -var-file=environment/prod.tfvars
 ```
 
 ---
 
-**Last Updated:** January 2025  
-**Version:** 3.0 - Simplified Deployment Guide
+**Last Updated:** January 2025
+**Version:** 4.1 - Comprehensive Deployment Guide
