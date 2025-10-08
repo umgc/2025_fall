@@ -10,7 +10,7 @@
 ## Step 1: Configure AWS Profile
 
 ```bash
-export AWS_PROFILE=edu
+AWS configure
 ```
 
 Or add credentials to `terraform_learninglens/environment/prod.tfvars`:
