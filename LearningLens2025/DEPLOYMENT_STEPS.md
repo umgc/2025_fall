@@ -183,5 +183,4 @@ terraform_learninglens/
 ├── vpc.tf                   # VPC configuration
 ├── main.tf                  # Main configuration
 ├── variables.tf             # Variable definitions
-└── outputs.tf               # Output definitions
 ```
