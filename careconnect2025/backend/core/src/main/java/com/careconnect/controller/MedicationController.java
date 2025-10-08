@@ -19,11 +19,13 @@ import java.util.List;
 @Tag(name = "Medication Management", description = "Endpoint for medication list access")
 ///@SecurityRequirement(name = "Bearer Authentication")
 /// TODO: Determine if these class should implement authentication or piggyback on patient services somehow
+/// Does seem a waste to copy all off patient
 public class MedicationController {
 
     @Autowired
     private MedicationService medicationService;
 
+    /// TODO: Verify the correct URL for this endpoint
     @GetMapping("/{patientID}/medications")
     public ResponseEntity<List<MedicationDTO>> getAllMedications(@PathVariable Long patientID) {
         List<MedicationDTO> allMeds = medicationService.getAllMedicationsForPatient(patientID);
