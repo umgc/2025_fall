@@ -3,8 +3,6 @@ import 'package:care_connect_app/features/integrations/presentation/pages/home_m
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
-import 'package:care_connect_app/features/invoices/screens/model_manager_page.dart';
-import 'package:care_connect_app/features/invoices/screens/test_local_llm_chat_page.dart';
 import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -47,7 +45,6 @@ import '../../features/payments/presentation/pages/payment_success_page.dart';
 import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
 import '../../providers/user_provider.dart';
-import 'package:care_connect_app/features/invoices/screens/upload_invoice_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
