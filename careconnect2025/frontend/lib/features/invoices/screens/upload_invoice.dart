@@ -190,8 +190,6 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Invoice')),
-      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/upload'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

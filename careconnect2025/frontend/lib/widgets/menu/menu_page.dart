@@ -1,4 +1,6 @@
 import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,7 @@ class MenuPage extends StatefulWidget {
   State<MenuPage> createState() => _MenuPageState();
 }
 
+// TODO - need to store the shortccuts to disk, and then load them when application is loaded 
 class _MenuPageState extends State<MenuPage> {
   String? _profileImageUrl;
 
@@ -60,6 +63,12 @@ class _MenuPageState extends State<MenuPage> {
         label: 'Invoice Assistant',
         route: '/invoice-assistant/dashboard',
         visibleFor: const {'CAREGIVER', 'ADMIN'},
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const InvoiceTabbedPage()),
+          );        }
       ),
       _MenuItem(
         icon: Icons.verified_user,

@@ -102,24 +102,19 @@ class BottomNavConfig {
         routeName: 'messages',
         screen: MessagesListPage(),
       ),
-        BottomNavItem(
+      BottomNavItem(
         label: 'Menu',
         icon: Icons.menu_open_outlined,
         activeIcon: Icons.menu,
         routeName: 'menupage',
         screen: const MenuPage(),
-      ),
-      BottomNavItem(
-        label: 'More',
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more,
-        routeName: 'more',
         onPress: (context, builder) {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return const PatientMoreFeaturesBottomDrawerWidget();
+              return const MenuPage();
             },
+            isScrollControlled: true
           );
         },
       ),
@@ -150,26 +145,19 @@ class BottomNavConfig {
         routeName: 'tasks',
         screen: const CaregiverPatientList(),
       ),
-      // BottomNavItem(
-      //   label: 'Analytics',
-      //   icon: Icons.analytics_outlined,
-      //   activeIcon: Icons.analytics,
-      //   routeName: 'analytics',
-      //   screen: const CaregiverAnalyticsTab(),
-      // ),
+      BottomNavItem(
+        label: 'Analytics',
+        icon: Icons.analytics_outlined,
+        activeIcon: Icons.analytics,
+        routeName: 'analytics',
+        screen: const CaregiverAnalyticsTab(),
+      ),
       BottomNavItem(
         label: 'Messages',
         icon: Icons.message_outlined,
         activeIcon: Icons.message,
         routeName: 'messages',
         screen: const CaregiverMessagesTab(),
-      ),
-      BottomNavItem(
-        label: 'Menu',
-        icon: Icons.menu_open_outlined,
-        activeIcon: Icons.menu,
-        routeName: 'menupage',
-        screen: const MenuPage(),
       ),
       BottomNavItem(
         label: 'More',
@@ -180,11 +168,12 @@ class BottomNavConfig {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return const CaregiverMoreFeaturesBottomDrawerWidget();
+              return const MenuPage();
             },
+            isScrollControlled:
+                true, // This will make bottom drawer full height
           );
         },
-
       ),
     ];
   }

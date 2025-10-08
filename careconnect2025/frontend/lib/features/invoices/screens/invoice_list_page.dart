@@ -138,13 +138,6 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         _invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoice Management'),
-        actions: [
-           
-        ],
-      ),
-      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/list'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

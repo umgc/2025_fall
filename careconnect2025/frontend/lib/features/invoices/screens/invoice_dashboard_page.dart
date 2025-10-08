@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'invoice_detail_page.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
+
 
 class InvoiceDashboardPage extends StatefulWidget {
   const InvoiceDashboardPage({super.key});
@@ -16,66 +15,11 @@ class InvoiceDashboardPage extends StatefulWidget {
 }
 
 class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
-  late final Future<List<Invoice>> _invoicesFuture =
-      InvoiceService.instance.fetchInvoices();
-
-  // Navigation helpers
-  void _goDashboard() => context.go('/invoice-assistant/dashboard');
-  void _goUpload() => context.go('/invoice-assistant/upload');
-  void _goList() => context.go('/invoice-assistant/list');
+  late final Future<List<Invoice>> _invoicesFuture = InvoiceService.instance.fetchInvoices();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoice Dashboard'),
-        actions: [
-          IconButton(
-            tooltip: 'Upload',
-            onPressed: _goUpload,
-            icon: const Icon(Icons.cloud_upload),
-          ),
-          IconButton(
-            tooltip: 'Invoice List',
-            onPressed: _goList,
-            icon: const Icon(Icons.list_alt),
-          ),
-        ],
-      ),
-      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/dashboard'),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0, // 0 = Dashboard, 1 = Upload, 2 = List
-        onDestinationSelected: (i) {
-          switch (i) {
-            case 0:
-              _goDashboard();
-              break;
-            case 1:
-              _goUpload();
-              break;
-            case 2:
-              _goList();
-              break;
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.cloud_upload_outlined),
-            selectedIcon: Icon(Icons.cloud_upload),
-            label: 'Upload',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: 'List',
-          ),
-        ],
-      ),
       body: FutureBuilder<List<Invoice>>(
         future: _invoicesFuture,
         builder: (context, snap) {
@@ -86,13 +30,12 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
           return LayoutBuilder(
             builder: (context, c) {
               final isWide = c.maxWidth >= 900;
-              const pagePad = 16.0;
-              const gap = 12.0;
+              final pagePad = 16.0;
+              final gap = 12.0;
               final columns = isWide ? 3 : 1;
-              const maxContentWidth = 1400.0;
+              final maxContentWidth = 1400.0; // keeps web from stretching too wide
               final contentWidth = c.maxWidth.clamp(0, maxContentWidth);
-              final cardWidth =
-                  (contentWidth - (pagePad * 2) - (gap * (columns - 1))) / columns;
+              final cardWidth = (contentWidth - (pagePad * 2) - (gap * (columns - 1))) / columns;
 
               Widget gridChild(Widget child, {bool span2 = false}) {
                 return SizedBox(
@@ -105,20 +48,11 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
                 padding: const EdgeInsets.all(16),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                    constraints: BoxConstraints(maxWidth: maxContentWidth),
                     child: Wrap(
                       spacing: gap,
                       runSpacing: gap,
                       children: [
-                        // Quick actions first
-                        gridChild(
-                          _QuickActionsCard(
-                            onUpload: _goUpload,
-                            onList: _goList,
-                          ),
-                          span2: true,
-                        ),
-
                         gridChild(_OverdueBlock(invoices: invoices, loading: loading)),
                         gridChild(_KpiCard(
                           icon: Icons.receipt_long,
@@ -148,21 +82,10 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
                           value: '${metrics.overdueCount}',
                           loading: loading,
                         )),
-                        gridChild(
-                          _RecentActivityCard(invoices: invoices, loading: loading),
-                          span2: true,
-                        ),
-                        gridChild(
-                          _PaymentProgressCard(metrics: metrics, loading: loading),
-                        ),
-                        gridChild(
-                          _PaymentStatusChartCard(invoices: invoices, loading: loading),
-                          span2: true,
-                        ),
-                        gridChild(
-                          _MonthlyInvoiceTrendsCard(invoices: invoices, loading: loading),
-                          span2: true,
-                        ),
+                        gridChild(_RecentActivityCard(invoices: invoices, loading: loading), span2: true),
+                        gridChild(_PaymentProgressCard(metrics: metrics, loading: loading)),
+                        gridChild(_PaymentStatusChartCard(invoices: invoices, loading: loading), span2: true),
+                        gridChild(_MonthlyInvoiceTrendsCard(invoices: invoices, loading: loading), span2: true),
                       ],
                     ),
                   ),
@@ -171,72 +94,6 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goUpload,
-        icon: const Icon(Icons.cloud_upload),
-        label: const Text('Upload Invoice'),
-      ),
-    );
-  }
-}
-
-/* =====================  QUICK ACTIONS  ===================== */
-
-class _QuickActionsCard extends StatelessWidget {
-  const _QuickActionsCard({required this.onUpload, required this.onList});
-  final VoidCallback onUpload;
-  final VoidCallback onList;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.flash_on, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Quick actions', style: theme.textTheme.titleMedium),
-            ]),
-            const SizedBox(height: 8),
-            LayoutBuilder(
-              builder: (context, c) {
-                final vertical = c.maxWidth < 480;
-                final uploadBtn = ElevatedButton.icon(
-                  onPressed: onUpload,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('Upload Invoice'),
-                );
-                final listBtn = OutlinedButton.icon(
-                  onPressed: onList,
-                  icon: const Icon(Icons.list_alt),
-                  label: const Text('Open Invoice List'),
-                );
-
-                return vertical
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          uploadBtn,
-                          const SizedBox(height: 8),
-                          listBtn,
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          uploadBtn,
-                          const SizedBox(width: 8),
-                          listBtn,
-                        ],
-                      );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -326,12 +183,10 @@ class _OverdueTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Due: ${_fmt(invoice.dates.dueDate)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                Text('Due: ${_fmt(invoice.dates.dueDate)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        )),
               ],
             ),
           ),
@@ -342,11 +197,6 @@ class _OverdueTile extends StatelessWidget {
             },
             icon: const Icon(Icons.remove_red_eye, size: 16),
             label: const Text('View'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () => context.go('/invoice-assistant/list'),
-            icon: const Icon(Icons.list_alt, size: 16),
-            label: const Text('Go to List'),
           ),
         ],
       ),
@@ -522,12 +372,12 @@ class _PaymentProgressCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Paid Invoices', style: theme.textTheme.bodySmall),
-              Text('${((pct * 100).isNaN ? 0 : pct * 100).round()}%'),
+              Text('${(pct * 100).round()}%'),
             ]),
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(value: pct.isNaN ? 0 : pct, minHeight: 10),
+              child: LinearProgressIndicator(value: pct, minHeight: 10),
             ),
             const SizedBox(height: 8),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -606,7 +456,7 @@ class _PaymentStatusChartCard extends StatelessWidget {
             Text('Overview of invoice payment statuses', style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             AspectRatio(
-              aspectRatio: kIsWeb ? 1.8 : 1.5,
+              aspectRatio: kIsWeb ? 1.8 : 1.5, // a touch wider on web to reduce wrap
               child: PieChart(
                 PieChartData(
                   sections: [
@@ -684,8 +534,7 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
             ))
         .toList();
 
-    final maxY =
-        (counts.values.isEmpty ? 0 : counts.values.reduce((a, b) => a > b ? a : b)).toDouble();
+    final maxY = (counts.values.isEmpty ? 0 : counts.values.reduce((a, b) => a > b ? a : b)).toDouble();
     final yMax = (maxY <= 5) ? 6.0 : maxY + 2.0;
 
     return Card(
@@ -706,23 +555,19 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
               height: 260,
               child: BarChart(
                 BarChartData(
-                  gridData:
-                      FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 2),
+                  gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 2),
                   borderData: FlBorderData(show: false),
                   barGroups: bars,
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
-                      sideTitles:
-                          SideTitles(showTitles: true, interval: 2, reservedSize: 28),
+                      sideTitles: SideTitles(showTitles: true, interval: 2, reservedSize: 28),
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= months.length) {
-                            return const SizedBox.shrink();
-                          }
+                          if (idx < 0 || idx >= months.length) return const SizedBox.shrink();
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(months[idx].label, style: const TextStyle(fontSize: 12)),
@@ -773,10 +618,7 @@ class _AmountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: theme.colorScheme.outline.withOpacity(.4)),
       ),
-      child: Text(
-        text,
-        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-      ),
+      child: Text(text, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
     );
   }
 }
