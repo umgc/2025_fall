@@ -23,10 +23,10 @@ export const handler = async (event, context) => {
       },
     });
 
-    } catch (error) {
-      console.error("Failed to create connection: ", error);
-      throw error;
-    }
+  } catch (error) {
+    console.error("Failed to create connection: ", error);
+    throw error;
+  }
   const command = event["queryStringParameters"]["command"];
   const method = event["requestContext"]["http"]["method"];
   console.log(command);
@@ -53,8 +53,8 @@ export const handler = async (event, context) => {
   }
 };
 
-  async function buildDatabase(client) {
-    try {
+async function buildDatabase(client) {
+  try {
     await client`CREATE TABLE IF NOT EXISTS AI_LOGS (
       log_id UUID PRIMARY KEY,
       student_id BIGINT,
@@ -67,31 +67,31 @@ export const handler = async (event, context) => {
       lms_service SMALLINT,
       time TIMESTAMP
     );`;
-    }
-    catch (error) {
-      console.error("Failed to create database table: ", error);
-      throw error;
-    }
+  }
+  catch (error) {
+    console.error("Failed to create database table: ", error);
+    throw error;
+  }
 };
 
-  async function getAllLogs(client, courseId, assignmentId, studentId, lms) {
-    try {
-      return await client`SELECT * FROM AI_LOGS WHERE
+async function getAllLogs(client, courseId, assignmentId, studentId, lms) {
+  try {
+    return await client`SELECT * FROM AI_LOGS WHERE
       course_id = ${courseId} AND
       lms_service = ${lms} AND
       (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
       (${studentId} = -1  OR student_id = ${studentId});`;
-    }
-    catch (error) {
-      console.error("Failed to get logs ", error);
-      throw error;
-    }
-  };
+  }
+  catch (error) {
+    console.error("Failed to get logs ", error);
+    throw error;
+  }
+};
 
-    async function addLog(client, body) {
-    try {
-      let log = JSON.parse(body);
-      return await client`
+async function addLog(client, body) {
+  try {
+    let log = JSON.parse(body);
+    return await client`
       INSERT INTO AI_LOGS VALUES (
       gen_random_uuid(),
       ${log.studentId},
@@ -104,9 +104,9 @@ export const handler = async (event, context) => {
       ${log.lms},
       current_timestamp
       );`;
-    }
-    catch (error) {
-      console.error("Failed to add log ", error);
-      throw error;
-    }
-  };
+  }
+  catch (error) {
+    console.error("Failed to add log ", error);
+    throw error;
+  }
+};
