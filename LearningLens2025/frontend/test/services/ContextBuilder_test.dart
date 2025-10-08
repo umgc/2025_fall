@@ -44,8 +44,8 @@ void main() {
       );
 
       // core + modules appear before any user/assistant turns
-      final firstConvIdx =
-          msgs.indexWhere((m) => m['role'] == 'user' || m['role'] == 'assistant');
+      final firstConvIdx = msgs
+          .indexWhere((m) => m['role'] == 'user' || m['role'] == 'assistant');
 
       // All system messages (core/modules) are before conversation starts
       for (int i = 0; i < firstConvIdx; i++) {
@@ -55,10 +55,12 @@ void main() {
       // The first system should be core
       expect(msgs[0]['content']!.startsWith('CORE:'), isTrue);
       // At least one module present (when budget allows)
-      expect(msgs.any((m) =>
-          m['role'] == 'system' && m['content']!.startsWith('MODULE:')), isTrue);
+      expect(
+          msgs.any((m) =>
+              m['role'] == 'system' && m['content']!.startsWith('MODULE:')),
+          isTrue);
     });
-     test('packs history newest -> oldest to fill remaining budget', () {
+    test('packs history newest -> oldest to fill remaining budget', () {
       final msgs = buildContext(
         permTokens: perm,
         chatHistory: history,
@@ -74,7 +76,7 @@ void main() {
       if (lastUserIndex > 0) {
         expect(
           msgs[lastUserIndex - 1]['role'] == 'assistant' ||
-          msgs[lastUserIndex - 1]['role'] == 'user',
+              msgs[lastUserIndex - 1]['role'] == 'user',
           isTrue,
         );
       }
@@ -85,14 +87,14 @@ void main() {
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
-        llmContextSize: 100,   // tiny window on purpose
-        maxOutputTokens: 80,   // large output
-        safetyMargin: 40,      // leaves almost no input room
+        llmContextSize: 100, // tiny window on purpose
+        maxOutputTokens: 80, // large output
+        safetyMargin: 40, // leaves almost no input room
       );
 
       expect(msgs.length, 2);
       expect(msgs[0]['role'], 'system'); // core
-      expect(msgs[1]['role'], 'user');   // prompt
+      expect(msgs[1]['role'], 'user'); // prompt
     });
 
     test('never drops the core system message', () {
@@ -100,7 +102,7 @@ void main() {
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
-        llmContextSize: 512,   // very tight
+        llmContextSize: 512, // very tight
         maxOutputTokens: 400,
         safetyMargin: 80,
       );
