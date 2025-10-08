@@ -27,3 +27,16 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+/*learningLens2025*/
+
+# CareConnect Deployment Documentation (contains sensitive info)
+
+# Terraform variable files (contain secrets)
+*.tfvars
+*.tfvars.json
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
