@@ -31,10 +31,6 @@ doc/api/
 
 # CareConnect Deployment Documentation (contains sensitive info)
 
-# Terraform variable files (contain secrets)
-*.tfvars
-*.tfvars.json
-
 # Terraform state files
 *.tfstate
 *.tfstate.*
