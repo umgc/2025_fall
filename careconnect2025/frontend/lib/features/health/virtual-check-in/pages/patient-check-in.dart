@@ -97,8 +97,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                                   width: 2,
                                 ),
                                 color: isSelected
-                                    ? Colors.blue.shade50
-                                    : Colors.white,
+                                    ? Theme.of(context).primaryColor
+                                    : Theme.of(context).cardColor,
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
