@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
+import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
@@ -70,7 +71,9 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
   bool _isLoading = false;
   List<dynamic> _evaluationResults = [];
   late Future<List<Course>> _courses;
+  List<Assignment> assignments = [];
   Course? selectedCourse;
+  Assignment? selectedAssignment;
 
   @override
   void initState() {
@@ -142,6 +145,106 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
     await _getEvaluationsForCourse(courseId);
   }
 
+  void _onCourseChanged(Course? course) {
+    if (course == null) return;
+    setState(() {
+      selectedCourse = course;
+    });
+  }
+
+  void _openCreateDialog(List<Course> courses) {
+    selectedCourse = null;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Create Assignment"),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Course dropdown
+              DropdownButtonFormField<Course>(
+                decoration: const InputDecoration(labelText: "Course"),
+                items: courses
+                    .map((course) => DropdownMenuItem(
+                          value: course,
+                          child: Text(course.fullName),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCourse = value!;
+                    selectedAssignment = null; // reset assignment when course changes
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Assignment dropdown
+              DropdownButtonFormField<Assignment>(
+                // value: selectedAssignment,
+                decoration: const InputDecoration(labelText: "Assignment"),
+                items: selectedCourse == null
+                    ? []
+                    : selectedCourse!.essays!
+                        .map((assignment) => DropdownMenuItem(
+                              value: assignment,
+                              child: Text(assignment.name),
+                            ))
+                        .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedAssignment = value;
+                  });
+                },
+              ),
+              // const SizedBox(height: 16),
+
+              // Expected Output text area
+              // TextFormField(
+              //   controller: expectedOutputController,
+              //   decoration: const InputDecoration(
+              //     labelText: "Expected Output",
+              //     border: OutlineInputBorder(),
+              //   ),
+              //   maxLines: 3,
+              // ),
+              // const SizedBox(height: 16),
+
+              // // Disabled max time limit input
+              // TextFormField(
+              //   decoration: const InputDecoration(
+              //     labelText: "Maximum Time Limit (seconds)",
+              //     border: OutlineInputBorder(),
+              //   ),
+              //   initialValue: "30",
+              //   enabled: false,
+              // ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Handle form submission here
+              // print("Course: $selectedCourse");
+              // print("Assignment: $selectedAssignment");
+              // print("Expected Output: ${expectedOutputController.text}");
+              Navigator.pop(context);
+            },
+            child: const Text("Submit"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,25 +265,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
               else{
-                final mainLayout = _buildMainLayout(snapshot.data!);
-                // For mobile layout
-                if(constraints.maxWidth < 600){
-                  return Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Column(
-                      spacing: 8,
-                      children: mainLayout,
-                    )
-                  );
-                }
-
-                return Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Row(
-                    spacing: 8,
-                    children: mainLayout,
-                  )
-                );
+                return _buildMainLayout(snapshot.data!);
               }
             }
           );
@@ -189,37 +274,71 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
     );
   }
 
-  List<Widget> _buildMainLayout(List<Course> courses){
-    return [
-        Expanded(
-          flex: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: _buildCourseListView(courses)
+  Widget _buildMainLayout(List<Course> courses){
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // First row with Create button aligned right
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                    _openCreateDialog(courses);
+                  // Handle create action
+                },
+                child: const Text("Create"),
+              ),
+              const SizedBox(width: 16), // some spacing from edge
+            ],
           ),
-        ),
-        if(selectedCourse != null)
-          if(_isLoading)
-            Expanded(
-              flex: 2,
-              child: Center(child: CircularProgressIndicator())
-            )
-          else
-            Expanded(
-              flex: 2,
-              child: _buildAssignmentTable(selectedCourse!)
-            )
-        else
+
+          const SizedBox(height: 16),
+
+          // Second row with DataTable
           Expanded(
-            flex: 2,
-            child: Center(
-              child: Text("Please select a course.")
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text("Course")),
+                  DataColumn(label: Text("Assignment")),
+                  DataColumn(label: Text("Status")),
+                  DataColumn(label: Text("Action")),
+                ],
+                rows: [
+                  DataRow(cells: [
+                    const DataCell(Text("Math 101")),
+                    const DataCell(Text("Homework 1")),
+                    const DataCell(Text("Pending")),
+                    DataCell(
+                      ElevatedButton(
+                        onPressed: () {
+                          // Handle view action
+                        },
+                        child: const Text("View"),
+                      ),
+                    ),
+                  ]),
+                  DataRow(cells: [
+                    const DataCell(Text("History 202")),
+                    const DataCell(Text("Essay")),
+                    const DataCell(Text("Completed")),
+                    DataCell(
+                      ElevatedButton(
+                        onPressed: () {
+                          // Handle view action
+                        },
+                        child: const Text("View"),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
             ),
-          )
-      ];
+          ),
+        ],
+      );
   }
 
   Widget _buildCourseListView(List<Course> courses){
