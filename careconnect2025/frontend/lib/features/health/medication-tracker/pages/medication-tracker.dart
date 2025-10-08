@@ -3,6 +3,9 @@ import 'package:care_connect_app/features/health/medication-tracker/widgets/medi
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-card.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-header.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+
 
 /// Medication tracker page
 class MedicationsTrackerPage extends StatefulWidget {
@@ -10,10 +13,12 @@ class MedicationsTrackerPage extends StatefulWidget {
 
   @override
   State<MedicationsTrackerPage> createState() => _MedicationsPageState();
+
 }
 
 class _MedicationsPageState extends State<MedicationsTrackerPage> {
   /// TODO - this should be removed when backend is ready
+  /// TODO - Figure out how to make a request to the backend
   /// Mocked medication list
   List<Medication> medications = [
     Medication(
@@ -57,6 +62,11 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
         },
       ),
     );
+  }
+
+  Future<http.Response> fetchMedication()
+  {
+      return http.get()
   }
 
   @override
