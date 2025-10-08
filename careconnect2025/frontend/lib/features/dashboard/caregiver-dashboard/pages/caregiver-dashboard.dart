@@ -2,6 +2,9 @@ import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/recent-patient-activity-widget.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/upcoming-checkins-widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
+import 'package:care_connect_app/features/invoices/widgets/invoice_overview_card.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/shared/widgets/dashboard_appheader_widget.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
@@ -46,10 +49,34 @@ class CaregiverDashboard extends StatelessWidget {
 
               // Care Team Performance
               const CareTeamPerformance(),
+              // Invoice overview
+              const SizedBox(height: 20),
+              InvoiceOverviewCard(
+                getUnpaidCount: () => _fetchUnpaidInvoiceCount(context),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<int> _fetchUnpaidInvoiceCount(BuildContext context) async {
+    final unpaidStatuses = <PaymentStatus>{
+      PaymentStatus.pending,
+      PaymentStatus.overdue,
+      PaymentStatus.pendingInsurance,
+      PaymentStatus.sent,
+      PaymentStatus.partialPayment,
+      PaymentStatus.rejectedInsurance,
+    };
+
+    final invoices = await InvoiceService.instance.fetchInvoices(
+      status: unpaidStatuses,
+      pageSize: 200, // adjust if needed
+    );
+
+    return invoices.length;
   }
 }

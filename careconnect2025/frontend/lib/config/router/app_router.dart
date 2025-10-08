@@ -5,6 +5,7 @@ import 'package:care_connect_app/features/integrations/presentation/pages/smart_
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/model_manager_page.dart';
 import 'package:care_connect_app/features/invoices/screens/test_local_llm_chat_page.dart';
+import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -17,6 +18,7 @@ import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
+import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -699,10 +701,15 @@ final GoRouter appRouter = GoRouter(
         return null;
       },
       routes: [
+        // GoRoute(
+        //   path: 'upload',
+        //   name: 'invoiceUpload',
+        //   builder: (context, state) => const UploadInvoiceScreen(),
+        // ),
         GoRoute(
           path: 'upload',
           name: 'invoiceUpload',
-          builder: (context, state) => const UploadInvoiceScreen(),
+          builder: (context, state) => const UploadInvoicePage(),
         ),
         GoRoute(
           path: 'list',
@@ -733,5 +740,10 @@ final GoRouter appRouter = GoRouter(
         
       ],
     ),
+        GoRoute(
+          path: 'menu',
+          name: 'menupage',
+          builder: (context, state) => const MenuPage(),
+        ),
   ],
 );

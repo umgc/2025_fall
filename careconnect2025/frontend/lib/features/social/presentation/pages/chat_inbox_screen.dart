@@ -7,7 +7,6 @@ import '../model/conversation_preview_dto.dart';
 import 'chat_room_screen.dart';
 import 'my_friend_screen.dart';
 
-
 class ChatInboxScreen extends StatefulWidget {
   const ChatInboxScreen({super.key});
 
@@ -25,36 +24,46 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (!_initialized) {
-      final user = Provider.of<UserProvider>(context, listen: false).user;
-      if (user == null) {
+    if (_initialized) return;
+
+    final user = Provider.of<UserProvider>(context, listen: false).user;
+    if (user == null) {
+      // Avoid setState here. Just inform the user if still mounted.
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User not logged in')),
         );
-        return;
       }
-
-      _userId = user.id;
-      fetchInbox();
-      _initialized = true;
+      return;
     }
+
+    _userId = user.id;
+    _initialized = true;
+    fetchInbox();
   }
 
   Future<void> fetchInbox() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
+
     try {
       final data = await ApiService.getInbox(_userId!);
+
+      if (!mounted) return;
       setState(() {
-        inbox = (data)
-            .map((json) => ConversationPreviewDto.fromJson(json))
-            .toList();
+        inbox = (data).map<ConversationPreviewDto>(
+          (json) => ConversationPreviewDto.fromJson(json),
+        ).toList();
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to load inbox: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load inbox: $e')),
+        );
+      }
     }
   }
 
@@ -69,50 +78,55 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Messages'),
-          actions: [
-      IconButton(
-      icon: const Icon(Icons.group),
-      tooltip: 'My Friends',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => MyFriendsScreen()),
-        );
-        },
-      ),
-          ],
+        title: const Text('Messages'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.group),
+            tooltip: 'My Friends',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MyFriendsScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : inbox.isEmpty
-          ? const Center(child: Text('No messages yet'))
-          : ListView.builder(
-              itemCount: inbox.length,
-              itemBuilder: (context, index) {
-                final convo = inbox[index];
-                return ListTile(
-                  title: Text(convo.peerName),
-                  subtitle: Text(convo.content),
-                  trailing: Text(
-                    convo.timestamp.toIso8601String().split('T').join(' • '),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ChatRoomScreen(
-                                peerUserId: convo.peerId,
-                                peerName: convo.peerName,
-                            ),
+              ? const Center(child: Text('No messages yet'))
+              : ListView.builder(
+                  itemCount: inbox.length,
+                  itemBuilder: (context, index) {
+                    final convo = inbox[index];
+                    return ListTile(
+                      title: Text(convo.peerName),
+                      subtitle: Text(convo.content),
+                      trailing: Text(
+                        convo.timestamp.toIso8601String().split('T').join(' • '),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatRoomScreen(
+                              peerUserId: convo.peerId,
+                              peerName: convo.peerName,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
     );
+  }
+
+  @override
+  void dispose() {
+    // If you add streams, timers, or listeners later, cancel them here.
+    super.dispose();
   }
 }

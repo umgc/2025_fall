@@ -56,6 +56,17 @@ public class TextractService {
 
         byte[] combinedPdfData = pdfService.combineToPdf(files);
         String fileName = files.get(0).getOriginalFilename();
+        // Ensure fileName is not null or empty
+        if (fileName == null || fileName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
+
+        // Remove extra extension if necessary
+        String baseName = fileName;
+        if (fileName.toLowerCase().endsWith(".pdf")) {
+            baseName = fileName.substring(0, fileName.length() - 4);
+        }
+
         String s3Key = "invoices/" + UUID.randomUUID() + "-" + fileName + ".pdf";
 
         s3StorageService.upload(combinedPdfData, s3Key, "application/pdf");

@@ -70,7 +70,7 @@ ADDITIONAL FIELDS INSTRUCTIONS:
 - history: Leave as empty array unless transaction history is provided
 - aiSummary: MUST be generated - provide concise summary of the invoice
 - recommendedActions: MUST be generated - provide actionable next steps for the patient
-
+11. 
 EXTRACTION SCHEMA:
 {
   "id": "",

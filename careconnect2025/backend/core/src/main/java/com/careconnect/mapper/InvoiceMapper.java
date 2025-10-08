@@ -123,6 +123,7 @@ public final class InvoiceMapper {
             }
         }
         e.setRecommendedActions(acts);
+
         if (dto.payments != null) {
             e.getPayments().clear();
             for (PaymentDto pd : dto.payments) {
@@ -223,16 +224,31 @@ public final class InvoiceMapper {
             ra.add(ract.getActionText());
         }
         dto.recommendedActions = ra;
-        dto.payments = e.getPayments().stream().map(InvoiceMapper::toDto).collect(Collectors.toList());
+
+        dto.payments = e.getPayments().stream()
+                .map(InvoiceMapper::toDto)
+                .collect(Collectors.toList());
+
         return dto;
     }
 
     // ---------- helpers ----------
     private static String nz(String s) { return s == null ? "" : s; }
-    private static OffsetDateTime parse(String s) { return OffsetDateTime.parse(s); }
-    private static OffsetDateTime parseNullable(String s) { return s == null ? null : OffsetDateTime.parse(s); }
-    private static String fmt(OffsetDateTime t) { return t.toString(); }
-    private static String fmtNullable(OffsetDateTime t) { return t == null ? null : t.toString(); }
+
+    // tolerant parsing and normalized formatting
+    private static OffsetDateTime parse(String s) {
+        return DateParsers.parseOffsetOrLocalToUtc(s);
+    }
+    private static OffsetDateTime parseNullable(String s) {
+        return DateParsers.parseNullableOffsetOrLocalToUtc(s);
+    }
+    private static String fmt(OffsetDateTime t) {
+        return DateParsers.format(t);
+    }
+    private static String fmtNullable(OffsetDateTime t) {
+        return DateParsers.formatNullable(t);
+    }
+
     private static BigDecimal toBD(Double d) { return d == null ? null : BigDecimal.valueOf(d); }
     private static Double toD(BigDecimal bd) { return bd == null ? null : bd.doubleValue(); }
 
@@ -265,11 +281,12 @@ public final class InvoiceMapper {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
     }
+
     public static PaymentDto toDto(InvoicePayment p) {
         PaymentDto d = new PaymentDto();
         d.id = p.getId();
         d.confirmationNumber = p.getConfirmationNumber();
-        d.date = p.getPaymentDate() == null ? null : p.getPaymentDate().toString();
+        d.date = DateParsers.formatNullable(p.getPaymentDate());
         d.methodKey = p.getMethodKey();
         d.amountPaid = p.getAmountPaid();
         d.planEnabled = p.isPlanEnabled();
@@ -291,17 +308,4 @@ public final class InvoiceMapper {
         p.setCreatedBy(d.createdBy);
         return p;
     }
-    private static OffsetDateTime parseClientDate(String s) {
-        if (s == null || s.isBlank()) return OffsetDateTime.now();
-        final String t = s.trim();
-        try {
-            // ISO with offset, e.g. 2025-10-05T14:34:38.877903Z or +05:00
-            return OffsetDateTime.parse(t);
-        } catch (java.time.format.DateTimeParseException ignored) {
-            // No offset? parse as local date-time, then assume UTC (or choose system default)
-            java.time.LocalDateTime ldt = java.time.LocalDateTime.parse(t);
-            return ldt.atOffset(java.time.ZoneOffset.UTC);
-        }
-    }
-
 }

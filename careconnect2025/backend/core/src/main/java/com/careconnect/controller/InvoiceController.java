@@ -3,6 +3,7 @@ package com.careconnect.controller;
 
 import com.careconnect.dto.chat.AiRequest;
 import com.careconnect.dto.invoice.InvoiceDto;
+import com.careconnect.dto.invoice.InvoiceResponseDto;
 import com.careconnect.dto.invoice.PaymentDto;
 import com.careconnect.model.invoice.Invoice;
 import com.careconnect.service.invoice.InvoiceService;
@@ -120,6 +121,7 @@ public class InvoiceController {
             return ResponseEntity.badRequest().body("Please provide at least one valid file.");
         }
         try {
+            log.info("received file for ocr "+files.get(0).getOriginalFilename());
             // Step 1: Get raw text using the updated service
             AiRequest.AnalysisResult result = textractService.analyzeAndGetResult(files);
 
@@ -128,8 +130,34 @@ public class InvoiceController {
             var outputConverter = new BeanOutputConverter<>(InvoiceDto.class);
             InvoiceDto invoiceDto=outputConverter.convert(json);
             invoiceDto.documentLink=result.s3Key;
-            // Step 3: Return the object
-            return ResponseEntity.ok(invoiceDto);
+
+            // Step 3: Duplicate check (provider + total are the primary keys we compare)
+            final String providerName = invoiceDto.provider == null ? null : invoiceDto.provider.name;
+            final Double total = (invoiceDto.amounts == null) ? null : invoiceDto.amounts.total;
+            final String invoiceNumber = invoiceDto.invoiceNumber;
+
+            Optional<Invoice> dup = service.findDuplicateByProviderAndTotal(providerName, total, invoiceNumber);
+            InvoiceResponseDto payload = new InvoiceResponseDto();
+            payload.invoice = invoiceDto;
+            if (dup.isPresent()) {
+                Invoice existing = dup.get();
+                payload.duplicate = true;
+                payload.duplicateId = existing.getId();
+                payload.duplicateInvoiceNumber = existing.getInvoiceNumber();
+                payload.message = String.format(
+                        "Duplicate invoice detected. This invoice is already in the system for provider %s with total %.2f.",
+                        providerName == null ? "(unknown provider)" : providerName,
+                        total == null ? 0.0 : total
+                );
+            } else {
+                payload.duplicate = false;
+                payload.message = null;
+                payload.duplicateId = null;
+                payload.duplicateInvoiceNumber = null;
+            }
+
+            // Step 4: Return the object
+            return ResponseEntity.ok(payload);
 
         } catch (Exception e) {
             log.error("Error during LLM extraction: ", e);

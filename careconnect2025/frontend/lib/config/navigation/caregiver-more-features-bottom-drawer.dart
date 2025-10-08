@@ -1,4 +1,6 @@
+import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
 import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
+import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
 
@@ -19,6 +21,31 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const NotetakerConfigurationPage()),
+          );
+        },
+      ),
+      FeatureItem(
+        icon: Icons.payments,
+        iconColor: Colors.blue,
+        title: 'Invoice Assistant',
+        subtitle: 'Manage your medical invoices.',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const InvoiceDashboardPage()),
+          );
+        },
+      ),FeatureItem(
+        icon: Icons.settings,
+        iconColor: Colors.blue,
+        title: 'Settings',
+        subtitle: 'Manage application settings.',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsPage()),
           );
         },
       )

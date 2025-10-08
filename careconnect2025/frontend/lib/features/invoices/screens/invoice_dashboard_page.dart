@@ -20,8 +20,6 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
-      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/dashboard'),
       body: FutureBuilder<List<Invoice>>(
         future: _invoicesFuture,
         builder: (context, snap) {
