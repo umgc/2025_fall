@@ -16,7 +16,7 @@ class _AddAlexaDeviceScreenState extends State<AddAlexaDeviceScreen> {
   bool _isLoading = true;
 
   String get _base {
-    if (kIsWeb) return 'https://4caf87a6108f.ngrok-free.app';                // web
+    if (kIsWeb) return 'https://f2c6b10d3107.ngrok-free.app';                // web
     if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8080';                           // Android emulator
     }
