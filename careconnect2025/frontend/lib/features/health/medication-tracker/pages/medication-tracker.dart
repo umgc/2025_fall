@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:care_connect_app/features/health/medication-tracker/models/medication-model.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-add-input-form.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-card.dart';
@@ -17,39 +19,11 @@ class MedicationsTrackerPage extends StatefulWidget {
 }
 
 class _MedicationsPageState extends State<MedicationsTrackerPage> {
-  /// TODO - this should be removed when backend is ready
-  /// TODO - Figure out how to make a request to the backend
   /// Mocked medication list
-  List<Medication> medications = [
-    Medication(
-      name: 'Blood Pressure Medication',
-      dosage: '10mg',
-      frequency: '2x daily',
-      status: MedicationStatus.upcoming,
-      nextDose: '9:00 AM',
-      deliveryMethod: 'Take with food, swallow whole',
-    ),
-    Medication(
-      name: 'Vitamin D3',
-      dosage: '1000 IU',
-      frequency: '1x daily',
-      status: MedicationStatus.taken,
-      nextDose: '6:00 PM',
-      deliveryMethod: 'Take with meal for better absorption',
-    ),
-    Medication(
-      name: 'Pain Relief Medication',
-      dosage: '20mg',
-      frequency: '3x daily',
-      status: MedicationStatus.missed,
-      nextDose: '2:00 PM',
-      deliveryMethod: 'Take on empty stomach, 1 hour before meals',
-    ),
-  ];
+  List<Medication> medications = [];
 
   /// Method for showing the add medication modal
-  /// TODO - update this to use backend. Currently it's just using mocked list
-  void _showAddMedicationModal() {
+  Future<void> _showAddMedicationModal() async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -62,11 +36,25 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
         },
       ),
     );
+    ///TODO: Get the proper URL for the patient
+    List<Medication> allMedications = await parseMedication('insertURL');
+    medications.addAll(allMedications);
   }
 
-  Future<http.Response> fetchMedication()
-  {
-      return http.get()
+
+  ///TODO: Get the correct endpoint
+  Future<List<Medication>> parseMedication(String targetURL)
+  async {
+      final response = await http.get(Uri.parse(targetURL));
+
+      if(response.statusCode == 200)
+        {
+          return (json.decode(response.body) as List).map((data) => Medication.fromJson(data)).toList();
+        }
+      else
+        {
+          throw Exception('Failed to load medication data');
+        }
   }
 
   @override
