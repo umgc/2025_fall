@@ -98,6 +98,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Student breakdown report built from live LMS participant data.
   List<Map<String, dynamic>> _studentBreakdown = [];
   Map<String, dynamic>? _selectedStudent;
+  List<Map<String, String>> _selectedStudentData = [];
+  bool _selectedStudentWaiting = false;
+  String? _selectedStudentError;
 
   // For quiz assessments, question breakdown data.
   List<QuestionStatsType> _questionBreakdown = [];
@@ -206,6 +209,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       _studentBreakdown.clear();
       _questionBreakdown.clear();
       _selectedStudent = null;
+      _selectedStudentData.clear();
     });
 
     try {
@@ -616,6 +620,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisAi.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
+                _selectedStudentData.clear();
               });
               if (_selectedCourse != null) {
                 // Fetch essays and quizzes, then combine them.
@@ -662,6 +667,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   _aiAnalysisAi.clear();
                   _aiAnalysisCourse.clear();
                   _selectedStudent = null;
+                  _selectedStudentData.clear();
                 });
               },
             ),
@@ -687,6 +693,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisAi.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
+                _selectedStudentData.clear();
               });
             },
           ),
@@ -844,67 +851,67 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       return const Center(child: CircularProgressIndicator());
     }
     return SizedBox(
-      height: 300,
-      child: Scrollbar(
-          thumbVisibility: true,
-          controller: _verticalStudentController,
-          child: SingleChildScrollView(
+        height: 300,
+        child: Scrollbar(
+            thumbVisibility: true,
             controller: _verticalStudentController,
-            child: DataTable(
-              showCheckboxColumn: false,
-              columnSpacing: 12.0,
-              columns: const [
-                DataColumn(label: Expanded(child: Text('Student Name'))),
-                DataColumn(label: Text('Average Grade')),
-                DataColumn(label: Text('Class Rank')),
-              ],
-              rows: _studentBreakdown.map((student) {
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith<Color?>(
-                      (Set<WidgetState> states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.15);
-                    }
-                    if (states.contains(WidgetState.hovered)) {
-                      return Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.25);
-                    }
-                    return _studentBreakdown.indexOf(student) % 2 == 0
-                        ? Theme.of(context)
+            child: SingleChildScrollView(
+              controller: _verticalStudentController,
+              child: DataTable(
+                showCheckboxColumn: false,
+                columnSpacing: 12.0,
+                columns: const [
+                  DataColumn(label: Expanded(child: Text('Student Name'))),
+                  DataColumn(label: Text('Average Grade')),
+                  DataColumn(label: Text('Class Rank')),
+                ],
+                rows: _studentBreakdown.map((student) {
+                  return DataRow(
+                    color: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Theme.of(context)
                             .colorScheme
-                            .primaryContainer
-                            .withOpacity(.55)
-                        : null; // Use the default value.
-                  }),
-                  selected: student == _selectedStudent,
-                  onSelectChanged: (val) {
-                    setState(() {
-                      _selectedStudent = student;
-                    });
-                  },
-                  cells: [
-                    DataCell(
-                      Text(
-                        student['studentName'].toString(),
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          decoration: TextDecoration.underline,
+                            .primary
+                            .withOpacity(0.15);
+                      }
+                      if (states.contains(WidgetState.hovered)) {
+                        return Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.25);
+                      }
+                      return _studentBreakdown.indexOf(student) % 2 == 0
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(.55)
+                          : null; // Use the default value.
+                    }),
+                    selected: student == _selectedStudent,
+                    onSelectChanged: (val) {
+                      setState(() {
+                        _selectedStudent = student;
+                        _fetchAllAssessmentsForStudent(student['id']);
+                      });
+                    },
+                    cells: [
+                      DataCell(
+                        Text(
+                          student['studentName'].toString(),
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(Text(student['avgGrade'].toString())),
-                    DataCell(Text(student['classRank'].toString())),
-                  ],
-                );
-              }).toList(),
-            ),
-          )),
-    );
+                      DataCell(Text(student['avgGrade'].toString())),
+                      DataCell(Text(student['classRank'].toString())),
+                    ],
+                  );
+                }).toList(),
+              ),
+            )));
   }
 
   // ---------------------------------------------------------------------------
@@ -921,51 +928,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
     int studentId = _selectedStudent!['id'];
-    return FutureBuilder<List<Map<String, String>>>(
-      future: _fetchAllAssessmentsForStudent(studentId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error loading grades: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Text('No data available for student $studentId.');
-        }
-        List<Map<String, String>> detailData = snapshot.data!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Details for ${_selectedStudent!['studentName']}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            ...detailData.map((item) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "${item['Assessment']} (${item['Type']})",
-                        style: const TextStyle(fontSize: 16),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      item['Grade']!,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
+    if (_selectedStudentWaiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_selectedStudentError != null) {
+      return Center(
+          child: Text('Error loading grades: $_selectedStudentError'));
+    }
+    if (_selectedStudentData.isEmpty) {
+      return Text('No data available for student $studentId.');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Details for ${_selectedStudent!['studentName']}',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        ..._selectedStudentData.map((item) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    "${item['Assessment']} (${item['Type']})",
+                    style: const TextStyle(fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              );
-            }),
-          ],
-        );
-      },
+                Text(
+                  item['Grade']!,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -973,9 +975,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // _fetchAllAssessmentsForStudent:
   // Helper function to fetch ALL assessments (quiz or essay) for ONE student.
   // ---------------------------------------------------------------------------
-  Future<List<Map<String, String>>> _fetchAllAssessmentsForStudent(
-      int studentId) async {
-    if (_selectedCourse == null) return [];
+  Future<void> _fetchAllAssessmentsForStudent(int? studentId) async {
+    if (_selectedCourse == null || studentId == null) {
+      setState(() {
+        _selectedStudentData.clear();
+      });
+      return;
+    }
+    setState(() {
+      _selectedStudentWaiting = true;
+    });
     List<Future<Map<String, String>>> futureList = [];
     for (var assessment in _assessmentsData) {
       futureList.add(() async {
@@ -1014,7 +1023,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         };
       }());
     }
-    return Future.wait(futureList);
+    try {
+      final data = await Future.wait(futureList);
+      setState(() {
+        _selectedStudentData = data;
+      });
+    } catch (e) {
+      setState(() {
+        _selectedStudentData.clear();
+        _selectedStudentError = e.toString();
+      });
+    } finally {
+      setState(() {
+        _selectedStudentWaiting = false;
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1074,6 +1097,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ? null
                         : () => setState(() {
                               _selectedStudent = null;
+                              _selectedStudentData.clear();
                             }),
                     child: Text("Clear Selection"))
               ]),
