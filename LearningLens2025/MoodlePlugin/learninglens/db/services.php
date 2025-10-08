@@ -157,4 +157,12 @@ $functions = [
         'capabilities'=> 'mod/quiz:view',
         'services'    => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
+    'local_learninglens_get_quiz_stats_for_student' => [
+        'classname'   => 'local_learninglens\external\get_quiz_stats_for_student',
+        'description' => 'Fetches questions + stats for a quiz for a single student',
+        'type'        => 'read',
+        'ajax'        => true,
+        'capabilities'=> 'mod/quiz:view',
+        'services'    => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
 ];

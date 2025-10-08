@@ -6,7 +6,8 @@ import 'dart:convert';
 import 'package:excel/excel.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
-import 'dart:html' as html;
+import 'package:learninglens_app/stub/html_stub.dart'
+    if (dart.library.html) 'dart:html' as html;
 
 import 'send_essay_to_moodle.dart'; // Import for JSON encoding
 
@@ -391,7 +392,7 @@ class EssayEditPageState extends State<EssayEditPage> {
     final blob = html.Blob([pdfBytes]);
     final url = html.Url.createObjectUrlFromBlob(blob);
     html.AnchorElement(href: url)
-      ..setAttribute('download', fileName)
+      ..download = fileName
       ..click();
     html.Url.revokeObjectUrl(url);
   }
@@ -423,7 +424,7 @@ class EssayEditPageState extends State<EssayEditPage> {
       final blob = html.Blob([excelBytes]);
       final url = html.Url.createObjectUrlFromBlob(blob);
       html.AnchorElement(href: url)
-        ..setAttribute('download', fileName)
+        ..download = fileName
         ..click();
       html.Url.revokeObjectUrl(url);
     } catch (e) {
