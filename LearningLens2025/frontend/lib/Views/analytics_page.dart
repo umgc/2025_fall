@@ -116,7 +116,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<Map<String, dynamic>> _aiAnalysisFail = [];
   List<Map<String, dynamic>> _aiAnalysisAi = [];
   List<Map<String, dynamic>> _aiAnalysisCourse = [];
-  bool _isAnalyzingAI = false;
+  bool _isAnalyzingSuccess = false;
+  bool _isAnalyzingFail = false;
+  bool _isAnalyzingAi = false;
+  bool _isAnalyzingCourse = false;
+  bool _lastAnalysisQuiz = false;
+
+  List<int> _expandedPanels = [0, 1, 2, 3, 4];
 
   LlmType? selectedLLM;
 
@@ -739,8 +745,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               Spacer(),
               ElevatedButton(
                 onPressed: _studentBreakdown.isNotEmpty &&
-                            selectedLLM != null &&
-                            _selectedCourse != null ||
+                        selectedLLM != null &&
+                        _selectedCourse != null &&
                         _selectedAssessment != null
                     ? () => _analyzeReport(
                         _selectedCourse!,
@@ -749,7 +755,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         _selectedStudent?["id"],
                         isEssay() ? null : _questionBreakdown.toList())
                     : null,
-                child: _isAnalyzingAI
+                child: _isAnalyzingSuccess ||
+                        _isAnalyzingFail ||
+                        _isAnalyzingCourse ||
+                        _isAnalyzingAi
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -1209,7 +1218,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ],
           ),
           const SizedBox(height: 10),
-          _buildAIAnalysisTable(),
+          _buildAIAnalysisList(),
           const SizedBox(height: 30),
         ],
       ),
@@ -1240,29 +1249,111 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // build:
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
-  Widget _buildAIAnalysisTable() {
-    if (_aiAnalysisSuccess.isEmpty &&
-        _aiAnalysisFail.isEmpty &&
-        _aiAnalysisCourse.isEmpty &&
-        _aiAnalysisAi.isEmpty) {
-      return const Text("There is no AI analysis data.");
+  Widget _buildAIAnalysisList() {
+    return ExpansionPanelList(
+        expansionCallback: (panelIndex, isExpanded) {
+          if (isExpanded && !_expandedPanels.contains(panelIndex)) {
+            setState(() {
+              _expandedPanels.add(panelIndex);
+            });
+          } else if (!isExpanded && _expandedPanels.contains(panelIndex)) {
+            setState(() {
+              _expandedPanels.remove(panelIndex);
+            });
+          }
+        },
+        children: _buildAiAnalysisChildren());
+  }
+
+  List<ExpansionPanel> _buildAiAnalysisChildren() {
+    List<ExpansionPanel> children = [
+      ExpansionPanel(
+          canTapOnHeader: true,
+          headerBuilder: (context, isExpanded) {
+            return Row(children: [
+              Text("Areas of Success"),
+              Spacer(),
+              Visibility(
+                  visible: _isAnalyzingSuccess,
+                  child: CircularProgressIndicator())
+            ]);
+          },
+          body: Text(_isAnalyzingAi
+              ? "Loading AI Analysis..."
+              : (_aiAnalysisSuccess.isEmpty
+                  ? "No AI Success Data Found"
+                  : _aiAnalysisSuccess[0]["Summary"])),
+          isExpanded: _expandedPanels.contains(0)),
+      ExpansionPanel(
+          canTapOnHeader: true,
+          headerBuilder: (context, isExpanded) {
+            return Row(children: [
+              Text("Areas of Misunderstanding"),
+              Spacer(),
+              Visibility(
+                  visible: _isAnalyzingFail, child: CircularProgressIndicator())
+            ]);
+          },
+          body: Text(_isAnalyzingAi
+              ? "Loading AI Analysis..."
+              : (_aiAnalysisFail.isEmpty
+                  ? "No AI Misunderstanding Data Found"
+                  : _aiAnalysisFail[0]["Summary"])),
+          isExpanded: _expandedPanels.contains(1)),
+      ExpansionPanel(
+          canTapOnHeader: true,
+          headerBuilder: (context, isExpanded) {
+            return Row(children: [
+              Text("Course Improvements"),
+              Spacer(),
+              Visibility(
+                  visible: _isAnalyzingCourse,
+                  child: CircularProgressIndicator())
+            ]);
+          },
+          body: Text(_isAnalyzingCourse
+              ? "Loading AI Analysis..."
+              : (_aiAnalysisCourse.isEmpty
+                  ? "No AI Improvement Data Found"
+                  : _aiAnalysisCourse[0]["Course Improvements"])),
+          isExpanded: _expandedPanels.contains(2)),
+      ExpansionPanel(
+          canTapOnHeader: true,
+          headerBuilder: (context, isExpanded) {
+            return Row(children: [
+              Text("Assignment Improvements"),
+              Spacer(),
+              Visibility(
+                  visible: _isAnalyzingCourse,
+                  child: CircularProgressIndicator())
+            ]);
+          },
+          body: Text(_isAnalyzingCourse
+              ? "Loading AI Analysis..."
+              : (_aiAnalysisCourse.isEmpty
+                  ? "No AI Improvement Data Found"
+                  : _aiAnalysisCourse[1]["Assignment Improvements"])),
+          isExpanded: _expandedPanels.contains(3))
+    ];
+    if (!_lastAnalysisQuiz) {
+      children.add(ExpansionPanel(
+          canTapOnHeader: true,
+          headerBuilder: (context, isExpanded) {
+            return Row(children: [
+              Text("AI Use Areas"),
+              Spacer(),
+              Visibility(
+                  visible: _isAnalyzingAi, child: CircularProgressIndicator())
+            ]);
+          },
+          body: Text(_isAnalyzingAi
+              ? "Loading AI Analysis..."
+              : (_aiAnalysisAi.isEmpty
+                  ? "No AI Use Data Found"
+                  : _aiAnalysisAi[0]["Summary"])),
+          isExpanded: _expandedPanels.contains(4)));
     }
-    return DataTable(
-      columns: const [
-        DataColumn(label: Text('Student')),
-        DataColumn(label: Text('Status')),
-        DataColumn(label: Text('Comments')),
-      ],
-      rows: _aiAnalysisSuccess.map((row) {
-        return DataRow(
-          cells: [
-            DataCell(Text(row['Student']?.toString() ?? '')),
-            DataCell(Text(row['Status']?.toString() ?? '')),
-            DataCell(Text(row['Comments']?.toString() ?? '')),
-          ],
-        );
-      }).toList(),
-    );
+    return children;
   }
 
   /// Computes the percentage a question is answered correctly.
@@ -1303,20 +1394,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       List<Participant> participantsData,
       int? selectedStudentId,
       List<QuestionStatsType>? questionBreakdown) async {
-    setState(() {
-      _isAnalyzingAI = true;
-    });
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
                 "No AI credentials found. Please log in to an AI platform.")),
       );
-      setState(() {
-        _isAnalyzingAI = false;
-      });
       return;
     }
+
+    setState(() {
+      _isAnalyzingSuccess = true;
+      _isAnalyzingFail = true;
+      _isAnalyzingCourse = true;
+      _isAnalyzingAi = selectedAssessment.type == "essay";
+      _lastAnalysisQuiz = selectedAssessment.type == "quiz";
+    });
 
     String assignmentDescription;
     Participant? selectedParticipant =
@@ -1372,7 +1465,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     } else {
       if (questionBreakdown == null) {
         setState(() {
-          _isAnalyzingAI = false;
+          _isAnalyzingSuccess = false;
+          _isAnalyzingFail = false;
+          _isAnalyzingCourse = false;
         });
         return;
       }
@@ -1414,9 +1509,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         assignmentDescription,
         _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
         _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
-    setState(() {
-      _isAnalyzingAI = false;
-    });
   }
 
   Future<void> _analyzeEssaySuccess(
@@ -1437,6 +1529,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1458,6 +1551,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
@@ -1478,6 +1572,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisAi = response;
+      _isAnalyzingAi = false;
     });
   }
 
@@ -1495,7 +1590,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     $failures
     Based on the summaries of student success and student failure, recommend ways I can improve the assignment and my course materials overall.
     Provide a textual summary for both course and assignment improvements, as well as three references I could provide to students to help them better understand the topic.
-    Return your analysis as a JSON array where the textual summary on course improvments is an object with key 'Course Improvements',
+    Return your analysis as a JSON array where the textual summary on course improvements is an object with key 'Course Improvements',
     the summary on assignment improvements is an object with key 'Assignment Improvements', and
     the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
     """;
@@ -1503,6 +1598,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisCourse = response;
+      _isAnalyzingCourse = false;
     });
   }
 
@@ -1530,6 +1626,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1558,6 +1655,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
@@ -1581,6 +1679,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1604,6 +1703,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
