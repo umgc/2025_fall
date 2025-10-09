@@ -42,5 +42,6 @@ frontend/android/
 
 terraform/terraformout.txt
 
-.idea/
-.metadata
+# Terraform
+.terraform*
+*.tfstate*

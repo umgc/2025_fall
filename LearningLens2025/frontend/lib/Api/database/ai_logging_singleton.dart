@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
-import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/assignment.dart';
@@ -28,8 +27,8 @@ class AILoggingSingleton {
       Assignment? assignment,
       Participant? student,
       int lmsType,
-      DateTime? startDate,
-      DateTime? endDate) async {
+      DateTime startDate,
+      DateTime endDate) async {
     List<AiLog> list = List.empty(growable: true);
     int courseId = course.id;
     int assignmentIdParam = assignment?.id ?? -1;
@@ -55,16 +54,13 @@ class AILoggingSingleton {
           LlmType.values.elementAt(m["ai_model"]),
           m["reflection"],
           m["log_id"],
-          LmsType.values.elementAt(m["lms_service"]),
+          LocalStorageService.getSelectedClassroom(),
           DateTime.parse(m["time"])));
     }
     return list;
   }
 
-  String getDateString(DateTime? date) {
-    if (date == null) {
-      return "null";
-    }
+  String getDateString(DateTime date) {
     return date.toUtc().toString().split(' ')[0];
   }
 

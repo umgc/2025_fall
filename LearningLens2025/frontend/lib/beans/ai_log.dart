@@ -7,10 +7,9 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 
 // A AI log entry.
 class AiLog {
-  final Assignment assignment; // Multiple choice text - required
-  final Course
-      course; // Point value from 0 (incorrect) to 100 (correct) - required
-  final Participant student; // Feedback for the choice - optional
+  final Assignment assignment;
+  final Course course;
+  final Participant student;
   final String prompt;
   final String response;
   final String reflection;
@@ -63,7 +62,7 @@ class AiLog {
       case 6:
         return model.displayName;
       case 7:
-        return created.toLocal();
+        return created;
       default:
         return "";
     }
@@ -91,7 +90,7 @@ class AiLog {
       case 6:
         return "AI Model";
       case 7:
-        return "Created";
+        return "Created (UTC)";
       default:
         return "";
     }
