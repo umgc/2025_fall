@@ -1,4 +1,3 @@
-import 'package:care_connect_app/config/navigation/caregiver-more-features-bottom-drawer.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
@@ -7,7 +6,6 @@ import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
-import 'patient-more-features-bottom-drawer.dart';
 
 /// Represents a single item in the bottom navigation bar.
 ///

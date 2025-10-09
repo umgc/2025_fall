@@ -237,26 +237,30 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     );
   }
 
-  void _openDetail(Invoice invoice) async {
-    final updated = await Navigator.push<Invoice>(
-      context,
-      MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
-    );
-    if (updated != null) {
-      await InvoiceService.instance.upsert(updated);
-      _fetch();
-    }
+void _openDetail(Invoice invoice) async {
+  // Push onto the app-level (root) navigator
+  final updated = await Navigator.of(context, rootNavigator: true).push<Invoice>(
+    MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
+  );
+  if (updated != null) {
+    await InvoiceService.instance.upsert(updated);
+    _fetch();
   }
+}
 
-  void _openDetailPaymentTab(Invoice invoice) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            InvoiceDetailPage(invoice: invoice, initialTabIndex: 2),
+void _openDetailPaymentTab(Invoice invoice) {
+  // Same idea, but start on the Payment tab
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(
+      builder: (_) => InvoiceDetailPage(
+        invoice: invoice,
+        initialTabIndex: 2,
       ),
-    );
-  }
+    ),
+  );
+}
+
+ 
 }
 
 /// Compact, Material 3 styled filter bar that matches the mock:

@@ -193,7 +193,9 @@ class _OverdueTile extends StatelessWidget {
           _AmountBadge(text: _currency(invoice.amounts.amountDue ?? invoice.amounts.total ?? 0)),
           FilledButton.tonalIcon(
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)));
+               Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
+                );
             },
             icon: const Icon(Icons.remove_red_eye, size: 16),
             label: const Text('View'),
@@ -314,11 +316,11 @@ class _RecentActivityCard extends StatelessWidget {
                           children: [
                             _AmountBadge(text: _currency(i.amounts.amountDue ?? i.amounts.total ?? 0)),
                             OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: i)),
-                                );
-                              },
+                           onPressed: () {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: i)),
+                            );
+},
                               icon: const Icon(Icons.remove_red_eye, size: 16),
                               label: const Text('View'),
                             ),

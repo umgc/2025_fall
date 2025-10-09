@@ -141,7 +141,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
           ),
         ),
       ),
-      drawer: const CommonDrawer(currentRoute: '/invoice-assistant/detail'),
+     // drawer: const CommonDrawer(currentRoute: '/invoice-assistant/detail'),
       body: AbsorbPointer(
         absorbing: _busy,
         child: TabBarView(
