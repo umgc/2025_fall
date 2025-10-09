@@ -53,7 +53,7 @@ dependencies:
   
   intl: ^0.20.2 # data formatting
   # camera: ^0.11.1 # emotion detector use
-  pdf: ^3.11.3 # PDF generation
+  # pdf: ^3.11.3 # PDF generation
   # emotion detector use
 
   # Temporarily disabled due to iOS dependency conflicts
