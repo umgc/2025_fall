@@ -1,9 +1,7 @@
-// lib/screens/settings_screen.dart
+import 'package:care_connect_app/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-// import 'dart:io';
-import 'package:care_connect_app/widgets/user_avatar.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'upload_avatar_screen.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';

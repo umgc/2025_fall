@@ -3,9 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 // Use conditional imports to prevent Agora from loading on web
-import 'video_call_service_mobile.dart'
-    if (dart.library.html) 'video_call_service_web.dart'
-    as platform_service;
 
 class HybridVideoCallService {
   static final HybridVideoCallService _instance =
