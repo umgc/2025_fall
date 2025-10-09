@@ -8,6 +8,21 @@ import postgres from "postgres";
  * @param {object} context 
  */
 async function handleGET(client, event, context){
+    const cmd = event.queryStringParameters?.command
+    if(cmd && cmd == 'createDb'){
+        return await client`CREATE TABLE IF NOT EXISTS code_evaluation (
+            course_id varchar NOT NULL,
+            assignment_id varchar NOT NULL,
+            expected_output varchar NOT NULL,
+            username varchar NOT NULL,
+            status varchar NOT NULL,
+            results_json text,
+            start_time timestamptz NOT NULL DEFAULT now(),
+            finish_time timestamptz,
+            primary key (course_id, assignment_id, username)
+        );`
+    }
+
     const username = event.queryStringParameters?.username
     if(!username){
         return {
