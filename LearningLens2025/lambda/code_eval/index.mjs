@@ -8,17 +8,17 @@ import postgres from "postgres";
  * @param {object} context 
  */
 async function handleGET(client, event, context){
-    const courseId = event.queryStringParameters?.courseId
-    if(!courseId){
+    const username = event.queryStringParameters?.username
+    if(!username){
         return {
             statusCode: 400,
-            body: 'Missing courseId',
+            body: 'Missing username',
         }
     }
 
     return await client`
         SELECT * FROM code_evaluation
-        WHERE course_id = ${courseId};
+        WHERE username = ${username};
     `
 }
 
@@ -46,12 +46,15 @@ async function handlePOST(client, event, context){
      */
     await client`
         INSERT INTO code_evaluation VALUES (
-            ${body.assignmentId},
             ${body.courseId},
+            ${body.assignmentId},
+            ${body.expectedOutput},
+            ${body.username},
             'JOB STARTED'
         )
-        ON CONFLICT (assignment_id, course_id) DO UPDATE
+        ON CONFLICT (assignment_id, course_id, username) DO UPDATE
         SET status = EXCLUDED.status,
+            expected_output = EXCLUDED.expected_output,
             results_json = NULL,
             start_time = now(),
             finish_time = NULL;
@@ -64,15 +67,16 @@ async function handlePOST(client, event, context){
 }
 
 export const handler = async (event, context) => {
+    const hostname = '2bthdlvyqq5d5zl2bxxmm6r25m.dsql.us-east-1.on.aws'
     const signer = new DsqlSigner({
-        hostname: 'avtgqkrvpgwur5hk6x5lruqjim.dsql.us-east-1.on.aws',
+        hostname: hostname,
         region: 'us-east-1',
     })
 
     const token = await signer.getDbConnectAdminAuthToken()
 
     const client = postgres({
-      host: 'avtgqkrvpgwur5hk6x5lruqjim.dsql.us-east-1.on.aws',
+      host: hostname,
       user: "admin",
       password: token,
       database: "postgres",
