@@ -184,7 +184,7 @@ class DashboardAppHeader extends StatelessWidget
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            "Welcome back",
+                            "Welcome back ${userName}",
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w600,
