@@ -14,29 +14,33 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 //@EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    @Autowired
-    private CallNotificationHandler callNotificationHandler;
+    // Commented out to prevent bean injection errors when WebSocket is disabled for Lambda
+    // @Autowired
+    // private CallNotificationHandler callNotificationHandler;
 
-    @Autowired
-    private CareConnectWebSocketHandler careConnectWebSocketHandler;
+    // @Autowired
+    // private CareConnectWebSocketHandler careConnectWebSocketHandler;
 
-    @Autowired
-    private NotificationWebSocketHandler notificationWebSocketHandler;
+    // @Autowired
+    // private NotificationWebSocketHandler notificationWebSocketHandler;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // WebSocket handlers disabled for Lambda deployment
+        // Uncomment when @EnableWebSocket is enabled for local development
+        
         // Call/SMS notification WebSocket endpoint
-        registry.addHandler(callNotificationHandler, "/ws/calls")
-                .setAllowedOrigins("*")
-                .withSockJS();
+        // registry.addHandler(callNotificationHandler, "/ws/calls")
+        //         .setAllowedOrigins("*")
+        //         .withSockJS();
 
         // General CareConnect WebSocket endpoint for real-time updates
-        registry.addHandler(careConnectWebSocketHandler, "/ws/careconnect")
-                .setAllowedOrigins("*")
-                .withSockJS();
+        // registry.addHandler(careConnectWebSocketHandler, "/ws/careconnect")
+        //         .setAllowedOrigins("*")
+        //         .withSockJS();
 
         // Notification WebSocket endpoint (no SockJS fallback)
-        registry.addHandler(notificationWebSocketHandler, "/ws/notifications")
-                .setAllowedOrigins("*");
+        // registry.addHandler(notificationWebSocketHandler, "/ws/notifications")
+        //         .setAllowedOrigins("*");
     }
 }
