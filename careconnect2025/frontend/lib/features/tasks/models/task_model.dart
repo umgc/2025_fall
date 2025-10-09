@@ -1,45 +1,70 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
-import '../../notifications/models/notification_model.dart';
+import '../../notifications/models/scheduled_notification_model.dart';
 
+/// =============================
+/// Task Model
+/// =============================
+/// Represents a scheduled task in CareConnect, which can:
+/// - Belong to a patient (or be unassigned)
+/// - Be one-time or recurring
+/// - Contain reminders/notifications
+/// - Track completion state
+///
+/// Supports recurrence (daily, weekly, monthly, yearly)
+/// and series updates (via `parentTaskId` + `applyToSeries`).
 class Task {
-  int id;
-  int? userId; // Optional, can be null if not assigned to a user
+  int? id;
+  int? assignedPatientId; // Optional, can be null if not assigned to a user
   String name;
   String description;
   DateTime date;
   TimeOfDay? timeOfDay; // Optional, can be null if not set
   bool isComplete;
-  List<Notification_dto>? notifications;
-  String? frequency; // e.g., 'daily', 'weekly', 'monthly'
-  int? interval; // e.g., every 2 days, every 3 weeks
-  int? count; // Number of occurrences
-  List<bool>? daysOfWeek; // e.g., [false, true, false, true, false, true, false] for Sun, Mon, Tue, Wed, Thu, Fri, Sat
+  List<ScheduledNotification>? notifications;
 
-
+  //Recurrence fields
+  String? frequency; // e.g., daily, weekly, monthly, yearly
+  int? interval; // number of days/weeks/months between recurrences
+  int? count; // number of total occurrences
+  List<bool>? daysOfWeek; // e.g., [false, true, false, true, ...] for Mon/Wed
+  final String? taskType; // "General" | "Lab" | "Appointment" | "custom"
+  bool applyToSeries;
+  int? parentTaskId;
 
   Task({
-    required this.id,
+    this.id,
     required this.name,
     this.description = "",
     required this.date,
     this.timeOfDay,
-    this.userId,
+    this.assignedPatientId,
     this.isComplete = false,
     this.notifications,
     this.frequency,
     this.interval,
     this.count,
     this.daysOfWeek,
+    this.taskType,
+    this.applyToSeries = false,
+    this.parentTaskId,
   });
-  
+
+  /// Factory constructor: build a [Task] from JSON data.
+  ///
+  /// Handles:
+  /// - Parsing `daysOfWeek` into `List<bool>`
+  /// - Supporting timeOfDay as `"HH:mm"` string or map `{hour, minute}`
+  /// - Mapping backend variations (`interval` vs `taskInterval`, `count` vs `doCount`)
   factory Task.fromJson(Map<String, dynamic> json) {
+    final parsedDays = json['daysOfWeek'] != null
+        ? List<bool>.from(json['daysOfWeek'])
+        : null;
+
     return Task(
-      id: json['id'] != null ? json['id'] as int : -1,
+      id: json['id'],
       name: json['name'],
-      description: json['description'],
+      description: json['description'] ?? "",
       date: DateTime.parse(json['date']),
       timeOfDay: json['timeOfDay'] != null
           ? TimeOfDay(
@@ -51,40 +76,48 @@ class Task {
                   : json['timeOfDay']['minute'],
             )
           : null,
-      userId: json['assignedTo'],
+      assignedPatientId: json['patientId'],
       isComplete: json['isComplete'] ?? false,
+      notifications: json['notifications'] != null
+          ? (json['notifications'] as List)
+                .map((n) => ScheduledNotification.fromJson(n))
+                .toList()
+          : null,
       frequency: json['frequency'],
-      interval: json['taskInterval'],
-      count: json['doCount'],
-      daysOfWeek: json['daysOfWeek'] != null
-          ? (json['daysOfWeek'] is String
-              ? List<bool>.from(jsonDecode(json['daysOfWeek']))
-              : List<bool>.from(json['daysOfWeek']))
-          : null
+      interval: json['interval'] ?? json['taskInterval'],
+      count: json['count'] ?? json['doCount'],
+      daysOfWeek: parsedDays,
+      taskType: json['taskType'],
+      applyToSeries: json['applyToSeries'] ?? false,
+      parentTaskId: json['parentTaskId'],
     );
   }
 
+  /// Convert a [Task] to JSON for API serialization.
+  ///
+  /// Notes:
+  /// - Converts [date] to ISO8601 string
+  /// - Converts [timeOfDay] into `"HH:mm"` string
+  /// - Uses `"isCompleted"` for completion state (matches backend)
   Map<String, dynamic> toJson() {
-    String taskType = 'custom'; // Default task type
-    if (daysOfWeek != null) {
-      taskType = 'dayOfWeek';
-    } else if (frequency != null && interval != null) {
-      taskType = 'frequency';
-    }
     return {
+      if (id != null) 'id': id,
       'name': name,
       'description': description,
-      'date': date.toString(),
+      'date': date.toIso8601String(),
       'timeOfDay': timeOfDay != null
-          ? "${timeOfDay!.hour}:${timeOfDay!.minute}"
+          ? "${timeOfDay!.hour.toString().padLeft(2, '0')}:${timeOfDay!.minute.toString().padLeft(2, '0')}"
           : null,
       'isCompleted': isComplete,
-      'notifications': null,
+      'notifications': notifications?.map((n) => n.toJson()).toList(),
       'frequency': frequency,
-      'taskInterval': interval,
-      'doCount': count,
-      'daysOfWeek': jsonEncode(daysOfWeek),
-      'taskType': taskType,
+      'interval': interval,
+      'count': count,
+      'daysOfWeek': daysOfWeek,
+      'taskType': taskType ?? "general",
+      'patientId': assignedPatientId,
+      'applyToSeries': applyToSeries,
+      'parentTaskId': parentTaskId,
     };
   }
 
@@ -93,86 +126,44 @@ class Task {
   }
 }
 
-class FrequencyTask extends Task {
-  @override
-  final String frequency; // e.g., 'daily', 'weekly', 'monthly'
-  @override
-  final int interval; // e.g., every 2 days, every 3 weeks
-  @override
-  final int? count; // Number of occurrences
-
-  FrequencyTask({
-    required this.frequency,
-    required this.interval,
-    this.count = 0,
-    required super.id,
-    required super.name,
-    required super.description,
-    required super.date,
-    super.timeOfDay,
-    super.userId,
-    super.isComplete = false,
-    super.notifications,
-  });
-
-  factory FrequencyTask.fromJson(Map<String, dynamic> json) {
-    return FrequencyTask(
-      frequency: json['frequency'],
-      interval: json['taskInterval'],
-      count: json['doCount'],
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      date: DateTime.parse(json['date']),
-      timeOfDay: json['timeOfDay'] != null
-          ? TimeOfDay(
-              hour: json['timeOfDay']['hour'],
-              minute: json['timeOfDay']['minute'],
-            )
-          : null,
-      userId: json['userId'],
-      isComplete: json['isComplete'] ?? false,
-      notifications: (json['notifications'] as List?)
-          ?.map((n) => Notification_dto.fromJson(n))
-          .toList(),
-    );
-  }
-}
-
-class DayOfWeekTask extends Task {
-  @override
-  final List<bool> daysOfWeek; // e.g., [true, false, true, false, true, false, false] for Mon, Wed, Fri
-
-  DayOfWeekTask({
-    required this.daysOfWeek,
-    required super.id,
-    required super.name,
-    required super.description,
-    required super.date,
-    super.timeOfDay,
-    super.userId,
-    super.isComplete = false,
-    super.notifications,
-  });
-
-  factory DayOfWeekTask.fromJson(Map<String, dynamic> json) {
-    return DayOfWeekTask(
-      daysOfWeek: List<bool>.from(json['daysOfWeek']),
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      date: DateTime.parse(json['date']),
-      timeOfDay: json['timeOfDay'] != null
-          ? TimeOfDay(
-              hour: json['timeOfDay']['hour'],
-              minute: json['timeOfDay']['minute'],
-            )
-          : null,
-      userId: json['userId'],
-      isComplete: json['isComplete'] ?? false,
-      notifications: (json['notifications'] as List?)
-          ?.map((n) => Notification_dto.fromJson(n))
-          .toList(),
+// =============================
+// TaskCopyWith Extension
+// =============================
+/// Provides a `copyWith` method for immutability-style updates.
+///
+/// Example:
+/// ```dart
+/// final updated = task.copyWith(name: "New name", isComplete: true);
+/// ```
+extension TaskCopyWith on Task {
+  Task copyWith({
+    int? id,
+    String? name,
+    String? description,
+    DateTime? date,
+    TimeOfDay? timeOfDay,
+    int? userId,
+    bool? isComplete,
+    String? frequency,
+    int? interval,
+    int? count,
+    List<bool>? daysOfWeek,
+    String? taskType,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      timeOfDay: timeOfDay ?? this.timeOfDay,
+      assignedPatientId: userId ?? this.assignedPatientId,
+      isComplete: isComplete ?? this.isComplete,
+      notifications: this.notifications, // keep existing notifications
+      frequency: frequency ?? this.frequency,
+      interval: interval ?? this.interval,
+      count: count ?? this.count,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      taskType: taskType ?? this.taskType,
     );
   }
 }
