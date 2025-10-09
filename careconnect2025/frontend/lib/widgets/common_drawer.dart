@@ -99,6 +99,8 @@ class _CommonDrawerState extends State<CommonDrawer> {
         user.role.toUpperCase() == 'CAREGIVER' ||
         user.role.toUpperCase() == 'FAMILY_LINK' ||
         user.role.toUpperCase() == 'ADMIN';
+    
+    final isAdmin = user.role.toUpperCase() == 'ADMIN';
 
     return Drawer(
       child: ListView(
@@ -218,6 +220,17 @@ class _CommonDrawerState extends State<CommonDrawer> {
             route: '/gamification',
             isActive: widget.currentRoute == '/gamification',
           ),
+
+          // EVV - Role-based access
+          if (isCaregiver || isAdmin) ...[
+            _buildDrawerItem(
+              context,
+              icon: Icons.verified_user,
+              title: 'EVV (Electronic Visit Verification)',
+              route: '/evv',
+              isActive: widget.currentRoute.startsWith('/evv'),
+            ),
+          ],
 
           const Divider(),
 

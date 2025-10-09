@@ -2,6 +2,9 @@ package com.careconnect.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.OffsetDateTime;
 import java.util.Map;
 
@@ -22,6 +25,7 @@ public class EvvAuditEvent {
     private Map<String,Object> deviceInfo;
 
     @Convert(disableConversion = true) @Column(name = "details", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private Map<String,Object> details;
 
     @PrePersist void onCreate(){ if(eventTime == null) eventTime = OffsetDateTime.now(); }

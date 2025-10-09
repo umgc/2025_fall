@@ -36,6 +36,13 @@ import '../../features/analytics/analytics_page.dart';
 import '../../features/payments/presentation/pages/payment_success_page.dart';
 import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
+import '../../features/evv/presentation/pages/evv_dashboard.dart';
+import '../../features/evv/presentation/pages/evv_participant_management.dart';
+import '../../features/evv/presentation/pages/evv_record_creation.dart';
+import '../../features/evv/presentation/pages/evv_record_review.dart';
+import '../../features/evv/presentation/pages/evv_visit_history.dart';
+import '../../features/evv/presentation/pages/evv_corrections.dart';
+import '../../features/evv/presentation/pages/evv_offline_sync.dart';
 import '../../providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -463,6 +470,36 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/medication',
       builder: (_, __) => const MedicationManagementScreen(),
+    ),
+    
+    // EVV Routes
+    GoRoute(
+      path: '/evv',
+      builder: (_, __) => const EvvDashboard(),
+    ),
+    GoRoute(
+      path: '/evv/participants',
+      builder: (_, __) => const EvvParticipantManagementPage(),
+    ),
+    GoRoute(
+      path: '/evv/create-record',
+      builder: (_, __) => const EvvRecordCreationPage(),
+    ),
+    GoRoute(
+      path: '/evv/review-records',
+      builder: (_, __) => const EvvRecordReviewPage(),
+    ),
+    GoRoute(
+      path: '/evv/visit-history',
+      builder: (_, __) => const EvvVisitHistoryPage(),
+    ),
+    GoRoute(
+      path: '/evv/corrections',
+      builder: (_, __) => const EvvCorrectionsPage(),
+    ),
+    GoRoute(
+      path: '/evv/offline-sync',
+      builder: (_, __) => const EvvOfflineSyncPage(),
     ),
     GoRoute(
       path: '/profile-settings',

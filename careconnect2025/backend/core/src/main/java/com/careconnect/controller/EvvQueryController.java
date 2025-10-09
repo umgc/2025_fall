@@ -13,7 +13,7 @@ public class EvvQueryController {
     @GetMapping
     public List<EvvRecord> list(@RequestParam(required = false) String status, @RequestParam(required = false) Long caregiverId) {
         if (status != null && caregiverId != null) return evvRecordRepository.findByCaregiverIdAndStatus(caregiverId, status);
-        if (status != null) return evvRecordRepository.findAll().stream().filter(r -> status.equals(r.getStatus())).toList();
+        if (status != null) return evvRecordRepository.findByStatus(status);
         return evvRecordRepository.findAll();
     }
 }

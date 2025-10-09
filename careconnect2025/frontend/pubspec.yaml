@@ -96,6 +96,11 @@ dependencies:
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
   
+  # EVV Dependencies
+  connectivity_plus: ^6.0.5
+  device_info_plus: ^11.1.0
+  uuid: ^4.5.1
+  
   # AI Voice Commands 
   # ag added as a fix
   porcupine_flutter: ^3.0.5
