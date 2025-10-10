@@ -25,6 +25,18 @@ class Medication {
     required this.deliveryMethod,
   });
 
+  ///Next dose and deliveryMethod are not provided by Medication on the backend.
+  ///TODO: Make the two comply with each other
+  factory Medication.fromJson(Map<String, dynamic> json)
+  {
+    return Medication(name: json['medicationName'],
+        dosage: json['dosage'],
+        frequency: json['frequency'],
+        status: json['isActive'],
+        nextDose: 'placeholder',
+        deliveryMethod: 'placeholder');
+  }
+
   Medication copyWith({
     String? name,
     String? dosage,
