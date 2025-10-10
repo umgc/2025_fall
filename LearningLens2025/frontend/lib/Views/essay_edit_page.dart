@@ -24,10 +24,11 @@ class EssayEditPage extends StatefulWidget {
 
 class EssayEditPageState extends State<EssayEditPage> {
   // Convert JSON to rows compatible with Editable
-  List rows = [];
+  List<Map<String, dynamic>> rows = [];
+  List<Map<String, dynamic>> headers = [];
+  List<TextEditingController> headerControllers = [];
 
-  // Headers or Columns
-  List headers = [];
+  final _editableKey = GlobalKey<EditableState>();
 
   @override
   void initState() {
@@ -42,8 +43,16 @@ class EssayEditPageState extends State<EssayEditPage> {
     Map<String, dynamic> mappedData = jsonDecode(widget.jsonData);
 
     // Step 1: Build headers dynamically based on the number of levels in the first criterion
-    List<dynamic> levels =
-        List<dynamic>.from(mappedData['criteria']?[0]['levels'] ?? []);
+    List<dynamic> criteria = List<dynamic>.from(mappedData['criteria'] ?? []);
+    if (criteria.isEmpty) return;
+
+    List<dynamic> levels = List<dynamic>.from(criteria[0]['levels'] ?? []);
+
+    // Initialize controllers for score headers
+    headerControllers = levels
+        .map((level) => TextEditingController(
+            text: level['score'].toString().replaceAll('%', '').trim()))
+        .toList();
 
     // Define the headers for the Editable table
     headers = [
@@ -63,25 +72,25 @@ class EssayEditPageState extends State<EssayEditPage> {
 
     // Add columns for each score level dynamically
     for (int i = 0; i < levels.length; i++) {
+      String sanitizedScore =
+          levels[i]['score'].toString().replaceAll('%', '').trim();
       headers.add({
-        "title": '${levels[i]['score']}', // Column title is the score
-        'index': i + 3, // Start after Criteria and Weight columns
-        'key': 'level_$i', // Key for Editable row mapping
-        'widthFactor':
-            0.65 / levels.length, // Width evenly divided among levels
+        "title": sanitizedScore.isEmpty ? '' : '$sanitizedScore%',
+        'index': i + 3,
+        'key': 'level_$i',
+        'widthFactor': 0.65 / levels.length,
       });
     }
 
     // Step 2: Build rows by mapping each criterion and its levels dynamically
-    rows = (mappedData['criteria'] ?? []).map((criterion) {
+    rows = criteria.map<Map<String, dynamic>>((criterion) {
       Map<String, dynamic> row = {
-        "name": criterion['description'], // Criteria description
-        "weight": criterion['weight']
-            .toString(), // Weight as string to make it editable
+        "name": criterion['description'].toString(),
+        "weight": criterion['weight'].toString(),
       };
-
-      for (int i = 0; i < (criterion['levels'] as List).length; i++) {
-        row['level_$i'] = (criterion['levels'] as List)[i]['definition'];
+      List<dynamic> lvl = List<dynamic>.from(criterion['levels'] ?? []);
+      for (int i = 0; i < lvl.length; i++) {
+        row['level_$i'] = lvl[i]['definition'].toString();
       }
 
       return row;
@@ -90,9 +99,6 @@ class EssayEditPageState extends State<EssayEditPage> {
     setState(
         () {}); // Ensure the UI is updated after populating headers and rows
   }
-
-  /// Create a Key for EditableState
-  final _editableKey = GlobalKey<EditableState>();
 
   /// Get the current JSON from Editable safely
   String getUpdatedJson() {
@@ -140,10 +146,67 @@ class EssayEditPageState extends State<EssayEditPage> {
       for (int j = 0; j < (criterion['levels'] as List).length; j++) {
         final def = row['level_$j'];
         criterion['levels'][j]['definition'] = def?.toString() ?? '';
+        criterion['levels'][j]['score'] =
+            headerControllers[j].text.replaceAll('%', '').trim();
       }
     }
 
     return jsonEncode(mappedData);
+  }
+
+  // Build the aligned score header row above percent columns
+  Widget buildScoreHeaderRow(double totalWidth) {
+    double criteriaWeightWidth = totalWidth * 0.25 + totalWidth * 0.1;
+    double scoreColumnWidth =
+        (totalWidth - criteriaWeightWidth) / headerControllers.length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // "Percentage Levels:" label
+          Container(
+            width: criteriaWeightWidth,
+            padding: EdgeInsets.only(left: 16.0),
+            child: Text(
+              'Percentage Levels:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          // Editable scores aligned above percent columns
+          ...headerControllers.map((controller) {
+            int index = headerControllers.indexOf(controller);
+            return Container(
+              width: scoreColumnWidth - 8,
+              margin: EdgeInsets.symmetric(horizontal: 4),
+              height: 40,
+              child: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  hintText: 'Score',
+                ),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+                onChanged: (_) {
+                  String sanitizedText =
+                      controller.text.replaceAll('%', '').trim();
+                  setState(() {
+                    headers[index + 2]['title'] =
+                        sanitizedText.isEmpty ? '' : '$sanitizedText%';
+                  });
+                },
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
   }
 
   @override
@@ -153,93 +216,87 @@ class EssayEditPageState extends State<EssayEditPage> {
         title: 'Edit Essay Rubric',
         userprofileurl: LmsFactory.getLmsService().profileImage ?? '',
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 24.0),
-
-              // Editable table with horizontal scrolling
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: 600,
-                      maxWidth: constraints.maxWidth > 600
-                          ? constraints.maxWidth
-                          : 600,
+      body: LayoutBuilder(builder: (context, constraints) {
+        double totalWidth =
+            constraints.maxWidth > 600 ? constraints.maxWidth : 600;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 16),
+            buildScoreHeaderRow(totalWidth),
+            SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(minWidth: 600, maxWidth: totalWidth),
+                  child: Editable(
+                    key: _editableKey,
+                    tdEditableMaxLines: 100,
+                    trHeight: 100,
+                    columns: headers,
+                    rows: rows,
+                    showCreateButton: false,
+                    tdStyle: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    child: Editable(
-                      key: _editableKey,
-                      tdEditableMaxLines: 100,
-                      trHeight: 100,
-                      columns: headers,
-                      rows: rows,
-                      showCreateButton: false,
-                      tdStyle: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      showSaveIcon: false,
-                      borderColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                    ),
+                    showSaveIcon: false,
+                    borderColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                   ),
                 ),
               ),
-
-              SizedBox(height: 20),
-
-              // Buttons row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    child: const Text('Send to Moodle'),
-                    onPressed: () => _handleButtonClick(action: () {
-                      String updatedJson = getUpdatedJson();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => EssayAssignmentSettings(
-                              updatedJson, widget.description),
-                        ),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Data sent to Moodle')),
-                      );
-                    }),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _handleButtonClick(action: () {
-                      final updatedRubric = jsonDecode(getUpdatedJson());
-                      exportPdf(updatedRubric, 'rubric.pdf');
-                    }),
-                    icon: Icon(Icons.picture_as_pdf),
-                    label: Text("Export PDF"),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _handleButtonClick(action: () {
-                      final updatedRubric = jsonDecode(getUpdatedJson());
-                      exportExcel(updatedRubric, 'rubric.xlsx');
-                    }),
-                    icon: Icon(Icons.table_chart),
-                    label: Text("Export Excel"),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: 20),
-            ],
-          );
-        },
-      ),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  child: Text('Send to Moodle'),
+                  onPressed: () => _handleButtonClick(() {
+                    String updatedJson = getUpdatedJson();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EssayAssignmentSettings(
+                            updatedJson, widget.description),
+                      ),
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Data sent to Moodle')),
+                    );
+                  }),
+                ),
+                SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _handleButtonClick(() {
+                    final updatedRubric = jsonDecode(getUpdatedJson());
+                    exportPdf(updatedRubric, 'rubric.pdf');
+                  }),
+                  icon: Icon(Icons.picture_as_pdf),
+                  label: Text("Export PDF"),
+                ),
+                SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _handleButtonClick(() {
+                    final updatedRubric = jsonDecode(getUpdatedJson());
+                    exportExcel(updatedRubric, 'rubric.xlsx');
+                  }),
+                  icon: Icon(Icons.table_chart),
+                  label: Text("Export Excel"),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+          ],
+        );
+      }),
     );
   }
 
-  void _handleButtonClick({required VoidCallback action}) {
+  void _handleButtonClick(VoidCallback action) {
     final editableState = _editableKey.currentState;
     if (editableState == null) return;
 
@@ -253,9 +310,7 @@ class EssayEditPageState extends State<EssayEditPage> {
           Map<String, dynamic>.from(allRows[rowIndex]);
 
       editedRow.forEach((key, value) {
-        if (key != 'row') {
-          safeRow[key] = value ?? '';
-        }
+        if (key != 'row') safeRow[key] = value ?? '';
       });
 
       allRows[rowIndex] = safeRow;
@@ -304,34 +359,6 @@ class EssayEditPageState extends State<EssayEditPage> {
       return;
     }
 
-    // Update JSON safely
-    Map<String, dynamic> mappedData = jsonDecode(widget.jsonData);
-    final criteriaList = mappedData['criteria'] as List<dynamic>;
-
-    for (int i = 0; i < allRows.length; i++) {
-      final row = allRows[i];
-      final criterion = criteriaList[i];
-
-      // Update weight safely
-      final weightValue = row['weight'];
-      int weightInt = 0;
-      if (weightValue is int) {
-        weightInt = weightValue;
-      } else if (weightValue is double) {
-        weightInt = weightValue.toInt();
-      } else if (weightValue is String) {
-        weightInt = double.tryParse(weightValue)?.toInt() ?? 0;
-      }
-      criterion['weight'] = weightInt;
-
-      // Update levels
-      for (int j = 0; j < (criterion['levels'] as List).length; j++) {
-        final def = row['level_$j'];
-        criterion['levels'][j]['definition'] = def?.toString() ?? '';
-      }
-    }
-
-    // Update the main rows so Editable stays in sync
     rows = List<Map<String, dynamic>>.from(allRows);
 
     setState(() {}); // Refresh UI
@@ -359,8 +386,7 @@ class EssayEditPageState extends State<EssayEditPage> {
                 headers: [
                   'Criteria',
                   'Weight',
-                  for (var level in criteria[0]['levels'])
-                    level['score'].toString()
+                  for (var c in headerControllers) '${c.text}%'
                 ],
                 data: [
                   for (var c in criteria)
@@ -376,10 +402,11 @@ class EssayEditPageState extends State<EssayEditPage> {
                 headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
                 border: pw.TableBorder.all(color: PdfColors.grey),
                 columnWidths: {
-                  0: pw.FlexColumnWidth(2.8),
-                  1: pw.FlexColumnWidth(1.8),
-                  for (int i = 2; i < (criteria[0]['levels'].length + 2); i++)
-                    i: pw.FlexColumnWidth(2),
+                  0: pw.FlexColumnWidth(1.7), // Criteria column gets 2x width
+                  1: pw.FlexColumnWidth(1), // Weight column slightly wider
+                  // remaining score columns: equal widths
+                  for (int i = 2; i < headerControllers.length + 2; i++)
+                    i: pw.FlexColumnWidth(1),
                 },
               ),
             ],
@@ -405,11 +432,7 @@ class EssayEditPageState extends State<EssayEditPage> {
       final criteria = rubricData['criteria'] as List<dynamic>;
 
       final header = ['Criteria', 'Weight'];
-      if (criteria.isNotEmpty) {
-        for (var level in criteria[0]['levels']) {
-          header.add(level['score'].toString());
-        }
-      }
+      header.addAll(headerControllers.map((c) => '${c.text}%'));
       sheet.appendRow(header);
 
       for (var c in criteria) {
