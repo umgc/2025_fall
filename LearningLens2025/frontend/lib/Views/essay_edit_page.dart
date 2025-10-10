@@ -203,7 +203,7 @@ class EssayEditPageState extends State<EssayEditPage> {
                 },
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
