@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
 import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 
 class InvoiceTabbedPage extends StatefulWidget {
   const InvoiceTabbedPage({super.key, this.initialTabIndex = 0});

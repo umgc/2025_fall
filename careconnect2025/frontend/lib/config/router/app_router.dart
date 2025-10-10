@@ -3,6 +3,7 @@ import 'package:care_connect_app/features/integrations/presentation/pages/home_m
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -696,21 +697,21 @@ final GoRouter appRouter = GoRouter(
         }
         return null;
       },
-      routes: [
-        // GoRoute(
-        //   path: 'upload',
-        //   name: 'invoiceUpload',
-        //   builder: (context, state) => const UploadInvoiceScreen(),
-        // ),
+      routes: [ 
+         GoRoute(
+          path: 'dashboard',
+          name: 'invoiceDashboard',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 0),
+        ),
         GoRoute(
           path: 'upload',
           name: 'invoiceUpload',
-          builder: (context, state) => const UploadInvoicePage(),
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 1),
         ),
         GoRoute(
           path: 'list',
           name: 'invoiceList',
-          builder: (context, state) => const InvoiceListPage(),
+         builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 2),
           routes: [
             GoRoute(
               path: ':filter',
@@ -727,12 +728,7 @@ final GoRouter appRouter = GoRouter(
             final invoice = state.extra as Invoice;
             return InvoiceDetailPage(invoice: invoice);
           },
-        ),
-        GoRoute(
-          path: 'dashboard',
-          name: 'invoiceDashboard',
-          builder: (context, state) => const InvoiceDashboardPage(),
-        ),
+        ),       
         
       ],
     ),

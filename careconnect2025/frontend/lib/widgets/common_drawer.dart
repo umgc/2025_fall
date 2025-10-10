@@ -228,14 +228,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
             route: '/gamification',
             isActive: widget.currentRoute == '/gamification',
           ),
-          _buildDrawerItem(
-            context,
-            icon: Icons.assistant,         
-            title: 'Models',
-            route: '/models',
-            isActive: widget.currentRoute == '/models',
-          ),
-
+      
           ExpansionTile(
             leading: Icon(
               Icons.receipt_long,           color: widget.currentRoute.startsWith('/invoice-assistant')

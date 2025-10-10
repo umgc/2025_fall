@@ -1,7 +1,5 @@
 import 'package:care_connect_app/features/invoices/services/invoice_file_service.dart';
 import 'package:flutter/material.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
-
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/widgets/toolbar/invoice_toolbar.dart';
 import 'package:care_connect_app/features/invoices/widgets/components/prev_next_bar.dart';
@@ -10,7 +8,6 @@ import 'package:care_connect_app/features/invoices/widgets/sections/services_sec
 import 'package:care_connect_app/features/invoices/widgets/sections/payment_section.dart';
 import 'package:care_connect_app/features/invoices/widgets/sections/ai_section.dart';
 import 'package:care_connect_app/features/invoices/widgets/sections/history_section.dart';
-
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 
 class InvoiceDetailPage extends StatefulWidget {
