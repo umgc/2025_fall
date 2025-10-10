@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learninglens_app/beans/chatLog.dart';
-import 'package:learninglens_app/services/ContextBuilder.dart';
+import 'package:learninglens_app/services/LLMContextBuilder.dart';
 
 void main() {
   group('buildContext', () {
@@ -20,7 +20,7 @@ void main() {
     ];
 
     test('includes persistant context first and user prompt last', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('attempts to include modules before history', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -61,7 +61,7 @@ void main() {
           isTrue);
     });
     test('packs history newest -> oldest to fill remaining budget', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('respects very small budgets (core + prompt only)', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -98,7 +98,7 @@ void main() {
     });
 
     test('never drops the core system message', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
