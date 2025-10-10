@@ -60,7 +60,6 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
       List.generate(60, (index) => index.toString().padLeft(2, '0'));
 
   TextEditingController _assignmentNameController = TextEditingController();
-  TextEditingController _assignmentSectionController = TextEditingController();
   TextEditingController _descriptionController = TextEditingController();
 
   // List of courses fetched from the controller
