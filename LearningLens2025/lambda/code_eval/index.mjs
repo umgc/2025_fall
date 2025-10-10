@@ -1,5 +1,20 @@
+import { GetFunctionConfigurationCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
+
+
+async function getVPCConfig(){
+    const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION });
+    const command = new GetFunctionConfigurationCommand({
+        FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME, // current function name
+    });
+    const config = await lambdaClient.send(command);
+
+    console.log("VPC Config:", config);
+    // Example output: { SubnetIds: [ 'subnet-abc123' ], SecurityGroupIds: [ 'sg-xyz789' ], VpcId: 'vpc-112233' }
+
+    return config;
+}
 
 /**
  * Retrieves the results of code evaluations for a course
@@ -9,19 +24,31 @@ import postgres from "postgres";
  */
 async function handleGET(client, event, context){
     const cmd = event.queryStringParameters?.command
-    if(cmd && cmd == 'createDb'){
-        return await client`CREATE TABLE IF NOT EXISTS code_evaluation (
-            course_id varchar NOT NULL,
-            assignment_id varchar NOT NULL,
-            expected_output varchar NOT NULL,
-            username varchar NOT NULL,
-            status varchar NOT NULL,
-            results_json text,
-            start_time timestamptz NOT NULL DEFAULT now(),
-            finish_time timestamptz,
-            primary key (course_id, assignment_id, username)
-        );`
+    if(cmd){
+        switch(cmd){
+            case 'createDb':
+                return await client`CREATE TABLE IF NOT EXISTS code_evaluation (
+                    course_id varchar NOT NULL,
+                    assignment_id varchar NOT NULL,
+                    expected_output varchar NOT NULL,
+                    language varchar NOT NULL,
+                    username varchar NOT NULL,
+                    status varchar NOT NULL,
+                    results_json text,
+                    start_time timestamptz NOT NULL DEFAULT now(),
+                    finish_time timestamptz,
+                    primary key (course_id, assignment_id, username)
+                );`
+            case 'getConf':
+                const config = await getVPCConfig()
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify(config)
+                }
+        }
     }
+
+
 
     const username = event.queryStringParameters?.username
     if(!username){
@@ -64,20 +91,24 @@ async function handlePOST(client, event, context){
             ${body.courseId},
             ${body.assignmentId},
             ${body.expectedOutput},
+            ${body.language},
             ${body.username},
             'JOB STARTED'
         )
         ON CONFLICT (assignment_id, course_id, username) DO UPDATE
         SET status = EXCLUDED.status,
             expected_output = EXCLUDED.expected_output,
+            language = EXCLUDED.language,
             results_json = NULL,
             start_time = now(),
             finish_time = NULL;
     `
 
+    const vpcConfig = await getVPCConfig()
+
     return {
         statusCode: 200,
-        body: 'Success',
+        body: JSON.stringify(vpcConfig),
     }
 }
 

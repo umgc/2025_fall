@@ -107,6 +107,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
     return DataRow(cells: [
       DataCell(Text(course.fullName)),
       DataCell(Text(assignment.name)),
+      DataCell(Text(result['language'])),
       DataCell(Text(result['status'])),
       DataCell(ElevatedButton(
         onPressed: () {
@@ -125,6 +126,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
           columns: const [
             DataColumn(label: Text("Course")),
             DataColumn(label: Text("Assignment")),
+            DataColumn(label: Text("Language")),
             DataColumn(label: Text("Status")),
             DataColumn(label: Text("Action")),
           ],

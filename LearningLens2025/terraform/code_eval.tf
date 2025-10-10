@@ -1,3 +1,25 @@
+# Get the default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get the default subnets
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Get the default security group for the default VPC
+data "aws_security_group" "default" {
+  vpc_id = data.aws_vpc.default.id
+  filter {
+    name   = "group-name"
+    values = ["default"]
+  }
+}
+
 # S3 bucket
 resource "aws_s3_bucket" "edulense" {
   bucket_prefix = "edulense-"
@@ -65,7 +87,6 @@ resource "aws_iam_role_policy_attachment" "attach_ecs_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-
 # Moodle service account username
 variable "moodle_username" {
   type = string
@@ -75,58 +96,6 @@ variable "moodle_username" {
 variable "moodle_password"{
   type = string
   sensitive = true
-}
-
-# Run npm install before zipping
-resource "null_resource" "npm_install_code_eval" {
-  triggers = {
-    # Trigger npm install when package.json or lock file changes
-    package_json = filemd5("../lambda/code_eval/package.json")
-    package_lock = filemd5("../lambda/code_eval/package-lock.json")
-  }
-
-  provisioner "local-exec" {
-    command = "cd ../lambda/code_eval && npm install"
-  }
-}
-
-# lambda function for code evaluations
-data "archive_file" "code_eval" {
-  type = "zip"
-  source_dir = "../lambda/code_eval/"
-  excludes = ["../lambda/code_eval/code_eval.zip"]
-  output_path = "../lambda/code_eval/code_eval.zip"
-
-  depends_on = [null_resource.npm_install_code_eval]
-}
-
-resource "aws_lambda_function" "code_eval_lambda" {
-filename = data.archive_file.code_eval.output_path
-  function_name = "evaluate_code"
-  role = aws_iam_role.lambda_token.arn
-  handler = "index.handler"
-  source_code_hash = data.archive_file.code_eval.output_base64sha256
-  runtime = "nodejs20.x"
-  timeout = "10"
-  environment {
-    variables = {
-      ENVIRONMENT = "production"
-      LOG_LEVEL = "info"
-      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
-      MOODLE_USERNAME = var.moodle_username
-      MOODLE_PASSWORD = var.moodle_password
-    }
-  }
-}
-
-resource "aws_lambda_function_url" "code_eval_url" {
-  function_name = aws_lambda_function.code_eval_lambda.function_name
-  authorization_type = "NONE"
-  cors {
-    allow_methods = ["GET", "POST"]
-    allow_origins = ["*"]
-    allow_headers = ["content-type"]
-  }
 }
 
 resource "aws_ecs_task_definition" "eval_c" {
@@ -152,7 +121,11 @@ resource "aws_ecs_task_definition" "eval_c" {
         {
           name  = "CODE_S3_URI"
           value = ""  # Fill this with the S3 URI at runtime or via Terraform variable
-        }
+        },
+        {
+          name  = "RESULT_POST_URL"
+          value = "" # URL to post evaluation results to
+        },
       ]
     }
   ])
@@ -177,5 +150,57 @@ resource "aws_ecs_cluster_capacity_providers" "eval_code_cluster" {
   default_capacity_provider_strategy {
     capacity_provider = "FARGATE"
     weight            = 1
+  }
+}
+
+# lambda function for code evaluations
+data "archive_file" "code_eval" {
+  type = "zip"
+  source_dir = "../lambda/code_eval/"
+  excludes = ["../lambda/code_eval/code_eval.zip"]
+  output_path = "../lambda/code_eval/code_eval.zip"
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_access" {
+  role       = aws_iam_role.lambda_token.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+
+resource "aws_lambda_function" "code_eval_lambda" {
+  filename = data.archive_file.code_eval.output_path
+  function_name = "evaluate_code"
+  role = aws_iam_role.lambda_token.arn
+  handler = "index.handler"
+  source_code_hash = data.archive_file.code_eval.output_base64sha256
+  runtime = "nodejs20.x"
+  timeout = "10"
+
+  vpc_config {
+    subnet_ids         = data.aws_subnets.default.ids
+    security_group_ids = [data.aws_security_group.default.id]
+  }
+
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL = "info"
+      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
+      MOODLE_USERNAME = var.moodle_username
+      MOODLE_PASSWORD = var.moodle_password
+      MOODLE_URL = "http://${aws_instance.moodle_instance.public_dns}"
+      ECS_TASK_ARN = aws_ecs_task_definition.eval_c.arn
+      ECS_CLUSTER_ARN = aws_ecs_cluster.eval_code_cluster.arn
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "code_eval_url" {
+  function_name = aws_lambda_function.code_eval_lambda.function_name
+  authorization_type = "NONE"
+  cors {
+    allow_methods = ["GET", "POST"]
+    allow_origins = ["*"]
+    allow_headers = ["content-type"]
   }
 }

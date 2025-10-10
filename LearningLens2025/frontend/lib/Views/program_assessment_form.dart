@@ -25,13 +25,17 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final lmsService = LmsFactory.getLmsService();
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
 
-  Course? selectedCourse;
-  Assignment? selectedAssignment;
   List<Course> courses = [];
   final TextEditingController outputController = TextEditingController();
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
+  final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
+
+  Course? selectedCourse;
+  Assignment? selectedAssignment;
+  String? selectedLanguage;
+
 
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
@@ -43,11 +47,12 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
   @override
   void initState() {
-    super.initState();
     // Listen to changes in the text field to update button state
     outputController.addListener(() {
       setState(() {}); // triggers rebuild to refresh button enabled/disabled
     });
+    selectedLanguage = languages[0];
+    super.initState();
   }
 
   @override
@@ -64,13 +69,14 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   }
 
   Future<void> _startEvaluation(
-      Course course, Assignment assignment, String expectedOutput) async {
+    Course course, Assignment assignment, String expectedOutput, String language) async {
     final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
         body: jsonEncode({
           'courseId': course.id,
           'assignmentId': assignment.id.toString(),
           'expectedOutput': expectedOutput,
-          'username': lmsService.userName
+          'username': lmsService.userName,
+          'language': language
         }));
 
     if (response.statusCode != 200) {
@@ -155,6 +161,29 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                 ),
                 SizedBox(width: 12),
 
+                // Language selection dropdown
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: "Language",
+                      border: OutlineInputBorder(),
+                    ),
+                    value: languages[0],
+                    items: languages.map((lang) => 
+                      DropdownMenuItem(
+                        value: lang,
+                        child: Text(lang),
+                      )
+                    ).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedLanguage = value;
+                      });
+                    }
+                  )
+                ),
+                SizedBox(width: 12),
+
                 // Expected Output TextField
                 Expanded(
                   child: TextFormField(
@@ -184,8 +213,12 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
               onPressed: !isFormValid
                   ? null
                   : () async {
-                      await _startEvaluation(selectedCourse!,
-                          selectedAssignment!, outputController.text);
+                      await _startEvaluation(
+                        selectedCourse!,
+                        selectedAssignment!, 
+                        outputController.text,
+                        selectedLanguage!
+                      );
 
                       debugPrint("Course: $selectedCourse");
                       debugPrint("Assignment: $selectedAssignment");

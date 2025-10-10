@@ -17,23 +17,29 @@ for file in *.c; do
     base=$(basename "$file" .c)
     exe="./$base.out"
 
-    # Compile C file
-    if gcc "$file" -o "$exe"; then
-        # Run program and capture output
-        output=$("$exe")
+    # Try to compile, capturing stderr if it fails
+    if gcc "$file" -o "$exe" 2>gcc_error.log; then
+        # Run program and capture stdout
+        output=$("$exe" 2>&1)
         
-        # Escape quotes and backslashes for JSON
+        # Escape output safely
         escaped_output=$(echo "$output" | jq -Rs .)
 
-        # Append to JSON
-        json+="{\"output\":${escaped_output}},"
+        # Add success object
+        json+="{\"output\":${escaped_output},\"error\":false},"
     else
-        # If compilation fails, add error message
-        json+="{\"output\":\"Compilation failed for $file\"},"
+        # Capture GCC error message
+        error_msg=$(<gcc_error.log)
+
+        # Escape error message safely
+        escaped_error=$(echo "$error_msg" | jq -Rs .)
+
+        # Add failure object
+        json+="{\"output\":${escaped_error},\"error\":true},"
     fi
 
-    # Clean up binary
-    rm -f "$exe"
+    # Clean up
+    rm -f "$exe" gcc_error.log
 done
 
 # Remove trailing comma if present
@@ -41,6 +47,3 @@ json=${json%,}
 
 # Close JSON array
 json+="]"
-
-# Print final JSON
-echo "$json"
