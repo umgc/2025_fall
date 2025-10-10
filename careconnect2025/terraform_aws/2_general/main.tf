@@ -28,6 +28,7 @@ module "vpc" {
   source         = "./modules/vpc"
   default_tags   = var.default_tags
   primary_region = var.primary_region
+  
 }
 
 module "s3_internal" {
@@ -70,8 +71,7 @@ resource "aws_ses_domain_identity" "ses_domain" {
 # ---  Configure the Custom MAIL FROM domain ---
 resource "aws_ses_domain_mail_from" "ses_mail_from" {
   domain           = aws_ses_domain_identity.ses_domain.domain
-  mail_from_domain = "mail.${var.domain_name}"
-
+  mail_from_domain = "mail.${var.domain_name}" 
   # This setting is optional but recommended. It tells SES to use its
   # default MAIL FROM domain if it runs into issues with your custom one,
   # which prevents your emails from being rejected.

@@ -8,7 +8,7 @@ terraform {
     region = "us-east-1"
 
     # Enable state locking and consistency
-    dynamodb_table = "terraform-state-lock"
+    # dynamodb_table = "terraform-state-lock"
     encrypt        = true
   }
 }

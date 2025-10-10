@@ -19,7 +19,8 @@ variable "domain_name" {
 
 variable "cc_ssm_params" {
   description = "List of secure SSM parameters to be created"
-  type        = map(string)
+  type        = map(string) 
+ 
 }
 
 variable "cc_iac_bucket_name" {
