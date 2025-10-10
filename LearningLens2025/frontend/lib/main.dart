@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
+import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
@@ -16,14 +17,15 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'Views/dashboard.dart';
 import 'Views/edit_questions.dart';
 import 'Views/essay_generation.dart';
-import 'Views/quiz_generator.dart';
 import 'Views/gamification_view.dart';
+import 'Views/quiz_generator.dart';
 
 void main() async {
   await dotenv.load();
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
   await AILoggingSingleton().createDb();
+  await ProgramAssessmentState.createDb();
 
   runApp(
     MultiProvider(
@@ -94,6 +96,7 @@ class MyApp extends StatelessWidget {
         // '/viewExams': (context) => const ViewExamPage(),
         // '/settings': (context) => Setting(themeModeNotifier: _themeModeNotifier)
         '/gamification': (context) => GamificationView(),
+        '/evaluate': (context) => ProgramAssessmentView()
       },
     );
   }

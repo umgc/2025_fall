@@ -1,5 +1,6 @@
 import 'dart:io' show File; // For non-web file I/O
 import 'package:collection/collection.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
@@ -98,6 +99,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Student breakdown report built from live LMS participant data.
   List<Map<String, dynamic>> _studentBreakdown = [];
   Map<String, dynamic>? _selectedStudent;
+  List<Map<String, String>> _selectedStudentData = [];
+  bool _selectedStudentWaiting = false;
+  String? _selectedStudentError;
 
   // For quiz assessments, question breakdown data.
   List<QuestionStatsType> _questionBreakdown = [];
@@ -113,7 +117,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<Map<String, dynamic>> _aiAnalysisFail = [];
   List<Map<String, dynamic>> _aiAnalysisAi = [];
   List<Map<String, dynamic>> _aiAnalysisCourse = [];
-  bool _isAnalyzingAI = false;
+  List<Map<String, dynamic>> _aiAnalysisAssignment = [];
+  bool _isAnalyzingSuccess = false;
+  bool _isAnalyzingFail = false;
+  bool _isAnalyzingAi = false;
+  bool _isAnalyzingCourse = false;
+  bool _isAnalyzingAssignment = false;
+  bool _lastAnalysisQuiz = false;
+
+  List<int> _expandedPanels = [0, 1, 2, 3, 4];
 
   LlmType? selectedLLM;
 
@@ -206,6 +218,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       _studentBreakdown.clear();
       _questionBreakdown.clear();
       _selectedStudent = null;
+      _selectedStudentData.clear();
     });
 
     try {
@@ -614,8 +627,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisSuccess.clear();
                 _aiAnalysisFail.clear();
                 _aiAnalysisAi.clear();
+                _aiAnalysisAssignment.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
+                _selectedStudentData.clear();
               });
               if (_selectedCourse != null) {
                 // Fetch essays and quizzes, then combine them.
@@ -660,8 +675,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   _aiAnalysisSuccess.clear();
                   _aiAnalysisFail.clear();
                   _aiAnalysisAi.clear();
+                  _aiAnalysisAssignment.clear();
                   _aiAnalysisCourse.clear();
                   _selectedStudent = null;
+                  _selectedStudentData.clear();
                 });
               },
             ),
@@ -685,8 +702,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisSuccess.clear();
                 _aiAnalysisFail.clear();
                 _aiAnalysisAi.clear();
+                _aiAnalysisAssignment.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
+                _selectedStudentData.clear();
               });
             },
           ),
@@ -732,8 +751,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               Spacer(),
               ElevatedButton(
                 onPressed: _studentBreakdown.isNotEmpty &&
-                            selectedLLM != null &&
-                            _selectedCourse != null ||
+                        selectedLLM != null &&
+                        _selectedCourse != null &&
                         _selectedAssessment != null
                     ? () => _analyzeReport(
                         _selectedCourse!,
@@ -742,7 +761,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         _selectedStudent?["id"],
                         isEssay() ? null : _questionBreakdown.toList())
                     : null,
-                child: _isAnalyzingAI
+                child: _isAnalyzingSuccess ||
+                        _isAnalyzingFail ||
+                        _isAnalyzingAssignment ||
+                        _isAnalyzingAi
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -769,9 +791,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // the table if the user has a smaller screen or they change their resolution.
   // ---------------------------------------------------------------------------
   Widget _buildQuestionBreakdown() {
-    if (isEssay()) {
-      return const SizedBox.shrink();
-    }
     if (_questionBreakdown.isEmpty) {
       return const Center(child: Text('No question breakdown available.'));
     }
@@ -844,67 +863,67 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       return const Center(child: CircularProgressIndicator());
     }
     return SizedBox(
-      height: 300,
-      child: Scrollbar(
-          thumbVisibility: true,
-          controller: _verticalStudentController,
-          child: SingleChildScrollView(
+        height: 300,
+        child: Scrollbar(
+            thumbVisibility: true,
             controller: _verticalStudentController,
-            child: DataTable(
-              showCheckboxColumn: false,
-              columnSpacing: 12.0,
-              columns: const [
-                DataColumn(label: Expanded(child: Text('Student Name'))),
-                DataColumn(label: Text('Average Grade')),
-                DataColumn(label: Text('Class Rank')),
-              ],
-              rows: _studentBreakdown.map((student) {
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith<Color?>(
-                      (Set<WidgetState> states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.15);
-                    }
-                    if (states.contains(WidgetState.hovered)) {
-                      return Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.25);
-                    }
-                    return _studentBreakdown.indexOf(student) % 2 == 0
-                        ? Theme.of(context)
+            child: SingleChildScrollView(
+              controller: _verticalStudentController,
+              child: DataTable(
+                showCheckboxColumn: false,
+                columnSpacing: 12.0,
+                columns: const [
+                  DataColumn(label: Expanded(child: Text('Student Name'))),
+                  DataColumn(label: Text('Average Grade')),
+                  DataColumn(label: Text('Class Rank')),
+                ],
+                rows: _studentBreakdown.map((student) {
+                  return DataRow(
+                    color: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Theme.of(context)
                             .colorScheme
-                            .primaryContainer
-                            .withOpacity(.55)
-                        : null; // Use the default value.
-                  }),
-                  selected: student == _selectedStudent,
-                  onSelectChanged: (val) {
-                    setState(() {
-                      _selectedStudent = student;
-                    });
-                  },
-                  cells: [
-                    DataCell(
-                      Text(
-                        student['studentName'].toString(),
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          decoration: TextDecoration.underline,
+                            .primary
+                            .withOpacity(0.15);
+                      }
+                      if (states.contains(WidgetState.hovered)) {
+                        return Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.25);
+                      }
+                      return _studentBreakdown.indexOf(student) % 2 == 0
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withOpacity(.55)
+                          : null; // Use the default value.
+                    }),
+                    selected: student == _selectedStudent,
+                    onSelectChanged: (val) {
+                      setState(() {
+                        _selectedStudent = student;
+                        _fetchAllAssessmentsForStudent(student['id']);
+                      });
+                    },
+                    cells: [
+                      DataCell(
+                        Text(
+                          student['studentName'].toString(),
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
-                    ),
-                    DataCell(Text(student['avgGrade'].toString())),
-                    DataCell(Text(student['classRank'].toString())),
-                  ],
-                );
-              }).toList(),
-            ),
-          )),
-    );
+                      DataCell(Text(student['avgGrade'].toString())),
+                      DataCell(Text(student['classRank'].toString())),
+                    ],
+                  );
+                }).toList(),
+              ),
+            )));
   }
 
   // ---------------------------------------------------------------------------
@@ -921,51 +940,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
     int studentId = _selectedStudent!['id'];
-    return FutureBuilder<List<Map<String, String>>>(
-      future: _fetchAllAssessmentsForStudent(studentId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error loading grades: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Text('No data available for student $studentId.');
-        }
-        List<Map<String, String>> detailData = snapshot.data!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Details for ${_selectedStudent!['studentName']}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            ...detailData.map((item) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "${item['Assessment']} (${item['Type']})",
-                        style: const TextStyle(fontSize: 16),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      item['Grade']!,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
+    if (_selectedStudentWaiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_selectedStudentError != null) {
+      return Center(
+          child: Text('Error loading grades: $_selectedStudentError'));
+    }
+    if (_selectedStudentData.isEmpty) {
+      return Text('No data available for student $studentId.');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Details for ${_selectedStudent!['studentName']}',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        ..._selectedStudentData.map((item) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    "${item['Assessment']} (${item['Type']})",
+                    style: const TextStyle(fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              );
-            }),
-          ],
-        );
-      },
+                Text(
+                  item['Grade']!,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -973,9 +987,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // _fetchAllAssessmentsForStudent:
   // Helper function to fetch ALL assessments (quiz or essay) for ONE student.
   // ---------------------------------------------------------------------------
-  Future<List<Map<String, String>>> _fetchAllAssessmentsForStudent(
-      int studentId) async {
-    if (_selectedCourse == null) return [];
+  Future<void> _fetchAllAssessmentsForStudent(int? studentId) async {
+    if (_selectedCourse == null || studentId == null) {
+      setState(() {
+        _selectedStudentData.clear();
+      });
+      return;
+    }
+    setState(() {
+      _selectedStudentWaiting = true;
+    });
     List<Future<Map<String, String>>> futureList = [];
     for (var assessment in _assessmentsData) {
       futureList.add(() async {
@@ -1014,7 +1035,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         };
       }());
     }
-    return Future.wait(futureList);
+    try {
+      final data = await Future.wait(futureList);
+      setState(() {
+        _selectedStudentData = data;
+      });
+    } catch (e) {
+      setState(() {
+        _selectedStudentData.clear();
+        _selectedStudentError = e.toString();
+      });
+    } finally {
+      setState(() {
+        _selectedStudentWaiting = false;
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1066,7 +1101,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               Row(children: [
                 Text(
                   'Student Breakdown',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 Spacer(),
                 ElevatedButton(
@@ -1074,6 +1109,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ? null
                         : () => setState(() {
                               _selectedStudent = null;
+                              _selectedStudentData.clear();
                             }),
                     child: Text("Clear Selection"))
               ]),
@@ -1094,21 +1130,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Top-right: label + question breakdown
-              const Text(
-                'Question Breakdown',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.all(8),
-                child: _buildQuestionBreakdown(),
-              ),
-              const SizedBox(height: 20),
+              Visibility(
+                  visible: isQuiz(),
+                  child: const Text(
+                    'Question Breakdown',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  )),
+              Visibility(visible: isQuiz(), child: const SizedBox(height: 8)),
+              Visibility(
+                  visible: isQuiz(),
+                  child: Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(8),
+                    child: _buildQuestionBreakdown(),
+                  )),
+              Visibility(visible: isQuiz(), child: const SizedBox(height: 20)),
               // Bottom-right: label + selected student detail
               const Text(
                 'Student Detail',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 8),
               Container(
@@ -1171,13 +1211,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             children: [
               const Text(
                 'AI Analysis Summary',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               ElevatedButton(
                 onPressed: _aiAnalysisSuccess.isNotEmpty ||
                         _aiAnalysisFail.isNotEmpty ||
-                        _aiAnalysisCourse.isNotEmpty ||
-                        _aiAnalysisAi.isNotEmpty
+                        _aiAnalysisAssignment.isNotEmpty ||
+                        _aiAnalysisAi.isNotEmpty ||
+                        _aiAnalysisCourse.isNotEmpty
                     ? _exportAIAnalysis
                     : null,
                 child: const Text('Export AI Analysis'),
@@ -1185,7 +1226,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ],
           ),
           const SizedBox(height: 10),
-          _buildAIAnalysisTable(),
+          _buildAIAnalysisList(),
           const SizedBox(height: 30),
         ],
       ),
@@ -1216,29 +1257,120 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // build:
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
-  Widget _buildAIAnalysisTable() {
-    if (_aiAnalysisSuccess.isEmpty &&
-        _aiAnalysisFail.isEmpty &&
-        _aiAnalysisCourse.isEmpty &&
-        _aiAnalysisAi.isEmpty) {
-      return const Text("There is no AI analysis data.");
+  Widget _buildAIAnalysisList() {
+    return ExpansionPanelList(
+        expandedHeaderPadding: EdgeInsets.zero,
+        materialGapSize: 0,
+        expansionCallback: (panelIndex, isExpanded) {
+          if (isExpanded && !_expandedPanels.contains(panelIndex)) {
+            setState(() {
+              _expandedPanels.add(panelIndex);
+            });
+          } else if (!isExpanded && _expandedPanels.contains(panelIndex)) {
+            setState(() {
+              _expandedPanels.remove(panelIndex);
+            });
+          }
+        },
+        children: _buildAiAnalysisChildren());
+  }
+
+  List<ExpansionPanel> _buildAiAnalysisChildren() {
+    List<ExpansionPanel> children = [
+      _buildChild(
+          0,
+          "Areas of Success",
+          _isAnalyzingSuccess,
+          _aiAnalysisSuccess.isEmpty ||
+                  !_aiAnalysisSuccess[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisSuccess[0]["Summary"],
+          true),
+      _buildChild(
+          1,
+          "Areas of Misunderstanding",
+          _isAnalyzingFail,
+          _aiAnalysisFail.isEmpty || !_aiAnalysisFail[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisFail[0]["Summary"],
+          true),
+      _buildChild(
+          2,
+          "Course Improvements",
+          _isAnalyzingCourse,
+          _aiAnalysisCourse.isEmpty ||
+                  !_aiAnalysisCourse[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisCourse[0]["Summary"],
+          false),
+      _buildChild(
+          3,
+          "Assignment Improvements",
+          _isAnalyzingAssignment,
+          _aiAnalysisAssignment.isEmpty ||
+                  !_aiAnalysisAssignment[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisAssignment[0]["Summary"],
+          false)
+    ];
+    if (!_lastAnalysisQuiz) {
+      children.add(_buildChild(
+          4,
+          "AI Use Areas",
+          _isAnalyzingAi,
+          _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisAi[0]["Summary"],
+          true));
     }
-    return DataTable(
-      columns: const [
-        DataColumn(label: Text('Student')),
-        DataColumn(label: Text('Status')),
-        DataColumn(label: Text('Comments')),
-      ],
-      rows: _aiAnalysisSuccess.map((row) {
-        return DataRow(
-          cells: [
-            DataCell(Text(row['Student']?.toString() ?? '')),
-            DataCell(Text(row['Status']?.toString() ?? '')),
-            DataCell(Text(row['Comments']?.toString() ?? '')),
-          ],
-        );
-      }).toList(),
-    );
+    return children;
+  }
+
+  ExpansionPanel _buildChild(
+      int index, String title, bool wait, String? bodyText, bool showChart) {
+    return ExpansionPanel(
+        backgroundColor:
+            Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
+        canTapOnHeader: true,
+        headerBuilder: (context, isExpanded) {
+          return Container(
+              padding: EdgeInsets.all(10),
+              child: Row(children: [
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Spacer(),
+                Visibility(visible: wait, child: CircularProgressIndicator())
+              ]));
+        },
+        body: Container(
+            color: Colors.grey[200],
+            padding: EdgeInsets.all(10),
+            child: Row(children: [
+              Expanded(
+                  child: Text(
+                wait
+                    ? "Loading AI Analysis..."
+                    : (bodyText ?? "No AI Analysis Data Found"),
+                softWrap: true,
+              )),
+              SizedBox(width: 10),
+              Visibility(
+                  visible: !wait && bodyText != null,
+                  child: SizedBox(
+                      height: 100,
+                      width: showChart ? 100 : 300,
+                      child: showChart
+                          ? PieChart(PieChartData(
+                              sections: [PieChartSectionData(value: 100)]))
+                          : ListView.builder(
+                              itemCount: 3,
+                              itemBuilder: (context, index) {
+                                return Text("Source $index");
+                              })))
+            ])),
+        isExpanded: _expandedPanels.contains(index));
   }
 
   /// Computes the percentage a question is answered correctly.
@@ -1279,20 +1411,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       List<Participant> participantsData,
       int? selectedStudentId,
       List<QuestionStatsType>? questionBreakdown) async {
-    setState(() {
-      _isAnalyzingAI = true;
-    });
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text(
                 "No AI credentials found. Please log in to an AI platform.")),
       );
-      setState(() {
-        _isAnalyzingAI = false;
-      });
       return;
     }
+
+    setState(() {
+      _isAnalyzingSuccess = true;
+      _isAnalyzingFail = true;
+      _isAnalyzingAssignment = true;
+      _isAnalyzingCourse = true;
+      _isAnalyzingAi = selectedAssessment.type == "essay";
+      _lastAnalysisQuiz = selectedAssessment.type == "quiz";
+    });
 
     String assignmentDescription;
     Participant? selectedParticipant =
@@ -1339,16 +1474,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
       }).join("\n");
 
-      await _analyzeEssaySuccess(
-          selectedAssessment.name, assignmentDescription, studentSummary);
-      await _analyzeEssayMisunderstanding(
-          selectedAssessment.name, assignmentDescription, studentSummary);
-      await _analyzeEssayAiUse(
-          selectedAssessment.name, assignmentDescription, aiSummary);
+      await Future.wait([
+        _analyzeEssaySuccess(
+            selectedAssessment.name, assignmentDescription, studentSummary),
+        _analyzeEssayMisunderstanding(
+            selectedAssessment.name, assignmentDescription, studentSummary),
+        _analyzeEssayAiUse(
+            selectedAssessment.name, assignmentDescription, aiSummary)
+      ]);
     } else {
       if (questionBreakdown == null) {
         setState(() {
-          _isAnalyzingAI = false;
+          _isAnalyzingSuccess = false;
+          _isAnalyzingFail = false;
+          _isAnalyzingAssignment = false;
+          _isAnalyzingCourse = false;
         });
         return;
       }
@@ -1363,36 +1503,44 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         studentSummary = studentData.map((question) {
           return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
         }).join("\n");
-        await _analyzeStudentQuizSuccess(
-            selectedAssessment.name,
-            assignmentDescription,
-            studentSummary,
-            selectedParticipant.fullname);
-        await _analyzeStudentQuizMisunderstanding(
-            selectedAssessment.name,
-            assignmentDescription,
-            studentSummary,
-            selectedParticipant.fullname);
+        await Future.wait([
+          _analyzeStudentQuizSuccess(
+              selectedAssessment.name,
+              assignmentDescription,
+              studentSummary,
+              selectedParticipant.fullname),
+          _analyzeStudentQuizMisunderstanding(
+              selectedAssessment.name,
+              assignmentDescription,
+              studentSummary,
+              selectedParticipant.fullname)
+        ]);
       } else {
         studentSummary = questionBreakdown.map((q) {
           return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
         }).join("\n");
-        await _analyzeCourseQuizSuccess(
-            selectedAssessment.name, assignmentDescription, studentSummary);
-        await _analyzeCourseQuizMisunderstanding(
-            selectedAssessment.name, assignmentDescription, studentSummary);
+        await Future.wait([
+          _analyzeCourseQuizSuccess(
+              selectedAssessment.name, assignmentDescription, studentSummary),
+          _analyzeCourseQuizMisunderstanding(
+              selectedAssessment.name, assignmentDescription, studentSummary)
+        ]);
       }
-      print(studentSummary);
     }
-    await _analyzeAssignmentImprovements(
-        selectedAssessment.name,
-        selectedCourse.fullName,
-        assignmentDescription,
-        _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-        _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]);
-    setState(() {
-      _isAnalyzingAI = false;
-    });
+    await Future.wait([
+      _analyzeAssignmentImprovements(
+          selectedAssessment.name,
+          selectedCourse.fullName,
+          assignmentDescription,
+          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]),
+      _analyzeCourseImprovements(
+          selectedAssessment.name,
+          selectedCourse.fullName,
+          assignmentDescription,
+          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"])
+    ]);
   }
 
   Future<void> _analyzeEssaySuccess(
@@ -1413,6 +1561,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1434,6 +1583,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
@@ -1454,6 +1604,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisAi = response;
+      _isAnalyzingAi = false;
+    });
+  }
+
+  Future<void> _analyzeCourseImprovements(
+      String courseName,
+      String assessmentName,
+      String essayPrompt,
+      String successes,
+      String failures) async {
+    String successPrompt = """
+    Recommend improvements that could be made to course '$courseName'.
+    Areas of Success:
+    $successes
+    Areas of Failure:
+    $failures
+    Based on the summaries of student success and student failure, recommend ways I can improve my course materials.
+    Provide a textual summary for both course, as well as three assignments I could create for my course to improve student's understanding of the topic.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
+    and the list of recommended assignments are an object named 'Data' with keys 'Name' and 'Description'.
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    setState(() {
+      _aiAnalysisCourse = response;
+      _isAnalyzingCourse = false;
     });
   }
 
@@ -1464,21 +1640,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String successes,
       String failures) async {
     String successPrompt = """
-    Recommend improvements that could be made to course '$courseName' and to assignment '$assessmentName' with description '$essayPrompt'.
+    Recommend improvements that could be made to to assignment '$assessmentName' with description '$essayPrompt'.
     Areas of Success:
     $successes
     Areas of Failure:
     $failures
-    Based on the summaries of student success and student failure, recommend ways I can improve the assignment and my course materials overall.
-    Provide a textual summary for both course and assignment improvements, as well as three references I could provide to students to help them better understand the topic.
-    Return your analysis as a JSON array where the textual summary on course improvments is an object with key 'Course Improvements',
-    the summary on assignment improvements is an object with key 'Assignment Improvements', and
-    the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
+    Based on the summaries of student success and student failure, recommend ways I can improve the assignment.
+    Provide a textual summary for assignment improvements, as well as three references I could provide to students to help them better understand the topic.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
+    and the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
-      _aiAnalysisCourse = response;
+      _aiAnalysisAssignment = response;
+      _isAnalyzingAssignment = false;
     });
   }
 
@@ -1506,6 +1682,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1534,6 +1711,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
@@ -1557,6 +1735,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisSuccess = response;
+      _isAnalyzingSuccess = false;
     });
   }
 
@@ -1580,6 +1759,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
     setState(() {
       _aiAnalysisFail = response;
+      _isAnalyzingFail = false;
     });
   }
 
