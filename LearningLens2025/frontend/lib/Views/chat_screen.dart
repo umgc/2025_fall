@@ -3,6 +3,9 @@ import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/beans/chatLog.dart';
+import 'package:learninglens_app/services/ContextBuilder.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For saving/loading chat history
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
@@ -16,50 +19,148 @@ class ChatScreen extends StatefulWidget {
   _ChatScreenState createState() => _ChatScreenState();
 }
 
+  UserRole getUserRole() {
+    return LmsFactory.getLmsService().role ?? UserRole.student;
+  }
+
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   List<Map<String, dynamic>> _messages = [];
+  List<Map<String, dynamic>> _context = [];
+  List<ChatTurn> _chatHistory = [];
   bool _isLoading = false;
   String _role = 'student'; // Role toggle for student/teacher
   final ScrollController _scrollController =
       ScrollController(); // For scrolling the chat
   SharedPreferences? _prefs; // SharedPreferences for saving chat history
   LlmType? selectedLLM;
+  static  const String kChatHistoryKey = 'chat_history_v2';
+  bool _historyLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadChatHistory(); // Load chat history when screen is initialized
+    _chatHistory = <ChatTurn>[]; 
     selectedLLM = LlmType.CHATGPT;
+    _init();
+  }
+  Future<void> _init() async {
+  await _loadChatHistory();
+  if (mounted) setState(() => _historyLoaded = true);
+}
+
+Future<void> _loadChatHistory() async {
+  _prefs = await SharedPreferences.getInstance();
+  final saved = _prefs?.getString(kChatHistoryKey);
+
+  // Migration: if old UI-style was saved under 'chat_history', try to convert
+  if (saved == null) {
+    final legacy = _prefs?.getString('chat_history');
+    if (legacy != null) {
+      final List<dynamic> raw = jsonDecode(legacy);
+      // convert UI bubbles -> ChatTurn best-effort
+      _chatHistory = raw.map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final sender = (m['sender'] as String?) ?? 'user';
+        final text = (m['text'] as String?) ?? '';
+        return ChatTurn(
+          role: sender == 'bot' ? 'assistant' : 'user',
+          content: text,
+        );
+      }).toList();
+      // rewrite in new format
+      await _saveChatHistory();
+    }
+  } else {
+    final List<dynamic> raw = jsonDecode(saved);
+    _chatHistory =
+        raw.map((e) => ChatTurn.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
-  // Load chat history from SharedPreferences
-  Future<void> _loadChatHistory() async {
-    _prefs = await SharedPreferences.getInstance();
-    String? savedMessages = _prefs?.getString('chat_history');
-    if (savedMessages != null) {
-      setState(() {
-        _messages = List<Map<String, dynamic>>.from(jsonDecode(savedMessages));
-      });
-    }
+  // Rebuild UI bubbles from _chatHistory
+  if (_messages.isEmpty) {
+    _rebuildMessagesFromHistory();
+    if (mounted) setState(() {});
   }
+}
 
-  // Save chat history to SharedPreferences
-  Future<void> _saveChatHistory() async {
-    if (_prefs != null) {
-      await _prefs?.setString('chat_history', jsonEncode(_messages));
-    }
-  }
+// Save chat history to SharedPreferences
+Future<void> _saveChatHistory() async {
+  if (_prefs == null) return;
+  final serialized = jsonEncode(_chatHistory.map((t) => t.toJson()).toList());
+  await _prefs!.setString(kChatHistoryKey, serialized);
+}
+
+// Build UI bubbles from model history (idempotent)
+void _rebuildMessagesFromHistory() {
+  _messages = _chatHistory.map((t) => <String, dynamic>{
+    'text': t.content,
+    'sender': t.role == 'assistant' ? 'bot' : 'user',
+  }).toList();
+}
+
 
   // Function to handle user message sending and API response
   Future<void> _sendMessage() async {
+    debugPrint('sendMessage start, input="${_controller.text}"');
     final input = _controller.text;
-    final aiPrompt =
-        "$input IMPORTANT: Do not use any Markdown syntax (e.g., #, *, **, etc.). Use plain text only.";
-
-    if (input.isEmpty) {
-      return;
+    if(input.isEmpty) {
+      return; // Do not send empty messages
     }
+
+    final userRole = getUserRole(); // 'student' or 'teacher'
+    final instructions = userRole == UserRole.teacher
+        ? """
+            You are an AI teaching assistant that supports educators across subjects and grade levels.
+            Your purpose is to save time, enhance learning, and provide reliable guidance in planning, assessment, and classroom support.
+
+            Core Functions:
+
+            -Answer teacher questions clearly and accurately.
+
+            -Explain or simplify educational concepts for any grade level.
+
+            -Provide ideas, examples, or strategies to improve instruction and engagement.
+
+            -Suggest ways to adapt lessons for diverse learners and inclusive classrooms.
+
+            -Maintain a professional, supportive tone and respect privacy and academic ethics.
+
+            -When uncertain, ask clarifying questions before giving detailed answers.
+
+            Focus on helpfulness, clarity, and accuracy — not creative writing or content generation handled by other features.
+            Keep responses concise, practical, and ready for classroom use.
+
+            IMPORTANT: Do not use any Markdown syntax (e.g., #, *, **, etc.). Use plain text only.
+
+            You are an AI learning assistant that helps students understand and apply what they learn.
+            Your purpose is to guide, explain, and encourage independent thinking, not just give answers.
+            """
+        : """
+            You are an AI learning assistant that helps students understand and apply what they learn.
+            Your purpose is to guide, explain, and encourage independent thinking, not just give answers.
+
+            Core Functions:
+
+            -Explain topics, assignments, or questions in clear, student-friendly terms.
+
+            -Provide examples, hints, or step-by-step reasoning to help learning.
+
+            -Encourage curiosity, problem-solving, and study skills.
+
+            -Maintain a respectful, supportive, and motivating tone.
+
+            -Never complete graded work or give full solutions without teaching the reasoning.
+
+            -When unsure, ask clarifying questions before answering.
+
+            -Focus on learning support, clarity, and encouragement — not doing the work for the student.
+            -Keep responses concise, engaging, and easy to understand.
+
+            IMPORTANT: Do not use any Markdown syntax (e.g., #, *, **, etc.). Use plain text only.
+                    
+          """;
+
     final LLM aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
@@ -77,29 +178,35 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Update UI to show user's message and reset text field
     setState(() {
-      _messages.add({'text': input, 'sender': 'user'});
+      _messages.add(<String, dynamic>{'text': input, 'sender': 'user'});
       _isLoading = true; // Show a loading indicator while waiting for response
     });
 
     _controller.clear(); // Clear the input field
     _scrollToBottom(); // Scroll to the bottom after sending the message
+
+    _chatHistory.add(ChatTurn(role: 'user', content: input));
     await _saveChatHistory(); // Save chat history
+   
 
     try {
-      // Get ChatGPT response
-      // final chatGPTService = OpenAiLLM();
-      final prompt = _role == 'teacher'
-          ? "You are assisting a teacher. $aiPrompt"
-          : aiPrompt;
-      final response = await aiModel.getChatResponse(prompt);
+      final ctx = buildContext(
+        permTokens: PermTokens(core: instructions),
+        chatHistory: _chatHistory,
+        userPrompt: input,
+        llmContextSize: aiModel.contextSize,
+        maxOutputTokens: 500,
+      );
+      final response = await aiModel.chat(context: ctx);
 
       setState(() {
-        _messages.add({'text': response, 'sender': 'bot'});
+        _chatHistory.add(ChatTurn(role: 'assistant', content: response));
+        _messages.add(<String, dynamic>{'text': response, 'sender': 'bot'});
         _isLoading = false;
       });
 
-      _scrollToBottom(); // Scroll to the bottom after receiving the bot response
       await _saveChatHistory(); // Save chat history after bot response
+      _scrollToBottom(); // Scroll to the bottom after receiving the bot response
     } catch (error) {
       setState(() {
         _messages.add({
@@ -115,22 +222,17 @@ class _ChatScreenState extends State<ChatScreen> {
   void _clearChat() {
     setState(() {
       _messages.clear();
+      _chatHistory.clear();
     });
     _saveChatHistory(); // Save the empty state to clear saved chat history
   }
 
-  // Function to toggle role (student/teacher)
-  // void _toggleRole() { ***** Not used *****
-  //   setState(() {
-  //     _role = _role == 'student' ? 'teacher' : 'student';
-  //   });
-  // }
-
   // Scroll to the bottom of the chat list
   void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       _scrollController.position.maxScrollExtent,
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
   }
@@ -211,8 +313,11 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.send, color: Colors.purpleAccent),
-                        onPressed: _sendMessage,
+                        icon: const Icon(Icons.send, color: Colors.purpleAccent),
+                        onPressed: () {
+                          debugPrint('SEND tapped, text="${_controller.text}"');
+                          _sendMessage();
+                        },
                       ),
                       IconButton(
                         icon: Icon(Icons.clear),

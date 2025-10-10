@@ -1,7 +1,8 @@
 import 'package:learninglens_app/beans/chatLog.dart';
 import 'package:learninglens_app/services/Token_Utils.dart';
 
-// Builds the context for LLM requests by combining persistent context, chat history, and the user's current prompt.
+// Builds the context for LLM requests by combining persistent context,
+// chat history (oldest -> newest), and the current user prompt (last).
 List<Map<String, dynamic>> buildContext({
   required PermTokens permTokens,
   required List<ChatTurn> chatHistory,
@@ -10,69 +11,73 @@ List<Map<String, dynamic>> buildContext({
   required int maxOutputTokens,
   int safetyMargin = 500,
 }) {
-  // Reserve tokens for response and safety margin
+  // Budget = model context - reserved for response - safety margin
   final int tokenBudget = llmContextSize - maxOutputTokens - safetyMargin;
 
-  // If the token budget is tiny or negative, return only core context and user prompt
+  // Messages start with core system prompt (null-safe)
+  final msgs = <Map<String, dynamic>>[
+    {'role': 'system', 'content': (permTokens.core ?? '').trim()},
+  ];
+
+  int count() => Token_Utils.estimateMessages(msgs);
+
+  // Fast path: if budget tiny/negative, return just core + current user
   if (tokenBudget <= 0) {
     return [
-      {'role': 'system', 'content': permTokens.core},
+      {'role': 'system', 'content': (permTokens.core ?? '').trim()},
       {'role': 'user', 'content': userPrompt},
     ];
   }
 
-  //Creates the messages list starting with core persistant context.
-  final msgs = <Map<String, dynamic>>[
-    {'role': 'system', 'content': permTokens.core},
-  ];
+  // Add module system prompts (null-safe, trimmed)
+  final List<String> modules = (permTokens.modules ?? const <String>[]);
+  for (final m in modules) {
+    final trimmed = (m ?? '').trim();
+    if (trimmed.isEmpty) continue;
 
-  // Gets the estimated token count of msgs
-  int count() {
-    return Token_Utils.estimateMessages(msgs);
-  }
-
-  // Iterates though dynamic context adding them to the messages list before checking token count.
-  if (permTokens.modules.isNotEmpty) {
-    for (final m in permTokens.modules) {
-      // Trim whitespace and skip empty modules
-      final trimmed = m.trim();
-      if (trimmed.isEmpty) continue;
-
-      msgs.add({'role': 'system', 'content': trimmed});
-
-      //Checks if adding the module exceeded the token budget
-      if (count() > tokenBudget) {
-        msgs.removeLast();
-        // Stop adding modules if we exceed the budget
-        //TODO Display a warning/return an error that contextsize is too small and feature may not work as expected
-        break;
-      }
-      //adds the current user prompt behind perminent context
-      msgs.add({'role': 'user', 'content': userPrompt});
-
-      int insertIndex() =>
-          msgs.length - 1; // insert right before the final user prompt
-      // Adds chat history in reverse order until the token budget is reached
-      for (int i = chatHistory.length - 1; i >= 0; i--) {
-        final turn = chatHistory[i];
-        msgs.insert(insertIndex(), turn.toJson());
-
-        if (count() > tokenBudget) {
-          msgs.removeAt(insertIndex());
-          // Stop adding chat history if we exceed the budget
-          break;
-        }
-      }
-      // If we still exceed the token budget, start removing the oldest conversation turns
-      while (count() > tokenBudget) {
-        final index = msgs.indexWhere(
-            (msg) => msg['role'] == 'user' || msg['role'] == 'assistant');
-        // If no more conversation turns to remove, break
-        if (index == -1 || index >= msgs.length - 1) break;
-        // Remove the oldest conversation turn
-        msgs.removeAt(index);
-      }
+    msgs.add({'role': 'system', 'content': trimmed});
+    if (count() > tokenBudget) {
+      msgs.removeLast(); // back out and stop adding modules
+      break;
     }
   }
+
+  // Add prior chat history in chronological order (oldest -> newest)
+  for (final turn in chatHistory) {
+    final map = turn.toJson();
+    final role = (map['role'] as String?)?.trim();
+    final content = (map['content'] as String?)?.trim();
+
+    if (role == null || content == null || content.isEmpty) continue;
+    if (role != 'user' && role != 'assistant') continue; // only valid roles
+
+    msgs.add({'role': role, 'content': content});
+    if (count() > tokenBudget) {
+      msgs.removeLast(); // back out and stop adding history
+      break;
+    }
+  }
+
+  // Add the CURRENT user prompt LAST
+  msgs.add({'role': 'user', 'content': userPrompt});
+
+  // If we’re over budget now, trim oldest conversation turns (not system)
+  while (count() > tokenBudget) {
+    final idx = msgs.indexWhere(
+      (m) => m['role'] == 'user' || m['role'] == 'assistant',
+    );
+    if (idx == -1 || idx >= msgs.length - 1) break; // nothing left to trim
+    msgs.removeAt(idx);
+  }
+
+  // Final guard: ensure we at least have system + current user
+  if (msgs.isEmpty || msgs.last['role'] != 'user') {
+    // Rebuild minimal context if something went odd during trimming
+    return [
+      {'role': 'system', 'content': (permTokens.core ?? '').trim()},
+      {'role': 'user', 'content': userPrompt},
+    ];
+  }
+
   return msgs;
 }

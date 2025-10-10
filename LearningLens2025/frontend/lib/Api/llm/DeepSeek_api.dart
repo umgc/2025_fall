@@ -277,6 +277,7 @@ class DeepseekLLM implements LLM {
     }
     // Parse and return the response content
     final data = jsonDecode(response.body);
+    //print(data);
 
     // Adjust based on actual response structure
     return data['choices'][0]['message']['content'].toString().trim();
