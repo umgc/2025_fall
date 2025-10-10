@@ -304,7 +304,7 @@ resource "aws_iam_role_policy_attachment" "logging" {
 
 data "archive_file" "get_token" {
   type = "zip"
-  source_dir = "../lambda/gettoken"
+  source_dir = "../lambda/gettoken/gettoken"
   excludes = ["../lambda/gettoken/gettoken.zip"]
   output_path = "../lambda/gettoken/gettoken.zip"
 }
