@@ -302,11 +302,26 @@ resource "aws_iam_role_policy_attachment" "logging" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Run npm install before zipping
+resource "null_resource" "npm_install_gettoken" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/gettoken/package.json")
+    package_lock = filemd5("../lambda/gettoken/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/gettoken && npm install"
+  }
+}
+
 data "archive_file" "get_token" {
   type = "zip"
-  source_dir = "../lambda"
-  excludes = ["../lambda/gettoken.zip"]
-  output_path = "../lambda/gettoken.zip"
+  source_dir = "../lambda/gettoken"
+  excludes = ["../lambda/gettoken/gettoken.zip"]
+  output_path = "../lambda/gettoken/gettoken.zip"
+
+  depends_on = [null_resource.npm_install_gettoken]
 }
 
 data "archive_file" "zip_plugin" {
@@ -341,3 +356,4 @@ resource "aws_lambda_function_url" "get_token_url" {
     allow_headers = ["content-type"]
   }
 }
+
