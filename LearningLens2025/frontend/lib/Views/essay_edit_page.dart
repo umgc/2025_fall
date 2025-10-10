@@ -439,18 +439,33 @@ class EssayEditPageState extends State<EssayEditPage> {
       final sheet = excel[excel.getDefaultSheet()!];
       final criteria = rubricData['criteria'] as List<dynamic>;
 
-      final header = ['Criteria', 'Weight'];
-      header.addAll(headerControllers.map((c) => '${c.text}%'));
-      sheet.appendRow(header);
+      if (criteria.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No criteria found to export')),
+        );
+        return;
+      }
 
+      // Extract headers dynamically from first criterion
+      final levels = List<dynamic>.from(criteria[0]['levels'] ?? []);
+      final scoreHeaders = levels.map((l) => '${l['score']}%').toList();
+
+      // Write header row
+      final headerRow = ['Criteria', 'Weight', ...scoreHeaders];
+      sheet.appendRow(headerRow);
+
+      // Write data rows
       for (var c in criteria) {
-        final row = [c['description'], c['weight']];
-        for (var level in c['levels']) {
-          row.add(level['definition']);
-        }
+        final row = [
+          c['description'] ?? '',
+          c['weight'].toString(),
+          for (var level in List<dynamic>.from(c['levels'] ?? []))
+            level['definition'] ?? ''
+        ];
         sheet.appendRow(row);
       }
 
+      // Encode Excel file
       final excelBytes = excel.encode()!;
       final blob = html.Blob([excelBytes]);
       final url = html.Url.createObjectUrlFromBlob(blob);
@@ -460,6 +475,9 @@ class EssayEditPageState extends State<EssayEditPage> {
       html.Url.revokeObjectUrl(url);
     } catch (e) {
       print('Error exporting Excel: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error exporting Excel: $e')),
+      );
     }
   }
 }
