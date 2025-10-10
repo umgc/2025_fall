@@ -317,7 +317,7 @@ resource "null_resource" "npm_install_gettoken" {
 
 data "archive_file" "get_token" {
   type = "zip"
-  source_dir = "../lambda/gettoken/gettoken"
+  source_dir = "../lambda/gettoken"
   excludes = ["../lambda/gettoken/gettoken.zip"]
   output_path = "../lambda/gettoken/gettoken.zip"
 

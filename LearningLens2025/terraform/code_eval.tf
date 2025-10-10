@@ -93,7 +93,7 @@ resource "null_resource" "npm_install_code_eval" {
 # lambda function for code evaluations
 data "archive_file" "code_eval" {
   type = "zip"
-  source_dir = "../lambda/code_eval/code_eval/"
+  source_dir = "../lambda/code_eval/"
   excludes = ["../lambda/code_eval/code_eval.zip"]
   output_path = "../lambda/code_eval/code_eval.zip"
 
