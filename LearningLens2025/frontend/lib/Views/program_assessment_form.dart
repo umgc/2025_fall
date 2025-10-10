@@ -7,21 +7,21 @@ import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
-class CourseForm extends StatefulWidget {
+class ProgramAssessmentForm extends StatefulWidget {
   final List<Course> courses;
   // Callback that is called when a new program evaluation is created successfully
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
-  const CourseForm(
+  const ProgramAssessmentForm(
       {super.key, required this.courses, required this.onEvaluationStarted});
 
   @override
-  _CourseFormState createState() =>
-      _CourseFormState(courses, onEvaluationStarted);
+  _ProgramAssessmentFormState createState() =>
+      _ProgramAssessmentFormState(courses, onEvaluationStarted);
 }
 
-class _CourseFormState extends State<CourseForm> {
+class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final lmsService = LmsFactory.getLmsService();
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
 
@@ -33,7 +33,7 @@ class _CourseFormState extends State<CourseForm> {
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
 
-  _CourseFormState(this.courses, this.onEvaluationStarted);
+  _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
   // Helper to check if form is valid
   bool get isFormValid =>
