@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
-import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
@@ -111,19 +110,6 @@ class _AiLogScreenState extends State<AiLogScreen> {
   void _queryDatabase() async {
     // For now just test adding data, get data
     if (selectedCourse != null) {
-      final String testString = "This is a test string for a prompt.";
-      final String replyString = "This is a test string for a reply.";
-      final String reflectionString = "This is a test reflection.";
-      if (selectedAssignment != null && selectedStudent != null) {
-        await AILoggingSingleton().addLog(AiLog(
-            selectedCourse!,
-            selectedAssignment!,
-            selectedStudent!,
-            testString,
-            replyString,
-            LlmType.CHATGPT,
-            reflectionString));
-      }
       List<AiLog> newLogs = [];
       setState(() {
         logs = [];
@@ -296,6 +282,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       Expanded(
                           child: DropdownButtonFormField<Course?>(
                         value: selectedCourse,
+                        isExpanded: true,
                         items: List.empty(growable: true)
                           ..add(DropdownMenuItem<Course?>(
                               value: null, child: Text('Select Course')))
@@ -328,6 +315,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                     border: OutlineInputBorder(),
                                     disabledBorder: null,
                                     enabled: selectedCourse != null),
+                                isExpanded: true,
                                 value: selectedAssignment,
                                 items: selectedCourse == null
                                     ? null
@@ -360,6 +348,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                                     disabledBorder: null,
                                     enabled: selectedCourse != null),
                                 value: selectedStudent,
+                                isExpanded: true,
                                 dropdownColor: selectedCourse == null
                                     ? Colors.grey.shade400
                                     : null,
@@ -389,8 +378,10 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectStartDate,
                         child: startDate == null
-                            ? Text("Select Start Date")
-                            : Text("Start Date: ${getDateString(startDate!)}"),
+                            ? Text("Select Start Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("Start Date: ${getDateString(startDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       Expanded(
@@ -398,20 +389,23 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         onPressed:
                             selectedCourse == null ? null : _selectEndDate,
                         child: endDate == null
-                            ? Text("Select End Date")
-                            : Text("End Date: ${getDateString(endDate!)}"),
+                            ? Text("Select End Date",
+                                maxLines: 3, textAlign: TextAlign.center)
+                            : Text("End Date: ${getDateString(endDate!)}",
+                                maxLines: 3, textAlign: TextAlign.center),
                       )),
                       SizedBox(width: 10),
                       ElevatedButton(
                         onPressed:
                             (selectedCourse == null) ? null : _queryDatabase,
-                        child: const Text('Filter'),
+                        child: const Text('Filter', maxLines: 1),
                       ),
                       Spacer(),
                       ElevatedButton(
                         onPressed:
                             logSource.sortedData.isEmpty ? null : _exportLogs,
-                        child: const Text('Export Logs'),
+                        child: const Text('Export Logs',
+                            maxLines: 2, textAlign: TextAlign.center),
                       ),
                     ]))
               ],
