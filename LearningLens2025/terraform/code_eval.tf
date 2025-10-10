@@ -1,6 +1,6 @@
 # S3 bucket
 resource "aws_s3_bucket" "edulense" {
-  bucket = "edulense"
+  bucket_prefix = "edulense-"
 }
 
 # IAM Policy for S3 read/write access
@@ -17,7 +17,7 @@ resource "aws_iam_policy" "edulense_rw" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::edulense"
+          "arn:aws:s3:::${aws_s3_bucket.edulense.id}"
         ]
       },
       {
@@ -28,7 +28,7 @@ resource "aws_iam_policy" "edulense_rw" {
           "s3:DeleteObject"
         ]
         Resource = [
-          "arn:aws:s3:::edulense/*"
+          "arn:aws:s3:::${aws_s3_bucket.edulense.id}/*"
         ]
       }
     ]

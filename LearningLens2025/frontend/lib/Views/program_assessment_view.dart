@@ -83,7 +83,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // First row with Create button aligned right
-        CourseForm(
+        ProgramAssessmentForm(
             courses: _courses,
             onEvaluationStarted: (course, assignment, expectedOutput) async {
               final results = await _getEvaluations(lmsService.userName!);
