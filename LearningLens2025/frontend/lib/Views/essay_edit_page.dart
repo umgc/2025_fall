@@ -371,6 +371,18 @@ class EssayEditPageState extends State<EssayEditPage> {
     final pdf = pw.Document();
     final criteria = rubricData['criteria'] as List<dynamic>;
 
+    if (criteria.isEmpty) {
+      // Safety check
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No criteria found to export')),
+      );
+      return;
+    }
+
+    // Extract headers dynamically from first criterion
+    final levels = List<dynamic>.from(criteria[0]['levels'] ?? []);
+    final scoreHeaders = levels.map((l) => '${l['score']}%').toList();
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -383,17 +395,14 @@ class EssayEditPageState extends State<EssayEditPage> {
                       fontSize: 24, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 16),
               pw.TableHelper.fromTextArray(
-                headers: [
-                  'Criteria',
-                  'Weight',
-                  for (var c in headerControllers) '${c.text}%'
-                ],
+                headers: ['Criteria', 'Weight', ...scoreHeaders],
                 data: [
                   for (var c in criteria)
                     [
-                      c['description'],
+                      c['description'] ?? '',
                       c['weight'].toString(),
-                      for (var level in c['levels']) level['definition']
+                      for (var level in List<dynamic>.from(c['levels'] ?? []))
+                        level['definition'] ?? ''
                     ]
                 ],
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -402,10 +411,9 @@ class EssayEditPageState extends State<EssayEditPage> {
                 headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
                 border: pw.TableBorder.all(color: PdfColors.grey),
                 columnWidths: {
-                  0: pw.FlexColumnWidth(1.7), // Criteria column gets 2x width
-                  1: pw.FlexColumnWidth(1), // Weight column slightly wider
-                  // remaining score columns: equal widths
-                  for (int i = 2; i < headerControllers.length + 2; i++)
+                  0: pw.FlexColumnWidth(1.7),
+                  1: pw.FlexColumnWidth(1),
+                  for (int i = 2; i < scoreHeaders.length + 2; i++)
                     i: pw.FlexColumnWidth(1),
                 },
               ),
