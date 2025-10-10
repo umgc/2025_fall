@@ -87,12 +87,13 @@ class BottomNavConfig {
         routeName: 'symptoms',
         screen: const SymptomsAllergiesPage(),
       ),
+
       BottomNavItem(
-        label: 'Health',
-        icon: Icons.health_and_safety_outlined,
-        activeIcon: Icons.health_and_safety,
-        routeName: 'health',
-        screen: const PatientHealthTab(),
+        label: 'Reports',
+        icon: Icons.analytics_outlined,
+        activeIcon: Icons.analytics,
+        routeName: 'reports',
+        screen: const PatientReportsTab(),
       ),
       BottomNavItem(
         label: 'Messages',

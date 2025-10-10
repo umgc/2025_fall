@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../features/profile/presentation/pages/profile_settings_page.dart';
 import '../../features/social/presentation/pages/chat_inbox_screen.dart';
-
+import '../../screens/patient_reports.dart';
 class PatientHomeTab extends StatelessWidget {
   const PatientHomeTab({super.key});
 
@@ -100,5 +100,14 @@ class PatientProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfileSettingsPage();
+  }
+}
+
+class PatientReportsTab extends StatelessWidget {
+  const PatientReportsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const PatientReportsScreen();
   }
 }
