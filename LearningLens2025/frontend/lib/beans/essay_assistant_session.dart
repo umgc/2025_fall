@@ -1,6 +1,7 @@
 // enum for different buld setting/mode
 import 'dart:convert';
 
+import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/chatLog.dart';
 
 enum EssayMode {
@@ -20,9 +21,7 @@ enum EssayHelper {
 // class to represent an essay builder session
 class EssaySession {
 
-  final String assignmentId;
-  final String courseId;
-  final String studentId;
+  Assignment essay;
   EssayMode mode;
   Set<EssayHelper> helpers;
   List<ChatTurn> chatLog;
@@ -30,9 +29,7 @@ class EssaySession {
 
   // constructor
   EssaySession({
-    required this.assignmentId,
-    required this.courseId,
-    required this.studentId,
+    required this.essay,
     this.mode = EssayMode.brainstorm,
     this.helpers = const {},
     this.chatLog = const [],
@@ -41,9 +38,15 @@ class EssaySession {
 
   // method to convert the object to json for storage
   String toJson() => jsonEncode({
-        'assignmentId': assignmentId,
-        'courseId': courseId,
-        'studentId': studentId,
+        'assignmentId': essay.id,
+        'name': essay.name,
+        'description': essay.description,
+        'dueDate': essay.dueDate?.toIso8601String(),
+        'cutoffDate': essay.cutoffDate?.toIso8601String(),
+        'isDraft': essay.isDraft,
+        'maxAttempts': essay.maxAttempts,
+        'gradingStatus': essay.gradingStatus,
+        'courseId': essay.courseId,
         'mode': mode.name,
         'helpers': helpers.map((e) => e.name).toList(),
         'chatLog': chatLog,
@@ -52,9 +55,21 @@ class EssaySession {
     // factory constructor to rebuild session from JSON
   factory EssaySession.fromJson(Map<String, dynamic> json) {
     return EssaySession(
-      assignmentId: json['assignmentId'],
-      courseId: json['courseId'],
-      studentId: json['studentId'],
+      essay: Assignment(
+        id: json['assignmentId'],
+        name: json['name'],
+        description: json['description'],
+        dueDate: json['dueDate'] != null
+            ? DateTime.parse(json['dueDate'])
+            : null,
+        cutoffDate: json['cutoffDate'] != null
+            ? DateTime.parse(json['cutoffDate'])
+            : null,
+        isDraft: json['isDraft'] ?? false,
+        maxAttempts: json['maxAttempts'] ?? 0,
+        gradingStatus: json['gradingStatus'] ?? 0,
+        courseId: json['courseId'] ?? 0,
+      ),
       mode: EssayMode.values.firstWhere((e) => e.name == json['mode']),
       helpers: (json['helpers'] as List)
           .map((h) => EssayHelper.values.firstWhere((e) => e.name == h))
