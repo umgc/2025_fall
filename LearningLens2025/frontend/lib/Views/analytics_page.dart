@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
@@ -1281,7 +1282,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<ExpansionPanel> children = [
       _buildChild(
           0,
-          "Areas of Success",
+          "Areas of Understanding",
           _isAnalyzingSuccess,
           _aiAnalysisSuccess.isEmpty ||
                   !_aiAnalysisSuccess[0].containsKey("Summary")
@@ -1292,6 +1293,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisSuccess[1].containsKey("Data")
               ? null
               : _aiAnalysisSuccess[1]["Data"],
+          "Top Areas of Understanding",
           "Topic",
           "Percentage"),
       _buildChild(
@@ -1305,6 +1307,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisFail.length < 2 || !_aiAnalysisFail[1].containsKey("Data")
               ? null
               : _aiAnalysisFail[1]["Data"],
+          "Top Areas of Misunderstanding",
           "Topic",
           "Percentage"),
       _buildChild(
@@ -1320,6 +1323,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisCourse[1].containsKey("Data")
               ? null
               : _aiAnalysisCourse[1]["Data"],
+          "Suggested Assignments",
           "Name",
           "Description"),
       _buildChild(
@@ -1335,6 +1339,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisAssignment[1].containsKey("Data")
               ? null
               : _aiAnalysisAssignment[1]["Data"],
+          "Suggested References",
           "URL",
           "Description")
     ];
@@ -1350,6 +1355,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisAi.length < 2 || !_aiAnalysisAi[1].containsKey("Data")
               ? null
               : _aiAnalysisAi[1]["Data"],
+          "Top AI Use Cases",
           "Area",
           "Percentage"));
     }
@@ -1363,6 +1369,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String? bodyText,
       bool showChart,
       List<dynamic>? data,
+      String graphicTitle,
       String key1,
       String key2) {
     if (data != null) {
@@ -1371,6 +1378,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           .toList();
     }
     bool isUrl = key1 == "URL";
+    final ScrollController listController = ScrollController();
     return ExpansionPanel(
         backgroundColor:
             Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
@@ -1401,109 +1409,133 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               SizedBox(width: 10),
               Visibility(
                   visible: !wait && bodyText != null,
-                  child: Container(
-                      height: 320,
-                      width: 370,
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: BoxBorder.all(
-                              color: Theme.of(context).colorScheme.primary)),
-                      child: data == null
-                          ? Text("No AI Analysis Data found.")
-                          : showChart
-                              ? BarChart(BarChartData(
-                                  barTouchData: BarTouchData(enabled: false),
-                                  minY: 0,
-                                  maxY: 100,
-                                  alignment: BarChartAlignment.spaceAround,
-                                  barGroups: data.map((e) {
-                                    HSLColor hsl = HSLColor.fromColor(
-                                        Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer);
-                                    return BarChartGroupData(
-                                        x: data!.indexOf(e),
-                                        barRods: [
-                                          BarChartRodData(
-                                              toY: e[key2],
-                                              width: 20,
-                                              borderRadius: BorderRadius.zero,
-                                              color: hsl
-                                                  .withLightness(
-                                                      (hsl.lightness -
-                                                              data.indexOf(e) /
-                                                                  10.0)
-                                                          .clamp(0, 1))
-                                                  .toColor())
-                                        ]);
-                                  }).toList(),
-                                  titlesData: FlTitlesData(
-                                      bottomTitles: AxisTitles(
-                                          sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 100,
-                                        getTitlesWidget: (value, meta) =>
-                                            SideTitleWidget(
-                                                meta: meta,
-                                                child: SizedBox(
-                                                    width: 110,
-                                                    child: Text(
-                                                      data![value.toInt()][key1]
-                                                          .toString(),
-                                                      softWrap: true,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      maxLines: 5,
-                                                    ))),
-                                      )),
-                                      topTitles: AxisTitles(
-                                          sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 50,
-                                        getTitlesWidget: (value, meta) =>
-                                            SideTitleWidget(
-                                                space: 20,
-                                                meta: meta,
-                                                child: Text(
-                                                  "${data![value.toInt()][key2].toString()}%",
-                                                  softWrap: true,
-                                                )),
-                                      )),
-                                      rightTitles: AxisTitles(
+                  child: Column(children: [
+                    Text(graphicTitle,
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Container(
+                        height: 320,
+                        width: 370,
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: BoxBorder.all(
+                                color: Theme.of(context).colorScheme.primary)),
+                        child: data == null
+                            ? Text("No AI Analysis Data found.")
+                            : showChart
+                                ? BarChart(BarChartData(
+                                    gridData: FlGridData(show: false),
+                                    barTouchData: BarTouchData(enabled: false),
+                                    minY: 0,
+                                    maxY: 100,
+                                    alignment: BarChartAlignment.spaceAround,
+                                    barGroups: data.map((e) {
+                                      HSLColor hsl = HSLColor.fromColor(
+                                          Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer);
+                                      return BarChartGroupData(
+                                          x: data!.indexOf(e),
+                                          barRods: [
+                                            BarChartRodData(
+                                                toY: e[key2],
+                                                width: 20,
+                                                borderRadius: BorderRadius.zero,
+                                                color: hsl
+                                                    .withLightness((hsl
+                                                                .lightness -
+                                                            data.indexOf(e) /
+                                                                10.0)
+                                                        .clamp(0, 1))
+                                                    .toColor())
+                                          ]);
+                                    }).toList(),
+                                    titlesData: FlTitlesData(
+                                        bottomTitles: AxisTitles(
+                                            sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 100,
+                                          getTitlesWidget: (value, meta) =>
+                                              SideTitleWidget(
+                                                  meta: meta,
+                                                  child: SizedBox(
+                                                      width: 100,
+                                                      child: Text(
+                                                        data![value.toInt()]
+                                                                [key1]
+                                                            .toString(),
+                                                        softWrap: true,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        maxLines: 5,
+                                                        style: TextStyle(
+                                                            fontSize: 12),
+                                                      ))),
+                                        )),
+                                        topTitles: AxisTitles(
+                                            sideTitles: SideTitles(
+                                          showTitles: true,
+                                          reservedSize: 50,
+                                          getTitlesWidget: (value, meta) =>
+                                              SideTitleWidget(
+                                                  space: 20,
+                                                  meta: meta,
+                                                  child: Text(
+                                                    "${data![value.toInt()][key2].toString()}%",
+                                                    softWrap: true,
+                                                  )),
+                                        )),
+                                        rightTitles: AxisTitles(
                                           sideTitles:
-                                              SideTitles(showTitles: false)))))
-                              : Scrollbar(
-                                  thumbVisibility: true,
-                                  child: ListView.builder(
-                                      itemCount: data.length,
-                                      itemBuilder: (context, index) {
-                                        Widget firstItem = Text(
-                                            data![index][key1],
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                decoration: isUrl
-                                                    ? TextDecoration.underline
-                                                    : null,
-                                                color: isUrl
-                                                    ? Colors.blue
-                                                    : Colors.black));
-                                        return Column(children: [
-                                          isUrl
-                                              ? InkWell(
-                                                  child: firstItem,
-                                                  onTap: () => launchUrl(
-                                                      Uri.parse(
-                                                          data![index][key1]),
-                                                      webOnlyWindowName:
-                                                          "_blank"),
-                                                )
-                                              : firstItem,
-                                          Text(data[index][key2])
-                                        ]);
-                                      }))))
+                                              SideTitles(showTitles: false),
+                                        ),
+                                        leftTitles: AxisTitles(
+                                            sideTitles: SideTitles(
+                                          interval: 25,
+                                          reservedSize: 50,
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) =>
+                                              SideTitleWidget(
+                                                  meta: meta,
+                                                  child: Text("$value%")),
+                                        )))))
+                                : Scrollbar(
+                                    thumbVisibility: true,
+                                    controller: listController,
+                                    child: ListView.builder(
+                                        controller: listController,
+                                        itemCount: data.length,
+                                        itemBuilder: (context, index) {
+                                          Widget firstItem = Text(
+                                              data![index][key1],
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  decoration: isUrl
+                                                      ? TextDecoration.underline
+                                                      : null,
+                                                  color: isUrl
+                                                      ? Colors.blue
+                                                      : Colors.black));
+                                          return Column(children: [
+                                            isUrl
+                                                ? InkWell(
+                                                    child: firstItem,
+                                                    onTap: () => launchUrl(
+                                                        Uri.parse(
+                                                            data![index][key1]),
+                                                        webOnlyWindowName:
+                                                            "_blank"),
+                                                  )
+                                                : firstItem,
+                                            Text(data[index][key2])
+                                          ]);
+                                        })))
+                  ]))
             ])),
         isExpanded: _expandedPanels.contains(index));
   }
@@ -1708,6 +1740,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each area, provide the topic name and the percentage of student submissions that discussed the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three discussed topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1730,6 +1784,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each area, provide the topic name and the percentage of student submissions that did not discuss the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three topics that were not discussed are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1751,6 +1827,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Provide a textual summary. Additionally, determine the top three AI use cases, each with a brief description and a percentage. If there was no AI use on this essay, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three AI use areas are an object named 'Data' with keys 'Area' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Area": "Area Name",
+            "Percentage": 100
+          },
+          {
+            "Area": "Area Name",
+            "Percentage": 100
+          },
+          {
+            "Area": "Area Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1768,14 +1866,36 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String failures) async {
     String successPrompt = """
     Recommend improvements that could be made to course '$courseName'.
-    Areas of Success:
+    Areas of Understanding:
     $successes
-    Areas of Failure:
+    Areas of Misunderstanding:
     $failures
-    Based on the summaries of student success and student failure, recommend ways I can improve my course materials.
+    Based on the summaries of student understanding and student misunderstanding, recommend ways I can improve my course materials.
     Provide a textual summary for both course, as well as three assignments I could create for my course to improve student's understanding of the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
     and the list of recommended assignments are an object named 'Data' with keys 'Name' and 'Description'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Name": "Assignment Name",
+            "Description": "A description of the assignment."
+          },
+          {
+            "Name": "Assignment Name",
+            "Description": "A description of the assignment."
+          },
+          {
+            "Name": "Assignment Name",
+            "Description": "A description of the assignment."
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1793,14 +1913,36 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String failures) async {
     String successPrompt = """
     Recommend improvements that could be made to to assignment '$assessmentName' with description '$essayPrompt'.
-    Areas of Success:
+    Areas of Understanding:
     $successes
-    Areas of Failure:
+    Areas of Misunderstanding:
     $failures
-    Based on the summaries of student success and student failure, recommend ways I can improve the assignment.
+    Based on the summaries of student understanding and student misunderstanding, recommend ways I can improve the assignment.
     Provide a textual summary for assignment improvements, as well as three references I could provide to students to help them better understand the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
     and the list of recommended references are an object named 'Data' with keys 'URL' and 'Description'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "URL": "https://www.example.com/",
+            "Description": "A textual description of the reference."
+          },
+          {
+            "URL": "https://www.example.com/",
+            "Description": "A textual description of the reference."
+          },
+          {
+            "URL": "https://www.example.com/",
+            "Description": "A textual description of the reference."
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1829,6 +1971,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially correctly.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1858,6 +2022,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially incorrectly.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1882,6 +2068,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly. If all questions have a 0% correctness rate, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three correctly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1906,6 +2114,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.  If all questions have a 100% correctness rate, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
     the top three incorrectly answered topics are an object named 'Data' with keys 'Topic' and 'Percentage'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      },
+      {
+        "Data": [
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          },
+          {
+            "Topic": "Topic Name",
+            "Percentage": 100
+          }
+        ]
+      }
+    ]
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
@@ -1929,7 +2159,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
 
     try {
-      var result = await aiModel.postToLlm(prompt);
+      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
       String normalizedResult = result.trim();
       // Remove markdown code block wrappers if present.
       if (normalizedResult.startsWith("```json")) {
