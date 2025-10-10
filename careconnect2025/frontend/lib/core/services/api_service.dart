@@ -13,6 +13,7 @@ class ApiConstants {
   static final String feed = '$_host/v1/api/feed';
   static final String users = '$_host/v1/api/users';
   static final String friends = '$_host/v1/api/friends';
+  static final String patients = '$_host/v1/api/patients';
 
   static var files;
 
@@ -195,5 +196,11 @@ class ApiService {
         'newPassword': newPassword,
       }),
     );
+  }
+  
+  static Future<http.Response> getPatientInfo(final int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final url = Uri.parse('${ApiConstants.patients}/$patientId');
+    return await http.get(url, headers: headers);
   }
 }
