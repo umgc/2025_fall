@@ -98,10 +98,6 @@ dependencies:
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
-
-  shelf_cors_headers: ^0.1.5
-  dart_jsonwebtoken: ^3.2.0
-  shelf_router: ^1.1.4
   
   # AI Voice Commands 
   # ag added as a fix
@@ -135,15 +131,20 @@ dependencies:
   table_calendar: ^3.2.0
 #team -d additions
   qr_flutter: ^4.1.0
-
-
+  #llm_toolkit: ^0.0.4
+  #llama_cpp_dart: 
   http_parser: ^4.0.2
   image: ^4.2.0
   # Required dependencies
-
+  #flutter_gemma: ^0.9.0
+  #tflite_flutter: ^0.11.0 
+  #fftea: ^1.5.0
   json_schema: ^5.2.1
 dependency_overrides:
-
+  # llama_cpp_dart:
+  #   git:
+  #     url: https://github.com/netdur/llama_cpp_dart.git
+  #     ref: main
 dev_dependencies:
   flutter_test:
     sdk: flutter

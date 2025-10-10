@@ -1,12 +1,12 @@
 import 'package:care_connect_app/core/services/api_service.dart';
-import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
-import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/widgets/menu/shortcut_search_delegate.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
- 
+import 'package:care_connect_app/providers/shortcut_provider.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 
 class MenuPage extends StatefulWidget {
   const MenuPage({super.key});
@@ -15,7 +15,6 @@ class MenuPage extends StatefulWidget {
   State<MenuPage> createState() => _MenuPageState();
 }
 
-// TODO - need to store the shortccuts to disk, and then load them when application is loaded 
 class _MenuPageState extends State<MenuPage> {
   String? _profileImageUrl;
 
@@ -48,16 +47,22 @@ class _MenuPageState extends State<MenuPage> {
     if (user == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Menu')),
-        body: _LoggedOutPrompt(onLogin: () => context.go('/login')),
+        body: _LoggedOutPrompt(onLogin: () => context.push('/login')),
       );
     }
 
     final role = user.role.toUpperCase();
-    final isCaregiver = role == 'CAREGIVER' || role == 'FAMILY_LINK' || role == 'ADMIN';
-    final isPatient = role == 'PATIENT';
+
+    final shortcutProvider = context.watch<ShortcutProvider>();
+    if (!shortcutProvider.isLoaded) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final activeShortcuts = shortcutProvider.visibleActiveForRole(role);
+    String resolveRoute(ShortcutDef d) =>
+        d.resolveRoute({'userId': user.id.toString()});
 
     final items = <_MenuItem>[
-      // Assistants and core features
       _MenuItem(
         icon: Icons.receipt_long,
         label: 'Invoice Assistant',
@@ -68,13 +73,14 @@ class _MenuPageState extends State<MenuPage> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const InvoiceTabbedPage()),
-          );        }
+          );
+        },
       ),
       _MenuItem(
         icon: Icons.verified_user,
         label: 'EVV',
         route: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN'},
+        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
@@ -92,23 +98,22 @@ class _MenuPageState extends State<MenuPage> {
         onTap: () => context.go('/social-feed?userId=${user.id}'),
       ),
       _MenuItem(
-        icon: Icons.watch,
-        label: 'Wearables',
-        route: '/wearables',
+        icon: Icons.emoji_events,
+        label: 'Gamification',
+        route: '/gamification',
       ),
+      _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
       _MenuItem(
         icon: Icons.folder,
         label: 'File Management',
         route: '/file-management',
       ),
-      // Caregiver shortcuts
       _MenuItem(
         icon: Icons.person_add,
         label: 'Add Patient',
         route: '/add-patient',
         visibleFor: const {'CAREGIVER', 'ADMIN'},
       ),
-      // Settings and theme
       _MenuItem(
         icon: Icons.settings,
         label: 'Settings',
@@ -122,45 +127,101 @@ class _MenuPageState extends State<MenuPage> {
         title: const Text('Menu'),
         actions: [
           IconButton(
-            onPressed: () => context.go('/search'),
-            icon: const Icon(Icons.search),
-            tooltip: 'Search',
-          ),
+              onPressed: () => showSearch(
+                context: context,
+                delegate: ShortcutSearchDelegate(
+                  roleUpper: role,                  
+                  userId: user.id.toString(),
+                ),
+              ),
+              icon: const Icon(Icons.search),
+              tooltip: 'Search',
+            ),
         ],
       ),
       body: CustomScrollView(
         slivers: [
+          // Profile header
           SliverToBoxAdapter(
-            child: _HeaderCard(
-              name: user.name ?? 'User',
-              role: role,
-              imageUrl: _profileImageUrl,
-              onTapProfile: () => context.go('/profile'),
+            child: ListTile(
+              contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              leading: CircleAvatar(
+                radius: 24,
+                backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                backgroundImage: _profileImageUrl != null
+                    ? NetworkImage(_profileImageUrl!)
+                    : null,
+                child: _profileImageUrl == null
+                    ? Icon(Icons.person, color: Theme.of(context).primaryColor)
+                    : null,
+              ),
+              title: Text(
+                user.name ?? 'User',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => context.push('/profile'),
+              ),
+              onTap: () => context.push('/profile'),
             ),
           ),
 
-          // Shortcuts section: shows a small curated set depending on role
+          // Shortcuts header + customize
           SliverToBoxAdapter(
-            child: _SectionHeader(title: 'Your shortcuts'),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'Your shortcuts',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.tune),
+                    tooltip: 'Customize',
+                    onPressed: () => _openCustomizeShortcuts(context, role),
+                  ),
+                ],
+              ),
+            ),
           ),
+
+          // Shortcuts grid from provider
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
-            delegate: SliverChildListDelegate.fixed(
-              _shortcutTiles(context, role, user.id.toString()),
-            ),
-
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
                 mainAxisExtent: 88,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
+              delegate: SliverChildListDelegate.fixed(
+                activeShortcuts
+                    .map(
+                      (d) => _ShortcutTile(
+                        shortcut: _Shortcut(
+                          d.icon,
+                          d.label,
+                          onTap: () => context.push(resolveRoute(d)),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ),
 
-          // Tools section 
-          SliverToBoxAdapter(child: _SectionHeader(title: 'Tools')),
+          // Tools
+          const SliverToBoxAdapter(child: _SectionHeader(title: 'Tools')),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
@@ -177,15 +238,15 @@ class _MenuPageState extends State<MenuPage> {
             ),
           ),
 
-          // Settings and theme toggle
-          SliverToBoxAdapter(child: _SectionHeader(title: 'Preferences')),
+          // Preferences
+          const SliverToBoxAdapter(child: _SectionHeader(title: 'Preferences')),
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: ListTile(
-                leading: const Icon(Icons.brightness_6),
-                title: const Text('Dark Mode'),
-                trailing: const ThemeToggleSwitch(showIcon: false, showLabel: false),
+              child: const ListTile(
+                leading: Icon(Icons.brightness_6),
+                title: Text('Dark Mode'),
+                trailing: ThemeToggleSwitch(showIcon: false, showLabel: false),
               ),
             ),
           ),
@@ -195,8 +256,14 @@ class _MenuPageState extends State<MenuPage> {
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: ListTile(
-                leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-                title: Text('Logout', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                leading: Icon(
+                  Icons.logout,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  'Logout',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
                 onTap: () async {
                   await userProvider.clearUser();
                   if (context.mounted) context.go('/');
@@ -207,104 +274,95 @@ class _MenuPageState extends State<MenuPage> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
-      ),
-      bottomNavigationBar: _BottomHintBar(
-        onGoHome: () => context.go('/dashboard'),
-        onGoProfile: () => context.go('/profile'),
-      ),
+      )
     );
   }
 
-  List<Widget> _shortcutTiles(BuildContext context, String role, String? userId) {
-    final isCaregiver = role == 'CAREGIVER' || role == 'ADMIN' || role == 'FAMILY_LINK';
-    final tiles = <_Shortcut>[
-      _Shortcut(Icons.dashboard, 'Dashboard', onTap: () => context.go('/dashboard')),
-      if (isCaregiver) _Shortcut(Icons.receipt, 'Invoices', onTap: () => context.go('/invoice-assistant/dashboard')),
-      _Shortcut(Icons.calendar_today, 'Calendar', onTap: () => context.go('/calendar')),
-      _Shortcut(Icons.forum, 'Feed', onTap: () => context.go('/social-feed?userId=$userId')),
-      _Shortcut(Icons.medical_information, 'Meds', onTap: () => context.go('/medication')),
-      if (isCaregiver) _Shortcut(Icons.shield, 'EVV', onTap: () => context.go('/evv')),
-      _Shortcut(Icons.watch, 'Wearables', onTap: () => context.go('/wearables')),
-      _Shortcut(Icons.folder, 'Files', onTap: () => context.go('/file-management')),
-    ];
+  Future<void> _openCustomizeShortcuts(
+    BuildContext context,
+    String roleUpper,
+  ) async {
+    final sp = context.read<ShortcutProvider>();
+    final list = sp.visibleCatalogForRole(roleUpper);
+    final working = Set<String>.from(sp.activeKeys);
+    final max = ShortcutProvider.maxShortcuts;
 
-    return tiles.take(8).map((s) => _ShortcutTile(shortcut: s)).toList();
-  }
-}
-
-/* ---------- Small components ---------- */
-
-class _HeaderCard extends StatelessWidget {
-  final String name;
-  final String role;
-  final String? imageUrl;
-  final VoidCallback onTapProfile;
-
-  const _HeaderCard({
-    required this.name,
-    required this.role,
-    required this.imageUrl,
-    required this.onTapProfile,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = Theme.of(context).colorScheme.onPrimary;
-    return GestureDetector(
-      onTap: onTapProfile,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        color: Theme.of(context).appBarTheme.backgroundColor,
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: fg,
-              backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-              child: imageUrl == null
-                  ? Icon(Icons.person, size: 30, color: Theme.of(context).primaryColor)
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).appBarTheme.foregroundColor ??
-                                Theme.of(context).colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          )),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.person, size: 14, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(
-                        role,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: 12 + MediaQuery.of(ctx).padding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Customize Shortcuts',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: list.map((d) {
+                    final checked = working.contains(d.key);
+                    return CheckboxListTile(
+                      value: checked,
+                      title: Row(
+                        children: [
+                          Icon(d.icon),
+                          const SizedBox(width: 12),
+                          Text(d.label),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text('View Profile',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true) {
+                            if (working.length < max) working.add(d.key);
+                          } else {
+                            working.remove(d.key);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await sp.setAll(working);
+                        if (mounted) Navigator.pop(ctx);
+                      },
+                      child: const Text('Save'),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const Icon(Icons.chevron_right, color: Colors.white),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+/* ---------- Small components ---------- */
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -353,7 +411,9 @@ class _ToolTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: item.onTap ?? (item.route != null ? () => context.go(item.route!) : null),
+        onTap:
+            item.onTap ??
+            (item.route != null ? () => context.push(item.route!) : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -361,7 +421,10 @@ class _ToolTile extends StatelessWidget {
               Icon(item.icon),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(item.label, style: Theme.of(context).textTheme.bodyMedium),
+                child: Text(
+                  item.label,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
               const Icon(Icons.chevron_right),
             ],
@@ -426,54 +489,20 @@ class _LoggedOutPrompt extends StatelessWidget {
           children: [
             Icon(Icons.login, size: 64, color: Theme.of(context).disabledColor),
             const SizedBox(height: 12),
-            Text('Please log in', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Please log in',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               'You need to be logged in to access the menu',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).disabledColor),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).disabledColor,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: onLogin, child: const Text('Login')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomHintBar extends StatelessWidget {
-  final VoidCallback onGoHome;
-  final VoidCallback onGoProfile;
-  const _BottomHintBar({required this.onGoHome, required this.onGoProfile});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onGoHome,
-                icon: const Icon(Icons.home),
-                label: const Text('Home'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: onGoProfile,
-                icon: const Icon(Icons.person),
-                label: const Text('Profile'),
-              ),
-            ),
           ],
         ),
       ),
