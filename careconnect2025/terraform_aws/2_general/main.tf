@@ -5,7 +5,6 @@ terraform {
   # NOTE: The backend block cannot use variables. You must manually update the bucket name
   # after running 1_s3_tfstate, or use: terraform init -backend-config="bucket=<bucket-name>"
   backend "s3" {
-    bucket       = var.cc_iac_bucket_name  # Replace this with output from 1_s3_tfstate
     key          = "tf-state/careconnect.tfstate"
     region       = "us-east-1"
     use_lockfile = true

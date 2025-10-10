@@ -3,7 +3,6 @@ terraform {
   # Consider using workspaces for different environments backends like dev, staging, prod
   # That could help in naming the resources differently based on the environment
   backend "s3" {
-    bucket       = var.iac_cc_s3_bucket_name
     key          = "tf-state/careconnect-compute.tfstate"
     region       = "us-east-1"
     use_lockfile = true
@@ -18,14 +17,14 @@ terraform {
   }
 }
 data "aws_s3_objects" "cc_package_list" { 
-  bucket = var.iac_cc_s3_bucket_name
+  bucket = var.cc_iac_bucket_name
   prefix = var.cc_main_backend_package_zip_s3key
 }
 
 data "terraform_remote_state" "cc_common_state" {
   backend = "s3"
   config = {
-    bucket = "${var.iac_cc_s3_bucket_name}"
+    bucket = "${var.cc_iac_bucket_name}"
     key    = "tf-state/careconnect.tfstate"
     region = "us-east-1"
   }
@@ -34,12 +33,48 @@ data "terraform_remote_state" "cc_common_state" {
 data "terraform_remote_state" "cc_db_state" {
   backend = "s3"
   config = {
-    bucket = "${var.iac_cc_s3_bucket_name}"
+    bucket = "${var.cc_iac_bucket_name}"
     key    = "careconnect-db-aurora-pg/terraform.tfstate"
     region = "us-east-1"
   }
 }
- 
+
+# Zip up web app
+data "archive_file" "web_app" {
+  type        = "zip"
+  source_dir  = var.absolute_path_to_frontend_webapp
+  output_path = "${var.absolute_path_to_frontend_webapp}/../web.zip"
+}
+
+resource "aws_s3_object" "frontend_folder" {
+  bucket = var.cc_iac_bucket_name
+  key    = "${var.cc_main_frontend_build_prefix}/"
+  content = "" # Creates an empty object to represent the folder
+}
+
+# Create backend folder in s3
+resource "aws_s3_object" "backend_folder" {
+  bucket = var.cc_iac_bucket_name
+  key    = "${var.cc_main_backend_build_prefix}/"
+  content = "" # Creates an empty object to represent the folder
+}
+
+# upload artifact
+resource "aws_s3_object" "backend_object" {
+  bucket = var.cc_iac_bucket_name
+  key    = var.cc_main_backend_package_zip_s3key
+  source = var.absolute_path_to_backend_artifact
+  etag   = filemd5(var.absolute_path_to_backend_artifact)
+}
+
+# upload frontend artifact
+resource "aws_s3_object" "frontend_object" {
+  bucket = var.cc_iac_bucket_name
+  key    = var.cc_main_frontend_package_zip_s3key
+  source = data.archive_file.web_app.output_path
+  etag   = data.archive_file.web_app.output_md5
+}
+
 resource "aws_cloudwatch_log_group" "cc_main_lambda_log_group" {
   name              = "/aws/lambda/cc_main_backend"
   retention_in_days = 90
@@ -57,8 +92,8 @@ resource "aws_lambda_function" "cc_main_backend_lambda" {
   role          = data.terraform_remote_state.cc_common_state.outputs.cc_app_role_info.arn
   memory_size   = 2048
   timeout       = 30
-  s3_bucket     = var.iac_cc_s3_bucket_name
-  s3_key        = var.cc_main_backend_package_zip_s3key
+  s3_bucket     = aws_s3_object.backend_object.bucket
+  s3_key        = aws_s3_object.backend_object.key
   publish       = true
   vpc_config {
     security_group_ids = [data.terraform_remote_state.cc_common_state.outputs.cc_compute_sg_id]
@@ -136,11 +171,45 @@ resource "aws_apigatewayv2_route" "cc_api_main_proxy" {
   target    = "integrations/${aws_apigatewayv2_integration.main.id}"
 }
 
+# Create Amplify app
+resource "aws_amplify_app" "careconnect" {
+  name     = "careconnect-dev"
+  platform = "WEB"
+}
+
+# Create branch
+resource "aws_amplify_branch" "main" {
+  app_id      = aws_amplify_app.careconnect.id
+  branch_name = "dev"
+}
+
+
+# Trigger Amplify deployment from S3
+resource "null_resource" "trigger_amplify_deployment" {
+  triggers = {
+    archive_md5 = data.archive_file.web_app.output_md5
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Starting Amplify deployment..."
+      aws amplify start-deployment \
+        --app-id ${aws_amplify_app.careconnect.id} \
+        --branch-name ${aws_amplify_branch.main.branch_name} \
+        --source-url s3://${var.cc_iac_bucket_name}/${aws_s3_object.frontend_object.key} \
+        --region us-east-1 || echo "Deployment failed with error code $?"
+      echo "Deployment command completed"
+    EOT
+  }
+
+  depends_on = [aws_s3_object.frontend_object]
+}
+
 module "deployment" {
   source                       = "./modules/deployment"
   default_tags                 = var.default_tags
   cc_app_role_arn              = data.terraform_remote_state.cc_common_state.outputs.cc_app_role_info.arn
-  cc_iac_bucket_name           = var.iac_cc_s3_bucket_name
+  cc_iac_bucket_name           = var.cc_iac_bucket_name
   cc_main_backend_build_prefix = var.cc_main_backend_build_prefix
   cc_lamnda_function_name      = aws_lambda_function.cc_main_backend_lambda.function_name
   cc_main_api_id               = data.terraform_remote_state.cc_common_state.outputs.main_api_id

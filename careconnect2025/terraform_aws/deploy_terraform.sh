@@ -1,6 +1,18 @@
 #!/bin/bash
 
+# TODO - update all applies to use this: terraform apply -var="cc_iac_bucket_name=my-cc-iac-bucket"
+#         Update all bucket variable uses to use cc_iac_bucket_name
+
+
 set -e  # Exit on any error
+
+# Parse command-line arguments
+DESTROY_MODE=false
+for arg in "$@"; do
+    if [ "$arg" = "--destroy" ]; then
+        DESTROY_MODE=true
+    fi
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -172,8 +184,19 @@ run_terraform() {
 
     # Build additional terraform flags
     local tf_var_flags=""
+
+    # Add bucket name variable for all folders except 1_s3_tfstate
+    if [ "$folder_name" != "1_s3_tfstate" ] && [ -n "$TF_BACKEND_BUCKET" ]; then
+        tf_var_flags="-var=cc_iac_bucket_name=$TF_BACKEND_BUCKET"
+    fi
+
+    # Add SSM parameters for 2_general
     if [ "$folder_name" = "2_general" ] && [ -n "$TF_VAR_SSM_PARAMS" ]; then
-        tf_var_flags="-var=cc_ssm_params=$TF_VAR_SSM_PARAMS"
+        if [ -n "$tf_var_flags" ]; then
+            tf_var_flags="$tf_var_flags -var=cc_ssm_params=$TF_VAR_SSM_PARAMS"
+        else
+            tf_var_flags="-var=cc_ssm_params=$TF_VAR_SSM_PARAMS"
+        fi
         print_info "Using SSM parameters for 2_general"
     fi
 
@@ -193,7 +216,7 @@ run_terraform() {
 
         # Apply (Terraform will prompt for variables and confirmation)
         print_info "Applying Terraform configuration..."
-        terraform apply $tf_var_flags
+        terraform apply $tf_var_flags 
 
         if [ $? -eq 0 ]; then
             print_success "Terraform apply completed for $folder_name"
@@ -236,6 +259,58 @@ run_terraform() {
             print_success "Terraform apply completed for $folder_name"
         else
             print_error "Terraform apply failed for $folder_name"
+            exit 1
+        fi
+    fi
+
+    cd "$SCRIPT_DIR"
+}
+
+# Function to destroy terraform resources in a directory
+destroy_terraform() {
+    local dir="$1"
+    local folder_name=$(basename "$dir")
+
+    print_info "=================================================="
+    print_info "Destroying Terraform resources in: $folder_name"
+    print_info "=================================================="
+
+    cd "$dir"
+
+    # Special handling for 1_s3_tfstate (no backend configuration needed)
+    if [ "$folder_name" = "1_s3_tfstate" ]; then
+        # Initialize Terraform
+        print_info "Initializing Terraform..."
+        terraform init
+
+        # Destroy
+        print_info "Destroying Terraform resources..."
+        terraform destroy
+
+        if [ $? -eq 0 ]; then
+            print_success "Terraform destroy completed for $folder_name"
+        else
+            print_error "Terraform destroy failed for $folder_name"
+            exit 1
+        fi
+    else
+        # For all other folders, initialize with backend config if available
+        if [ -n "$TF_BACKEND_BUCKET" ]; then
+            print_info "Initializing Terraform with backend bucket: $TF_BACKEND_BUCKET"
+            terraform init -backend-config="bucket=$TF_BACKEND_BUCKET"
+        else
+            print_info "Initializing Terraform..."
+            terraform init
+        fi
+
+        # Destroy
+        print_info "Destroying Terraform resources..."
+        terraform destroy
+
+        if [ $? -eq 0 ]; then
+            print_success "Terraform destroy completed for $folder_name"
+        else
+            print_error "Terraform destroy failed for $folder_name"
             exit 1
         fi
     fi
@@ -335,6 +410,49 @@ main() {
     done
     print_success "All Terraform folders found"
     echo ""
+
+    # If destroy mode is enabled, run destroy in reverse order first
+    if [ "$DESTROY_MODE" = true ]; then
+        print_warning "=================================================="
+        print_warning "DESTROY MODE ENABLED"
+        print_warning "This will destroy all Terraform resources!"
+        print_warning "=================================================="
+        echo ""
+
+        # Confirm with user
+        read -p "$(echo -e ${RED}Are you sure you want to destroy all resources? [y/N]:${NC} )" -n 1 -r
+        echo ""
+
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_warning "Destroy cancelled."
+            exit 0
+        fi
+
+        # Get backend bucket name from 1_s3_tfstate outputs if available
+        if [ -d "$SCRIPT_DIR/1_s3_tfstate" ]; then
+            cd "$SCRIPT_DIR/1_s3_tfstate"
+            BACKEND_BUCKET_NAME=$(terraform output -raw backend_bucket_name 2>/dev/null)
+            if [ -n "$BACKEND_BUCKET_NAME" ]; then
+                export TF_BACKEND_BUCKET="$BACKEND_BUCKET_NAME"
+                print_info "Using backend bucket: $TF_BACKEND_BUCKET"
+            fi
+            cd "$SCRIPT_DIR"
+        fi
+
+        # Destroy in reverse order (exclude 1_s3_tfstate for now)
+        print_info "Starting Terraform destroy in reverse order..."
+        echo ""
+
+        for ((i=${#folders[@]}-1; i>=0; i--)); do
+            destroy_terraform "$SCRIPT_DIR/${folders[i]}"
+            echo ""
+        done
+
+        print_success "=================================================="
+        print_success "All Terraform resources destroyed successfully!"
+        print_success "=================================================="
+        exit 0
+    fi
 
     # Ask if user wants to build projects
     read -p "$(echo -e ${YELLOW}Do you want to build the backend and frontend? [Y/n]:${NC} )" -n 1 -r

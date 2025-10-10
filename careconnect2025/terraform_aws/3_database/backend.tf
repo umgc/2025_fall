@@ -3,7 +3,6 @@
 terraform {
   backend "s3" {
     # Replace with your S3 bucket name
-    bucket = var.bucket_name
     key    = "careconnect-db-aurora-pg/terraform.tfstate" 
     region = "us-east-1"
 
