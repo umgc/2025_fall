@@ -49,7 +49,6 @@ dependencies:
   path_provider: ^2.1.5
   mime: ^2.0.0
   image_picker: ^1.2.0  # image upload
-  connectivity_plus: ^6.0.5
   # Temporarily disabled for faster builds
   # jitsi_meet_flutter_sdk: ^11.4.0
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
@@ -98,7 +97,7 @@ dependencies:
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
-  
+    
   # AI Voice Commands 
   # ag added as a fix
   porcupine_flutter: ^3.0.5
@@ -106,7 +105,7 @@ dependencies:
 
   # device integration
   fitbitter: ^2.0.6
-  health: ^13.1.4
+  health: ^13.2.0
   mobile_scanner: ^7.0.1
   share_plus: ^12.0.0
 
@@ -129,7 +128,7 @@ dependencies:
 
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
-#team -d additions
+# Team D - Dependencies Begin
   qr_flutter: ^4.1.0
   #llm_toolkit: ^0.0.4
   #llama_cpp_dart: 
@@ -140,6 +139,14 @@ dependencies:
   #tflite_flutter: ^0.11.0 
   #fftea: ^1.5.0
   json_schema: ^5.2.1
+  flutter_staggered_grid_view: ^0.7.0
+  excel: ^4.0.6         # For creating and manipulating Excel files. 
+  open_filex: ^4.7.0  
+
+  ##EVV Dependencies
+  connectivity_plus: ^6.0.5
+  device_info_plus: ^12.1.0
+  # Team D - Dependencies End
 dependency_overrides:
   # llama_cpp_dart:
   #   git:

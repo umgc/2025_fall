@@ -1,4 +1,4 @@
-import 'package:care_connect_app/features/invoices/services/invoice_file_service.dart';
+import 'package:care_connect_app/features/invoices/services/pdf/invoice_file_service.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/widgets/toolbar/invoice_toolbar.dart';
@@ -129,7 +129,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
                       borderSide: BorderSide(width: 3, color: cs.primary),
                       insets: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    overlayColor: MaterialStateProperty.all(Colors.transparent),
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
                     tabs: _buildTabs(isNew),
                   ),
                 ),
