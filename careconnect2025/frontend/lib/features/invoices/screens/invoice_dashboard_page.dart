@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'invoice_detail_page.dart';
-
 
 class InvoiceDashboardPage extends StatefulWidget {
   const InvoiceDashboardPage({super.key});
@@ -15,7 +15,8 @@ class InvoiceDashboardPage extends StatefulWidget {
 }
 
 class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
-  late final Future<List<Invoice>> _invoicesFuture = InvoiceService.instance.fetchInvoices();
+  late final Future<List<Invoice>> _invoicesFuture =
+      InvoiceService.instance.fetchInvoices();
 
   @override
   Widget build(BuildContext context) {
@@ -29,67 +30,142 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
 
           return LayoutBuilder(
             builder: (context, c) {
-              final isWide = c.maxWidth >= 900;
-              final pagePad = 16.0;
-              final gap = 12.0;
-              final columns = isWide ? 3 : 1;
-              final maxContentWidth = 1400.0; // keeps web from stretching too wide
-              final contentWidth = c.maxWidth.clamp(0, maxContentWidth);
-              final cardWidth = (contentWidth - (pagePad * 2) - (gap * (columns - 1))) / columns;
+              final w = c.maxWidth;
+              final isDesktop = w >= 900;
+              final cols = w >= 1400 ? 12 : (w >= 900 ? 8 : 1);
+              const gutter = 12.0;
+              const maxContentWidth = 1600.0;
+              final leftRailWidth = isDesktop ? 360.0 : w;
 
-              Widget gridChild(Widget child, {bool span2 = false}) {
-                return SizedBox(
-                  width: span2 && isWide ? (cardWidth * 2 + gap) : cardWidth,
-                  child: child,
+              int span(int desktop, int tablet) {
+                if (cols >= 12) return desktop;
+                if (cols >= 6) return tablet;
+                return 1;
+              }
+
+              Widget leftRail() => ConstrainedBox(
+                    constraints: BoxConstraints.tightFor(width: leftRailWidth),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: _OverdueBlock(
+                            invoices: invoices,
+                            loading: loading,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+
+              Widget rightGrid() => Center(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: maxContentWidth),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: StaggeredGrid.count(
+                          crossAxisCount: cols,
+                          mainAxisSpacing: gutter,
+                          crossAxisSpacing: gutter,
+                          children: [
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(3, 3),
+                              child: _KpiCard(
+                                icon: Icons.receipt_long,
+                                title: 'Total Invoices',
+                                subtitle: 'Active medical invoices',
+                                value: '${metrics.totalCount}',
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(3, 3),
+                              child: _KpiCard(
+                                icon: Icons.attach_money,
+                                title: 'Total Amount',
+                                subtitle: 'Across all invoices',
+                                value: _currency(metrics.totalAmount),
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(3, 3),
+                              child: _KpiCard(
+                                icon: Icons.schedule,
+                                title: 'Pending Payments',
+                                subtitle: 'Requires attention',
+                                value: _currency(metrics.pendingAmount),
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(3, 3),
+                              child: _KpiCard(
+                                icon: Icons.report_gmailerrorred_outlined,
+                                title: 'Overdue Bills',
+                                subtitle: 'Past due date',
+                                value: '${metrics.overdueCount}',
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(6, 6),
+                              child: _RecentActivityCard(
+                                invoices: invoices,
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(4, 6),
+                              child: _PaymentProgressCard(
+                                metrics: metrics,
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(8, 6),
+                              child: _PaymentStatusChartCard(
+                                invoices: invoices,
+                                loading: loading,
+                              ),
+                            ),
+                            StaggeredGridTile.fit(
+                              crossAxisCellCount: span(12, 6),
+                              child: _MonthlyInvoiceTrendsCard(
+                                invoices: invoices,
+                                loading: loading,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+
+              if (!isDesktop) {
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      leftRail(),
+                      rightGrid(),
+                    ],
+                  ),
                 );
               }
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxContentWidth),
-                    child: Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        gridChild(_OverdueBlock(invoices: invoices, loading: loading)),
-                        gridChild(_KpiCard(
-                          icon: Icons.receipt_long,
-                          title: 'Total Invoices',
-                          subtitle: 'Active medical invoices',
-                          value: '${metrics.totalCount}',
-                          loading: loading,
-                        )),
-                        gridChild(_KpiCard(
-                          icon: Icons.attach_money,
-                          title: 'Total Amount',
-                          subtitle: 'Across all invoices',
-                          value: _currency(metrics.totalAmount),
-                          loading: loading,
-                        )),
-                        gridChild(_KpiCard(
-                          icon: Icons.schedule,
-                          title: 'Pending Payments',
-                          subtitle: 'Requires attention',
-                          value: _currency(metrics.pendingAmount),
-                          loading: loading,
-                        )),
-                        gridChild(_KpiCard(
-                          icon: Icons.report_gmailerrorred_outlined,
-                          title: 'Overdue Bills',
-                          subtitle: 'Past due date',
-                          value: '${metrics.overdueCount}',
-                          loading: loading,
-                        )),
-                        gridChild(_RecentActivityCard(invoices: invoices, loading: loading), span2: true),
-                        gridChild(_PaymentProgressCard(metrics: metrics, loading: loading)),
-                        gridChild(_PaymentStatusChartCard(invoices: invoices, loading: loading), span2: true),
-                        gridChild(_MonthlyInvoiceTrendsCard(invoices: invoices, loading: loading), span2: true),
-                      ],
-                    ),
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: leftRailWidth,
+                    child: SingleChildScrollView(child: leftRail()),
                   ),
-                ),
+                  Expanded(child: rightGrid()),
+                ],
               );
             },
           );
@@ -111,42 +187,49 @@ class _OverdueBlock extends StatelessWidget {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final overdue = invoices
-        .where((i) => i.paymentStatus != PaymentStatus.paid && i.dates.dueDate.isBefore(now))
+        .where((i) =>
+            i.paymentStatus != PaymentStatus.paid &&
+            i.dates.dueDate.isBefore(now))
         .toList();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-              const SizedBox(width: 8),
-              Text('Urgent Attention Required', style: theme.textTheme.titleMedium),
-            ]),
-            const SizedBox(height: 4),
-            Text('Overdue and upcoming bills', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 12),
-            if (loading)
-              const _BlockLoading(height: 120)
-            else if (overdue.isEmpty)
-              const Text('No invoices found.')
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Overdue Bills (${overdue.length})',
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  ...overdue.map((inv) => _OverdueTile(invoice: inv)),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
+          const SizedBox(width: 8),
+          Text('Urgent Attention Required',
+              style: theme.textTheme.titleMedium),
+        ]),
+        const SizedBox(height: 4),
+        Text('Overdue and upcoming bills', style: theme.textTheme.bodySmall),
+        const SizedBox(height: 12),
+        if (loading)
+          const _BlockLoading(height: 160)
+        else if (overdue.isEmpty)
+          const Text('No invoices found.')
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Overdue Bills (${overdue.length})',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 480,
+                child: ListView.separated(
+                  itemCount: overdue.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) =>
+                      _OverdueTile(invoice: overdue[i]),
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }
@@ -183,19 +266,27 @@ class _OverdueTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                Text('Due: ${_fmt(invoice.dates.dueDate)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        )),
+                Text(
+                  'Due: ${_fmt(invoice.dates.dueDate)}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                ),
               ],
             ),
           ),
-          _AmountBadge(text: _currency(invoice.amounts.amountDue ?? invoice.amounts.total ?? 0)),
+          _AmountBadge(
+            text: _currency(
+              invoice.amounts.amountDue ?? invoice.amounts.total ?? 0,
+            ),
+          ),
           FilledButton.tonalIcon(
             onPressed: () {
-               Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
-                );
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (_) => InvoiceDetailPage(invoice: invoice),
+                ),
+              );
             },
             icon: const Icon(Icons.remove_red_eye, size: 16),
             label: const Text('View'),
@@ -238,7 +329,12 @@ class _KpiCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 6),
                   if (loading)
                     const LinearProgressIndicator(minHeight: 4)
@@ -246,10 +342,19 @@ class _KpiCard extends StatelessWidget {
                     FittedBox(
                       alignment: Alignment.centerLeft,
                       fit: BoxFit.scaleDown,
-                      child: Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      child: Text(
+                        value,
+                        style: theme.textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
@@ -271,7 +376,9 @@ class _RecentActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final data = invoices.toList()
-      ..sort((a, b) => b.dates.statementDate.compareTo(a.dates.statementDate));
+      ..sort(
+        (a, b) => b.dates.statementDate.compareTo(a.dates.statementDate),
+      );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -281,10 +388,12 @@ class _RecentActivityCard extends StatelessWidget {
             Row(children: [
               Icon(Icons.update, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('Recent Invoice Activity', style: theme.textTheme.titleMedium),
+              Text('Recent Invoice Activity',
+                  style: theme.textTheme.titleMedium),
             ]),
             const SizedBox(height: 4),
-            Text('Latest updates and submissions', style: theme.textTheme.bodySmall),
+            Text('Latest updates and submissions',
+                style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             if (loading)
               const _BlockLoading(height: 160)
@@ -297,15 +406,19 @@ class _RecentActivityCard extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      title: Text(i.provider.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      title: Text(i.provider.name,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Wrap(
                         spacing: 12,
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(_label(i.paymentStatus), style: theme.textTheme.bodySmall),
-                          Text(_fmt(i.dates.statementDate), style: theme.textTheme.bodySmall),
+                          Text(_label(i.paymentStatus),
+                              style: theme.textTheme.bodySmall),
+                          Text(_fmt(i.dates.statementDate),
+                              style: theme.textTheme.bodySmall),
                         ],
                       ),
                       trailing: FittedBox(
@@ -314,14 +427,22 @@ class _RecentActivityCard extends StatelessWidget {
                           spacing: 8,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            _AmountBadge(text: _currency(i.amounts.amountDue ?? i.amounts.total ?? 0)),
+                            _AmountBadge(
+                              text: _currency(i.amounts.amountDue ??
+                                  i.amounts.total ??
+                                  0),
+                            ),
                             OutlinedButton.icon(
-                           onPressed: () {
-                            Navigator.of(context, rootNavigator: true).push(
-                              MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: i)),
-                            );
-},
-                              icon: const Icon(Icons.remove_red_eye, size: 16),
+                              onPressed: () {
+                                Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        InvoiceDetailPage(invoice: i),
+                                  ),
+                                );
+                              },
+                              icon:
+                                  const Icon(Icons.remove_red_eye, size: 16),
                               label: const Text('View'),
                             ),
                           ],
@@ -341,7 +462,8 @@ class _RecentActivityCard extends StatelessWidget {
 /* =====================  PAYMENT PROGRESS  ===================== */
 
 class _PaymentProgressCard extends StatelessWidget {
-  const _PaymentProgressCard({required this.metrics, required this.loading});
+  const _PaymentProgressCard(
+      {required this.metrics, required this.loading});
   final _Metrics metrics;
   final bool loading;
 
@@ -350,7 +472,12 @@ class _PaymentProgressCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (loading) {
-      return const Card(child: Padding(padding: EdgeInsets.all(12), child: _BlockLoading(height: 160)));
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: _BlockLoading(height: 160),
+        ),
+      );
     }
 
     final total = metrics.totalAmount;
@@ -370,7 +497,8 @@ class _PaymentProgressCard extends StatelessWidget {
               Text('Payment Progress', style: theme.textTheme.titleMedium),
             ]),
             const SizedBox(height: 4),
-            Text('Your payment completion rate', style: theme.textTheme.bodySmall),
+            Text('Your payment completion rate',
+                style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text('Paid Invoices', style: theme.textTheme.bodySmall),
@@ -382,26 +510,41 @@ class _PaymentProgressCard extends StatelessWidget {
               child: LinearProgressIndicator(value: pct, minHeight: 10),
             ),
             const SizedBox(height: 8),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Paid', style: theme.textTheme.bodySmall?.copyWith(color: Colors.green)),
-                FittedBox(
-                  alignment: Alignment.centerLeft,
-                  fit: BoxFit.scaleDown,
-                  child: Text(_currency(paid), style: const TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ]),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text('Remaining', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
-                FittedBox(
-                  alignment: Alignment.centerRight,
-                  fit: BoxFit.scaleDown,
-                  child: Text(_currency(remaining), style: const TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ]),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Paid',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: Colors.green)),
+                      FittedBox(
+                        alignment: Alignment.centerLeft,
+                        fit: BoxFit.scaleDown,
+                        child: Text(_currency(paid),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('Remaining',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error)),
+                  FittedBox(
+                    alignment: Alignment.centerRight,
+                    fit: BoxFit.scaleDown,
+                    child: Text(_currency(remaining),
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ],
+            ),
             const SizedBox(height: 12),
-            Text('Recent Invoice Insights', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            Text('Recent Invoice Insights',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             const _Insight(text: 'Contact insurance for claim status'),
             const _Insight(text: 'Explore financial assistance programs'),
@@ -416,7 +559,8 @@ class _PaymentProgressCard extends StatelessWidget {
 /* =====================  STATUS PIE  ===================== */
 
 class _PaymentStatusChartCard extends StatelessWidget {
-  const _PaymentStatusChartCard({required this.invoices, required this.loading});
+  const _PaymentStatusChartCard(
+      {required this.invoices, required this.loading});
   final List<Invoice> invoices;
   final bool loading;
 
@@ -425,21 +569,32 @@ class _PaymentStatusChartCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (loading) {
-      return const Card(child: Padding(padding: EdgeInsets.all(12), child: _BlockLoading(height: 240)));
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: _BlockLoading(height: 240),
+        ),
+      );
     }
 
-    final paid = invoices.where((i) => i.paymentStatus == PaymentStatus.paid).length;
-    final pending = invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
-    final rejected = invoices.where((i) => i.paymentStatus == PaymentStatus.rejectedInsurance).length;
+    final paid =
+        invoices.where((i) => i.paymentStatus == PaymentStatus.paid).length;
+    final pending =
+        invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
+    final rejected = invoices
+        .where((i) => i.paymentStatus == PaymentStatus.rejectedInsurance)
+        .length;
     final total = (paid + pending + rejected).clamp(1, 1 << 30);
 
-    PieChartSectionData _section({required double value, required Color color}) {
+    PieChartSectionData section(
+        {required double value, required Color color}) {
       return PieChartSectionData(
         value: value <= 0 ? 0.001 : value,
         color: color,
         title: '',
         radius: 56,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
       );
     }
 
@@ -452,19 +607,23 @@ class _PaymentStatusChartCard extends StatelessWidget {
             Row(children: [
               Icon(Icons.pie_chart, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('Payment Status Distribution', style: theme.textTheme.titleMedium),
+              Text('Payment Status Distribution',
+                  style: theme.textTheme.titleMedium),
             ]),
             const SizedBox(height: 4),
-            Text('Overview of invoice payment statuses', style: theme.textTheme.bodySmall),
+            Text('Overview of invoice payment statuses',
+                style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             AspectRatio(
-              aspectRatio: kIsWeb ? 1.8 : 1.5, // a touch wider on web to reduce wrap
+              aspectRatio: kIsWeb ? 1.8 : 1.5,
               child: PieChart(
                 PieChartData(
                   sections: [
-                    _section(value: paid.toDouble(), color: Colors.green),
-                    _section(value: pending.toDouble(), color: Colors.orange),
-                    _section(value: rejected.toDouble(), color: Colors.red.shade600),
+                    section(value: paid.toDouble(), color: Colors.green),
+                    section(value: pending.toDouble(), color: Colors.orange),
+                    section(
+                        value: rejected.toDouble(),
+                        color: Colors.red.shade600),
                   ],
                   centerSpaceRadius: 46,
                   sectionsSpace: 4,
@@ -481,7 +640,8 @@ class _PaymentStatusChartCard extends StatelessWidget {
               children: [
                 _LegendDot(color: Colors.green, label: 'Paid ($paid)'),
                 _LegendDot(color: Colors.orange, label: 'Pending ($pending)'),
-                _LegendDot(color: Colors.red.shade600, label: 'Rejected ($rejected)'),
+                _LegendDot(
+                    color: Colors.red.shade600, label: 'Rejected ($rejected)'),
               ],
             ),
             const SizedBox(height: 4),
@@ -496,7 +656,8 @@ class _PaymentStatusChartCard extends StatelessWidget {
 /* =====================  MONTHLY TRENDS  ===================== */
 
 class _MonthlyInvoiceTrendsCard extends StatelessWidget {
-  const _MonthlyInvoiceTrendsCard({required this.invoices, required this.loading});
+  const _MonthlyInvoiceTrendsCard(
+      {required this.invoices, required this.loading});
   final List<Invoice> invoices;
   final bool loading;
 
@@ -505,7 +666,12 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     if (loading) {
-      return const Card(child: Padding(padding: EdgeInsets.all(12), child: _BlockLoading(height: 260)));
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: _BlockLoading(height: 260),
+        ),
+      );
     }
 
     final now = DateTime.now();
@@ -516,7 +682,8 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
       return _MonthBucket(key: key, label: label, date: d);
     });
 
-    final counts = Map<String, int>.fromEntries(months.map((m) => MapEntry(m.key, 0)));
+    final counts =
+        Map<String, int>.fromEntries(months.map((m) => MapEntry(m.key, 0)));
     for (final inv in invoices) {
       final d = inv.dates.statementDate;
       final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
@@ -536,7 +703,10 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
             ))
         .toList();
 
-    final maxY = (counts.values.isEmpty ? 0 : counts.values.reduce((a, b) => a > b ? a : b)).toDouble();
+    final maxY = (counts.values.isEmpty
+            ? 0
+            : counts.values.reduce((a, b) => a > b ? a : b))
+        .toDouble();
     final yMax = (maxY <= 5) ? 6.0 : maxY + 2.0;
 
     return Card(
@@ -548,37 +718,49 @@ class _MonthlyInvoiceTrendsCard extends StatelessWidget {
             Row(children: [
               Icon(Icons.bar_chart, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('Monthly Invoice Trends', style: theme.textTheme.titleMedium),
+              Text('Monthly Invoice Trends',
+                  style: theme.textTheme.titleMedium),
             ]),
             const SizedBox(height: 4),
-            Text('Invoice volume and amounts over time', style: theme.textTheme.bodySmall),
+            Text('Invoice volume and amounts over time',
+                style: theme.textTheme.bodySmall),
             const SizedBox(height: 12),
             SizedBox(
               height: 260,
               child: BarChart(
                 BarChartData(
-                  gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 2),
+                  gridData: FlGridData(
+                      show: true, drawVerticalLine: false, horizontalInterval: 2),
                   borderData: FlBorderData(show: false),
                   barGroups: bars,
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, interval: 2, reservedSize: 28),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 2,
+                        reservedSize: 28,
+                      ),
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= months.length) return const SizedBox.shrink();
+                          if (idx < 0 || idx >= months.length) {
+                            return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(months[idx].label, style: const TextStyle(fontSize: 12)),
+                            child: Text(months[idx].label,
+                                style: const TextStyle(fontSize: 12)),
                           );
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles:
+                        const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles:
+                        const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                   barTouchData: BarTouchData(enabled: true),
                   maxY: yMax,
@@ -620,7 +802,10 @@ class _AmountBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: theme.colorScheme.outline.withOpacity(.4)),
       ),
-      child: Text(text, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -632,7 +817,11 @@ class _LegendDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
       const SizedBox(width: 6),
       Text(label),
     ]);
@@ -663,15 +852,20 @@ class _Metrics {
 
 _Metrics _computeMetrics(List<Invoice> invoices) {
   final now = DateTime.now();
-  double sumAmount(Invoice i) => (i.amounts.amountDue ?? i.amounts.total ?? 0).toDouble();
+  double sumAmount(Invoice i) =>
+      (i.amounts.amountDue ?? i.amounts.total ?? 0).toDouble();
   final totalAmount = invoices.fold<double>(0, (s, i) => s + sumAmount(i));
   final pendingAmount = invoices
       .where((i) => i.paymentStatus == PaymentStatus.pending)
       .fold<double>(0, (s, i) => s + sumAmount(i));
-  final overdueCount =
-      invoices.where((i) => i.paymentStatus != PaymentStatus.paid && i.dates.dueDate.isBefore(now)).length;
-  final paidAmount =
-      invoices.where((i) => i.paymentStatus == PaymentStatus.paid).fold<double>(0, (s, i) => s + sumAmount(i));
+  final overdueCount = invoices
+      .where((i) =>
+          i.paymentStatus != PaymentStatus.paid &&
+          i.dates.dueDate.isBefore(now))
+      .length;
+  final paidAmount = invoices
+      .where((i) => i.paymentStatus == PaymentStatus.paid)
+      .fold<double>(0, (s, i) => s + sumAmount(i));
   return _Metrics(
     totalCount: invoices.length,
     totalAmount: totalAmount,

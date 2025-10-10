@@ -2,10 +2,11 @@
 import 'package:care_connect_app/features/invoices/models/filter_result.dart';
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'package:care_connect_app/features/invoices/widgets/search_filter_sheet.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'invoice_detail_page.dart';
+
+import 'package:care_connect_app/features/invoices/services/excel_service.dart';
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key, this.quickFilter});
@@ -41,7 +42,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       search: _searchQuery,
       status: _statusFilter,
       providerName: _providerFilter,
-      patientName: _patientFilter, 
+      patientName: _patientFilter,
       dueRange: _dueRange,
       amountRange: _amountRange,
       sort: _mapSort(_sort),
@@ -199,7 +200,9 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                           icon: const Icon(Icons.file_download_outlined),
                           label: const Text('Export'),
                           onPressed: () {
-                            // TODO: export
+                            // THIS IS THE UPDATED CODE
+                            ExcelService.instance
+                                .exportInvoices(_invoices, context);
                           },
                         ),
                       ],
@@ -237,30 +240,29 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     );
   }
 
-void _openDetail(Invoice invoice) async {
-  // Push onto the app-level (root) navigator
-  final updated = await Navigator.of(context, rootNavigator: true).push<Invoice>(
-    MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
-  );
-  if (updated != null) {
-    await InvoiceService.instance.upsert(updated);
-    _fetch();
+  void _openDetail(Invoice invoice) async {
+    // Push onto the app-level (root) navigator
+    final updated =
+        await Navigator.of(context, rootNavigator: true).push<Invoice>(
+      MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
+    );
+    if (updated != null) {
+      await InvoiceService.instance.upsert(updated);
+      _fetch();
+    }
   }
-}
 
-void _openDetailPaymentTab(Invoice invoice) {
-  // Same idea, but start on the Payment tab
-  Navigator.of(context, rootNavigator: true).push(
-    MaterialPageRoute(
-      builder: (_) => InvoiceDetailPage(
-        invoice: invoice,
-        initialTabIndex: 2,
+  void _openDetailPaymentTab(Invoice invoice) {
+    // Same idea, but start on the Payment tab
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => InvoiceDetailPage(
+          invoice: invoice,
+          initialTabIndex: 2,
+        ),
       ),
-    ),
-  );
-}
-
- 
+    );
+  }
 }
 
 /// Compact, Material 3 styled filter bar that matches the mock:
@@ -290,7 +292,7 @@ class _FilterBar extends StatelessWidget {
             final sortField = DropdownButtonFormField<String>(
               value: sort,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Recently Added'),
+              decoration: const InputDecoration(labelText: 'Sort By'),
               items: const [
                 DropdownMenuItem(
                     value: 'recently_added', child: Text('Recently Added')),
@@ -308,8 +310,7 @@ class _FilterBar extends StatelessWidget {
                     value: 'amount_desc',
                     child: Text('Amount (High to Low)')),
                 DropdownMenuItem(
-                    value: 'amount_asc',
-                    child: Text('Amount (Low to High)')),
+                    value: 'amount_asc', child: Text('Amount (Low to High)')),
               ],
               onChanged: (v) => onChangeSort(v ?? 'recently_added'),
             );

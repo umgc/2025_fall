@@ -129,7 +129,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
                       borderSide: BorderSide(width: 3, color: cs.primary),
                       insets: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    overlayColor: MaterialStateProperty.all(Colors.transparent),
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
                     tabs: _buildTabs(isNew),
                   ),
                 ),
