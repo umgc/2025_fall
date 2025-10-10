@@ -1285,7 +1285,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisSuccess[0].containsKey("Summary")
               ? null
               : _aiAnalysisSuccess[0]["Summary"],
-          true),
+          true,
+          _aiAnalysisSuccess.length < 2 ||
+            !_aiAnalysisSuccess[1].containsKey("Data") ? null : _aiAnalysisSuccess[1]["Data"], "Topic", "Percentage"),
       _buildChild(
           1,
           "Areas of Misunderstanding",
@@ -1293,7 +1295,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisFail.isEmpty || !_aiAnalysisFail[0].containsKey("Summary")
               ? null
               : _aiAnalysisFail[0]["Summary"],
-          true),
+          true,
+          _aiAnalysisFail.length < 2 ||
+            !_aiAnalysisFail[1].containsKey("Data") ? null : _aiAnalysisFail[1]["Data"], "Topic", "Percentage"),
       _buildChild(
           2,
           "Course Improvements",
@@ -1302,7 +1306,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisCourse[0].containsKey("Summary")
               ? null
               : _aiAnalysisCourse[0]["Summary"],
-          false),
+          false,
+          _aiAnalysisCourse.length < 2 ||
+            !_aiAnalysisCourse[1].containsKey("Data") ? null : _aiAnalysisCourse[1]["Data"], "Name", "Description"),
       _buildChild(
           3,
           "Assignment Improvements",
@@ -1311,7 +1317,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisAssignment[0].containsKey("Summary")
               ? null
               : _aiAnalysisAssignment[0]["Summary"],
-          false)
+          false,
+          _aiAnalysisAssignment.length < 2 ||
+            !_aiAnalysisAssignment[1].containsKey("Data") ? null : _aiAnalysisAssignment[1]["Data"], "URL", "Description")
     ];
     if (!_lastAnalysisQuiz) {
       children.add(_buildChild(
@@ -1321,13 +1329,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
               ? null
               : _aiAnalysisAi[0]["Summary"],
-          true));
+          true,
+          _aiAnalysisAi.length < 2 ||
+            !_aiAnalysisAi[1].containsKey("Data") ? null : _aiAnalysisAi[1]["Data"], "Area", "Percentage"));
     }
     return children;
   }
 
   ExpansionPanel _buildChild(
-      int index, String title, bool wait, String? bodyText, bool showChart) {
+      int index, String title, bool wait, String? bodyText, bool showChart, List<dynamic>? data, String key1, String key2) {
+    if (data != null) {
+      data = data.where((e) => e.containsKey(key1) && e.containsKey(key2)).toList();
+    }
     return ExpansionPanel(
         backgroundColor:
             Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
@@ -1352,22 +1365,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   child: Text(
                 wait
                     ? "Loading AI Analysis..."
-                    : (bodyText ?? "No AI Analysis Data Found"),
+                    : (bodyText ?? "No AI Analysis Summary Found"),
                 softWrap: true,
               )),
               SizedBox(width: 10),
               Visibility(
                   visible: !wait && bodyText != null,
                   child: SizedBox(
-                      height: 100,
-                      width: showChart ? 100 : 300,
-                      child: showChart
-                          ? PieChart(PieChartData(
-                              sections: [PieChartSectionData(value: 100)]))
+                      height: 300,
+                      width: 300,
+                      child: data == null ? Text("No AI Analysis Data found.") : showChart
+                          ? BarChart(BarChartData(
+                              barGroups: data.map((e) {
+                                return BarChartGroupData(x: data!.indexOf(e), barRods: [BarChartRodData(toY: e[key2])]);
+                              }).toList(),
+                              titlesData: FlTitlesData(
+                                bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true,
+                                  getTitlesWidget: (value, meta) => SideTitleWidget(child: Text(data![value.toInt()][key1].toString()), meta: meta),
+                                )),
+                                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: true,
+                                  getTitlesWidget: (value, meta) => SideTitleWidget(child: Text(data![value.toInt()][key2].toString()), meta: meta),
+                                ))
+                              )))
                           : ListView.builder(
-                              itemCount: 3,
+                              itemCount: data.length,
                               itemBuilder: (context, index) {
-                                return Text("Source $index");
+                                return Column(children: [Text(data![index][key1], style: TextStyle(fontWeight: FontWeight.bold)), Text(data[index][key2])]);
                               })))
             ])),
         isExpanded: _expandedPanels.contains(index));
@@ -1420,6 +1443,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       return;
     }
 
+    try {
     setState(() {
       _isAnalyzingSuccess = true;
       _isAnalyzingFail = true;
@@ -1541,6 +1565,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
           _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"])
     ]);
+    }
+    catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+            content: Text(
+                "Error occurred during AI Analysis: $e. Results may be incomplete.")),
+      );
+      setState(() {
+              _isAnalyzingSuccess = false;
+      _isAnalyzingFail = false;
+      _isAnalyzingAssignment = false;
+      _isAnalyzingCourse = false;
+      _isAnalyzingAi = false;
+      });
+      return;
+    }
   }
 
   Future<void> _analyzeEssaySuccess(
@@ -1648,7 +1689,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Based on the summaries of student success and student failure, recommend ways I can improve the assignment.
     Provide a textual summary for assignment improvements, as well as three references I could provide to students to help them better understand the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
-    and the list of recommended references are an object named 'Data' with keys 'Description' and 'URL'.
+    and the list of recommended references are an object named 'Data' with keys 'URL' and 'Description'.
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
