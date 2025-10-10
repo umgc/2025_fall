@@ -1,7 +1,7 @@
 // Represents permanent tokens for a chat session
 class PermTokens {
-  final String core;            // permanent system instructions
-  final List<String> modules;   // optional extra system snippets
+  final String core; // permanent system instructions
+  final List<String> modules; // optional extra system snippets
 
   PermTokens({
     String? core,
@@ -14,7 +14,7 @@ class PermTokens {
 
 // Represents a single turn in a chat conversation
 class ChatTurn {
-  final String role;    // 'user' | 'assistant' | 'system'
+  final String role; // 'user' | 'assistant' | 'system'
   final String content;
 
   const ChatTurn({required this.role, required this.content});

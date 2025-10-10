@@ -3,7 +3,7 @@ import 'package:learninglens_app/services/Token_Utils.dart';
 
 // Builds the context for LLM requests by combining persistent context,
 // chat history (oldest -> newest), and the current user prompt (last).
-List<Map<String, dynamic>> buildContext({
+List<Map<String, dynamic>> generateContext({
   required PermTokens permTokens,
   required List<ChatTurn> chatHistory,
   required String userPrompt,

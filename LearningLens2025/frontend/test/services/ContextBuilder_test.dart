@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learninglens_app/beans/chatLog.dart';
-import 'package:learninglens_app/services/ContextBuilder.dart';
+import 'package:learninglens_app/services/LLMContextBuilder.dart';
 
 void main() {
   group('buildContext', () {
@@ -20,7 +20,7 @@ void main() {
     ];
 
     test('includes persistant context first and user prompt last', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('attempts to include modules before history', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -44,8 +44,8 @@ void main() {
       );
 
       // core + modules appear before any user/assistant turns
-      final firstConvIdx =
-          msgs.indexWhere((m) => m['role'] == 'user' || m['role'] == 'assistant');
+      final firstConvIdx = msgs
+          .indexWhere((m) => m['role'] == 'user' || m['role'] == 'assistant');
 
       // All system messages (core/modules) are before conversation starts
       for (int i = 0; i < firstConvIdx; i++) {
@@ -55,11 +55,13 @@ void main() {
       // The first system should be core
       expect(msgs[0]['content']!.startsWith('CORE:'), isTrue);
       // At least one module present (when budget allows)
-      expect(msgs.any((m) =>
-          m['role'] == 'system' && m['content']!.startsWith('MODULE:')), isTrue);
+      expect(
+          msgs.any((m) =>
+              m['role'] == 'system' && m['content']!.startsWith('MODULE:')),
+          isTrue);
     });
-     test('packs history newest -> oldest to fill remaining budget', () {
-      final msgs = buildContext(
+    test('packs history newest -> oldest to fill remaining budget', () {
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
@@ -74,33 +76,33 @@ void main() {
       if (lastUserIndex > 0) {
         expect(
           msgs[lastUserIndex - 1]['role'] == 'assistant' ||
-          msgs[lastUserIndex - 1]['role'] == 'user',
+              msgs[lastUserIndex - 1]['role'] == 'user',
           isTrue,
         );
       }
     });
 
     test('respects very small budgets (core + prompt only)', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
-        llmContextSize: 100,   // tiny window on purpose
-        maxOutputTokens: 80,   // large output
-        safetyMargin: 40,      // leaves almost no input room
+        llmContextSize: 100, // tiny window on purpose
+        maxOutputTokens: 80, // large output
+        safetyMargin: 40, // leaves almost no input room
       );
 
       expect(msgs.length, 2);
       expect(msgs[0]['role'], 'system'); // core
-      expect(msgs[1]['role'], 'user');   // prompt
+      expect(msgs[1]['role'], 'user'); // prompt
     });
 
     test('never drops the core system message', () {
-      final msgs = buildContext(
+      final msgs = generateContext(
         permTokens: perm,
         chatHistory: history,
         userPrompt: 'Create week 1 plan.',
-        llmContextSize: 512,   // very tight
+        llmContextSize: 512, // very tight
         maxOutputTokens: 400,
         safetyMargin: 80,
       );
