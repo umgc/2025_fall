@@ -34,6 +34,8 @@ import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'dart:convert';
 
+import 'package:url_launcher/url_launcher.dart';
+
 /// Enum to represent export formats.
 enum ExportFormat { pdf, excel }
 
@@ -1287,7 +1289,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               : _aiAnalysisSuccess[0]["Summary"],
           true,
           _aiAnalysisSuccess.length < 2 ||
-            !_aiAnalysisSuccess[1].containsKey("Data") ? null : _aiAnalysisSuccess[1]["Data"], "Topic", "Percentage"),
+                  !_aiAnalysisSuccess[1].containsKey("Data")
+              ? null
+              : _aiAnalysisSuccess[1]["Data"],
+          "Topic",
+          "Percentage"),
       _buildChild(
           1,
           "Areas of Misunderstanding",
@@ -1296,8 +1302,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ? null
               : _aiAnalysisFail[0]["Summary"],
           true,
-          _aiAnalysisFail.length < 2 ||
-            !_aiAnalysisFail[1].containsKey("Data") ? null : _aiAnalysisFail[1]["Data"], "Topic", "Percentage"),
+          _aiAnalysisFail.length < 2 || !_aiAnalysisFail[1].containsKey("Data")
+              ? null
+              : _aiAnalysisFail[1]["Data"],
+          "Topic",
+          "Percentage"),
       _buildChild(
           2,
           "Course Improvements",
@@ -1308,7 +1317,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               : _aiAnalysisCourse[0]["Summary"],
           false,
           _aiAnalysisCourse.length < 2 ||
-            !_aiAnalysisCourse[1].containsKey("Data") ? null : _aiAnalysisCourse[1]["Data"], "Name", "Description"),
+                  !_aiAnalysisCourse[1].containsKey("Data")
+              ? null
+              : _aiAnalysisCourse[1]["Data"],
+          "Name",
+          "Description"),
       _buildChild(
           3,
           "Assignment Improvements",
@@ -1319,7 +1332,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               : _aiAnalysisAssignment[0]["Summary"],
           false,
           _aiAnalysisAssignment.length < 2 ||
-            !_aiAnalysisAssignment[1].containsKey("Data") ? null : _aiAnalysisAssignment[1]["Data"], "URL", "Description")
+                  !_aiAnalysisAssignment[1].containsKey("Data")
+              ? null
+              : _aiAnalysisAssignment[1]["Data"],
+          "URL",
+          "Description")
     ];
     if (!_lastAnalysisQuiz) {
       children.add(_buildChild(
@@ -1330,17 +1347,30 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ? null
               : _aiAnalysisAi[0]["Summary"],
           true,
-          _aiAnalysisAi.length < 2 ||
-            !_aiAnalysisAi[1].containsKey("Data") ? null : _aiAnalysisAi[1]["Data"], "Area", "Percentage"));
+          _aiAnalysisAi.length < 2 || !_aiAnalysisAi[1].containsKey("Data")
+              ? null
+              : _aiAnalysisAi[1]["Data"],
+          "Area",
+          "Percentage"));
     }
     return children;
   }
 
   ExpansionPanel _buildChild(
-      int index, String title, bool wait, String? bodyText, bool showChart, List<dynamic>? data, String key1, String key2) {
+      int index,
+      String title,
+      bool wait,
+      String? bodyText,
+      bool showChart,
+      List<dynamic>? data,
+      String key1,
+      String key2) {
     if (data != null) {
-      data = data.where((e) => e.containsKey(key1) && e.containsKey(key2)).toList();
+      data = data
+          .where((e) => e.containsKey(key1) && e.containsKey(key2))
+          .toList();
     }
+    bool isUrl = key1 == "URL";
     return ExpansionPanel(
         backgroundColor:
             Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
@@ -1371,27 +1401,109 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               SizedBox(width: 10),
               Visibility(
                   visible: !wait && bodyText != null,
-                  child: SizedBox(
-                      height: 300,
-                      width: 300,
-                      child: data == null ? Text("No AI Analysis Data found.") : showChart
-                          ? BarChart(BarChartData(
-                              barGroups: data.map((e) {
-                                return BarChartGroupData(x: data!.indexOf(e), barRods: [BarChartRodData(toY: e[key2])]);
-                              }).toList(),
-                              titlesData: FlTitlesData(
-                                bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true,
-                                  getTitlesWidget: (value, meta) => SideTitleWidget(child: Text(data![value.toInt()][key1].toString()), meta: meta),
-                                )),
-                                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: true,
-                                  getTitlesWidget: (value, meta) => SideTitleWidget(child: Text(data![value.toInt()][key2].toString()), meta: meta),
-                                ))
-                              )))
-                          : ListView.builder(
-                              itemCount: data.length,
-                              itemBuilder: (context, index) {
-                                return Column(children: [Text(data![index][key1], style: TextStyle(fontWeight: FontWeight.bold)), Text(data[index][key2])]);
-                              })))
+                  child: Container(
+                      height: 320,
+                      width: 370,
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: BoxBorder.all(
+                              color: Theme.of(context).colorScheme.primary)),
+                      child: data == null
+                          ? Text("No AI Analysis Data found.")
+                          : showChart
+                              ? BarChart(BarChartData(
+                                  barTouchData: BarTouchData(enabled: false),
+                                  minY: 0,
+                                  maxY: 100,
+                                  alignment: BarChartAlignment.spaceAround,
+                                  barGroups: data.map((e) {
+                                    HSLColor hsl = HSLColor.fromColor(
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer);
+                                    return BarChartGroupData(
+                                        x: data!.indexOf(e),
+                                        barRods: [
+                                          BarChartRodData(
+                                              toY: e[key2],
+                                              width: 20,
+                                              borderRadius: BorderRadius.zero,
+                                              color: hsl
+                                                  .withLightness(
+                                                      (hsl.lightness -
+                                                              data.indexOf(e) /
+                                                                  10.0)
+                                                          .clamp(0, 1))
+                                                  .toColor())
+                                        ]);
+                                  }).toList(),
+                                  titlesData: FlTitlesData(
+                                      bottomTitles: AxisTitles(
+                                          sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 100,
+                                        getTitlesWidget: (value, meta) =>
+                                            SideTitleWidget(
+                                                meta: meta,
+                                                child: SizedBox(
+                                                    width: 110,
+                                                    child: Text(
+                                                      data![value.toInt()][key1]
+                                                          .toString(),
+                                                      softWrap: true,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      maxLines: 5,
+                                                    ))),
+                                      )),
+                                      topTitles: AxisTitles(
+                                          sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 50,
+                                        getTitlesWidget: (value, meta) =>
+                                            SideTitleWidget(
+                                                space: 20,
+                                                meta: meta,
+                                                child: Text(
+                                                  "${data![value.toInt()][key2].toString()}%",
+                                                  softWrap: true,
+                                                )),
+                                      )),
+                                      rightTitles: AxisTitles(
+                                          sideTitles:
+                                              SideTitles(showTitles: false)))))
+                              : Scrollbar(
+                                  thumbVisibility: true,
+                                  child: ListView.builder(
+                                      itemCount: data.length,
+                                      itemBuilder: (context, index) {
+                                        Widget firstItem = Text(
+                                            data![index][key1],
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                decoration: isUrl
+                                                    ? TextDecoration.underline
+                                                    : null,
+                                                color: isUrl
+                                                    ? Colors.blue
+                                                    : Colors.black));
+                                        return Column(children: [
+                                          isUrl
+                                              ? InkWell(
+                                                  child: firstItem,
+                                                  onTap: () => launchUrl(
+                                                      Uri.parse(
+                                                          data![index][key1]),
+                                                      webOnlyWindowName:
+                                                          "_blank"),
+                                                )
+                                              : firstItem,
+                                          Text(data[index][key2])
+                                        ]);
+                                      }))))
             ])),
         isExpanded: _expandedPanels.contains(index));
   }
@@ -1444,141 +1556,140 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
 
     try {
-    setState(() {
-      _isAnalyzingSuccess = true;
-      _isAnalyzingFail = true;
-      _isAnalyzingAssignment = true;
-      _isAnalyzingCourse = true;
-      _isAnalyzingAi = selectedAssessment.type == "essay";
-      _lastAnalysisQuiz = selectedAssessment.type == "quiz";
-    });
+      setState(() {
+        _isAnalyzingSuccess = true;
+        _isAnalyzingFail = true;
+        _isAnalyzingAssignment = true;
+        _isAnalyzingCourse = true;
+        _isAnalyzingAi = selectedAssessment.type == "essay";
+        _lastAnalysisQuiz = selectedAssessment.type == "quiz";
+      });
 
-    String assignmentDescription;
-    Participant? selectedParticipant =
-        participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
+      String assignmentDescription;
+      Participant? selectedParticipant =
+          participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
 
-    // Build a summary string from the student breakdown data.
-    if (selectedAssessment.type == "essay") {
-      String studentSummary;
-      assignmentDescription =
-          (selectedAssessment.assessment as Assignment).description;
-      List<Submission> submissions =
-          await lmsService.getAssignmentSubmissions(selectedAssessment.id);
-      List<AiLog> aiLogs = await AILoggingSingleton().getLogs(
-          selectedCourse,
-          selectedAssessment.assessment,
-          selectedParticipant,
-          LocalStorageService.getSelectedClassroom().index,
-          DateTime(2025, 9),
-          DateTime(
-              DateTime.now().year, DateTime.now().month, DateTime.now().day));
+      // Build a summary string from the student breakdown data.
+      if (selectedAssessment.type == "essay") {
+        String studentSummary;
+        assignmentDescription =
+            (selectedAssessment.assessment as Assignment).description;
+        List<Submission> submissions =
+            await lmsService.getAssignmentSubmissions(selectedAssessment.id);
+        List<AiLog> aiLogs = await AILoggingSingleton().getLogs(
+            selectedCourse,
+            selectedAssessment.assessment,
+            selectedParticipant,
+            LocalStorageService.getSelectedClassroom().index,
+            DateTime(2025, 9),
+            DateTime(
+                DateTime.now().year, DateTime.now().month, DateTime.now().day));
 
-      // Whole course
-      if (selectedParticipant == null) {
-        studentSummary = participantsData
-            .map((student) {
-              Submission? s =
-                  submissions.firstWhereOrNull((s) => s.userid == student.id);
-              if (s != null) {
-                return "Name: ${student.fullname}, Submission: ${s.onlineText}";
-              } else {
-                return "";
-              }
-            })
-            .where((result) => result.isNotEmpty)
-            .join("\n");
-      }
-      // Single student
-      else {
-        studentSummary =
-            "Name: ${selectedParticipant.fullname}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == selectedParticipant.id)?.onlineText}";
-      }
+        // Whole course
+        if (selectedParticipant == null) {
+          studentSummary = participantsData
+              .map((student) {
+                Submission? s =
+                    submissions.firstWhereOrNull((s) => s.userid == student.id);
+                if (s != null) {
+                  return "Name: ${student.fullname}, Submission: ${s.onlineText}";
+                } else {
+                  return "";
+                }
+              })
+              .where((result) => result.isNotEmpty)
+              .join("\n");
+        }
+        // Single student
+        else {
+          studentSummary =
+              "Name: ${selectedParticipant.fullname}, Submission: ${submissions.firstWhereOrNull((s) => s.userid == selectedParticipant.id)?.onlineText}";
+        }
 
-      String aiSummary = aiLogs.map((logEntry) {
-        return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
-      }).join("\n");
-
-      await Future.wait([
-        _analyzeEssaySuccess(
-            selectedAssessment.name, assignmentDescription, studentSummary),
-        _analyzeEssayMisunderstanding(
-            selectedAssessment.name, assignmentDescription, studentSummary),
-        _analyzeEssayAiUse(
-            selectedAssessment.name, assignmentDescription, aiSummary)
-      ]);
-    } else {
-      if (questionBreakdown == null) {
-        setState(() {
-          _isAnalyzingSuccess = false;
-          _isAnalyzingFail = false;
-          _isAnalyzingAssignment = false;
-          _isAnalyzingCourse = false;
-        });
-        return;
-      }
-      String studentSummary;
-      assignmentDescription =
-          (selectedAssessment.assessment as Quiz).description ?? "";
-      if (selectedParticipant != null) {
-        List studentData = await (lmsService as moodle.MoodleLmsService)
-            .getQuizStatsForStudent(
-                (selectedAssessment.assessment as Quiz).id!.toString(),
-                selectedParticipant.id);
-        studentSummary = studentData.map((question) {
-          return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
+        String aiSummary = aiLogs.map((logEntry) {
+          return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
         }).join("\n");
+
         await Future.wait([
-          _analyzeStudentQuizSuccess(
-              selectedAssessment.name,
-              assignmentDescription,
-              studentSummary,
-              selectedParticipant.fullname),
-          _analyzeStudentQuizMisunderstanding(
-              selectedAssessment.name,
-              assignmentDescription,
-              studentSummary,
-              selectedParticipant.fullname)
+          _analyzeEssaySuccess(
+              selectedAssessment.name, assignmentDescription, studentSummary),
+          _analyzeEssayMisunderstanding(
+              selectedAssessment.name, assignmentDescription, studentSummary),
+          _analyzeEssayAiUse(
+              selectedAssessment.name, assignmentDescription, aiSummary)
         ]);
       } else {
-        studentSummary = questionBreakdown.map((q) {
-          return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
-        }).join("\n");
-        await Future.wait([
-          _analyzeCourseQuizSuccess(
-              selectedAssessment.name, assignmentDescription, studentSummary),
-          _analyzeCourseQuizMisunderstanding(
-              selectedAssessment.name, assignmentDescription, studentSummary)
-        ]);
+        if (questionBreakdown == null) {
+          setState(() {
+            _isAnalyzingSuccess = false;
+            _isAnalyzingFail = false;
+            _isAnalyzingAssignment = false;
+            _isAnalyzingCourse = false;
+          });
+          return;
+        }
+        String studentSummary;
+        assignmentDescription =
+            (selectedAssessment.assessment as Quiz).description ?? "";
+        if (selectedParticipant != null) {
+          List studentData = await (lmsService as moodle.MoodleLmsService)
+              .getQuizStatsForStudent(
+                  (selectedAssessment.assessment as Quiz).id!.toString(),
+                  selectedParticipant.id);
+          studentSummary = studentData.map((question) {
+            return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
+          }).join("\n");
+          await Future.wait([
+            _analyzeStudentQuizSuccess(
+                selectedAssessment.name,
+                assignmentDescription,
+                studentSummary,
+                selectedParticipant.fullname),
+            _analyzeStudentQuizMisunderstanding(
+                selectedAssessment.name,
+                assignmentDescription,
+                studentSummary,
+                selectedParticipant.fullname)
+          ]);
+        } else {
+          studentSummary = questionBreakdown.map((q) {
+            return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
+          }).join("\n");
+          await Future.wait([
+            _analyzeCourseQuizSuccess(
+                selectedAssessment.name, assignmentDescription, studentSummary),
+            _analyzeCourseQuizMisunderstanding(
+                selectedAssessment.name, assignmentDescription, studentSummary)
+          ]);
+        }
       }
-    }
-    await Future.wait([
-      _analyzeAssignmentImprovements(
-          selectedAssessment.name,
-          selectedCourse.fullName,
-          assignmentDescription,
-          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]),
-      _analyzeCourseImprovements(
-          selectedAssessment.name,
-          selectedCourse.fullName,
-          assignmentDescription,
-          _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-          _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"])
-    ]);
-    }
-    catch (e) {
+      await Future.wait([
+        _analyzeAssignmentImprovements(
+            selectedAssessment.name,
+            selectedCourse.fullName,
+            assignmentDescription,
+            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]),
+        _analyzeCourseImprovements(
+            selectedAssessment.name,
+            selectedCourse.fullName,
+            assignmentDescription,
+            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"])
+      ]);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.red,
+            backgroundColor: Colors.red,
             content: Text(
                 "Error occurred during AI Analysis: $e. Results may be incomplete.")),
       );
       setState(() {
-              _isAnalyzingSuccess = false;
-      _isAnalyzingFail = false;
-      _isAnalyzingAssignment = false;
-      _isAnalyzingCourse = false;
-      _isAnalyzingAi = false;
+        _isAnalyzingSuccess = false;
+        _isAnalyzingFail = false;
+        _isAnalyzingAssignment = false;
+        _isAnalyzingCourse = false;
+        _isAnalyzingAi = false;
       });
       return;
     }
