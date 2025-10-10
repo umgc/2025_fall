@@ -1,6 +1,6 @@
 FROM debian:stable-slim
 RUN apt-get update && apt-get install -y build-essential unzip \
- && apt-get install -y curl
+ && apt-get install -y curl dos2unix jq
 
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
@@ -10,5 +10,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     rm -rf aws
 
 COPY ./runcode.sh ./runcode.sh
+
+RUN dos2unix ./runcode.sh
 
 CMD [ "/bin/bash", "runcode.sh" ]
