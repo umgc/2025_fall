@@ -67,6 +67,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
   // List of courses fetched from the controller
   List<Course> courses = [];
   String selectedCourse = 'Select a course';
+  String selectedSection = 'Select a section number';
 
   @override
   void initState() {
@@ -264,25 +265,35 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                   sectionTitle(title: 'General'),
                   _buildCourseDropdown(),
                   SizedBox(height: 12),
-                  TextFormField(
-                    controller: _assignmentSectionController,
+                  DropdownButtonFormField<String>(
+                    value: selectedSection == 'Select a section number' ? null : selectedSection,
                     decoration: InputDecoration(
                       labelText: 'Section Number',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType:
-                        TextInputType.number, // Set keyboard type to number
-                    inputFormatters: <TextInputFormatter>[
-                      FilteringTextInputFormatter
-                          .digitsOnly // Allow only digits
-                    ],
-                    // Adding validator to ensure section number is not empty
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a section number';
+                      if (value == null || value == 'Select a section number') {
+                        return 'Please select a section number';
                       }
                       return null;
                     },
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedSection = newValue!;
+                      });
+                    },
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Select a section number',
+                        child: Text('Select a section number'),
+                      ),
+                      DropdownMenuItem(value: '1234', child: Text('1234')),
+                      DropdownMenuItem(value: '2345', child: Text('2345')),
+                      DropdownMenuItem(value: '3456', child: Text('3456')),
+                      DropdownMenuItem(value: '4567', child: Text('4567')),
+                      DropdownMenuItem(value: '6789', child: Text('6789')),
+                    ],
+                    isExpanded: true,
                   ),
                   SizedBox(height: 12),
                   TextFormField(
@@ -454,8 +465,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                     .toString();
                                 String assignmentName =
                                     _assignmentNameController.text;
-                                String sectionNumber =
-                                    _assignmentSectionController.text;
+                                String sectionNumber = selectedSection;
                                 String description =
                                     _descriptionController.text.trim();
                                 String dueDate =
