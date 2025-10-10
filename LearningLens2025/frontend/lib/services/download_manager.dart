@@ -69,7 +69,6 @@ class DownloadManager {
     }
     _baseDir = modelsDir.path;
     _initialized = true;
-    debugPrint('✅ DownloadManager initialized lazily: $_baseDir');
   }
 
   String _getFilePathSync(String modelName) {

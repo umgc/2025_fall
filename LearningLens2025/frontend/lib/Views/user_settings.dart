@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:fllama/fllama.dart';
 
 class UserSettings extends StatefulWidget {
   @override
@@ -36,18 +38,20 @@ class UserSettingsState extends State<UserSettings> {
   Set<String> downloadedModels = {};
   String? selectedModel;
   bool isDownloading = false;
-  http.Client? _httpClient;
-  bool _isCancelled = false;
-  String? _currentDownloadPath;
   bool _modelsLoading = true;
 
   double downloadProgress = 0.0;
+
+  // need for web
+  String _mlcModelId = MlcModelId.qwen05b;
 
   @override
   void initState() {
     super.initState();
     _initCycle();
-    DownloadManager().init();
+    if (!kIsWeb) {
+      DownloadManager().init();
+    }
     //_checkSelectedModelDownloaded();
   }
 
@@ -380,262 +384,427 @@ class UserSettingsState extends State<UserSettings> {
     }
   }
 
+  // Dummy download method (for web logic placeholder)
+  Future<void> _dummyDownloadModel(String modelId) async {
+    debugPrint('Starting dummy download for $modelId...');
+    await Future.delayed(const Duration(seconds: 2));
+    debugPrint('Finished dummy download for $modelId.');
+  }
+
 // Updated GGUF Model Picker
   Widget _buildGGUFModelPicker() {
-    if (_modelsLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: CircularProgressIndicator(),
-      );
-    }
+    // support for web:
+    if (kIsWeb) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Local LLM Model (MLC & WebGPU):',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Dropdown with checkmark
+              Expanded(
+                child: DropdownButton(
+                  value: _mlcModelId,
+                  isExpanded: true,
+                  hint: const Text('Select a model'),
+                  onChanged: (value) {
+                    setState(() {
+                      _mlcModelId = value!;
+                    });
+                  },
+                  items: [
+                    MlcModelId.llama321bInstruct,
+                    MlcModelId.llama323bInstruct,
+                    MlcModelId.llama318bInstruct,
+                    MlcModelId.deepSeekR1Llama38b,
+                    MlcModelId.openHermesLlama38b,
+                    MlcModelId.openHermesMistral,
+                    MlcModelId.phi35mini,
+                    MlcModelId.qwen05b,
+                    MlcModelId.tinyLlama,
+                  ].map((modelId) {
+                    return DropdownMenuItem(
+                      value: modelId,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(modelId.toString()),
+                          FutureBuilder<bool?>(
+                            future: fllamaMlcIsWebModelDownloaded(modelId),
+                            builder: (context, snapshot) {
+                              final isDownloaded = snapshot.data ?? false;
+                              final waiting = snapshot.connectionState ==
+                                  ConnectionState.waiting;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Local LLM Model:',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            // Dropdown with checkmark
-            Expanded(
-              child: DropdownButton<String>(
-                value: selectedModel,
-                isExpanded: true,
-                hint: const Text('Select a model'),
-                onChanged: (value) {
-                  setState(() {
-                    selectedModel = value;
-                  });
-                },
-                items: modelMap.keys.map((key) {
-                  return DropdownMenuItem(
-                    value: key,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(key),
-                        ValueListenableBuilder<double>(
-                          valueListenable:
-                              DownloadManager().progressNotifier(key),
-                          builder: (context, progress, child) {
-                            final isDownloaded = progress >= 1.0 ||
-                                DownloadManager().isDownloaded(key);
+                              if (waiting) {
+                                return const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              }
 
-                            if (isDownloaded) {
-                              return Row(
-                                children: [
-                                  const Icon(Icons.check,
-                                      color: Colors.green, size: 18),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'Downloaded',
-                                    style: TextStyle(
-                                        color: Colors.green, fontSize: 12),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red, size: 18),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    tooltip: 'Delete model',
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: const Text('Delete Model'),
-                                          content: Text(
-                                              'Are you sure you want to delete "$key"?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              child: const Text('Delete'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
+                              if (isDownloaded) {
+                                return Row(
+                                  children: [
+                                    const Icon(Icons.check,
+                                        color: Colors.green, size: 18),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      'Downloaded',
+                                      style: TextStyle(
+                                          color: Colors.green, fontSize: 12),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      tooltip: 'Delete model',
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Delete Model'),
+                                            content: Text(
+                                                'Are you sure you want to delete "${modelId.toString()}"?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
 
-                                      if (confirm == true) {
-                                        await DownloadManager()
-                                            .deleteModel(key);
-                                        LocalStorageService.saveLocalLLMPath(
-                                            "");
-                                        _ggufModelPath = "";
-
-                                        if (selectedModel == key) {
-                                          setState(() {
-                                            selectedModel = null;
-                                          });
+                                        if (confirm == true) {
+                                          await fllamaMlcWebModelDelete(
+                                              modelId);
+                                          setState(() {}); // refresh UI
                                         }
-                                        // Rebuild to reflect change
-                                        (context as Element).markNeedsBuild();
-                                      }
-                                    },
-                                  ),
-                                ],
-                              );
-                            }
+                                      },
+                                    ),
+                                  ],
+                                );
+                              }
 
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                              // Not downloaded
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
 
-            // Right-hand panel
-            if (selectedModel != null)
-              ValueListenableBuilder<double>(
-                valueListenable:
-                    DownloadManager().progressNotifier(selectedModel!),
-                builder: (context, progress, child) {
-                  final isDownloading =
-                      DownloadManager().isDownloading(selectedModel!);
-                  final isDownloaded = progress >= 1.0 ||
-                      DownloadManager().isDownloaded(selectedModel!);
+              const SizedBox(width: 10),
+
+              // Right-hand button panel
+              FutureBuilder<bool?>(
+                future: fllamaMlcIsWebModelDownloaded(_mlcModelId),
+                builder: (context, snapshot) {
+                  final isDownloaded = snapshot.data ?? false;
+                  final waiting =
+                      snapshot.connectionState == ConnectionState.waiting;
+
+                  if (waiting) {
+                    return const CircularProgressIndicator(strokeWidth: 2);
+                  }
 
                   if (isDownloaded) {
-                    final modelName = _ggufModelPath!
-                        .split('models\\')
-                        .last
-                        .split(".gguf")
-                        .first;
-                    print(modelName);
-                    if (modelName != selectedModel!) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () async {
-                              final path = await DownloadManager()
-                                  .getFilePath(selectedModel!);
-                              LocalStorageService.saveLocalLLMPath(path);
-                              setState(() {
-                                _ggufModelPath = path;
-                              });
-                              debugPrint('Model loaded: $path');
-                            },
-                            child: const Text('Load this model'),
-                          ),
-                        ],
-                      );
-                    } else {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton(
-                            onPressed: null,
-                            child: const Text('Loaded'),
-                          ),
-                        ],
-                      );
-                    }
-                  } else if (isDownloading) {
-                    return Row(
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: CircularProgressIndicator(
-                                value: progress,
-                                strokeWidth: 3,
-                              ),
-                            ),
-                            Text(
-                              '${(progress * 100).toStringAsFixed(0)}%',
-                              style: const TextStyle(
-                                  fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () {
-                            DownloadManager().cancelDownload(selectedModel!);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                      ],
-                    );
-                  } else {
-                    final url = modelMap[selectedModel!];
                     return ElevatedButton(
                       onPressed: () {
-                        if (url != null) {
-                          DownloadManager().startDownload(selectedModel!, url);
-                        }
+                        debugPrint('Model ${_mlcModelId.toString()} loaded.');
+                      },
+                      child: const Text('Load this model'),
+                    );
+                  } else {
+                    return ElevatedButton(
+                      onPressed: () async {
+                        await _dummyDownloadModel(_mlcModelId);
+                        setState(() {});
                       },
                       child: const Text('Download'),
                     );
                   }
                 },
               ),
-          ],
-        ),
-        // Pick GGUF
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ElevatedButton(
-              onPressed: () async {
-                final result = await FilePicker.platform.pickFiles(
-                  type: FileType.custom,
-                  allowedExtensions: ['gguf'],
-                );
-                if (result != null && result.files.single.path != null) {
-                  setState(() {
-                    selectedModel = result.files.single.path!
-                        .split('\\')
-                        .last
-                        .split(".gguf")
-                        .first;
-
-                    if (!modelMap.containsKey(selectedModel)) {
-                      modelMap[selectedModel!] =
-                          ""; // URL is null since it’s local
-                    }
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Select GGUF Model From Device'),
-            ),
-          ],
-        ),
-        if (_ggufModelPath != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              'Currently Loaded Model: $_ggufModelPath',
-              style: const TextStyle(fontStyle: FontStyle.italic),
-            ),
+            ],
           ),
-        const Divider(),
-      ],
-    );
+          const Divider(),
+        ],
+      );
+    } else {
+      if (_modelsLoading) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: CircularProgressIndicator(),
+        );
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Local LLM Model:',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Dropdown with checkmark
+              Expanded(
+                child: DropdownButton<String>(
+                  value: selectedModel,
+                  isExpanded: true,
+                  hint: const Text('Select a model'),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedModel = value;
+                    });
+                  },
+                  items: modelMap.keys.map((key) {
+                    return DropdownMenuItem(
+                      value: key,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(key),
+                          ValueListenableBuilder<double>(
+                            valueListenable:
+                                DownloadManager().progressNotifier(key),
+                            builder: (context, progress, child) {
+                              final isDownloaded = progress >= 1.0 ||
+                                  DownloadManager().isDownloaded(key);
+
+                              if (isDownloaded) {
+                                return Row(
+                                  children: [
+                                    const Icon(Icons.check,
+                                        color: Colors.green, size: 18),
+                                    const SizedBox(width: 4),
+                                    const Text(
+                                      'Downloaded',
+                                      style: TextStyle(
+                                          color: Colors.green, fontSize: 12),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete,
+                                          color: Colors.red, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      tooltip: 'Delete model',
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Delete Model'),
+                                            content: Text(
+                                                'Are you sure you want to delete "$key"?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm == true) {
+                                          await DownloadManager()
+                                              .deleteModel(key);
+                                          LocalStorageService.saveLocalLLMPath(
+                                              "");
+                                          _ggufModelPath = "";
+
+                                          if (selectedModel == key) {
+                                            setState(() {
+                                              selectedModel = null;
+                                            });
+                                          }
+                                          // Rebuild to reflect change
+                                          (context as Element).markNeedsBuild();
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                );
+                              }
+
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Right-hand panel
+              if (selectedModel != null)
+                ValueListenableBuilder<double>(
+                  valueListenable:
+                      DownloadManager().progressNotifier(selectedModel!),
+                  builder: (context, progress, child) {
+                    final isDownloading =
+                        DownloadManager().isDownloading(selectedModel!);
+                    final isDownloaded = progress >= 1.0 ||
+                        DownloadManager().isDownloaded(selectedModel!);
+
+                    if (isDownloaded) {
+                      final modelName = _ggufModelPath!
+                          .split('models\\')
+                          .last
+                          .split(".gguf")
+                          .first;
+                      print(modelName);
+                      if (modelName != selectedModel!) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () async {
+                                final path = await DownloadManager()
+                                    .getFilePath(selectedModel!);
+                                LocalStorageService.saveLocalLLMPath(path);
+                                setState(() {
+                                  _ggufModelPath = path;
+                                });
+                                debugPrint('Model loaded: $path');
+                              },
+                              child: const Text('Load this model'),
+                            ),
+                          ],
+                        );
+                      } else {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ElevatedButton(
+                              onPressed: null,
+                              child: const Text('Loaded'),
+                            ),
+                          ],
+                        );
+                      }
+                    } else if (isDownloading) {
+                      return Row(
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: CircularProgressIndicator(
+                                  value: progress,
+                                  strokeWidth: 3,
+                                ),
+                              ),
+                              Text(
+                                '${(progress * 100).toStringAsFixed(0)}%',
+                                style: const TextStyle(
+                                    fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () {
+                              DownloadManager().cancelDownload(selectedModel!);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ],
+                      );
+                    } else {
+                      final url = modelMap[selectedModel!];
+                      return ElevatedButton(
+                        onPressed: () {
+                          if (url != null) {
+                            DownloadManager()
+                                .startDownload(selectedModel!, url);
+                          }
+                        },
+                        child: const Text('Download'),
+                      );
+                    }
+                  },
+                ),
+            ],
+          ),
+          // Pick GGUF
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ElevatedButton(
+                onPressed: () async {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['gguf'],
+                  );
+                  if (result != null && result.files.single.path != null) {
+                    setState(() {
+                      selectedModel = result.files.single.path!
+                          .split('\\')
+                          .last
+                          .split(".gguf")
+                          .first;
+
+                      if (!modelMap.containsKey(selectedModel)) {
+                        modelMap[selectedModel!] =
+                            ""; // URL is null since it’s local
+                      }
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Select GGUF Model From Device'),
+              ),
+            ],
+          ),
+          if (_ggufModelPath != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Currently Loaded Model: $_ggufModelPath',
+                style: const TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ),
+          const Divider(),
+        ],
+      );
+    }
   }
 
   // -------------------------------------------
