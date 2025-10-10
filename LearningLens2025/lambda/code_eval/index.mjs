@@ -82,10 +82,10 @@ async function handlePOST(client, event, context){
 }
 
 export const handler = async (event, context) => {
-    const hostname = '2bthdlvyqq5d5zl2bxxmm6r25m.dsql.us-east-1.on.aws'
+    const hostname = process.env.AWS_DB_CLUSTER
     const signer = new DsqlSigner({
         hostname: hostname,
-        region: 'us-east-1',
+        region: process.env.AWS_REGION,
     })
 
     const token = await signer.getDbConnectAdminAuthToken()

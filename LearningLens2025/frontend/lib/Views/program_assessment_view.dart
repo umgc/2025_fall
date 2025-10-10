@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/Views/program_assessment_form.dart';
@@ -24,6 +25,12 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
   
   Course? selectedCourse;
   Assignment? selectedAssignment;
+
+  static Future<void> createDb() async{
+    final url =
+        Uri.parse("${LocalStorageService.getCodeEvalUrl()}/?command=createDb");
+    await http.get(url);
+  }
 
   @override
   void initState() {
@@ -85,7 +92,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView>{
         children: [
           // First row with Create button aligned right
           CourseForm(
-            courses: _courses, 
+            courses: _courses,
             onEvaluationStarted: (course, assignment, expectedOutput) async {
               final results = await _getEvaluations(lmsService.userName!);
               setState(() {

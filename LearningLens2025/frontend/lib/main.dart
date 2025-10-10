@@ -22,6 +22,7 @@ void main() async {
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
   await AILoggingSingleton().createDb();
+  await ProgramAssessmentState.createDb();
 
   runApp(
     MultiProvider(
