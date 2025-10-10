@@ -58,7 +58,7 @@ public class PatientController {
 
     @Autowired
     private MedicationService medicationService;
-    
+
     // Helper method to get current user
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -275,7 +275,7 @@ public class PatientController {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can access this endpoint");
         }
         
-        Patient patient = patientService.getPatientByUserId(currentUser.getId());
+        Patient patient = patientService.getPatientById(currentUser.getId());
         log.debug("Retrieved patient profile: id={}, userId={}", patient.getId(), patient.getUser().getId());
         return ResponseEntity.ok(patient);
     }
@@ -635,7 +635,7 @@ public class PatientController {
                 .body(Map.of("error", "Failed to retrieve enhanced patient profile"));
         }
     }
-    
+
     @GetMapping("/{patientID}/medications")
     @Operation(summary = "Get all medications for patient",
             description = "Get all medications for a specific patient")
