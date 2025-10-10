@@ -26,9 +26,5 @@ public class MedicationController {
     private MedicationService medicationService;
 
     /// TODO: Verify the correct URL for this endpoint
-    @GetMapping("/{patientID}/medications")
-    public ResponseEntity<List<MedicationDTO>> getAllMedications(@PathVariable Long patientID) {
-        List<MedicationDTO> allMeds = medicationService.getAllMedicationsForPatient(patientID);
-        return  ResponseEntity.ok(allMeds);
-    }
+
 }

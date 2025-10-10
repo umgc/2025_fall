@@ -12,34 +12,38 @@ import java.util.List;
 @Tag(name = "Check-In", description = "Endpoint for the virtual Check-In, including both patient submitting and caregiver checking")
 public class CheckInController {
 
-    @PostMapping()
+//    CheckIn
+    
+    @PostMapping("/create")
+    // TODO - add body
     public ResponseEntity<CheckIn> patientCheckIn()
     {
         //This function creates patient check-ins. Presumably by accessing the current data from the screen.
         //TODO:Check how that works
-        return  new ResponseEntity<CheckIn>();
+//        return  new ResponseEntity<CheckIn>();
+        return null;
     }
 
     @GetMapping()
     public List<ResponseEntity<CheckIn>> getCheckIns()
     {
         //This function lists patient check-ins that meet a criteria
-        return new List<ResponseEntity<CheckIn>>[];
+        return null;
     }
 
     @GetMapping("/{id}")
     public CheckIn getCheckIn(@PathVariable Long id)
     {
         //This function retrieves a specific check-in by ID
-        CheckIn target = CheckInService.getCheckInByID(id);
+//        CheckIn target = CheckInService.getCheckInByID(id);
         //Validate access to checkIn, perform checks
-        return target;
+        return null;
     }
 
     @PutMapping("/{id}")
     public  ResponseEntity<CheckIn> updateCheckIn()
     {
         //This function updates a specific check-in by ID
-        return new ResponseEntity<CheckIn>();
+        return null;
     }
 }

@@ -1,11 +1,14 @@
 package com.careconnect.model;
 
 import jakarta.persistence.Embeddable;
+import lombok.Getter;
+
 import java.io.Serializable;
 import java.util.Objects;
 
+@Getter
 @Embeddable
-public class CheckInQuestionId implements Serializable {
+public final class CheckInQuestionId {
     private Long checkInId;
     private Long questionId;
 
@@ -15,8 +18,6 @@ public class CheckInQuestionId implements Serializable {
         this.questionId = questionId;
     }
 
-    public Long getCheckInId() { return checkInId; }
-    public Long getQuestionId() { return questionId; }
     public void setCheckInId(Long checkInId) { this.checkInId = checkInId; }
     public void setQuestionId(Long questionId) { this.questionId = questionId; }
 

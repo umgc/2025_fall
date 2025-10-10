@@ -1171,6 +1171,70 @@ class ApiService {
       return null;
     }
   }
+  
+  static Future<http.Response> getPatientMedicationsForPatient(int patientId) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+          '${ApiConstants.patients}/$patientId/medications');
+      return await httpClient
+          .get(uri, headers: headers)
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+      );
+    }  catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Add a new medication for a patient
+  static Future<http.Response> addPatientMedication(
+    int patientId,
+    Map<String, dynamic> medicationData,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications',
+      );
+
+      return await httpClient
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode(medicationData),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Remove (deactivate) a medication for a patient
+  static Future<http.Response> removePatientMedication(
+    int patientId,
+    int medicationId,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications/$medicationId',
+      );
+
+      return await httpClient
+          .delete(uri, headers: headers)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
 }
 
 // Save speech-to-text to a file and upload it to S3
