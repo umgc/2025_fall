@@ -77,12 +77,27 @@ variable "moodle_password"{
   sensitive = true
 }
 
+# Run npm install before zipping
+resource "null_resource" "npm_install_code_eval" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/code_eval/package.json")
+    package_lock = filemd5("../lambda/code_eval/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/code_eval && npm install"
+  }
+}
+
 # lambda function for code evaluations
 data "archive_file" "code_eval" {
   type = "zip"
   source_dir = "../lambda/code_eval/"
   excludes = ["../lambda/code_eval/code_eval.zip"]
   output_path = "../lambda/code_eval/code_eval.zip"
+
+  depends_on = [null_resource.npm_install_code_eval]
 }
 
 resource "aws_lambda_function" "code_eval_lambda" {

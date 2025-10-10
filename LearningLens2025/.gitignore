@@ -45,3 +45,5 @@ terraform/terraformout.txt
 # Terraform
 .terraform*
 *.tfstate*
+
+node_modules
