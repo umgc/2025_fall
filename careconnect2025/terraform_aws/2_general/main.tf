@@ -2,8 +2,10 @@ terraform {
 
   # Consider using workspaces for different environments backends like dev, staging, prod
   # That could help in naming the resources differently based on the environment
+  # NOTE: The backend block cannot use variables. You must manually update the bucket name
+  # after running 1_s3_tfstate, or use: terraform init -backend-config="bucket=<bucket-name>"
   backend "s3" {
-    bucket       = "cc-iac-us-east-1-650566638526"
+    bucket       = var.cc_iac_bucket_name  # Replace this with output from 1_s3_tfstate
     key          = "tf-state/careconnect.tfstate"
     region       = "us-east-1"
     use_lockfile = true
@@ -24,11 +26,15 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+# Retrieve the S3 bucket created in 1_s3_tfstate
+data "aws_s3_bucket" "backend_bucket" {
+  bucket = var.cc_iac_bucket_name
+}
+
 module "vpc" {
   source         = "./modules/vpc"
   default_tags   = var.default_tags
   primary_region = var.primary_region
-  
 }
 
 module "s3_internal" {
@@ -71,7 +77,8 @@ resource "aws_ses_domain_identity" "ses_domain" {
 # ---  Configure the Custom MAIL FROM domain ---
 resource "aws_ses_domain_mail_from" "ses_mail_from" {
   domain           = aws_ses_domain_identity.ses_domain.domain
-  mail_from_domain = "mail.${var.domain_name}" 
+  mail_from_domain = "mail.${var.domain_name}"
+
   # This setting is optional but recommended. It tells SES to use its
   # default MAIL FROM domain if it runs into issues with your custom one,
   # which prevents your emails from being rejected.

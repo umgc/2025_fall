@@ -3,7 +3,7 @@ terraform {
   # Consider using workspaces for different environments backends like dev, staging, prod
   # That could help in naming the resources differently based on the environment
   backend "s3" {
-    bucket       = "cc-iac-us-east-1-650566638526"
+    bucket       = var.iac_cc_s3_bucket_name
     key          = "tf-state/careconnect-compute.tfstate"
     region       = "us-east-1"
     use_lockfile = true
