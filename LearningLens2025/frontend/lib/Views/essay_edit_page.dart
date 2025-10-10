@@ -299,14 +299,11 @@ class EssayEditPageState extends State<EssayEditPage> {
     final editableState = _editableKey.currentState;
     if (editableState == null) return;
 
-    // Use the currently displayed rows from Editable
+    // Merge current rows with edits
     final allRows = List<Map<String, dynamic>>.from(rows);
-
-    // Merge any edits
     for (var editedRow in editableState.editedRows) {
       int rowIndex = editedRow['row'];
-      Map<String, dynamic> safeRow =
-          Map<String, dynamic>.from(allRows[rowIndex]);
+      Map<String, dynamic> safeRow = Map<String, dynamic>.from(allRows[rowIndex]);
 
       editedRow.forEach((key, value) {
         if (key != 'row') safeRow[key] = value ?? '';
@@ -315,9 +312,46 @@ class EssayEditPageState extends State<EssayEditPage> {
       allRows[rowIndex] = safeRow;
     }
 
-    double total = 0;
+    // Step 1: Validate headerControllers
+    for (int i = 0; i < headerControllers.length; i++) {
+      final text = headerControllers[i].text.trim();
+
+      if (text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Percentage level ${i + 1} cannot be blank.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final value = double.tryParse(text);
+      if (value == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Invalid percentage value in level ${i + 1}: "$text".'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (value > 100) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Percentage in level ${i + 1} exceeds 100%. Please enter a valid value.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
 
     // Validate each weight first
+    double total = 0;
     for (int i = 0; i < allRows.length; i++) {
       final weightValue = allRows[i]['weight'];
       double? weightDouble;
@@ -344,6 +378,17 @@ class EssayEditPageState extends State<EssayEditPage> {
         return;
       }
 
+      if (weightDouble < 0 || weightDouble > 100) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Weight in row ${i + 1} must be between 0 and 100. Found $weightDouble%.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       total += weightDouble;
     }
 
@@ -351,13 +396,14 @@ class EssayEditPageState extends State<EssayEditPage> {
     if (total != 100) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Total weight must sum to 100%. Current sum: $total%'),
+          content: Text('Total weight must sum to 100%. Current sum: $total%.'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
+    // Step 3: Moving onwards
     rows = List<Map<String, dynamic>>.from(allRows);
 
     setState(() {}); // Refresh UI
