@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'invoice_detail_page.dart';
 
-import 'package:care_connect_app/features/invoices/services/excel_service.dart';
+import 'package:care_connect_app/features/invoices/services/excel/excel_service.dart';
 
 class InvoiceListPage extends StatefulWidget {
   const InvoiceListPage({super.key, this.quickFilter});

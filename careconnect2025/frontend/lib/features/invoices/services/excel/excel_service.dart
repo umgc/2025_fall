@@ -1,9 +1,9 @@
 // lib/features/invoices/services/excel_service.dart
 
 // This conditional import is the key: it loads the correct helper file at compile time.
-import 'package:care_connect_app/features/invoices/services/save_service_stub.dart'
-    if (dart.library.io) 'package:care_connect_app/features/invoices/services/save_service_mobile.dart'
-    if (dart.library.html) 'package:care_connect_app/features/invoices/services/save_service_web.dart';
+import 'package:care_connect_app/features/invoices/services/excel/save_service_stub.dart'
+    if (dart.library.io) 'package:care_connect_app/features/invoices/services/excel/save_service_mobile.dart'
+    if (dart.library.html) 'package:care_connect_app/features/invoices/services/excel/save_service_web.dart';
 
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:excel/excel.dart';
