@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
-import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
@@ -111,19 +110,6 @@ class _AiLogScreenState extends State<AiLogScreen> {
   void _queryDatabase() async {
     // For now just test adding data, get data
     if (selectedCourse != null) {
-      final String testString = "This is a test string for a prompt.";
-      final String replyString = "This is a test string for a reply.";
-      final String reflectionString = "This is a test reflection.";
-      if (selectedAssignment != null && selectedStudent != null) {
-        await AILoggingSingleton().addLog(AiLog(
-            selectedCourse!,
-            selectedAssignment!,
-            selectedStudent!,
-            testString,
-            replyString,
-            LlmType.CHATGPT,
-            reflectionString));
-      }
       List<AiLog> newLogs = [];
       setState(() {
         logs = [];
