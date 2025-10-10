@@ -10,6 +10,9 @@ import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart'; 
+
 import 'Views/dashboard.dart';
 import 'Views/edit_questions.dart';
 import 'Views/essay_generation.dart';
@@ -67,6 +70,15 @@ class MyApp extends StatelessWidget {
             seedColor: Provider.of<ThemeNotifier>(context).primaryColor),
       ),
       scrollBehavior: CustomScrollBehavior(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        FlutterQuillLocalizations.delegate, // <-- required for Quill
+      ],
+      supportedLocales: const [
+        Locale('en'), // add more if you support multiple languages
+      ],
       routes: {
         // '/EssayEditPage': (context) => EssayEditPage(jsonData),
         // '/Content': (context) => ViewCourseContents(),
