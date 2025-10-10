@@ -52,3 +52,10 @@ terraform/terraformout.txt
 /lambda/gettoken/node_modules
 /lambda/gettoken/gettoken.zip
 /lambda/code_eval/code_eval.zip
+
+# npm
+
+/lambda/code_eval/node_modules
+/lambda/gettoken/node_modules
+/lambda/gettoken/gettoken.zip
+/lambda/code_eval/code_eval.zip
