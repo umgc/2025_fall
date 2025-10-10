@@ -285,9 +285,8 @@ class LocalStorageService {
   }
 
   static String getCodeEvalUrl() {
-    String url = _prefs.getString('CODE_EVAL_URL') ??
-        dotenv.env['CODE_EVAL_URL'] ??
-        '';
+    String url =
+        _prefs.getString('CODE_EVAL_URL') ?? dotenv.env['CODE_EVAL_URL'] ?? '';
     if (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
@@ -297,7 +296,7 @@ class LocalStorageService {
   static void clearAILoggingUrl() {
     _prefs.remove('AI_LOGGING_URL');
   }
-  
+
   static void clearCodeEvalUrl() {
     _prefs.remove('AI_LOGGING_URL');
   }

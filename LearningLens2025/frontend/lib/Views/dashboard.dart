@@ -321,7 +321,8 @@ class TeacherDashboard extends StatelessWidget {
       },
       {
         'title': 'Program Assessment',
-        'description': 'Automatically evaluate student programming assignments.',
+        'description':
+            'Automatically evaluate student programming assignments.',
         'onPressed': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProgramAssessmentView()),

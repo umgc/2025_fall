@@ -10,22 +10,28 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 class CourseForm extends StatefulWidget {
   final List<Course> courses;
   // Callback that is called when a new program evaluation is created successfully
-  final Future<void> Function(Course course, Assignment assignment, String expectedOutput)? onEvaluationStarted;
-  const CourseForm({super.key, required this.courses, required this.onEvaluationStarted});
-  
+  final Future<void> Function(
+          Course course, Assignment assignment, String expectedOutput)?
+      onEvaluationStarted;
+  const CourseForm(
+      {super.key, required this.courses, required this.onEvaluationStarted});
+
   @override
-  _CourseFormState createState() => _CourseFormState(courses, onEvaluationStarted);
+  _CourseFormState createState() =>
+      _CourseFormState(courses, onEvaluationStarted);
 }
 
 class _CourseFormState extends State<CourseForm> {
   final lmsService = LmsFactory.getLmsService();
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
-  
+
   Course? selectedCourse;
   Assignment? selectedAssignment;
   List<Course> courses = [];
   final TextEditingController outputController = TextEditingController();
-  final Future<void> Function(Course course, Assignment assignment, String expectedOutput)? onEvaluationStarted;
+  final Future<void> Function(
+          Course course, Assignment assignment, String expectedOutput)?
+      onEvaluationStarted;
 
   _CourseFormState(this.courses, this.onEvaluationStarted);
 
@@ -51,44 +57,37 @@ class _CourseFormState extends State<CourseForm> {
   }
 
   // Helper to show status messages
-  void _showSnackBar(SnackBar snackBar){
-      if(mounted){
-        ScaffoldMessenger.of(context)
-        .showSnackBar(snackBar);
-      }
+  void _showSnackBar(SnackBar snackBar) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    }
   }
 
-  Future<void> _startEvaluation(Course course, Assignment assignment, String expectedOutput) async{
-    final response = await ApiService().httpPost(
-      Uri.parse(codeEvalUrl),
-      body: jsonEncode({
-        'courseId': course.id,
-        'assignmentId': assignment.id.toString(),
-        'expectedOutput': expectedOutput,
-        'username': lmsService.userName
-      })
-    );
+  Future<void> _startEvaluation(
+      Course course, Assignment assignment, String expectedOutput) async {
+    final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
+        body: jsonEncode({
+          'courseId': course.id,
+          'assignmentId': assignment.id.toString(),
+          'expectedOutput': expectedOutput,
+          'username': lmsService.userName
+        }));
 
-    if(response.statusCode != 200){
-      _showSnackBar(
-        SnackBar(
+    if (response.statusCode != 200) {
+      _showSnackBar(SnackBar(
           backgroundColor: Colors.red[700],
-          content: Text('Unable to evaluate coding assignment: status code ${response.statusCode}')
-        )
-      );
+          content: Text(
+              'Unable to evaluate coding assignment: status code ${response.statusCode}')));
 
       debugPrint(response.body);
       return;
     }
 
-    _showSnackBar(
-      SnackBar(
+    _showSnackBar(SnackBar(
         backgroundColor: Colors.green,
-        content: Text('Evaluation started successfully')
-      )
-    );
+        content: Text('Evaluation started successfully')));
 
-    if(onEvaluationStarted != null){
+    if (onEvaluationStarted != null) {
       await onEvaluationStarted!(course, assignment, expectedOutput);
     }
   }
@@ -142,12 +141,11 @@ class _CourseFormState extends State<CourseForm> {
                             .firstWhere((c) => c == selectedCourse)
                             .essays!
                             .map((assignment) {
-                              return DropdownMenuItem(
-                                value: assignment,
-                                child: Text(assignment.name),
-                              );
-                            })
-                            .toList(),
+                            return DropdownMenuItem(
+                              value: assignment,
+                              child: Text(assignment.name),
+                            );
+                          }).toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedAssignment = value;
@@ -171,29 +169,30 @@ class _CourseFormState extends State<CourseForm> {
             ),
             SizedBox(height: 20),
             ElevatedButton(
-               style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16), // bigger size
-                  textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), // bigger text
-                  backgroundColor: Colors.deepPurpleAccent, // primary color
-                  foregroundColor: Colors.white, // text color
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12), // rounded corners
-                  ),
-                  elevation: 5, // shadow for prominence
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 40, vertical: 16), // bigger size
+                textStyle: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold), // bigger text
+                backgroundColor: Colors.deepPurpleAccent, // primary color
+                foregroundColor: Colors.white, // text color
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12), // rounded corners
                 ),
-                onPressed: !isFormValid ? null : () async {
-                  await _startEvaluation(
-                    selectedCourse!, 
-                    selectedAssignment!, 
-                    outputController.text
-                  );
+                elevation: 5, // shadow for prominence
+              ),
+              onPressed: !isFormValid
+                  ? null
+                  : () async {
+                      await _startEvaluation(selectedCourse!,
+                          selectedAssignment!, outputController.text);
 
-                  debugPrint("Course: $selectedCourse");
-                  debugPrint("Assignment: $selectedAssignment");
-                  debugPrint("Expected Output: ${outputController.text}");
-                },
-                child: Text("Create"),
-              )
+                      debugPrint("Course: $selectedCourse");
+                      debugPrint("Assignment: $selectedAssignment");
+                      debugPrint("Expected Output: ${outputController.text}");
+                    },
+              child: Text("Create"),
+            )
           ],
         ),
       ),
