@@ -265,7 +265,9 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                   _buildCourseDropdown(),
                   SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: selectedSection == 'Select a section number' ? null : selectedSection,
+                    value: selectedSection == 'Select a section number'
+                        ? null
+                        : selectedSection,
                     decoration: InputDecoration(
                       labelText: 'Section Number',
                       border: OutlineInputBorder(),

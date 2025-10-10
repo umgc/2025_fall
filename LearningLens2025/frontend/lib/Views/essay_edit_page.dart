@@ -244,8 +244,7 @@ class EssayEditPageState extends State<EssayEditPage> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     showSaveIcon: false,
-                    borderColor:
-                        Theme.of(context).colorScheme.primaryContainer,
+                    borderColor: Theme.of(context).colorScheme.primaryContainer,
                   ),
                 ),
               ),
