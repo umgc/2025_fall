@@ -1,0 +1,12 @@
+{
+    "favorites.resources": [
+        {
+            "filePath": "lib\\config\\router\\app_router.dart",
+            "group": "Default"
+        },
+        {
+            "filePath": "lib\\config\\navigation\\bottom_nav_config.dart",
+            "group": "Default"
+        }
+    ]
+}
