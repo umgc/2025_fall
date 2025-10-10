@@ -16,7 +16,7 @@ List<Map<String, dynamic>> generateContext({
 
   // Messages start with core system prompt (null-safe)
   final msgs = <Map<String, dynamic>>[
-    {'role': 'system', 'content': (permTokens.core ?? '').trim()},
+    {'role': 'system', 'content': (permTokens.core).trim()},
   ];
 
   int count() => Token_Utils.estimateMessages(msgs);
@@ -24,15 +24,15 @@ List<Map<String, dynamic>> generateContext({
   // Fast path: if budget tiny/negative, return just core + current user
   if (tokenBudget <= 0) {
     return [
-      {'role': 'system', 'content': (permTokens.core ?? '').trim()},
+      {'role': 'system', 'content': (permTokens.core).trim()},
       {'role': 'user', 'content': userPrompt},
     ];
   }
 
   // Add module system prompts (null-safe, trimmed)
-  final List<String> modules = (permTokens.modules ?? const <String>[]);
+  final List<String> modules = (permTokens.modules);
   for (final m in modules) {
-    final trimmed = (m ?? '').trim();
+    final trimmed = (m).trim();
     if (trimmed.isEmpty) continue;
 
     msgs.add({'role': 'system', 'content': trimmed});
@@ -74,7 +74,7 @@ List<Map<String, dynamic>> generateContext({
   if (msgs.isEmpty || msgs.last['role'] != 'user') {
     // Rebuild minimal context if something went odd during trimming
     return [
-      {'role': 'system', 'content': (permTokens.core ?? '').trim()},
+      {'role': 'system', 'content': (permTokens.core).trim()},
       {'role': 'user', 'content': userPrompt},
     ];
   }

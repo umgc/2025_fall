@@ -39,7 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
   // LLM selection
   LlmType _selectedLLM = LlmType.CHATGPT;
 
-    // Check if user has API key for selected LLM
+  // Check if user has API key for selected LLM
   bool _hasKeyFor(LlmType llm) {
     return LocalStorageService.userHasLlmKey(llm);
   }
@@ -47,8 +47,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // Persistence
   SharedPreferences? _prefs;
   static const String kChatHistoryKey = 'chat_history';
-
-  
 
   /// Initialize the chat screen.
   @override
@@ -71,10 +69,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _init() async {
     await _loadChatHistory();
   }
+
   // Ensure SharedPreferences instance
   Future<void> _ensurePrefs() async {
     _prefs ??= await SharedPreferences.getInstance();
   }
+
   // Load chat history from SharedPreferences
   Future<void> _loadChatHistory() async {
     await _ensurePrefs();
@@ -134,11 +134,13 @@ class _ChatScreenState extends State<ChatScreen> {
             }),
       );
   }
+
   // Determine user role from LMS service
   UserRole _getUserRole() {
     // Safe default to student
     return LmsFactory.getLmsService().role ?? UserRole.student;
   }
+
   // Build system instructions based on user role
   String _buildInstructions(UserRole role) {
     if (role == UserRole.teacher) {
@@ -151,9 +153,9 @@ class _ChatScreenState extends State<ChatScreen> {
     - Ask clarifying questions when uncertain.
     IMPORTANT: Use plain text only (no Markdown).
     ''';
-        }
-        // Student
-        return '''
+    }
+    // Student
+    return '''
     You are an AI learning assistant for students. Be concise, supportive, and clear.
     - Explain topics in student-friendly terms.
     - Provide examples, hints, or step-by-step reasoning.
@@ -162,7 +164,8 @@ class _ChatScreenState extends State<ChatScreen> {
     - Ask clarifying questions when unsure.
     IMPORTANT: Use plain text only (no Markdown).
     ''';
-      }
+  }
+
   //---------- Scrolling ----------
   // Scroll to bottom of chat
   void _scrollToBottom() {
@@ -173,15 +176,18 @@ class _ChatScreenState extends State<ChatScreen> {
       curve: Curves.easeOut,
     );
   }
+
   // Schedule scroll after frame
   void _postFrameScroll() {
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
+
   // Append message bubble and scroll
   void _appendMessageBubble(String text, String sender) {
     _messages.add({'text': text, 'sender': sender});
     _postFrameScroll();
   }
+
   // Show a SnackBar message
   void _showSnack(String msg) {
     if (!mounted) return;
@@ -208,43 +214,32 @@ class _ChatScreenState extends State<ChatScreen> {
     switch (_selectedLLM) {
       case LlmType.CHATGPT:
         final key = LocalStorageService.getOpenAIKey();
-        if (key == null || key.isEmpty) {
+        if (key.isEmpty) {
           _showSnack('OpenAI API key is missing.');
           return;
         }
         aiModel = OpenAiLLM(key);
-        break;
       case LlmType.GROK:
         final key = LocalStorageService.getGrokKey();
-        if (key == null || key.isEmpty) {
+        if (key.isEmpty) {
           _showSnack('Grok API key is missing.');
           return;
         }
         aiModel = GrokLLM(key);
-        break;
       case LlmType.PERPLEXITY:
         final key = LocalStorageService.getPerplexityKey();
-        if (key == null || key.isEmpty) {
+        if (key.isEmpty) {
           _showSnack('Perplexity API key is missing.');
           return;
         }
         aiModel = PerplexityLLM(key);
-        break;
       case LlmType.DEEPSEEK:
         final key = LocalStorageService.getDeepseekKey();
-        if (key == null || key.isEmpty) {
+        if (key.isEmpty) {
           _showSnack('DeepSeek API key is missing.');
           return;
         }
         aiModel = DeepseekLLM(key);
-        break;
-      default:
-        final key = LocalStorageService.getOpenAIKey();
-        if (key == null || key.isEmpty) {
-          _showSnack('OpenAI API key is missing.');
-          return;
-        }
-        aiModel = OpenAiLLM(key);
     }
 
     // Optimistic UI
@@ -284,8 +279,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e, st) {
       debugPrint('[chat] error: $e\n$st');
       if (!mounted) return;
-      const errText =
-          'Error: Could not fetch response. Please try again.';
+      const errText = 'Error: Could not fetch response. Please try again.';
       setState(() {
         // Keep error in history for transparency
         _chatHistory.add(const ChatTurn(role: 'assistant', content: errText));
@@ -314,8 +308,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final canSend =
-        !_isLoading && _hasKeyFor(_selectedLLM); // disable send when loading/missing key
+    final canSend = !_isLoading &&
+        _hasKeyFor(_selectedLLM); // disable send when loading/missing key
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -386,8 +380,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             filled: true,
                             fillColor: Theme.of(context)
-                                .inputDecorationTheme
-                                .fillColor ??
+                                    .inputDecorationTheme
+                                    .fillColor ??
                                 scheme.surface,
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 10,
