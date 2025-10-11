@@ -1,5 +1,11 @@
-/// Medication status enum
+//medication status enum
 enum MedicationStatus { upcoming, taken, missed }
+
+MedicationStatus _statusFrom(dynamic v, bool? isActive) {
+  // backend uses isActive flag, not explicit "status" field
+  if (isActive == true) return MedicationStatus.upcoming; // active meds = upcoming
+  return MedicationStatus.missed; // inactive = missed
+}
 
 /// Medication model
 /// @param name - The name of the medication
@@ -42,4 +48,26 @@ class Medication {
       deliveryMethod: deliveryMethod ?? this.deliveryMethod,
     );
   }
+
+  // backend MedicationDTO
+  factory Medication.fromJson(Map<String, dynamic> j) {
+    return Medication(
+      name: j['medicationName']?.toString() ?? '',
+      dosage: j['dosage']?.toString() ?? '',
+      frequency: j['frequency']?.toString() ?? '',
+      deliveryMethod: j['route']?.toString() ?? '',
+      status: _statusFrom(j['medicationType'], j['isActive']),
+      nextDose: '', // backend doesn't provide next dose time yet
+    );
+  }
+
+  //convert back to JSON for later POST/PUT support
+  Map<String, dynamic> toJson() => {
+    'medicationName': name,
+    'dosage': dosage,
+    'frequency': frequency,
+    'route': deliveryMethod,
+    'isActive': status == MedicationStatus.upcoming,
+  };
 }
+
