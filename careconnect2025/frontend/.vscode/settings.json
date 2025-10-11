@@ -15,6 +15,10 @@
         {
             "filePath": "lib\\features\\invoices",
             "group": "Default"
+        },
+        {
+            "filePath": "lib\\widgets\\menu\\menu_page.dart",
+            "group": "Default"
         }
     ]
 }

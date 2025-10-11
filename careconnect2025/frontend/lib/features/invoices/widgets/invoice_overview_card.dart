@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
 
 /// Simple card that shows the count of unpaid invoices and links to the invoice dashboard.
 /// Provide a Future<int> that returns the count, so you can plug any data source.

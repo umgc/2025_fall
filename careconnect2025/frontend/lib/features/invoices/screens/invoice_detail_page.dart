@@ -72,11 +72,13 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage>
       appBar: AppBar(
         title: Row(
           children: [
-            Text(isNew && !hasNumber ? 'New Invoice' : 'Invoice ${_edited.invoiceNumber}'),
+            Text(isNew && !hasNumber ? 'New Invoice' : 'Invoice ${_edited.invoiceNumber}', overflow: TextOverflow.ellipsis,
+          maxLines: 1),
             const SizedBox(width: 8),
             if (!isNew || hasNumber) _statusIcon(_edited.paymentStatus, context),
           ],
         ),
+        
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(96),
           child: Column(

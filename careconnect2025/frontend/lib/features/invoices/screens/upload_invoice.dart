@@ -2,7 +2,6 @@ import 'package:care_connect_app/features/invoices/services/invoice_ocr_llm_api.
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/widgets/review_photos_screen.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -47,8 +46,8 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     for (final f in picked.files) {
       final path = f.path;
-      if (path == null) continue;
-      final e = ext(path);
+      if (path == null) continue;     
+       final e = ext(f.name); 
       if (e == 'png' || e == 'jpg' || e == 'jpeg') {
         imagePaths.add(path);
       } else if (e == 'pdf') {
@@ -81,7 +80,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
       final res = await runWithBlockingDialog<InvoiceResponseDto?>(
         context: context,
-        message: 'Extracting invoice data from images. This may take 15 to 20 seconds.',
+        message: 'Extracting invoice data from images. This may take a minute.',
         future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
       );
 
@@ -93,7 +92,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     if (pdfPaths.isNotEmpty) {
       final res = await runWithBlockingDialog<InvoiceResponseDto?>(
         context: context,
-        message: 'Extracting invoice data from PDF files. This may take 15 to 20 seconds.',
+        message: 'Extracting invoice data from PDF files. This may take a minute.',
         future: InvoiceOcrLlmApi.extractWithLlm(pdfPaths: pdfPaths),
       );
 
@@ -128,7 +127,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     final res = await runWithBlockingDialog<InvoiceResponseDto?>(
       context: context,
-      message: 'Extracting invoice data from images. This may take 15 to 20 seconds.',
+      message: 'Extracting invoice data from images. This may take a minute.',
       future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
     );
 
@@ -156,16 +155,12 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     // Do not save here. Go to detail so user can review and save there.
     if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(
-          invoice: res.invoice,
-          isNew: res.invoice.id.isEmpty,
-        ),
-      ),
-    );
+    await   Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute(builder: (_) => InvoiceDetailPage( invoice: res.invoice,
+          isNew: res.invoice.id.isEmpty)),
+                                );
   }
+
 
   Future<void> _onManualEntry() async {
     if (!mounted) return;
