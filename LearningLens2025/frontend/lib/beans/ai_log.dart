@@ -72,7 +72,7 @@ class AiLog {
   String getStringForColumn(int column) {
     if (column == 7) {
       return DateFormat.yMd().add_jms().format(created.toLocal());
-    }else {
+    } else {
       return getValueForColumn(column).toString();
     }
   }

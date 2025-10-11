@@ -483,9 +483,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
     final DateTime? picked = await showDatePicker(
       cancelText: "Clear",
       context: context,
-      initialDate: startDate ?? (endDate == null ? lastPossibleDate : endDate!),
+      initialDate: startDate ?? (endDate ?? lastPossibleDate),
       firstDate: earliestPossibleDate,
-      lastDate: endDate == null ? lastPossibleDate : endDate!,
+      lastDate: endDate ?? lastPossibleDate,
     );
 
     setState(() {
@@ -500,8 +500,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
       cancelText: "Clear",
       context: context,
       initialDate: lastPossibleDate,
-      firstDate:
-          endDate ?? (startDate == null ? earliestPossibleDate : startDate!),
+      firstDate: endDate ?? (startDate ?? earliestPossibleDate),
       lastDate: lastPossibleDate,
     );
 
