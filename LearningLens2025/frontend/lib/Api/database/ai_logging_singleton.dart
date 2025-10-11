@@ -61,7 +61,7 @@ class AILoggingSingleton {
   }
 
   String getDateString(DateTime date) {
-    return date.toUtc().toString().split(' ')[0];
+    return date.toUtc().toString();
   }
 
   Future<String> addLog(AiLog log) async {
