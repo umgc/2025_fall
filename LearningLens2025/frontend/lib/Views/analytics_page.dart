@@ -1423,7 +1423,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             color: Colors.white,
                             border: BoxBorder.all(
                                 color: Theme.of(context).colorScheme.primary)),
-                        child: data == null
+                        child: data == null || data.isEmpty
                             ? Text("No AI Analysis Data found.")
                             : showChart
                                 ? BarChart(BarChartData(
