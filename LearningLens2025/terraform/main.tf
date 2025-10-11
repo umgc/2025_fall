@@ -241,6 +241,7 @@ resource "null_resource" "build_docker_c_image" {
     dep_id = time_sleep.after_python.triggers["dep_id"]
     script_hash = sha1(file("../docker/dockerupload.ps1"))
     docker_hash = sha1(file("../docker/Dockerc"))
+    docker_hash = sha1(file("../docker/runcode.sh"))
   }
   provisioner "local-exec" {
     working_dir = "../docker/"
@@ -356,4 +357,3 @@ resource "aws_lambda_function_url" "get_token_url" {
     allow_headers = ["content-type"]
   }
 }
-
