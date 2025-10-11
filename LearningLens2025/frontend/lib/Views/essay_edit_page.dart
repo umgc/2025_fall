@@ -357,6 +357,19 @@ class EssayEditPageState extends State<EssayEditPage> {
         return;
       }
 
+      if (headerControllers
+              .where((element) => element.text.trim() == text)
+              .length >
+          1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Score level $text% is not unique.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       if (value > 100) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -448,41 +461,38 @@ class EssayEditPageState extends State<EssayEditPage> {
     final scoreHeaders = levels.map((l) => '${l['score']}%').toList();
 
     pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
         build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Rubric',
-                  style: pw.TextStyle(
-                      fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 16),
-              pw.TableHelper.fromTextArray(
-                headers: ['Criteria', 'Weight', ...scoreHeaders],
-                data: [
-                  for (var c in criteria)
-                    [
-                      c['description'] ?? '',
-                      c['weight'].toString(),
-                      for (var level in List<dynamic>.from(c['levels'] ?? []))
-                        level['definition'] ?? ''
-                    ]
-                ],
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                cellStyle: pw.TextStyle(fontSize: 12),
-                cellAlignment: pw.Alignment.topLeft,
-                headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
-                border: pw.TableBorder.all(color: PdfColors.grey),
-                columnWidths: {
-                  0: pw.FlexColumnWidth(1.7),
-                  1: pw.FlexColumnWidth(1),
-                  for (int i = 2; i < scoreHeaders.length + 2; i++)
-                    i: pw.FlexColumnWidth(1),
-                },
-              ),
-            ],
-          );
+          return [
+            pw.Text('Rubric',
+                style:
+                    pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 16),
+            pw.TableHelper.fromTextArray(
+              headers: ['Criteria', 'Weight', ...scoreHeaders],
+              data: [
+                for (var c in criteria)
+                  [
+                    c['description'] ?? '',
+                    c['weight'].toString(),
+                    for (var level in List<dynamic>.from(c['levels'] ?? []))
+                      level['definition'] ?? ''
+                  ]
+              ],
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellStyle: pw.TextStyle(fontSize: 12),
+              cellAlignment: pw.Alignment.topLeft,
+              headerDecoration: pw.BoxDecoration(color: PdfColors.grey300),
+              border: pw.TableBorder.all(color: PdfColors.grey),
+              columnWidths: {
+                0: pw.FlexColumnWidth(1.7),
+                1: pw.FlexColumnWidth(1),
+                for (int i = 2; i < scoreHeaders.length + 2; i++)
+                  i: pw.FlexColumnWidth(1),
+              },
+            ),
+          ];
         },
       ),
     );
