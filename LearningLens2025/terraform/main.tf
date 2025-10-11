@@ -90,86 +90,86 @@ variable "github_token" {
   type = string
 }
 
-# resource "aws_amplify_app" "edulenseweb" {
-#   name = "EduLenseApp"
-#   repository = "https://github.com/rappleb1/2025_fall/"
-#   access_token = var.github_token
-#   enable_branch_auto_build = true
+resource "aws_amplify_app" "edulenseweb" {
+  name = "EduLenseApp"
+  repository = "https://github.com/rappleb1/2025_fall/"
+  access_token = var.github_token
+  enable_branch_auto_build = true
 
-#   build_spec = <<-EOT
-#     version: 1
-#     frontend:
-#       phases:
-#         preBuild:
-#           commands:
-#             - echo "Installing Flutter SDK"
-#             - git clone https://github.com/flutter/flutter.git -b stable --depth 1
-#             - export PATH="$PATH:$(pwd)/flutter/bin"
-#             - flutter config --no-analytics
-#             - flutter doctor
-#             - echo "Installing dependencies"
-#             - cd LearningLens2025/frontend/
-#             - flutter pub get
-#             - flutter create . --platforms web
-#         build:
-#           commands:
-#             - echo "Building Flutter web application"
-#             - echo "$ENV_FILE" > .env
-#             - export ENV_FILE=
-#             - flutter build web
-#       artifacts:
-#         baseDirectory: LearningLens2025/frontend/build/web/
-#         files:
-#           - '**/*'
-#           - '.env'
-#           - 'assets/.env'
-#     test:
-#       phases:
-#         test:
-#           commands:
-#             - echo "Exporting Artifacts"
-#       artifacts:
-#         baseDirectory: LearningLens2025/frontend/build/web/
-#         files:
-#           - '**/*'
-#           - '.env'
-#           - 'assets/.env'
-#     cache:
-#       paths:
-#         - flutter/.pub-cache
-#   EOT
+  build_spec = <<-EOT
+    version: 1
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - echo "Installing Flutter SDK"
+            - git clone https://github.com/flutter/flutter.git -b stable --depth 1
+            - export PATH="$PATH:$(pwd)/flutter/bin"
+            - flutter config --no-analytics
+            - flutter doctor
+            - echo "Installing dependencies"
+            - cd LearningLens2025/frontend/
+            - flutter pub get
+            - flutter create . --platforms web
+        build:
+          commands:
+            - echo "Building Flutter web application"
+            - echo "$ENV_FILE" > .env
+            - export ENV_FILE=
+            - flutter build web
+      artifacts:
+        baseDirectory: LearningLens2025/frontend/build/web/
+        files:
+          - '**/*'
+          - '.env'
+          - 'assets/.env'
+    test:
+      phases:
+        test:
+          commands:
+            - echo "Exporting Artifacts"
+      artifacts:
+        baseDirectory: LearningLens2025/frontend/build/web/
+        files:
+          - '**/*'
+          - '.env'
+          - 'assets/.env'
+    cache:
+      paths:
+        - flutter/.pub-cache
+  EOT
 
-#   environment_variables = {
-#     ENV_FILE = file("../frontend/.env")
-#   }
-# }
+  environment_variables = {
+    ENV_FILE = file("../frontend/.env")
+  }
+}
 
-# resource "aws_amplify_branch" "master" {
-#   app_id      = aws_amplify_app.edulenseweb.id
-#   branch_name = "team_e"
+resource "aws_amplify_branch" "master" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = "team_e"
 
-#   stage = "PRODUCTION"
-# }
+  stage = "PRODUCTION"
+}
 
-# resource "aws_amplify_webhook" "deploy" {
-#   app_id      = aws_amplify_app.edulenseweb.id
-#   branch_name = aws_amplify_branch.master.branch_name
-#   description = "deployapp"
-# }
+resource "aws_amplify_webhook" "deploy" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = aws_amplify_branch.master.branch_name
+  description = "deployapp"
+}
 
-# data "http" "deploy" {
-#   url = aws_amplify_webhook.deploy.url
+data "http" "deploy" {
+  url = aws_amplify_webhook.deploy.url
 
-#   method = "POST"
+  method = "POST"
 
-#   request_headers = {
-#     Accept = "application/json"
-#   }
-# }
+  request_headers = {
+    Accept = "application/json"
+  }
+}
 
-# output "response" {
-#   value = data.http.deploy.response_body
-# }
+output "response" {
+  value = data.http.deploy.response_body
+}
 
 data "aws_region" "current" {}
 
