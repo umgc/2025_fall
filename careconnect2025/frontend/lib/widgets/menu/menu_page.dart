@@ -1,4 +1,5 @@
 import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/features/health/medication-tracker/pages/medication-tracker.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/widgets/menu/shortcut_search_delegate.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
@@ -89,8 +90,14 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.medication,
-        label: 'Medication Management',
-        route: '/medication',
+        label: 'Medication Tracker',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MedicationsTrackerPage()),
+          );
+        },
       ),
       _MenuItem(
         icon: Icons.public,
