@@ -821,6 +821,28 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
+  /// Add an existing patient to a caregiver's care list by email
+  static Future<http.Response> addExistingPatientToCaregiver({
+    required int caregiverId,
+    required String patientEmail,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+
+    print('🔍 addExistingPatientToCaregiver caregiverId: $caregiverId');
+    print('🔍 patientEmail: $patientEmail');
+
+    return await _httpClient
+        .post(
+          Uri.parse('${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add'),
+          headers: headers,
+          body: jsonEncode({'email': patientEmail}),
+        )
+        .timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+        );
+  }
+
   // ========================
   // PROFILE MANAGEMENT METHODS
   // ========================

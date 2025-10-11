@@ -1,7 +1,14 @@
 package com.careconnect.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+
+// TODO
+
+@Setter
+@Getter
 @Entity
 @Table(name = "check_in_questions")
 public class CheckInQuestion {
@@ -39,15 +46,4 @@ public class CheckInQuestion {
         );
     }
 
-    public CheckInQuestionId getId() { return id; }
-    public CheckIn getCheckIn() { return checkIn; }
-    public Question getQuestion() { return question; }
-    public boolean isRequired() { return required; }
-    public int getOrdinal() { return ordinal; }
-
-    public void setId(CheckInQuestionId id) { this.id = id; }
-    public void setCheckIn(CheckIn checkIn) { this.checkIn = checkIn; }
-    public void setQuestion(Question question) { this.question = question; }
-    public void setRequired(boolean required) { this.required = required; }
-    public void setOrdinal(int ordinal) { this.ordinal = ordinal; }
 }
