@@ -397,7 +397,6 @@ main() {
         "2_general"
         "3_database"
         "4_compute"
-        "5_deploy"
     )
 
     # Check if all folders exist
