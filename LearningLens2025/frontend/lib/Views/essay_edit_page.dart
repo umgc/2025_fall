@@ -271,8 +271,24 @@ class EssayEditPageState extends State<EssayEditPage> {
                 SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: () => _handleButtonClick(() {
-                    final updatedRubric = jsonDecode(getUpdatedJson());
-                    exportPdf(updatedRubric, 'rubric.pdf');
+                    // Force Editable to commit any ongoing edits
+                    FocusScope.of(context).unfocus();
+
+                    // Wait a moment for state update to finish
+                    Future.delayed(Duration(milliseconds: 200), () {
+                      final updatedJson = getUpdatedJson();
+                      final updatedRubric = jsonDecode(updatedJson);
+
+                      if (updatedRubric['criteria'] == null ||
+                          (updatedRubric['criteria'] as List).isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('No rubric data available to export')),
+                        );
+                        return;
+                      }
+
+                      exportPdf(updatedRubric, 'rubric.pdf');
+                    });
                   }),
                   icon: Icon(Icons.picture_as_pdf),
                   label: Text("Export PDF"),
