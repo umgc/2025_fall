@@ -3,8 +3,6 @@ import fetch from "node-fetch";
 import path from "path";
 import { PassThrough } from 'stream';
 
-const OUTPUT_ZIP = "submissions.zip"
-
 // Moodle configuration
 const moodleUsername = process.env.MOODLE_USERNAME
 const moodlePassword = process.env.MOODLE_PASSWORD
@@ -129,4 +127,28 @@ export async function createSubmissionsZip(assignmentId) {
     // 4. Finalize the archive
     await archive.finalize();
     return Buffer.concat(chunks)
+}
+
+export async function updateGrade(studentId, assignmentId, grade, feedback){
+    console.log('Updating grade for student', studentId, assignmentId)
+    const token = await getAuthToken()
+
+    const params = new URLSearchParams({
+        wstoken: token,
+        wsfunction: "mod_assign_save_grade",
+        moodlewsrestformat: "json",
+    });
+
+    params.append("assignmentid", assignmentId);
+    params.append("userid", studentId);
+    params.append("grade", grade);
+    params.append("attemptnumber", -1); // -1 = latest attempt
+    params.append("addattempt", 0);
+    params.append("workflowstate", "released"); // ✅ Immediately visible to student
+    params.append("applytoall", 0);
+    params.append("plugindata[assignfeedbackcomments_editor][text]", feedback);
+    params.append("plugindata[assignfeedbackcomments_editor][format]", 1);
+
+    const res = await fetch(`${MOODLE_API}?${params}`)
+    console.log('Response', await res.json())
 }

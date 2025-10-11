@@ -2,7 +2,7 @@ import { DescribeTaskDefinitionCommand, ECSClient, RunTaskCommand } from "@aws-s
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
-import { createSubmissionsZip } from './moodle.js';
+import { createSubmissionsZip, updateGrade } from './moodle.js';
 
 /**
  * Starts the ECS task to evaluate student submissions
@@ -89,6 +89,14 @@ async function startEvaluation(body){
     return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId)
 }
 
+
+/**
+ * 
+ * @param {postgres.Sql<{}>} client 
+ * @param {*} courseId 
+ * @param {*} assignmentId 
+ * @param {*} evaluation 
+ */
 async function storeEvaluationResults(client, courseId, assignmentId, evaluation){
     await client`
         UPDATE code_evaluation 
@@ -97,6 +105,24 @@ async function storeEvaluationResults(client, courseId, assignmentId, evaluation
         WHERE course_id = ${courseId}
         AND assignment_id = ${assignmentId};
     `
+
+    const rows = await client`
+        SELECT expected_output FROM code_evaluation
+        WHERE course_id = ${courseId}
+        AND assignment_id = ${assignmentId}
+    `
+
+    console.log(rows)
+    const expectedOutput = rows[0].expected_output
+
+    for(const result of evaluation){
+        if(result['output'] == expectedOutput){
+            await updateGrade(result['studentId'], assignmentId, 100, 'Output matched what was expected')
+        }
+        else{
+            await updateGrade(result['studentId'], assignmentId, 0, 'Output did not match what was expected')
+        }
+    }
 }
 
 /**
@@ -122,14 +148,14 @@ async function handleGET(client, event, context){
                     finish_time timestamptz,
                     primary key (course_id, assignment_id, username)
                 );`
-            case 'start':
+           /*  case 'start':
                 const body = JSON.parse(event.body)
                 const taskDef = await startEvaluation(body)
                 
                 return {
                     statusCode: 200,
                     body: JSON.stringify(taskDef)
-                }
+                } */
         }
     }
 
@@ -187,6 +213,9 @@ async function handlePOST(client, event, context){
             finish_time = NULL;
     `
 
+    const taskDef = await startEvaluation(body)
+    console.log('Task Definition', taskDef)
+    
     return {
         statusCode: 200,
         body: 'Success',

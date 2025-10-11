@@ -10,6 +10,7 @@ unzip code.zip
 
 # Initialize JSON array
 json="["
+shopt -s nullglob
 
 # Loop over each directory in the current directory
 for dir in */ ; do
@@ -24,12 +25,12 @@ for dir in */ ; do
     # Enter the directory
     cd "$dir" || continue
 
-    # Loop through each .c file
-    for file in *.c; do
-        exe="./$(basename "$file" .c).out"
+    # Loop through each .c and *.cpp file
+    for file in *.c *.cpp; do
+        exe="./$(basename "$file" | sed 's/\.[^.]*$//').out"
 
         # Compile the C file, capture stderr
-        if gcc "$file" -o "$exe" 2>gcc_error.log; then
+        if g++ "$file" -o "$exe" 2>gcc_error.log; then
             # Run the program and capture stdout and stderr
             output=$("$exe" 2>&1)
             combined_output+="$output"

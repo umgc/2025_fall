@@ -30,12 +30,14 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
-  final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
+  // final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
+  final List<String> languages = ['C', 'C++'];
 
   Course? selectedCourse;
   Assignment? selectedAssignment;
   String? selectedLanguage;
 
+  bool _isLoading = false;
 
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
@@ -68,8 +70,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     }
   }
 
-  Future<void> _startEvaluation(
-    Course course, Assignment assignment, String expectedOutput, String language) async {
+  Future<void> _startEvaluation(Course course, Assignment assignment,
+      String expectedOutput, String language) async {
     final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
         body: jsonEncode({
           'courseId': course.id,
@@ -83,15 +85,18 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       _showSnackBar(SnackBar(
           backgroundColor: Colors.red[700],
           content: Text(
-              'Unable to evaluate coding assignment: status code ${response.statusCode}')));
+              'Unable to evaluate coding assignment: status code ${response.body}')));
 
       debugPrint(response.body);
       return;
     }
 
     _showSnackBar(SnackBar(
-        backgroundColor: Colors.green,
-        content: Text('Evaluation started successfully')));
+      backgroundColor: Colors.green,
+      content:
+          Text('Evaluation started successfully. Check back in a few minutes.'),
+      duration: Duration(seconds: 8),
+    ));
 
     if (onEvaluationStarted != null) {
       await onEvaluationStarted!(course, assignment, expectedOutput);
@@ -163,30 +168,29 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
                 // Language selection dropdown
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: "Language",
-                      border: OutlineInputBorder(),
-                    ),
-                    value: languages[0],
-                    items: languages.map((lang) => 
-                      DropdownMenuItem(
-                        value: lang,
-                        child: Text(lang),
-                      )
-                    ).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedLanguage = value;
-                      });
-                    }
-                  )
-                ),
+                    child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: "Language",
+                          border: OutlineInputBorder(),
+                        ),
+                        value: languages[0],
+                        items: languages
+                            .map((lang) => DropdownMenuItem(
+                                  value: lang,
+                                  child: Text(lang),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedLanguage = value;
+                          });
+                        })),
                 SizedBox(width: 12),
 
                 // Expected Output TextField
                 Expanded(
                   child: TextFormField(
+                    maxLines: null,
                     controller: outputController,
                     decoration: InputDecoration(
                       labelText: "Expected Output",
@@ -197,35 +201,63 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
               ],
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 40, vertical: 16), // bigger size
-                textStyle: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold), // bigger text
-                backgroundColor: Colors.deepPurpleAccent, // primary color
-                foregroundColor: Colors.white, // text color
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12), // rounded corners
+            if (_isLoading)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 16), // bigger size
+                  textStyle: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold), // bigger text
+                  backgroundColor: Colors.deepPurpleAccent, // primary color
+                  foregroundColor: Colors.white, // text color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // rounded corners
+                  ),
+                  elevation: 5, // shadow for prominence
                 ),
-                elevation: 5, // shadow for prominence
-              ),
-              onPressed: !isFormValid
-                  ? null
-                  : () async {
-                      await _startEvaluation(
-                        selectedCourse!,
-                        selectedAssignment!, 
-                        outputController.text,
-                        selectedLanguage!
-                      );
+                onPressed: null,
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2),
+                ),
+              )
+            else
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 40, vertical: 16), // bigger size
+                  textStyle: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold), // bigger text
+                  backgroundColor: Colors.deepPurpleAccent, // primary color
+                  foregroundColor: Colors.white, // text color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12), // rounded corners
+                  ),
+                  elevation: 5, // shadow for prominence
+                ),
+                onPressed: !isFormValid
+                    ? null
+                    : () async {
+                        setState(() {
+                          _isLoading = true;
+                        });
 
-                      debugPrint("Course: $selectedCourse");
-                      debugPrint("Assignment: $selectedAssignment");
-                      debugPrint("Expected Output: ${outputController.text}");
-                    },
-              child: Text("Create"),
-            )
+                        try {
+                          await _startEvaluation(
+                              selectedCourse!,
+                              selectedAssignment!,
+                              outputController.text,
+                              selectedLanguage!);
+                        } finally {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        }
+                      },
+                child: Text("Create"),
+              )
           ],
         ),
       ),
