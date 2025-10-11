@@ -1,19 +1,102 @@
-import { GetFunctionConfigurationCommand, LambdaClient } from "@aws-sdk/client-lambda";
+import { DescribeTaskDefinitionCommand, ECSClient, RunTaskCommand } from "@aws-sdk/client-ecs";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
+import { createSubmissionsZip } from './moodle.js';
 
+/**
+ * Starts the ECS task to evaluate student submissions
+ * @param {string} s3Uri s3Uri S3 URI for zip file containing student submissions
+ * @param {string|number} assignmentId 
+ * @param {string|number} courseId 
+ * @returns 
+ */
+async function startECSTask(s3Uri, assignmentId, courseId){
+    const ecsClient = new ECSClient({ region: process.env.AWS_REGION });
+    const subnets = process.env.SUBNET_IDS.split(",");
+    const securityGroups = process.env.SECURITY_GROUP_IDS.split(",");
 
-async function getVPCConfig(){
-    const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION });
-    const command = new GetFunctionConfigurationCommand({
-        FunctionName: process.env.AWS_LAMBDA_FUNCTION_NAME, // current function name
-    });
-    const config = await lambdaClient.send(command);
+    try {
+        // Grab the task definition info to get the latest container name
+        const taskDefName = process.env.ECS_TASK_NAME
+        const taskDefCmd = new DescribeTaskDefinitionCommand({
+            taskDefinition: taskDefName,
+        });
+        const taskDefResponse = await ecsClient.send(taskDefCmd);
 
-    console.log("VPC Config:", config);
-    // Example output: { SubnetIds: [ 'subnet-abc123' ], SecurityGroupIds: [ 'sg-xyz789' ], VpcId: 'vpc-112233' }
+        console.log('taskDefResponse', taskDefResponse)
 
-    return config;
+        const { taskDefinition } = taskDefResponse
+        // Latest container definition
+        const container = taskDefinition.containerDefinitions[0];
+        
+        console.log(taskDefResponse.taskDefinition.containerDefinitions)
+        const functionName = process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+        const command = new RunTaskCommand({
+            cluster: process.env.ECS_CLUSTER_ARN, // ECS cluster name or ARN
+            taskDefinition: taskDefinition.taskDefinitionArn, // family:revision or ARN
+            launchType: "FARGATE", // or "EC2"
+            networkConfiguration: {
+                awsvpcConfiguration: {
+                    subnets: subnets,
+                    securityGroups: securityGroups,
+                    assignPublicIp: "ENABLED",
+                },
+            },
+            overrides: {
+                containerOverrides: [
+                    {
+                        name: container.name, // must match container name in task definition
+                        environment: [
+                            { name: "CODE_S3_URI", value: s3Uri },
+                            { name: "LAMBDA_NAME", value: functionName },
+                            { name: "ASSIGNMENT_ID", value: assignmentId.toString() },
+                            { name: "COURSE_ID", value: courseId.toString() },
+                        ],
+                    },
+                ],
+            },
+        });
+
+        const response = await ecsClient.send(command);
+        console.log("Task started:", response.tasks);
+        return response;
+    }
+    catch (err) {
+        console.error("Error running ECS task:", err);
+        throw err;
+    }
+}
+
+async function startEvaluation(body){
+    const { assignmentId, courseId, expectedOutput } = body
+    const zipFile = await createSubmissionsZip(assignmentId)
+    const s3Client = new S3Client({ region: "us-east-1" });
+    console.log('uploading to S3')
+    const key = `${courseId}/${assignmentId}/submissions.zip`;
+    
+    const bucket = process.env.S3_BUCKET;
+    await s3Client.send(
+        new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: zipFile,
+            ContentType: "application/zip",
+        })
+    );
+
+    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId)
+}
+
+async function storeEvaluationResults(client, courseId, assignmentId, evaluation){
+    await client`
+        UPDATE code_evaluation 
+        SET status = 'JOB FINISHED', finish_time = now(),
+            results_json = ${JSON.stringify(evaluation)}
+        WHERE course_id = ${courseId}
+        AND assignment_id = ${assignmentId};
+    `
 }
 
 /**
@@ -39,16 +122,16 @@ async function handleGET(client, event, context){
                     finish_time timestamptz,
                     primary key (course_id, assignment_id, username)
                 );`
-            case 'getConf':
-                const config = await getVPCConfig()
+            case 'start':
+                const body = JSON.parse(event.body)
+                const taskDef = await startEvaluation(body)
+                
                 return {
                     statusCode: 200,
-                    body: JSON.stringify(config)
+                    body: JSON.stringify(taskDef)
                 }
         }
     }
-
-
 
     const username = event.queryStringParameters?.username
     if(!username){
@@ -104,11 +187,9 @@ async function handlePOST(client, event, context){
             finish_time = NULL;
     `
 
-    const vpcConfig = await getVPCConfig()
-
     return {
         statusCode: 200,
-        body: JSON.stringify(vpcConfig),
+        body: 'Success',
     }
 }
 
@@ -132,6 +213,15 @@ export const handler = async (event, context) => {
         rejectUnauthorized: true,
       },
     })
+
+    // evalution key being present signifies payload from ECS container
+    if(event.evaluation){
+        await storeEvaluationResults(client, event.courseId, event.assignmentId, event.evaluation)
+        return {
+            statusCode: 200,
+            body: 'Success'
+        }
+    }
 
     const method = event["requestContext"]["http"]["method"];
 
