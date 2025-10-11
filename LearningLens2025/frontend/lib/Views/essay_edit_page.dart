@@ -282,7 +282,9 @@ class EssayEditPageState extends State<EssayEditPage> {
                       if (updatedRubric['criteria'] == null ||
                           (updatedRubric['criteria'] as List).isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('No rubric data available to export')),
+                          SnackBar(
+                              content:
+                                  Text('No rubric data available to export')),
                         );
                         return;
                       }
@@ -319,7 +321,8 @@ class EssayEditPageState extends State<EssayEditPage> {
     final allRows = List<Map<String, dynamic>>.from(rows);
     for (var editedRow in editableState.editedRows) {
       int rowIndex = editedRow['row'];
-      Map<String, dynamic> safeRow = Map<String, dynamic>.from(allRows[rowIndex]);
+      Map<String, dynamic> safeRow =
+          Map<String, dynamic>.from(allRows[rowIndex]);
 
       editedRow.forEach((key, value) {
         if (key != 'row') safeRow[key] = value ?? '';
