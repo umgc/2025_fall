@@ -1,6 +1,6 @@
 package com.careconnect.evv;
 
-import com.careconnect.service.EvvSubmissionService;
+import com.careconnect.service.evv.EvvSubmissionService;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;

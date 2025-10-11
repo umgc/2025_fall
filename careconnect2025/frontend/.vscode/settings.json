@@ -7,6 +7,14 @@
         {
             "filePath": "lib\\config\\navigation\\bottom_nav_config.dart",
             "group": "Default"
+        },
+        {
+            "filePath": "lib\\features\\evv",
+            "group": "Default"
+        },
+        {
+            "filePath": "lib\\features\\invoices",
+            "group": "Default"
         }
     ]
 }

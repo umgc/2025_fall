@@ -1,4 +1,4 @@
-package com.careconnect.dto;
+package com.careconnect.dto.evv;
 
 import com.careconnect.model.evv.EvvParticipant;
 import com.careconnect.model.evv.EvvRecord;

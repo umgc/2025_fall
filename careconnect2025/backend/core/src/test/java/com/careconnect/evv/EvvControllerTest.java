@@ -2,8 +2,8 @@ package com.careconnect.evv;
 
 import org.junit.jupiter.api.Test;
 import java.time.*;
-import com.careconnect.dto.CreateParticipationRequestDto;
-import com.careconnect.dto.EvvRecordRequestDto;
+import com.careconnect.dto.evv.CreateParticipationRequestDto;
+import com.careconnect.dto.evv.EvvRecordRequestDto;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class EvvControllerTest {

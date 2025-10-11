@@ -2,9 +2,9 @@ package com.careconnect.evv;
 
 import com.careconnect.model.evv.EvvParticipant;
 import com.careconnect.model.evv.EvvRecord;
-import com.careconnect.service.AuditLogger;
-import com.careconnect.service.EvvOutboxService;
-import com.careconnect.service.EvvSubmissionService;
+import com.careconnect.service.evv.AuditLogger;
+import com.careconnect.service.evv.EvvOutboxService;
+import com.careconnect.service.evv.EvvSubmissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;

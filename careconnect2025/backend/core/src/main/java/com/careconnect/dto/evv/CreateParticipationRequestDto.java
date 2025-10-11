@@ -1,4 +1,4 @@
-package com.careconnect.dto;
+package com.careconnect.dto.evv;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

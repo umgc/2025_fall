@@ -1,6 +1,6 @@
-package com.careconnect.service;
+package com.careconnect.service.evv;
 
-import com.careconnect.dto.*;
+import com.careconnect.dto.evv.*;
 import com.careconnect.model.evv.EvvCorrection;
 import com.careconnect.model.evv.EvvOfflineQueue;
 import com.careconnect.model.evv.EvvParticipant;

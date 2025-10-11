@@ -1,4 +1,4 @@
-package com.careconnect.dto;
+package com.careconnect.dto.evv;
 
 import lombok.*;
 import java.time.LocalDate;

@@ -14,12 +14,16 @@ import 'package:flutter/material.dart';
 ///
 /// The screen includes pull-to-refresh functionality and real-time search filtering.
 class CaregiverPatientList extends StatefulWidget {
+  /// Creates a CaregiverPatientList widget.
   const CaregiverPatientList({super.key});
 
   @override
   State<CaregiverPatientList> createState() => _CaregiverPatientList();
 }
 
+/// Private state class for CaregiverPatientList.
+///
+/// Manages patient data loading, filtering, and search functionality.
 class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// Complete list of all patients assigned to this caregiver
   List<Patient> _allPatients = [];
@@ -33,6 +37,9 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// Loading state indicator for async operations
   bool _isLoading = false;
 
+  /// Initializes the widget state.
+  ///
+  /// Sets up the search controller listener and loads initial patient data.
   @override
   void initState() {
     super.initState();
@@ -40,6 +47,9 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
     _searchController.addListener(_onSearchChanged);
   }
 
+  /// Cleans up resources when the widget is disposed.
+  ///
+  /// Removes the search controller listener and disposes of the controller.
   @override
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
@@ -50,8 +60,12 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// Loads patient data from the server.
   ///
   /// Currently uses mock data with simulated network delay.
+  /// In production, this would make an actual API call to fetch
+  /// the caregiver's assigned patients.
+  ///
+  /// Returns:
+  /// * Future<void> - Completes when patient data is loaded
   Future<void> _loadPatients() async {
-    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -59,11 +73,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
     // Simulate API call with delay
     await Future.delayed(const Duration(seconds: 1));
 
-    if (!mounted) return;
-
     final patients = _generateMockPatients();
-
-    if (!mounted) return;
     setState(() {
       _allPatients = patients;
       _filteredPatients = patients;
@@ -72,6 +82,12 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   }
 
   /// Generates mock patient data for testing and development.
+  ///
+  /// Creates a list of sample patients with varying health statuses,
+  /// mood indicators, and urgency levels to demonstrate the UI.
+  ///
+  /// Returns:
+  /// * List<Patient> - A list of mock patient objects
   List<Patient> _generateMockPatients() {
     return [
       Patient(
@@ -150,43 +166,58 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   }
 
   /// Handles search text changes and filters the patient list.
+  ///
+  /// Filters patients based on the search query using multiple matching strategies:
+  /// - Exact substring matching in full name
+  /// - Prefix matching on first and last names
+  /// - Fuzzy matching for typo tolerance
+  ///
+  /// Updates the filtered patient list and triggers a rebuild.
   void _onSearchChanged() {
-    if (!mounted) return;
-
     final query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) {
-      if (!mounted) return;
       setState(() {
         _filteredPatients = _allPatients;
       });
-      return;
+    } else {
+      final results = _allPatients.where((patient) {
+        final fullName = patient.fullName.toLowerCase();
+        final firstName = patient.firstName.toLowerCase();
+        final lastName = patient.lastName.toLowerCase();
+
+        // Check if query matches any part of the name
+        return fullName.contains(query) ||
+            firstName.startsWith(query) ||
+            lastName.startsWith(query) ||
+            _fuzzyMatch(query, fullName);
+      }).toList();
+
+      setState(() {
+        _filteredPatients = results;
+      });
     }
-
-    final results = _allPatients.where((patient) {
-      final fullName = patient.fullName.toLowerCase();
-      final firstName = patient.firstName.toLowerCase();
-      final lastName = patient.lastName.toLowerCase();
-
-      return fullName.contains(query) ||
-          firstName.startsWith(query) ||
-          lastName.startsWith(query) ||
-          _fuzzyMatch(query, fullName);
-    }).toList();
-
-    if (!mounted) return;
-    setState(() {
-      _filteredPatients = results;
-    });
   }
 
-  /// Performs a simple fuzzy match for typo tolerance.
+  /// Performs fuzzy matching to handle search typos.
+  ///
+  /// Compares characters position by position and allows for a limited
+  /// number of differences based on the query length. Shorter queries
+  /// allow fewer differences to maintain search relevance.
+  ///
+  /// Parameters:
+  /// * [query] - The search query string (lowercase)
+  /// * [target] - The target string to match against (lowercase)
+  ///
+  /// Returns:
+  /// * bool - True if the strings match within the allowed difference threshold
   bool _fuzzyMatch(String query, String target) {
     if (query.length <= 2) return false;
 
-    final allowedDifferences = query.length <= 4 ? 1 : 2;
-    var differences = 0;
+    // Allow for 1-2 character differences depending on length
+    int allowedDifferences = query.length <= 4 ? 1 : 2;
+    int differences = 0;
 
-    for (var i = 0; i < query.length && i < target.length; i++) {
+    for (int i = 0; i < query.length && i < target.length; i++) {
       if (query[i] != target[i]) {
         differences++;
         if (differences > allowedDifferences) {
@@ -198,9 +229,36 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
     return differences <= allowedDifferences;
   }
 
+  /// Returns the count of patients requiring urgent attention.
+  ///
+  /// Counts patients where the isUrgent flag is true.
+  ///
+  /// Returns:
+  /// * int - Number of urgent cases
   int get urgentCasesCount => _allPatients.where((p) => p.isUrgent).length;
+
+  /// Returns the count of patients with normal status.
+  ///
+  /// Counts patients where the isUrgent flag is false.
+  ///
+  /// Returns:
+  /// * int - Number of normal status cases
   int get normalCasesCount => _allPatients.where((p) => !p.isUrgent).length;
 
+  /// Builds the main UI for the caregiver patient list screen.
+  ///
+  /// Creates a scaffold with:
+  /// - App header
+  /// - Statistics cards showing urgent and normal cases
+  /// - Search bar with filter options
+  /// - Patient list with pull-to-refresh functionality
+  /// - Loading states and empty state handling
+  ///
+  /// Parameters:
+  /// * [context] - The build context
+  ///
+  /// Returns:
+  /// * Widget - The complete patient list screen UI
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -209,10 +267,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
       backgroundColor: theme.colorScheme.surface,
       appBar: DefaultAppHeader(),
       body: RefreshIndicator(
-        onRefresh: () async {
-          if (!mounted) return;
-          await _loadPatients();
-        },
+        onRefresh: _loadPatients,
         child: Column(
           children: [
             // Stats Cards
@@ -271,8 +326,8 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  // If you are not on Flutter 3.22+ replace with .withOpacity
-                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  fillColor: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.3),
                 ),
               ),
             ),
@@ -288,44 +343,43 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                       ),
                     )
                   : _filteredPatients.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: 64,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No patients found',
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No patients found',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _filteredPatients.length,
+                      itemBuilder: (context, index) {
+                        final patient = _filteredPatients[index];
+                        return PatientCard(
+                          patient: patient,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => PatientDetailsPage(
+                                  patientId: patient.id,   // or patient: patient
                                 ),
                               ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _filteredPatients.length,
-                          itemBuilder: (context, index) {
-                            final patient = _filteredPatients[index];
-                            return PatientCard(
-                              patient: patient,
-                              onTap: () {
-                                if (!mounted) return;
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => PatientDetailsPage(
-                                      patientId: patient.id,
-                                    ),
-                                  ),
-                                );
-                              },
                             );
                           },
-                        ),
+                        );
+                      },
+              ),
             ),
           ],
         ),
@@ -334,6 +388,18 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   }
 
   /// Builds a statistics card widget.
+  ///
+  /// Creates a card displaying a count and label with appropriate styling.
+  /// Used for showing urgent cases and normal status counts.
+  ///
+  /// Parameters:
+  /// * [count] - The numerical value to display
+  /// * [label] - The descriptive label for the statistic
+  /// * [color] - The color to use for the count text
+  /// * [theme] - The app theme data for consistent styling
+  ///
+  /// Returns:
+  /// * Widget - A styled card containing the statistic
   Widget _buildStatCard(
     String count,
     String label,

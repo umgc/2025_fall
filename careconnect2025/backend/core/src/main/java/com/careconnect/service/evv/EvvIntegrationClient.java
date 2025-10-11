@@ -1,4 +1,4 @@
-package com.careconnect.service;
+package com.careconnect.service.evv;
 
 import com.careconnect.model.evv.EvvRecord;
 

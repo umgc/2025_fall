@@ -1,12 +1,12 @@
 package com.careconnect.controller;
 
-import com.careconnect.dto.*;
+import com.careconnect.dto.evv.*;
 import com.careconnect.model.evv.EvvRecord;
 import com.careconnect.model.evv.EvvCorrection;
 import com.careconnect.model.evv.EvvOfflineQueue;
-import com.careconnect.service.EvvService;
-import com.careconnect.service.EvvSubmissionService;
-import com.careconnect.service.EvvOfflineSyncService;
+import com.careconnect.service.evv.EvvService;
+import com.careconnect.service.evv.EvvSubmissionService;
+import com.careconnect.service.evv.EvvOfflineSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;

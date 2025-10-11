@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../../services/enhanced_auth_service.dart';
-import '../../../../widgets/role_mismatch_dialog.dart';
-import '../../../../widgets/email_verification_dialog.dart';
-import '../../../../providers/user_provider.dart';
+
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
+import '../../../../providers/user_provider.dart';
+import '../../../../services/enhanced_auth_service.dart';
+import '../../../../widgets/email_verification_dialog.dart';
+import '../../../../widgets/role_mismatch_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   final String? userType;
@@ -60,14 +61,18 @@ class _LoginPageState extends State<LoginPage> {
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
-            builder: (context) =>
-                EmailVerificationDialog(email: user.email),
+            builder: (context) => EmailVerificationDialog(email: user.email),
           );
           return; // Don't proceed with navigation
         }
 
         // Save user info to Provider
         Provider.of<UserProvider>(context, listen: false).setUser(user);
+        await Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).fetchUserDetails();
+        print('fetchUserDetails completed');
 
         // Add a small delay to ensure JWT token is fully saved before navigation
         await Future.delayed(const Duration(milliseconds: 100));
