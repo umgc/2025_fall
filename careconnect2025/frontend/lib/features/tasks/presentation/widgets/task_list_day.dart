@@ -1,7 +1,8 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// =============================
 /// TaskListDay Widget
@@ -36,6 +37,7 @@ class TaskListDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final manager = context.watch<TaskTypeManager>();
     if (events.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16.0),
@@ -63,11 +65,10 @@ class TaskListDay extends StatelessWidget {
             ? patientNames[task.assignedPatientId] ?? "Unknown Patient"
             : "Unassigned";
 
+        final color = manager.getColor(task.taskType);
+        final icon = manager.getIcon(task.taskType);
         return ListTile(
-          leading: Icon(
-            TaskTypeUtils.getIcon(task.taskType),
-            color: TaskTypeUtils.getColor(task.taskType),
-          ),
+          leading: Icon(icon, color: color),
           title: Text(
             task.name,
             style: const TextStyle(fontWeight: FontWeight.bold),

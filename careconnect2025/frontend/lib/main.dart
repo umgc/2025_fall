@@ -1,20 +1,22 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:app_links/app_links.dart';
-import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'providers/user_provider.dart';
-import 'providers/theme_provider.dart';
+import 'package:provider/provider.dart';
+
 import 'config/router/app_router.dart';
-import 'services/auth_migration_helper.dart';
-import 'services/messaging_service.dart';
-import 'services/video_call_service.dart';
 import 'config/theme/app_theme.dart';
 import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
+import 'features/tasks/utils/task_type_manager.dart';
+import 'providers/theme_provider.dart';
+import 'providers/user_provider.dart';
+import 'services/auth_migration_helper.dart';
+import 'services/messaging_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +57,7 @@ Future<void> main() async {
           providers: [
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
+            ChangeNotifierProvider(create: (_) => TaskTypeManager()),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),
