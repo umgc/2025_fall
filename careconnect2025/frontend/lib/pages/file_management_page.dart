@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:care_connect_app/features/streaming_asr_with_diarization/streaming_asr.dart';
+import 'package:care_connect_app/features/streaming_asr_with_diarization/streaming_asr_and_diarization.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -500,8 +500,41 @@ class _FileManagementPageState extends State<FileManagementPage>
             const SizedBox(height: 24),
             // Speech to Text Section
             Card(
-              child: StreamingAsrScreen(),
+              child: StreamingAsrAndDiarizationScreen(
+                patientId: _userId,
+                onUploadSuccess: (response) {
+                  _loadFiles(); // Refresh the files list
+                },
+                onUploadError: (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                },
+              ),
             ),
+            // Speech to Text Section
+            // Card(
+            //   child: Padding(
+            //     padding: const EdgeInsets.all(16),
+            //     child: SpeechToTextCard(
+            //       patientId: _userId,
+            //       onUploadSuccess: (response) {
+            //         _loadFiles(); // Refresh the files list
+            //       },
+            //       onUploadError: (error) {
+            //         ScaffoldMessenger.of(context).showSnackBar(
+            //           SnackBar(
+            //             content: Text(error),
+            //             backgroundColor: Theme.of(context).colorScheme.error,
+            //           ),
+            //         );
+            //       },
+            //     ),
+            //   ),
+            // )
           ],
         ),
       ),
