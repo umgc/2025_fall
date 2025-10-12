@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart'; // For file saving on non-web pla
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
 import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
@@ -117,6 +118,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<Map<String, String>> _selectedStudentData = [];
   bool _selectedStudentWaiting = false;
   String? _selectedStudentError;
+  String _selectedGradeLevel = LearningLensConstants.gradeLevels.last;
 
   // For quiz assessments, question breakdown data.
   List<QuestionStatsType> _questionBreakdown = [];
@@ -729,6 +731,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ),
           const SizedBox(height: 12),
           Row(children: [
+            Spacer(),
+            Text("Grade Level: "),
+            DropdownButton<String>(
+              value: _selectedGradeLevel,
+              items: LearningLensConstants.gradeLevels.map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedGradeLevel =
+                      newValue ?? LearningLensConstants.gradeLevels.last;
+                });
+              },
+            )
+          ]),
+          Row(children: [
             ElevatedButton(
               onPressed: (_selectedCourse == null ||
                       _selectedSubject == null ||
@@ -738,6 +759,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               child: const Text('Generate'),
             ),
             Spacer(),
+            Text("LLM: "),
             DropdownButton<LlmType>(
                 value: selectedLLM,
                 onChanged: (LlmType? newValue) {
@@ -778,7 +800,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         _participantsData,
                         _selectedStudent?["id"],
                         isEssay() ? null : _questionBreakdown.toList(),
-                        _selectedStudentData)
+                        _selectedStudentData,
+                        _selectedGradeLevel)
                     : null,
                 child: _isAnalyzingSuccess ||
                         _isAnalyzingFail ||
@@ -1720,7 +1743,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       List<Participant> participantsData,
       int? selectedStudentId,
       List<QuestionStatsType>? questionBreakdown,
-      List<dynamic> selectedStudentData) async {
+      List<dynamic> selectedStudentData,
+      String selectedGradeLevel) async {
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1755,8 +1779,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             return "Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']))}";
           }
         }).join("\n");
-        futures.add(
-            _analyzeStudentTrend(selectedParticipant.fullname, studentGrades));
+        futures.add(_analyzeStudentTrend(
+            selectedParticipant.fullname, studentGrades, selectedGradeLevel));
       }
 
       // Build a summary string from the student breakdown data.
@@ -1801,12 +1825,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         }).join("\n");
 
         futures.addAll([
-          _analyzeEssaySuccess(
-              selectedAssessment.name, assignmentDescription, studentSummary),
-          _analyzeEssayMisunderstanding(
-              selectedAssessment.name, assignmentDescription, studentSummary),
-          _analyzeEssayAiUse(
-              selectedAssessment.name, assignmentDescription, aiSummary)
+          _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
+              studentSummary, selectedGradeLevel),
+          _analyzeEssayMisunderstanding(selectedAssessment.name,
+              assignmentDescription, studentSummary, selectedGradeLevel),
+          _analyzeEssayAiUse(selectedAssessment.name, assignmentDescription,
+              aiSummary, selectedGradeLevel)
         ]);
       } else {
         if (questionBreakdown == null) {
@@ -1834,22 +1858,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 selectedAssessment.name,
                 assignmentDescription,
                 studentSummary,
-                selectedParticipant.fullname),
+                selectedParticipant.fullname,
+                selectedGradeLevel),
             _analyzeStudentQuizMisunderstanding(
                 selectedAssessment.name,
                 assignmentDescription,
                 studentSummary,
-                selectedParticipant.fullname)
+                selectedParticipant.fullname,
+                selectedGradeLevel)
           ]);
         } else {
           studentSummary = questionBreakdown.map((q) {
             return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
           }).join("\n");
           futures.addAll([
-            _analyzeCourseQuizSuccess(
-                selectedAssessment.name, assignmentDescription, studentSummary),
-            _analyzeCourseQuizMisunderstanding(
-                selectedAssessment.name, assignmentDescription, studentSummary)
+            _analyzeCourseQuizSuccess(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel),
+            _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel)
           ]);
         }
       }
@@ -1860,13 +1886,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             selectedCourse.fullName,
             assignmentDescription,
             _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"]),
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+            selectedGradeLevel),
         _analyzeCourseImprovements(
             selectedAssessment.name,
             selectedCourse.fullName,
             assignmentDescription,
             _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"])
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+            selectedGradeLevel)
       ]);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1887,13 +1915,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
-  Future<void> _analyzeStudentTrend(
-      String studentName, String studentGrades) async {
+  Future<void> _analyzeStudentTrend(String studentName, String studentGrades,
+      String selectedGradeLevel) async {
     String studentPrompt = """
-    Analyze student performance over time for student '$studentName'.
+    Analyze student performance over time for student '$studentName' for grade level '$selectedGradeLevel'.
     Student Assignment Submissions:
     $studentGrades
     Based on the list of student grades, perform an analysis of the student's performance over time.
+    The analysis should be appropriate for the indicated grade level.
     Determine if the student is improving over time, staying the same over time, or worsening over time.
     Provide insight into how their assignment grades have changed from the earliest submission to the last submission.
     Provide insight into which assignments have not been submitted.
@@ -1913,14 +1942,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeEssaySuccess(
-      String assessmentName, String essayPrompt, String studentSummary) async {
+  Future<void> _analyzeEssaySuccess(String assessmentName, String essayPrompt,
+      String studentSummary, String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt' for grade level '$selectedGradeLevel'.
     Student Assignment Submissions:
     $studentSummary
     Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students understood.
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students understood,
     based on the number of students who discussed that topic in their essay submission.
     For each area, provide the topic name and the percentage of student submissions that discussed the topic.
@@ -1958,13 +1988,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Future<void> _analyzeEssayMisunderstanding(
-      String assessmentName, String essayPrompt, String studentSummary) async {
+      String assessmentName,
+      String essayPrompt,
+      String studentSummary,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Compare the following student assignment submissions against the essay name '$assessmentName' with prompt '$essayPrompt' for grade level '$selectedGradeLevel'.
     Student Assignment Submissions:
     $studentSummary
     Based on the student submissions, provide a thorough analysis on which aspects of the assignment the students did not understand.
     To perform your analysis, compare each student submission to the essay name and the essay prompt.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary. Additionally, determine the top three topics from the essay prompt that students did not understand,
     based on the number of students who failed to discuss that topic in their essay submission.
     For each area, provide the topic name and the percentage of student submissions that did not discuss the topic.
@@ -2001,14 +2035,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeEssayAiUse(
-      String assessmentName, String essayPrompt, String aiSummary) async {
+  Future<void> _analyzeEssayAiUse(String assessmentName, String essayPrompt,
+      String aiSummary, String selectedGradeLevel) async {
     String successPrompt = """
-    Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt'.
+    Summarize how students used AI on the essay name '$assessmentName' with prompt '$essayPrompt' for grade level '$selectedGradeLevel'.
     Student AI Interactions:
     $aiSummary
     Based on the student AI interactions, provide a thorough analysis on how students used and reflected on AI use throughout the assignment.
     To perform your analysis, summarize the student prompts and reflections on AI use.
+    The analysis should be appropriate for the indicated grade level.
     If there is no AI use on this essay, then there is nothing to summarize.
     Provide a textual summary. Additionally, determine the top three AI use cases, each with a brief description and a percentage. If there was no AI use on this essay, then this list should be empty.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary' and
@@ -2049,14 +2084,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String assessmentName,
       String essayPrompt,
       String successes,
-      String failures) async {
+      String failures,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Recommend improvements that could be made to course '$courseName'.
+    Recommend improvements that could be made to course '$courseName' for grade level '$selectedGradeLevel'.
     Areas of Understanding:
     $successes
     Areas of Misunderstanding:
     $failures
     Based on the summaries of student understanding and student misunderstanding, recommend ways I can improve my course materials.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary for both course, as well as three assignments I could create for my course to improve student's understanding of the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
     and the list of recommended assignments are an object named 'Data' with keys 'Name' and 'Description'.
@@ -2096,14 +2133,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String assessmentName,
       String essayPrompt,
       String successes,
-      String failures) async {
+      String failures,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Recommend improvements that could be made to to assignment '$assessmentName' with description '$essayPrompt'.
+    Recommend improvements that could be made to to assignment '$assessmentName' with description '$essayPrompt' for grade level '$selectedGradeLevel'.
     Areas of Understanding:
     $successes
     Areas of Misunderstanding:
     $failures
     Based on the summaries of student understanding and student misunderstanding, recommend ways I can improve the assignment.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary for assignment improvements, as well as three references I could provide to students to help them better understand the topic.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary',
     and the list of recommended references are an object named 'Data' with keys 'URL' and 'Description'.
@@ -2156,10 +2195,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeStudentQuizSuccess(String quizName,
-      String quizDescription, String studentSummary, String studentName) async {
+  Future<void> _analyzeStudentQuizSuccess(
+      String quizName,
+      String quizDescription,
+      String studentSummary,
+      String studentName,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
+    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName' for grade level '$selectedGradeLevel'.
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student understood.
@@ -2170,6 +2213,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     A question that the student answered correctly will have a 'State' value of 'gradedright'.
     A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
     A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that student understood,
     based on number of questions about that topic the student answered correctly. If the student answered all questions incorrectly, then this list should be empty.
     For each topic, provide the topic name and the percentage of questions about that topic that were answered at least partially correctly.
@@ -2206,10 +2250,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     });
   }
 
-  Future<void> _analyzeStudentQuizMisunderstanding(String quizName,
-      String quizDescription, String studentSummary, String studentName) async {
+  Future<void> _analyzeStudentQuizMisunderstanding(
+      String quizName,
+      String quizDescription,
+      String studentSummary,
+      String studentName,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName'.
+    Compare the following student quiz results against the quiz name '$quizName' with description '$quizDescription' for student '$studentName' for grade level '$selectedGradeLevel'.
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the student did not understand.
@@ -2220,6 +2268,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     A question that the student answered correctly will have a 'State' value of 'gradedright'.
     A question that the student answered correctly will have a 'State' value of 'gradedwrong'.
     A question that the student answered partially correctly will have a 'State' value of 'gradedpartial'.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary.
     Additionally, determine the top three topics from the quiz that student did not understand,
     based on number of questions about that topic the student answered incorrectly. If the student answered all questions correctly, then this list should be empty.
@@ -2258,15 +2307,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Future<void> _analyzeCourseQuizSuccess(
-      String quizName, String quizDescription, String studentSummary) async {
+      String quizName,
+      String quizDescription,
+      String studentSummary,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
+    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription' for grade level '$selectedGradeLevel'.
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class understood.
     To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
     and compare the question text against the quiz name and description.
     If all questions have an 0% correctness rate, then there are no topics on this quiz that the course understood.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that the course understood,
     based on number of questions about that topic the course answered correctly.
     For each topic, provide the topic name and the percentage of questions about that topic that were answered correctly. If all questions have a 0% correctness rate, then this list should be empty.
@@ -2304,15 +2357,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Future<void> _analyzeCourseQuizMisunderstanding(
-      String quizName, String quizDescription, String studentSummary) async {
+      String quizName,
+      String quizDescription,
+      String studentSummary,
+      String selectedGradeLevel) async {
     String successPrompt = """
-    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription'.
+    Compare the following class quiz results against the quiz name '$quizName' with description '$quizDescription' for grade level '$selectedGradeLevel'.
     Student Quiz Results:
     $studentSummary
     Based on the student quiz performance, provide a thorough analysis on which aspects of the assignment the class did not understand.
     To perform your analysis, determine how many times each question was answered correctly, incorrectly, and partially correctly
     and compare the question text against the quiz name and description.
     If all questions have a 100% correctness rate, then there are no topics on this quiz that the course did not understand.
+    The analysis should be appropriate for the indicated grade level.
     Provide a textual summary. Additionally, determine the top three topics from the quiz that the course did not understand,
     based on number of questions about that topic the course answered incorrectly.
     For each topic, provide the topic name and the percentage of questions about that topic that were answered incorrectly.  If all questions have a 100% correctness rate, then this list should be empty.
