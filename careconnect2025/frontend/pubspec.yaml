@@ -30,6 +30,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_chat_core: ^2.0.0
+  flutter_chat_ui: ^2.0.0
+  uuid: ^4.2.1
   file_picker: ^10.3.3
   path: ^1.9.1
   shared_preferences: ^2.5.3
@@ -116,6 +119,7 @@ dependencies:
   # Flutter SDK
   flutter:
     sdk: flutter
+  flutter_svg: ^2.0.9  # Add this line
 
   web: ^1.1.0
   #speech to text, voice recognition, and diarization
@@ -155,6 +159,8 @@ flutter:
     - assets/sherpa-onnx-pyannote-segmentation-3-0/
     - assets/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
     - assets/sherpa-onnx-zipformer-gigaspeech-2023-12-12/
+    - assets/images/CareConnectLogo.png
+    - assets/images/CareConnectLogo.svg
     - .env
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
