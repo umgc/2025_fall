@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
+import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Controller/html_converter.dart';
@@ -40,6 +41,8 @@ import 'package:url_launcher/url_launcher.dart';
 /// Enum to represent export formats.
 enum ExportFormat { pdf, excel }
 
+enum AnalysisDataType { bar, list, line }
+
 /// AnalyticsPage displays the Analytics Dashboard where teachers can:
 ///  - View overall analytics data (live data fetched from the LMS)
 ///  - Generate a detailed report for essay assignments only (quizzes are omitted)
@@ -73,6 +76,14 @@ class Assessment {
       return (assessment as Quiz).id ?? 0;
     }
   }
+
+  DateTime? get dueDate {
+    if (type == "essay") {
+      return (assessment as Assignment).dueDate;
+    } else {
+      return (assessment as Quiz).timeClose;
+    }
+  }
 }
 
 class AnalyticsPage extends StatefulWidget {
@@ -102,6 +113,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Student breakdown report built from live LMS participant data.
   List<Map<String, dynamic>> _studentBreakdown = [];
   Map<String, dynamic>? _selectedStudent;
+  // Name, Type, Grade
   List<Map<String, String>> _selectedStudentData = [];
   bool _selectedStudentWaiting = false;
   String? _selectedStudentError;
@@ -121,12 +133,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<Map<String, dynamic>> _aiAnalysisAi = [];
   List<Map<String, dynamic>> _aiAnalysisCourse = [];
   List<Map<String, dynamic>> _aiAnalysisAssignment = [];
+  List<Map<String, dynamic>> _aiAnalysisStudent = [];
   bool _isAnalyzingSuccess = false;
   bool _isAnalyzingFail = false;
   bool _isAnalyzingAi = false;
   bool _isAnalyzingCourse = false;
   bool _isAnalyzingAssignment = false;
+  bool _isAnalyzingStudent = false;
   bool _lastAnalysisQuiz = false;
+  bool _lastAnalysisStudent = false;
 
   List<int> _expandedPanels = [0, 1, 2, 3, 4];
 
@@ -762,7 +777,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         _selectedAssessment!,
                         _participantsData,
                         _selectedStudent?["id"],
-                        isEssay() ? null : _questionBreakdown.toList())
+                        isEssay() ? null : _questionBreakdown.toList(),
+                        _selectedStudentData)
                     : null,
                 child: _isAnalyzingSuccess ||
                         _isAnalyzingFail ||
@@ -975,9 +991,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                 ),
                 Text(
-                  item['Grade']!,
+                  DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(
+                          int.parse(item['Due Date']!))
+                      .toLocal()),
                   style: const TextStyle(fontSize: 16),
                 ),
+                SizedBox(
+                    width: 50,
+                    child: Text(
+                      item['Grade']!,
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.right,
+                    )),
               ],
             ),
           );
@@ -1035,6 +1060,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           'Assessment': assessment.name,
           'Type': assessment.type.toUpperCase(),
           'Grade': gradeStr,
+          'Due Date':
+              assessment.dueDate?.millisecondsSinceEpoch.toString() ?? "N/A"
         };
       }());
     }
@@ -1288,7 +1315,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisSuccess[0].containsKey("Summary")
               ? null
               : _aiAnalysisSuccess[0]["Summary"],
-          true,
+          AnalysisDataType.bar,
           _aiAnalysisSuccess.length < 2 ||
                   !_aiAnalysisSuccess[1].containsKey("Data")
               ? null
@@ -1303,7 +1330,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisFail.isEmpty || !_aiAnalysisFail[0].containsKey("Summary")
               ? null
               : _aiAnalysisFail[0]["Summary"],
-          true,
+          AnalysisDataType.bar,
           _aiAnalysisFail.length < 2 || !_aiAnalysisFail[1].containsKey("Data")
               ? null
               : _aiAnalysisFail[1]["Data"],
@@ -1318,7 +1345,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisCourse[0].containsKey("Summary")
               ? null
               : _aiAnalysisCourse[0]["Summary"],
-          false,
+          AnalysisDataType.list,
           _aiAnalysisCourse.length < 2 ||
                   !_aiAnalysisCourse[1].containsKey("Data")
               ? null
@@ -1334,7 +1361,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   !_aiAnalysisAssignment[0].containsKey("Summary")
               ? null
               : _aiAnalysisAssignment[0]["Summary"],
-          false,
+          AnalysisDataType.list,
           _aiAnalysisAssignment.length < 2 ||
                   !_aiAnalysisAssignment[1].containsKey("Data")
               ? null
@@ -1351,13 +1378,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
               ? null
               : _aiAnalysisAi[0]["Summary"],
-          true,
+          AnalysisDataType.bar,
           _aiAnalysisAi.length < 2 || !_aiAnalysisAi[1].containsKey("Data")
               ? null
               : _aiAnalysisAi[1]["Data"],
           "Top AI Use Cases",
           "Area",
           "Percentage"));
+    }
+
+    if (_lastAnalysisStudent) {
+      children.add(_buildChild(
+          5,
+          "Student Trends",
+          _isAnalyzingStudent,
+          _aiAnalysisStudent.isEmpty ||
+                  !_aiAnalysisStudent[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisStudent[0]["Summary"],
+          AnalysisDataType.line,
+          _selectedStudentData,
+          "Student Grades Over Time",
+          "Grade",
+          "Due Date"));
     }
     return children;
   }
@@ -1367,15 +1410,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String title,
       bool wait,
       String? bodyText,
-      bool showChart,
+      AnalysisDataType dataType,
       List<dynamic>? data,
       String graphicTitle,
       String key1,
       String key2) {
-    if (data != null) {
+    if (data != null && data.isNotEmpty) {
       data = data
-          .where((e) => e.containsKey(key1) && e.containsKey(key2))
+          .where((e) =>
+              e.containsKey(key1) &&
+              e.containsKey(key2) &&
+              (dataType != AnalysisDataType.line || e[key2] != 'N/A'))
           .toList();
+      if (dataType == AnalysisDataType.line) {
+        data.sort((a, b) => int.parse(a[key2]).compareTo(int.parse(b[key2])));
+      }
     }
     bool isUrl = key1 == "URL";
     final ScrollController listController = ScrollController();
@@ -1425,9 +1474,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 color: Theme.of(context).colorScheme.primary)),
                         child: data == null || data.isEmpty
                             ? Text("No AI Analysis Data found.")
-                            : showChart
+                            : dataType == AnalysisDataType.bar
                                 ? BarChart(BarChartData(
-                                    gridData: FlGridData(show: false),
+                                    gridData: FlGridData(
+                                        drawVerticalLine: false,
+                                        horizontalInterval: 25),
                                     barTouchData: BarTouchData(enabled: false),
                                     minY: 0,
                                     maxY: 100,
@@ -1504,37 +1555,120 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                                   meta: meta,
                                                   child: Text("$value%")),
                                         )))))
-                                : Scrollbar(
-                                    thumbVisibility: true,
-                                    controller: listController,
-                                    child: ListView.builder(
+                                : dataType == AnalysisDataType.list
+                                    ? Scrollbar(
+                                        thumbVisibility: true,
                                         controller: listController,
-                                        itemCount: data.length,
-                                        itemBuilder: (context, index) {
-                                          Widget firstItem = Text(
-                                              data![index][key1],
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  decoration: isUrl
-                                                      ? TextDecoration.underline
-                                                      : null,
-                                                  color: isUrl
-                                                      ? Colors.blue
-                                                      : Colors.black));
-                                          return Column(children: [
-                                            isUrl
-                                                ? InkWell(
-                                                    child: firstItem,
-                                                    onTap: () => launchUrl(
-                                                        Uri.parse(
-                                                            data![index][key1]),
-                                                        webOnlyWindowName:
-                                                            "_blank"),
-                                                  )
-                                                : firstItem,
-                                            Text(data[index][key2])
-                                          ]);
-                                        })))
+                                        child: ListView.builder(
+                                            controller: listController,
+                                            itemCount: data.length,
+                                            itemBuilder: (context, index) {
+                                              Widget firstItem = Text(
+                                                  data![index][key1],
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      decoration: isUrl
+                                                          ? TextDecoration
+                                                              .underline
+                                                          : null,
+                                                      color: isUrl
+                                                          ? Colors.blue
+                                                          : Colors.black));
+                                              return Column(children: [
+                                                isUrl
+                                                    ? InkWell(
+                                                        child: firstItem,
+                                                        onTap: () => launchUrl(
+                                                            Uri.parse(
+                                                                data![index]
+                                                                    [key1]),
+                                                            webOnlyWindowName:
+                                                                "_blank"),
+                                                      )
+                                                    : firstItem,
+                                                Text(data[index][key2])
+                                              ]);
+                                            }))
+                                    : ScatterChart(ScatterChartData(
+                                        minY: 0,
+                                        maxY: 100,
+                                        scatterTouchData: ScatterTouchData(
+                                            touchTooltipData:
+                                                ScatterTouchTooltipData(
+                                                    fitInsideHorizontally: true,
+                                                    fitInsideVertically: true,
+                                                    getTooltipItems:
+                                                        (touchedSpot) {
+                                                      final defaultSp =
+                                                          defaultScatterTooltipItem(
+                                                              touchedSpot);
+                                                      return ScatterTooltipItem(
+                                                          "Assignment: ${data![touchedSpot.renderPriority]['Assessment']} (${data[touchedSpot.renderPriority]['Type']})\nDue: ${DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(int.parse(data[touchedSpot.renderPriority]['Due Date'])))}\nGrade:${data[touchedSpot.renderPriority]['Grade']}\n",
+                                                          textStyle: defaultSp
+                                                              ?.textStyle);
+                                                    })),
+                                        scatterSpots: data.map((e) {
+                                          String grade = e['Grade'];
+                                          return ScatterSpot(
+                                              dotPainter: FlDotCirclePainter(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primaryFixedDim,
+                                                  radius: 7),
+                                              double.parse(e['Due Date']),
+                                              double.parse(grade.substring(
+                                                  0, grade.length - 1)),
+                                              renderPriority: data!.indexOf(e));
+                                        }).toList(),
+                                        titlesData: FlTitlesData(
+                                            bottomTitles: AxisTitles(
+                                                sideTitles: SideTitles(
+                                              showTitles: true,
+                                              minIncluded: true,
+                                              maxIncluded: false,
+                                              reservedSize: 100,
+                                              getTitlesWidget: (value, meta) =>
+                                                  SideTitleWidget(
+                                                      meta: meta,
+                                                      angle: -70,
+                                                      child: SizedBox(
+                                                          width: 100,
+                                                          child: Text(
+                                                            (DateFormat.yMd().format(
+                                                                DateTime.fromMillisecondsSinceEpoch(
+                                                                        value
+                                                                            .toInt())
+                                                                    .toLocal())),
+                                                            softWrap: true,
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            maxLines: 1,
+                                                            style: TextStyle(
+                                                                fontSize: 12),
+                                                          ))),
+                                            )),
+                                            topTitles: AxisTitles(
+                                              sideTitles:
+                                                  SideTitles(showTitles: false),
+                                            ),
+                                            rightTitles: AxisTitles(
+                                              sideTitles:
+                                                  SideTitles(showTitles: false),
+                                            ),
+                                            leftTitles: AxisTitles(
+                                                sideTitles: SideTitles(
+                                              interval: 10,
+                                              reservedSize: 50,
+                                              showTitles: true,
+                                              getTitlesWidget: (value, meta) =>
+                                                  SideTitleWidget(
+                                                      meta: meta,
+                                                      child: Text("$value%")),
+                                            ))))))
                   ]))
             ])),
         isExpanded: _expandedPanels.contains(index));
@@ -1577,7 +1711,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       Assessment selectedAssessment,
       List<Participant> participantsData,
       int? selectedStudentId,
-      List<QuestionStatsType>? questionBreakdown) async {
+      List<QuestionStatsType>? questionBreakdown,
+      List<dynamic> selectedStudentData) async {
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1587,6 +1722,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       return;
     }
 
+    Participant? selectedParticipant =
+        participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
+
     try {
       setState(() {
         _isAnalyzingSuccess = true;
@@ -1594,12 +1732,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingAssignment = true;
         _isAnalyzingCourse = true;
         _isAnalyzingAi = selectedAssessment.type == "essay";
+        _isAnalyzingStudent = selectedParticipant != null;
         _lastAnalysisQuiz = selectedAssessment.type == "quiz";
+        _lastAnalysisStudent = selectedParticipant != null;
       });
 
       String assignmentDescription;
-      Participant? selectedParticipant =
-          participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
+
+      List<Future> futures = [];
+
+      if (selectedParticipant != null) {
+        String studentGrades = selectedStudentData.map((data) {
+          if (data != null) {
+            return "Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']))}";
+          }
+        }).join("\n");
+        futures.add(
+            _analyzeStudentTrend(selectedParticipant.fullname, studentGrades));
+      }
 
       // Build a summary string from the student breakdown data.
       if (selectedAssessment.type == "essay") {
@@ -1642,7 +1792,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
         }).join("\n");
 
-        await Future.wait([
+        futures.addAll([
           _analyzeEssaySuccess(
               selectedAssessment.name, assignmentDescription, studentSummary),
           _analyzeEssayMisunderstanding(
@@ -1687,7 +1837,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           studentSummary = questionBreakdown.map((q) {
             return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
           }).join("\n");
-          await Future.wait([
+          futures.addAll([
             _analyzeCourseQuizSuccess(
                 selectedAssessment.name, assignmentDescription, studentSummary),
             _analyzeCourseQuizMisunderstanding(
@@ -1695,6 +1845,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ]);
         }
       }
+      await Future.wait(futures);
       await Future.wait([
         _analyzeAssignmentImprovements(
             selectedAssessment.name,
@@ -1722,9 +1873,36 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingAssignment = false;
         _isAnalyzingCourse = false;
         _isAnalyzingAi = false;
+        _isAnalyzingStudent = false;
       });
       return;
     }
+  }
+
+  Future<void> _analyzeStudentTrend(
+      String studentName, String studentGrades) async {
+    String studentPrompt = """
+    Analyze student performance over time for student '$studentName'.
+    Student Assignment Submissions:
+    $studentGrades
+    Based on the list of student grades, perform an analysis of the student's performance over time.
+    Determine if the student is improving over time, staying the same over time, or worsening over time.
+    Provide insight into how their assignment grades have changed from the earliest submission to the last submission.
+    Provide insight into which assignments have not been submitted.
+    Return your analysis as a JSON array where the textual summary is an object with key 'Summary'.
+    An example of a properly formatted JSON array is:
+    [
+      {
+        "Summary": "A textual summary of the analysis."
+      }
+    ]
+    """;
+
+    List<Map<String, dynamic>> response = await _doAiQuery(studentPrompt);
+    setState(() {
+      _aiAnalysisStudent = response;
+      _isAnalyzingStudent = false;
+    });
   }
 
   Future<void> _analyzeEssaySuccess(
