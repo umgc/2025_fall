@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/notetaker_config_service.dart';
 import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;
 import 'package:record/record.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:accordion/accordion.dart';
 
 class NotetakerConfigurationPage extends StatefulWidget {
   const NotetakerConfigurationPage({super.key});
@@ -19,6 +23,57 @@ class NotetakerConfigurationPage extends StatefulWidget {
 }
 
 class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage> {
+
+  PatientNotetakerConfigDTO? _currentConfig;
+  bool _isLoading = true;
+  bool _isSaving = false;
+  UserSession? _user;
+  List<Map<String, String>> _patientList = [];
+  String? _selectedPatientId;
+  bool _isPatient = false;
+  bool _isEnabled = true;
+  bool _permitCaregiverAccess = false;
+  List<String>_PIIList = [];
+  List<String> _directories = [];
+  late List<Widget> _PIIWidgetList = stringToCard(_PIIList);
+  late List<Widget> _DirectoryWidgetList = stringToAccordion(_directories);
+  Map<String, String> keyword_Event = {};
+
+
+  //Audio Recorder
+  int _sampleRate = 16000;
+  late final AudioRecorder _audioRecorder;
+  StreamSubscription<RecordState>? _recordSub;
+  RecordState _recordState = RecordState.stop;
+  List<int> recordedData = [];
+
+  // Form controllers
+  final TextEditingController _keywordController = TextEditingController();
+  final TextEditingController _PIIController = TextEditingController();
+  final TextEditingController _fileNameController = TextEditingController();
+  String? _selectedDropdownValue;
+
+  @override
+  void initState() {
+    _audioRecorder = AudioRecorder();
+    _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
+      _updateRecordState(recordState);
+    });
+    super.initState();
+    _loadConfiguration();
+  }
+
+  void _updateRecordState(RecordState recordState) {
+    setState(() => _recordState = recordState);
+  }
+
+  @override
+  void dispose() {
+    _recordSub?.cancel();
+    _audioRecorder.dispose();
+    super.dispose();
+  }
+
   Widget _buildConfigForm() {
     final theme = Theme.of(context);
     List<Widget> childWidgets = [];
@@ -79,7 +134,10 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notetaker Configuration'),
+        title: Row(
+            children: [
+              const Text('Notetaker Configuration'),
+            ]),
         actions: [
           TextButton(
             onPressed: (_isLoading || _isSaving)
@@ -109,29 +167,93 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
         ],
       ),
-      drawer: const CommonDrawer(currentRoute: '/ai-configuration'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildConfigForm(),
     );
   }
 
-  List<Widget> piiToCard (List<String> piiList) {
-    return piiList.map((PIIString)=>
+  List<Widget> stringToAccordion(List<String> directories)  {
+    List<Widget> namedVoices = [];
+    for(int i=0; i<directories.length; i++) {
+      List<String> files = [];
+      Directory voiceDirectory = Directory(directories[i]);
+      String name = path.basename(directories[i]);
+      if (voiceDirectory.existsSync()) {
+        // Use the list method to get all files and directories
+        for (var entity in voiceDirectory.listSync(recursive: false, followLinks: false)) {
+          if (entity is File) {
+            files.add(entity.path); // Add file paths to the list
+          }
+        }
+        // Print the list of file paths
+        print('Files in directory:');
+        files.forEach(print);
+      } else {
+        print('Directory does not exist.');
+      }
+      if(files.isEmpty) {
+        voiceDirectory.deleteSync(recursive: true);
+      } else {
+        namedVoices.add(
+            Card(
+                child: Padding(
+                    padding: EdgeInsets.all(10.0),
+                    child: Accordion(
+                      headerBorderRadius: 50,
+                      headerPadding: EdgeInsets.all(15.0),
+                      children: [AccordionSection(
+                          header: Text(
+                              name, style: TextStyle(color: Colors.white)),
+                          content: Column(
+                              children:
+                              files.map((file) =>
+                                  Row(
+                                      mainAxisAlignment: MainAxisAlignment
+                                          .spaceBetween,
+                                      children: <Widget>[
+                                        Text(path.basename(file)),
+                                        IconButton(
+                                            icon: new Icon(Icons.cancel),
+                                            tooltip: 'delete voice sample',
+                                            onPressed: () {
+                                              setState(() {
+                                                deleteVoiceSamples(
+                                                    directories[i],
+                                                    path.basename(file));
+                                              });
+                                            }
+                                        )
+                                      ]
+                                  )
+                              ).toList()
+                          )
+                      )
+                      ],
+                    )
+                )
+            ));
+      }
+    }
+    return namedVoices;
+  }
+
+  List<Widget> stringToCard (List<String> list) {
+    return list.map((value)=>
         Card(
             child: Padding(
                 padding: EdgeInsets.all(10.0),
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Text(PIIString),
+                      Text(value),
                       IconButton(
                           icon: new Icon(Icons.cancel),
-                          tooltip: 'delete PII term',
+                          tooltip: 'delete PII',
                           onPressed: () {
                             setState(() {
-                              _PIIList.remove(PIIString);
-                              _PIIWidgetList = piiToCard(piiList);
+                                _PIIList.remove(value);
+                                _PIIWidgetList = stringToCard(list);
                             });
                           }
                       )
@@ -141,7 +263,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         )
     ).toList();
   }
-  
+
   List<DataRow> generateRows() {
     List<DataRow> rowList = [];
     keyword_Event.forEach((key, value)=>
@@ -185,61 +307,152 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
-  Future<void> _startListening() async {
-    if(await recorder.hasPermission()) {
-      setState(() {
-        _isListening = true;
-        voiceSamplePath = null;
-      });
-      final File file = await File('../../assets/voice_samples/audio_sample.webm').create(recursive: true);
-      print(file.path);
-      await recorder.start(const RecordConfig(encoder: AudioEncoder.pcm16bits), path: file.path);
+  void deleteVoiceSamples(String directory, String fileName) async {
+      File sampleToDelete = File('$directory/$fileName');
+      sampleToDelete.deleteSync();
+      loadVoiceSamples();
+  }
+
+  void loadVoiceSamples() async {
+    // Specify the directory path
+    Directory? directory = await getExternalStorageDirectory();
+    setState(() {
+      _directories = [];
+    });
+    if(directory != null) {
+      final voiceSampleDirectory = Directory('${directory.path}/voice_samples/');
+      // Check if the directory exists
+      if (await voiceSampleDirectory.exists()) {
+        // List all entities (files and subdirectories) in the directory
+        await for (var entity in voiceSampleDirectory.list(
+            recursive: false, followLinks: false)) {
+          if (entity is Directory) {
+            // Read the file content
+            setState(() {
+              _directories.add(entity.path);
+            });
+          }
+        }
+        setState(() {
+          _DirectoryWidgetList = stringToAccordion(_directories);
+        });
+      } else {
+        print('Voice Sample Directory does not exist.');
+      }
     }
+  }
+
+  Future<bool> _isEncoderSupported(AudioEncoder encoder) async {
+    final isSupported = await _audioRecorder.isEncoderSupported(
+      encoder,
+    );
+
+    if (!isSupported) {
+      debugPrint('${encoder.name} is not supported on this platform.');
+      debugPrint('Supported encoders are:');
+
+      for (final e in AudioEncoder.values) {
+        if (await _audioRecorder.isEncoderSupported(e)) {
+          debugPrint('- ${encoder.name}');
+        }
+      }
+    }
+
+    return isSupported;
+  }
+
+  Future<void> _startListening() async {
+      if (await _audioRecorder.hasPermission()) {
+        const encoder = AudioEncoder.pcm16bits;
+
+        if (!await _isEncoderSupported(encoder)) {
+          return;
+        }
+
+        final devs = await _audioRecorder.listInputDevices();
+        debugPrint(devs.toString());
+
+        const config = RecordConfig(
+          encoder: encoder,
+          sampleRate: 16000,
+          numChannels: 1,
+        );
+        recordedData = [];
+        final stream = await _audioRecorder.startStream(config);
+        stream.listen(
+              (data) {
+            recordedData.addAll(data);
+          },
+          onDone: () {
+            print('stream stopped.');
+          },
+        );
+      }
   }
 
   void _stopListening() async{
-    String? filePath = await recorder.stop();
-    if(filePath != null) {
-      setState(() {
-        _isListening = false;
-        voiceSamplePath = filePath;
-      });
+    await _audioRecorder.stop();
+  }
+
+  Future<void> saveFile(List<int> data, int sampleRate, String file) async {
+    Directory? directory = await getExternalStorageDirectory();
+    String filename = "";
+    if(directory != null) {
+      filename = "${directory.path}/voice_samples/$file/$file-${DateTime.now().millisecondsSinceEpoch}.wav";
+      File recordedFile = await File(filename).create(recursive: true);
+
+      var channels = 1;
+
+      int byteRate = ((16 * sampleRate * channels) / 8).round();
+
+      var size = data.length;
+
+      var fileSize = size + 36;
+
+      Uint8List header = Uint8List.fromList([
+        // "RIFF"
+        82, 73, 70, 70,
+        fileSize & 0xff,
+        (fileSize >> 8) & 0xff,
+        (fileSize >> 16) & 0xff,
+        (fileSize >> 24) & 0xff,
+        // WAVE
+        87, 65, 86, 69,
+        // fmt
+        102, 109, 116, 32,
+        // fmt chunk size 16
+        16, 0, 0, 0,
+        // Type of format
+        1, 0,
+        // One channel
+        channels, 0,
+        // Sample rate
+        sampleRate & 0xff,
+        (sampleRate >> 8) & 0xff,
+        (sampleRate >> 16) & 0xff,
+        (sampleRate >> 24) & 0xff,
+        // Byte rate
+        byteRate & 0xff,
+        (byteRate >> 8) & 0xff,
+        (byteRate >> 16) & 0xff,
+        (byteRate >> 24) & 0xff,
+        // Uhm
+        ((16 * channels) / 8).round(), 0,
+        // bitsize
+        16, 0,
+        // "data"
+        100, 97, 116, 97,
+        size & 0xff,
+        (size >> 8) & 0xff,
+        (size >> 16) & 0xff,
+        (size >> 24) & 0xff,
+        ...data
+      ]);
+      recordedFile.writeAsBytesSync(header, flush: true, mode: FileMode.write);
+      loadVoiceSamples();
+    } else {
+      print('local storage directory does not exist.');
     }
-  }
-
-  Future<void> _saveAudioSample() async {
-    //need to fill in
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Voice was saved')),
-    );
-  }
-
-  PatientNotetakerConfigDTO? _currentConfig;
-  bool _isLoading = true;
-  bool _isSaving = false;
-  UserSession? _user;
-  final AudioRecorder recorder = AudioRecorder();
-  List<Map<String, String>> _patientList = [];
-  String? _selectedPatientId;
-  String? voiceSamplePath;
-  bool _isPatient = false;
-  bool _isListening = false;
-  bool _isEnabled = true;
-  bool _permitCaregiverAccess = false;
-  List<String>_PIIList = [];
-  late List<Widget> _PIIWidgetList = piiToCard(_PIIList);
-  Map<String, String> keyword_Event = {};
-
-    // Form controllers
-  final TextEditingController _keywordController = TextEditingController();
-  final TextEditingController _PIIController = TextEditingController();
-  String? _selectedDropdownValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadConfiguration();
   }
 
   Future<void> _fetchConfig(int patientId) async {
@@ -256,8 +469,11 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           config.triggerKeywords.where((trigger)=> !trigger.keyword.contains("PII_")).forEach((trigger)=>
           keyword_Event[trigger.keyword] = trigger.event_type
           );
-          _PIIWidgetList = piiToCard(_PIIList);
+          _PIIWidgetList = stringToCard(_PIIList);
         });
+        if(!kIsWeb) {
+          loadVoiceSamples();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -479,7 +695,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                             onPressed: () {
                               setState(() {
                                 _PIIList.add(_PIIController.text);
-                                _PIIWidgetList = piiToCard(_PIIList);
+                                _PIIWidgetList = stringToCard(_PIIList);
                               });
                               Navigator.of(context).pop();
                               },
@@ -606,67 +822,173 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     );
   }
 
+  Widget _buildRecordStopControl() {
+    late Icon icon;
+    late Color color;
+
+    if (_recordState != RecordState.stop) {
+      icon = const Icon(Icons.stop, color: Colors.red, size: 30);
+      color = Colors.red.withOpacity(0.1);
+    } else {
+      final theme = Theme.of(context);
+      icon = Icon(Icons.mic, color: theme.primaryColor, size: 30);
+      color = theme.primaryColor.withOpacity(0.1);
+    }
+
+    return ClipOval(
+      child: Material(
+        color: color,
+        child: InkWell(
+          child: SizedBox(width: 56, height: 56, child: icon),
+          onTap: () {
+              (_recordState != RecordState.stop) ? _stopListening() : _startListening();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildText() {
+    if (_recordState == RecordState.stop) {
+      return const Text("Start");
+    } else {
+      return const Text("Stop");
+    }
+  }
+
   Widget _buildVoiceSampleSection(ThemeData theme) {
-    return _buildSection(
-      theme,
-      'Upload Voice Sample',
-      Icons.voice_chat,
-      [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            border: Border.all(
+    if(kIsWeb) {
+      return _buildSection(
+          theme,
+          'Manage Voice Sample',
+          Icons.voice_chat,
+          [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme
+                      .of(context)
+                      .dividerColor,
+                  width: 2,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                color: Theme
+                    .of(context)
+                    .colorScheme
+                    .surfaceContainerHighest
+                    .withOpacity(0.1),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.cancel_outlined, color: theme.colorScheme.primary,
+                      size: 48),
+                  const SizedBox(width: 12),
+                  Text(
+                    'This feature is not available on the web application',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ]
+      );
+    } else {
+      return _buildSection(
+        theme,
+        'Manage Voice Sample',
+        Icons.voice_chat,
+        [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme
+                    .of(context)
+                    .dividerColor,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
               color: Theme
                   .of(context)
-                  .dividerColor,
-              width: 2,
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.1),
             ),
-            borderRadius: BorderRadius.circular(8),
-            color: Theme
-                .of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withOpacity(0.1),
+            child: Column(
+              children: [
+                _buildInfoCard(theme, 'Tap the button below to start voice recognition. '
+                    'The more voice samples provided the more accurate speaker identification will be.'
+                    'Try saying the phrases: \"The birch canoe slid on the smooth planks\", \"Glue the sheet to the dark blue background.\", \"It’s easy to tell the depth of a well.\", '
+                    '\"These days a chicken leg is a rare dish.\"'),
+                const SizedBox(height: 16),
+                Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _buildRecordStopControl(),
+                  const SizedBox(width: 16),
+                  _buildText(),
+                ]),
+                ElevatedButton(onPressed: recordedData.isEmpty ? null : () {
+                  _fileNameController.clear();
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Expanded(
+                        child: SimpleDialog(
+                            title: Text("Enter your name"),
+                            children: <Widget> [
+                              Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: TextFormField(
+                                  controller: _fileNameController,
+                                  decoration: InputDecoration(labelText: 'Enter text'),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'This field is required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              SizedBox(height: 16),
+                              SimpleDialogOption(
+                                onPressed: () {
+                                  if(_fileNameController.text.isNotEmpty) {
+                                    saveFile(recordedData, _sampleRate, _fileNameController.text);
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                                child:const Text('Add'),
+                              )
+                            ]
+                        ),
+                      );
+                    },
+                  );
+                }, child: Text('Save File')),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              Icon(Icons.construction, color: theme.colorScheme.primary, size: 48),
-              const SizedBox(width: 12),
-              Text(
-                'Under Construction',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              // Text('Tap the button below to start voice recognition and read the following message: \n' +
-              //       'The dog fetches the ball',
-              //   textAlign: TextAlign.center,
-              //   style: const TextStyle(fontSize: 14),
-              // ),
-              // const SizedBox(height: 16),
-              // ElevatedButton(
-              //   onPressed: () {
-              //     if (_isListening) {
-              //       _stopListening();
-              //     } else {
-              //       _startListening();
-              //     }
-              //   },
-              //   child: Text(
-              //       _isListening ? 'Stop Listening' : 'Start Listening'),
-              // ),
-              // const SizedBox(height: 8),
-              // ElevatedButton(
-              //   onPressed: _saveAudioSample,
-              //   child: const Text('Save Voice'),
-              // ),
-            ],
+          const SizedBox(height: 24),
+          SizedBox(
+              height: 250,
+              child: ListView.builder(
+                itemCount: _DirectoryWidgetList.length,
+                itemBuilder: (context, index) {
+                  return _DirectoryWidgetList[index];
+                },
+              )
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
   }
 
   Widget _buildSection(

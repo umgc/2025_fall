@@ -1,11 +1,12 @@
 import 'package:care_connect_app/features/notifications/models/scheduled_notification_model.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/task_model.dart';
 import '../../utils/recurrence_utils.dart';
-import '../../utils/task_type_utils.dart';
 import '../../utils/task_utils.dart';
-import 'recurrence_form.dart'; // <- the form you just moved
+import 'recurrence_form.dart';
 
 // =============================
 // TaskFormDialog.dart
@@ -44,9 +45,6 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   TimeOfDay? selectedTime;
   int? selectedPatientId;
   String? selectedTaskType;
-  // Pull task types directly here
-  late final List<String> taskTypes = TaskTypeUtils.getSortedTypes();
-
   // Recurrence state
   bool isRecurring = false;
   String? recurrenceType;
@@ -80,16 +78,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
     selectedTime = t?.timeOfDay;
     selectedPatientId = widget.defaultPatientId ?? t?.assignedPatientId;
     //If editing and taskType is valid, keep it
-    if (t != null &&
-        t.taskType != null &&
-        taskTypes.contains(t.taskType!.toLowerCase())) {
-      selectedTaskType = t.taskType!.toLowerCase();
-    } else {
-      // Otherwise default to "general"
-      selectedTaskType = taskTypes.contains("general")
-          ? "general"
-          : taskTypes.first;
-    }
+    selectedTaskType = t?.taskType?.toLowerCase();
+
     // ensure Save button re-checks when text changes
     titleController.addListener(() => setState(() {}));
 
@@ -266,6 +256,8 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   /// Builds the full Add/Edit Task form inside an AlertDialog
   @override
   Widget build(BuildContext context) {
+    final manager = context.watch<TaskTypeManager>();
+    final taskTypes = manager.taskTypeColors.keys.toList();
     return AlertDialog(
       title: Text(widget.initialTask == null ? "Add Task" : "Edit Task"),
       content: SingleChildScrollView(
@@ -301,22 +293,28 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
               ),
               initialValue:
                   selectedTaskType != null &&
-                      ![
-                        "daily",
-                        "weekly",
-                        "monthly",
-                        "yearly",
-                      ].contains(selectedTaskType!.toLowerCase())
+                      taskTypes.contains(selectedTaskType)
                   ? selectedTaskType
-                  : null,
-              items: taskTypes
-                  .map(
-                    (type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(type[0].toUpperCase() + type.substring(1)),
-                    ),
-                  )
-                  .toList(),
+                  : (taskTypes.contains("general")
+                        ? "general"
+                        : taskTypes.firstOrNull),
+              items: taskTypes.map((type) {
+                final color = manager.getColor(type);
+                final icon = manager.getIcon(type);
+                return DropdownMenuItem(
+                  value: type,
+                  child: Row(
+                    children: [
+                      Icon(icon, color: color, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        type[0].toUpperCase() + type.substring(1),
+                        style: TextStyle(color: color),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: (val) => setState(() => selectedTaskType = val),
             ),
 
