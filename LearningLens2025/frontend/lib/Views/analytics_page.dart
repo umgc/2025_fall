@@ -13,7 +13,7 @@ import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
-
+import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw; // PDF package
 import 'package:excel/excel.dart'; // Excel package
 
@@ -143,7 +143,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _lastAnalysisQuiz = false;
   bool _lastAnalysisStudent = false;
 
-  List<int> _expandedPanels = [0, 1, 2, 3, 4];
+  List<int> _expandedPanels = [0, 1, 2, 3, 4, 5];
 
   LlmType? selectedLLM;
 
@@ -1288,21 +1288,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
   Widget _buildAIAnalysisList() {
-    return ExpansionPanelList(
-        expandedHeaderPadding: EdgeInsets.zero,
-        materialGapSize: 0,
-        expansionCallback: (panelIndex, isExpanded) {
-          if (isExpanded && !_expandedPanels.contains(panelIndex)) {
-            setState(() {
-              _expandedPanels.add(panelIndex);
-            });
-          } else if (!isExpanded && _expandedPanels.contains(panelIndex)) {
-            setState(() {
-              _expandedPanels.remove(panelIndex);
-            });
-          }
-        },
-        children: _buildAiAnalysisChildren());
+    return SelectionArea(
+        child: ExpansionPanelList(
+            expandedHeaderPadding: EdgeInsets.zero,
+            materialGapSize: 0,
+            expansionCallback: (panelIndex, isExpanded) {
+              if (isExpanded && !_expandedPanels.contains(panelIndex)) {
+                setState(() {
+                  _expandedPanels.add(panelIndex);
+                });
+              } else if (!isExpanded && _expandedPanels.contains(panelIndex)) {
+                setState(() {
+                  _expandedPanels.remove(panelIndex);
+                });
+              }
+            },
+            children: _buildAiAnalysisChildren()));
   }
 
   List<ExpansionPanel> _buildAiAnalysisChildren() {
@@ -1415,6 +1416,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       String graphicTitle,
       String key1,
       String key2) {
+    bool isUrl = key1 == "URL";
     if (data != null && data.isNotEmpty) {
       data = data
           .where((e) =>
@@ -1424,9 +1426,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           .toList();
       if (dataType == AnalysisDataType.line) {
         data.sort((a, b) => int.parse(a[key2]).compareTo(int.parse(b[key2])));
+      } else if (isUrl) {
+        print(data);
+        data = data
+            .where((element) =>
+                element.containsKey("ValidURL") && element["ValidURL"])
+            .toList();
       }
     }
-    bool isUrl = key1 == "URL";
+
     final ScrollController listController = ScrollController();
     return ExpansionPanel(
         backgroundColor:
@@ -2124,6 +2132,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     """;
 
     List<Map<String, dynamic>> response = await _doAiQuery(successPrompt);
+    // Check URL
+    if (response.length >= 2 && response[1].containsKey("Data")) {
+      for (dynamic map in response[1]["Data"]) {
+        if (map.containsKey("URL")) {
+          Uri? parse = Uri.tryParse(map["URL"]);
+
+          bool isValid = parse != null;
+          if (isValid) {
+            try {
+              isValid = (await http.get(parse)).statusCode < 400;
+            } on http.ClientException {
+              // Do nothing - not all CORS policies allow access but we still get the status code
+            }
+          }
+          map["ValidURL"] = isValid;
+        }
+      }
+    }
     setState(() {
       _aiAnalysisAssignment = response;
       _isAnalyzingAssignment = false;
