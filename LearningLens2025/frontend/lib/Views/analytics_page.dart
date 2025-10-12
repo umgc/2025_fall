@@ -115,9 +115,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<Map<String, dynamic>> _studentBreakdown = [];
   Map<String, dynamic>? _selectedStudent;
   // Name, Type, Grade
-  List<Map<String, String>> _selectedStudentData = [];
-  bool _selectedStudentWaiting = false;
-  String? _selectedStudentError;
+  List<Map<String, String>> _studentCourseData = [];
   String _selectedGradeLevel = LearningLensConstants.gradeLevels.last;
 
   // For quiz assessments, question breakdown data.
@@ -141,13 +139,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _isAnalyzingAi = false;
   bool _isAnalyzingCourse = false;
   bool _isAnalyzingAssignment = false;
-  bool _isAnalyzingStudent = false;
+  bool _isAnalyzingStudents = false;
   bool _lastAnalysisQuiz = false;
-  bool _lastAnalysisStudent = false;
 
   List<int> _expandedPanels = [0, 1, 2, 3, 4, 5];
 
   LlmType? selectedLLM;
+
+  List<List<Color>> contrastColors = Colors.primaries.map((e) {
+    HSLColor hsl = HSLColor.fromColor(e);
+    double contrast =
+        ThemeData.estimateBrightnessForColor(e) == Brightness.light ? -.3 : .3;
+    return [
+      e,
+      hsl.withLightness((hsl.lightness + contrast).clamp(0, 1)).toColor()
+    ];
+  }).toList();
 
   @override
   void initState() {
@@ -157,6 +164,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     _verticalQuestionController = ScrollController();
     _horizontalQuestionController = ScrollController();
     _fetchAnalyticsData();
+    selectedLLM = LlmType.values
+        .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
   }
 
   @override
@@ -238,7 +247,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       _studentBreakdown.clear();
       _questionBreakdown.clear();
       _selectedStudent = null;
-      _selectedStudentData.clear();
+      _studentCourseData.clear();
     });
 
     try {
@@ -267,6 +276,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
       // If it's a quiz, also fetch the question breakdown.
       await _fetchQuestionBreakdown();
+      await _fetchAllAssessmentsForStudents();
     } catch (e) {
       setState(() {
         errorMsg = 'Failed to generate report: $e';
@@ -650,7 +660,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisAssignment.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
-                _selectedStudentData.clear();
+                _studentCourseData.clear();
               });
               if (_selectedCourse != null) {
                 // Fetch essays and quizzes, then combine them.
@@ -698,7 +708,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   _aiAnalysisAssignment.clear();
                   _aiAnalysisCourse.clear();
                   _selectedStudent = null;
-                  _selectedStudentData.clear();
+                  _studentCourseData.clear();
                 });
               },
             ),
@@ -725,7 +735,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 _aiAnalysisAssignment.clear();
                 _aiAnalysisCourse.clear();
                 _selectedStudent = null;
-                _selectedStudentData.clear();
+                _studentCourseData.clear();
               });
             },
           ),
@@ -800,13 +810,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         _participantsData,
                         _selectedStudent?["id"],
                         isEssay() ? null : _questionBreakdown.toList(),
-                        _selectedStudentData,
+                        _studentCourseData,
                         _selectedGradeLevel)
                     : null,
                 child: _isAnalyzingSuccess ||
                         _isAnalyzingFail ||
                         _isAnalyzingAssignment ||
-                        _isAnalyzingAi
+                        _isAnalyzingAi ||
+                        _isAnalyzingStudents
                     ? const SizedBox(
                         width: 24,
                         height: 24,
@@ -946,7 +957,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     onSelectChanged: (val) {
                       setState(() {
                         _selectedStudent = student;
-                        _fetchAllAssessmentsForStudent(student['id']);
                       });
                     },
                     cells: [
@@ -982,14 +992,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
     int studentId = _selectedStudent!['id'];
-    if (_selectedStudentWaiting) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_selectedStudentError != null) {
-      return Center(
-          child: Text('Error loading grades: $_selectedStudentError'));
-    }
-    if (_selectedStudentData.isEmpty) {
+    if (_studentCourseData.isEmpty) {
       return Text('No data available for student $studentId.');
     }
     return Column(
@@ -1000,7 +1003,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        ..._selectedStudentData.map((item) {
+        ..._studentCourseData
+            .where(
+          (element) => int.parse(element['Student ID']!) == studentId,
+        )
+            .map((item) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Row(
@@ -1038,69 +1045,66 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // _fetchAllAssessmentsForStudent:
   // Helper function to fetch ALL assessments (quiz or essay) for ONE student.
   // ---------------------------------------------------------------------------
-  Future<void> _fetchAllAssessmentsForStudent(int? studentId) async {
-    if (_selectedCourse == null || studentId == null) {
+  Future<void> _fetchAllAssessmentsForStudents() async {
+    if (_selectedCourse == null) {
       setState(() {
-        _selectedStudentData.clear();
+        _studentCourseData.clear();
       });
       return;
     }
-    setState(() {
-      _selectedStudentWaiting = true;
-    });
-    List<Future<Map<String, String>>> futureList = [];
+    List<Future<List<Map<String, String>>>> futureList = [];
     for (var assessment in _assessmentsData) {
       futureList.add(() async {
-        String gradeStr = "0%";
+        List<Participant> participants = [];
         if (assessment.type == "quiz") {
-          final participants = await (lmsService as moodle.MoodleLmsService)
+          participants = await (lmsService as moodle.MoodleLmsService)
               .getQuizGradesForParticipants(
             _selectedCourse!.id.toString(),
             assessment.id,
           );
-          final participant = participants.firstWhere(
-            (p) => p.id == studentId,
-            orElse: () => Participant.empty(),
-          );
-          if (participant.avgGrade != null) {
-            gradeStr = "${participant.avgGrade!.toInt()}%";
-          }
         } else if (assessment.type == "essay") {
-          final participants = await (lmsService as moodle.MoodleLmsService)
+          participants = await (lmsService as moodle.MoodleLmsService)
               .getEssayGradesForParticipants(
             _selectedCourse!.id.toString(),
             assessment.id,
           );
-          final participant = participants.firstWhere(
-            (p) => p.id == studentId,
-            orElse: () => Participant.empty(),
-          );
-          if (participant.avgGrade != null) {
-            gradeStr = "${participant.avgGrade!.toInt()}%";
-          }
         }
-        return {
-          'Assessment': assessment.name,
-          'Type': assessment.type.toUpperCase(),
-          'Grade': gradeStr,
-          'Due Date':
-              assessment.dueDate?.millisecondsSinceEpoch.toString() ?? "N/A"
-        };
+        return participants.map((participant) {
+          return {
+            'Assessment': assessment.name,
+            'Type': assessment.type.toUpperCase(),
+            'Student ID': participant.id.toString(),
+            'Student Name': participant.fullname,
+            'Grade': "${(participant.avgGrade ?? 0)}%",
+            'Due Date':
+                assessment.dueDate?.millisecondsSinceEpoch.toString() ?? "N/A"
+          };
+        }).toList();
       }());
     }
     try {
       final data = await Future.wait(futureList);
+      List<Map<String, String>> unwrapped = [];
+      for (var d in data) {
+        for (var m in d) {
+          unwrapped.add(m);
+        }
+      }
+      unwrapped.sort((a, b) =>
+          DateTime.fromMillisecondsSinceEpoch(int.parse(b['Due Date'] ?? '0'))
+              .compareTo(DateTime.fromMillisecondsSinceEpoch(
+                  int.parse(a['Due Date'] ?? '0'))));
       setState(() {
-        _selectedStudentData = data;
+        _studentCourseData = unwrapped;
       });
     } catch (e) {
       setState(() {
-        _selectedStudentData.clear();
-        _selectedStudentError = e.toString();
-      });
-    } finally {
-      setState(() {
-        _selectedStudentWaiting = false;
+        _studentCourseData.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              backgroundColor: Colors.red,
+              content: Text("Error occurred while fetching student data: $e.")),
+        );
       });
     }
   }
@@ -1162,7 +1166,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ? null
                         : () => setState(() {
                               _selectedStudent = null;
-                              _selectedStudentData.clear();
                             }),
                     child: Text("Clear Selection"))
               ]),
@@ -1392,11 +1395,31 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               : _aiAnalysisAssignment[1]["Data"],
           "Suggested References",
           "URL",
-          "Description")
+          "Description"),
+      _buildChild(
+          4,
+          "Student Trends",
+          _isAnalyzingStudents,
+          _aiAnalysisStudent.isEmpty ||
+                  !_aiAnalysisStudent[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisStudent[0]["Summary"],
+          AnalysisDataType.line,
+          _selectedStudent == null
+              ? _studentCourseData
+              : _studentCourseData
+                  .where((element) =>
+                      int.parse(element['Student ID']!) ==
+                      _selectedStudent!["id"])
+                  .toList(),
+          "Student Grades Over Time",
+          "Grade",
+          "Due Date")
     ];
+
     if (!_lastAnalysisQuiz) {
       children.add(_buildChild(
-          4,
+          5,
           "AI Use Areas",
           _isAnalyzingAi,
           _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
@@ -1409,22 +1432,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           "Top AI Use Cases",
           "Area",
           "Percentage"));
-    }
-
-    if (_lastAnalysisStudent) {
-      children.add(_buildChild(
-          5,
-          "Student Trends",
-          _isAnalyzingStudent,
-          _aiAnalysisStudent.isEmpty ||
-                  !_aiAnalysisStudent[0].containsKey("Summary")
-              ? null
-              : _aiAnalysisStudent[0]["Summary"],
-          AnalysisDataType.line,
-          _selectedStudentData,
-          "Student Grades Over Time",
-          "Grade",
-          "Due Date"));
     }
     return children;
   }
@@ -1447,10 +1454,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               e.containsKey(key2) &&
               (dataType != AnalysisDataType.line || e[key2] != 'N/A'))
           .toList();
-      if (dataType == AnalysisDataType.line) {
-        data.sort((a, b) => int.parse(a[key2]).compareTo(int.parse(b[key2])));
-      } else if (isUrl) {
-        print(data);
+      if (isUrl) {
         data = data
             .where((element) =>
                 element.containsKey("ValidURL") && element["ValidURL"])
@@ -1627,6 +1631,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                         scatterTouchData: ScatterTouchData(
                                             touchTooltipData:
                                                 ScatterTouchTooltipData(
+                                                    getTooltipColor: (touchedSpot) =>
+                                                        contrastColors[int.parse(
+                                                                data![touchedSpot
+                                                                        .renderPriority]
+                                                                    [
+                                                                    'Student ID']) %
+                                                            Colors.primaries
+                                                                .length][1],
                                                     fitInsideHorizontally: true,
                                                     fitInsideVertically: true,
                                                     getTooltipItems:
@@ -1635,7 +1647,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                                           defaultScatterTooltipItem(
                                                               touchedSpot);
                                                       return ScatterTooltipItem(
-                                                          "Assignment: ${data![touchedSpot.renderPriority]['Assessment']} (${data[touchedSpot.renderPriority]['Type']})\nDue: ${DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(int.parse(data[touchedSpot.renderPriority]['Due Date'])))}\nGrade:${data[touchedSpot.renderPriority]['Grade']}\n",
+                                                          "Student: ${data![touchedSpot.renderPriority]['Student Name']}\nAssignment: ${data[touchedSpot.renderPriority]['Assessment']} (${data[touchedSpot.renderPriority]['Type']})\nDue: ${DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(int.parse(data[touchedSpot.renderPriority]['Due Date'])))}\nGrade:${data[touchedSpot.renderPriority]['Grade']}\n",
                                                           textStyle: defaultSp
                                                               ?.textStyle);
                                                     })),
@@ -1643,9 +1655,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                           String grade = e['Grade'];
                                           return ScatterSpot(
                                               dotPainter: FlDotCirclePainter(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .primaryFixedDim,
+                                                  color: contrastColors[
+                                                      int.parse(
+                                                              e['Student ID']) %
+                                                          Colors.primaries
+                                                              .length][0],
                                                   radius: 7),
                                               double.parse(e['Due Date']),
                                               double.parse(grade.substring(
@@ -1743,7 +1757,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       List<Participant> participantsData,
       int? selectedStudentId,
       List<QuestionStatsType>? questionBreakdown,
-      List<dynamic> selectedStudentData,
+      List<Map<String, String>> studentCourseData,
       String selectedGradeLevel) async {
     if (selectedLLM == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1763,10 +1777,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingFail = true;
         _isAnalyzingAssignment = true;
         _isAnalyzingCourse = true;
+        _isAnalyzingStudents = true;
         _isAnalyzingAi = selectedAssessment.type == "essay";
-        _isAnalyzingStudent = selectedParticipant != null;
         _lastAnalysisQuiz = selectedAssessment.type == "quiz";
-        _lastAnalysisStudent = selectedParticipant != null;
       });
 
       String assignmentDescription;
@@ -1774,14 +1787,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       List<Future> futures = [];
 
       if (selectedParticipant != null) {
-        String studentGrades = selectedStudentData.map((data) {
-          if (data != null) {
-            return "Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']))}";
-          }
-        }).join("\n");
-        futures.add(_analyzeStudentTrend(
-            selectedParticipant.fullname, studentGrades, selectedGradeLevel));
+        studentCourseData = studentCourseData
+            .where((element) =>
+                int.parse(element['Student ID']!) == selectedParticipant.id)
+            .toList();
       }
+      String studentGrades = studentCourseData.map((data) {
+        return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
+      }).join("\n");
+      print(studentGrades);
+      futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
 
       // Build a summary string from the student breakdown data.
       if (selectedAssessment.type == "essay") {
@@ -1839,6 +1854,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             _isAnalyzingFail = false;
             _isAnalyzingAssignment = false;
             _isAnalyzingCourse = false;
+            _isAnalyzingStudents = false;
           });
           return;
         }
@@ -1909,21 +1925,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingAssignment = false;
         _isAnalyzingCourse = false;
         _isAnalyzingAi = false;
-        _isAnalyzingStudent = false;
+        _isAnalyzingStudents = false;
       });
       return;
     }
   }
 
-  Future<void> _analyzeStudentTrend(String studentName, String studentGrades,
-      String selectedGradeLevel) async {
+  Future<void> _analyzeStudentTrend(
+      String studentGrades, String selectedGradeLevel) async {
     String studentPrompt = """
-    Analyze student performance over time for student '$studentName' for grade level '$selectedGradeLevel'.
-    Student Assignment Submissions:
+    Analyze student performance over time for students for grade level '$selectedGradeLevel'.
+    Assignment Submissions:
     $studentGrades
-    Based on the list of student grades, perform an analysis of the student's performance over time.
+    Based on the list of student grades, perform an analysis of each student's performance over time.
     The analysis should be appropriate for the indicated grade level.
-    Determine if the student is improving over time, staying the same over time, or worsening over time.
+    Determine if each student is improving over time, staying the same over time, or worsening over time.
     Provide insight into how their assignment grades have changed from the earliest submission to the last submission.
     Provide insight into which assignments have not been submitted.
     Return your analysis as a JSON array where the textual summary is an object with key 'Summary'.
@@ -1938,7 +1954,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Map<String, dynamic>> response = await _doAiQuery(studentPrompt);
     setState(() {
       _aiAnalysisStudent = response;
-      _isAnalyzingStudent = false;
+      _isAnalyzingStudents = false;
     });
   }
 
