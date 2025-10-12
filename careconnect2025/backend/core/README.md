@@ -158,45 +158,20 @@ If you prefer to use your IDE's run configuration instead of the `.env` approach
         SECURITY_JWT_SECRET=your_jwt_secret
         ...
         ```
-
-
-## Features Included
-
-### 🔔 Firebase Push Notifications
-- Real-time notifications for patient-caregiver interactions
-- Medical alerts and vital sign monitoring
-- Multi-platform support (Android, iOS, Web)
-- **Setup**: Place `firebase-service-account.json` in `src/main/resources/`
-
-### 🔐 Authentication & Security
-- JWT-based authentication with role-based access
-- Google OAuth integration
-- Password reset functionality
-- Account verification via email
-
-### 🏥 Healthcare Features
-- Patient and caregiver management
-- Vital signs tracking with automated alerts
-- Medication reminders
-- Family member connections
-
-### 📧 Multi-Provider Email Support
-- Resend, SendGrid, or Mailgun integration
-- Email verification and notifications
-- Password reset emails
-
-### 💳 Payment Integration
-- Stripe payment processing
-- Subscription management
-- Webhook handling
-
-### 🤖 AI Integration
-- OpenAI API integration for intelligent features
-
-### ☁️ Cloud Storage
-- AWS S3 integration for file storage
-- Local file storage option
-
+---
+## Verifying Email in Dev Profile
+1. After registering for an account, look at the back end logs. You should have something as follows:
+```
+🔧 DEV MODE - Email logged to console:
+  Provider: console
+  To: test@test.com
+  From: dev@careconnect.local
+  Subject: CareConnect Email Verification
+  Content: Please verify your email by clicking: http://localhost:50030/v1/api/auth/verify/fd5682b6-bf59-4e0c-be8f-b437cb2f1a4a
+  ===================================
+```
+2. Click or copy and paste the link in a browser
+3. You should receive the following message: "Your email has been verified! You can now log in."
 ---
 
 ## API Documentation
