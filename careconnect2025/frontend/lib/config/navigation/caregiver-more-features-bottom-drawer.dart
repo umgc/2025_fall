@@ -1,3 +1,4 @@
+import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
@@ -18,10 +19,27 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const NotetakerConfigurationPage()),
+            MaterialPageRoute(
+              builder: (context) => const NotetakerConfigurationPage(),
+            ),
           );
         },
-      )
+      ),
+      FeatureItem(
+        icon: Icons.calendar_month_outlined,
+        iconColor: Colors.blue,
+        title: 'Calendar Assistant',
+        subtitle: 'Manage your Calendar Assistant Settings',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CalendarAssistantScreen(),
+            ),
+          );
+        },
+      ),
     ];
 
     return MoreFeaturesBottomDrawer(features: features);
