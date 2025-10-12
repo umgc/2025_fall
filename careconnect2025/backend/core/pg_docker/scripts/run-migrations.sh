@@ -1,12 +1,12 @@
 #!/bin/bash
 # ================================
-# CareConnect Flyway Migration Script
+# CareConnect Database Migration Script (JPA)
 # ================================
 
 set -e
 
-echo "Running CareConnect Flyway Migrations..."
-echo "======================================="
+echo "CareConnect Database Migration (JPA-based)..."
+echo "============================================="
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,15 +36,11 @@ done
 
 echo "PostgreSQL is ready!"
 
-# Run Flyway migrations
-echo "Running Flyway migrations..."
-./mvnw flyway:migrate \
-    -Dflyway.url=jdbc:postgresql://localhost:5432/careconnect \
-    -Dflyway.user=postgres \
-    -Dflyway.password=changeme \
-    -Dflyway.locations=filesystem:src/main/resources/db/migration
+# JPA will handle schema creation automatically
+echo "JPA will handle database schema creation automatically when the application starts."
+echo "No manual migrations needed - schema is managed by JPA/Hibernate."
 
 echo ""
-echo "Migrations completed successfully!"
-echo "You can now run your Spring Boot application:"
+echo "Database is ready for JPA schema creation!"
+echo "Start your Spring Boot application to auto-create the schema:"
 echo "  ./mvnw spring-boot:run -Dspring.profiles.active=dev"
