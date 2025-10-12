@@ -30,7 +30,7 @@ class _RealVideoCallWidgetState extends State<RealVideoCallWidget> {
   bool _isInitialized = false;
   String _callStatus = 'Connecting...';
   int? _remoteUid;
-  bool _localUserJoined = false;
+  final bool _localUserJoined = false;
 
   @override
   void initState() {

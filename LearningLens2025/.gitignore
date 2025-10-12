@@ -52,3 +52,5 @@ terraform/terraformout.txt
 /lambda/gettoken/node_modules
 /lambda/gettoken/gettoken.zip
 /lambda/code_eval/code_eval.zip
+# Any extra javascript files for lambda functions
+!lambda/code_eval/*.js
