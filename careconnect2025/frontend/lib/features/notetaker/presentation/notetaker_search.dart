@@ -17,29 +17,28 @@ class NotetakerSearchPage extends StatefulWidget {
 }
 
 class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
-  static const String fetchURL = '/patient-notes/{patientId}/search';
-  PatientNotetakerConfigDTO? _currentConfig;
   List<PatientNote>? _currentPatientNotes;
   bool _isLoading = true;
-  bool _isSaving = false;
-  bool _isEditing = false;
   UserSession? _user;
   List<Map<String, String>> _patientList = [];
   String? _selectedPatientId;
   bool _isPatient = false;
-  bool _isEnabled = true;
-  bool _permitCaregiverAccess = false;
-  late List<Widget> _NotesWidgetList = [];
 
-  // Form controllers
-  final TextEditingController _noteController = TextEditingController();
-  String? _selectedDropdownValue;
+  final TextEditingController _searchController = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  List<PatientNote> _filteredNotes = [];
 
   @override
   void initState() {
     super.initState();
-    // need to load the page. first thing we need is patients
     init();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -50,9 +49,14 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
       Future.microtask(() => context.go('/login'));
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    //TODO
     return Scaffold(
-      appBar: AppBar(title: const Text('Notetaker Search')),
+      appBar: AppBar(
+        title: const Text('Notetaker Search'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildConfigForm(),
@@ -63,15 +67,12 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     final theme = Theme.of(context);
     List<Widget> childWidgets = [];
     final successText =
-        'Configure your Notetaker assistant to recognize PII, trigger words, etc and upload voice samples for speaker recognition.';
-    final failureText =
-        'Configuration options cannot be displayed because either you have no patients or their was an error fetching them.';
+        'View, Edit, and Delete your Notes from Notetaker Assistant.';
+    final failureText = 'Error fetching Medical Notetaker Notes.';
     if (_isPatient) {
       childWidgets = [
         _buildInfoCard(theme, successText),
         const SizedBox(height: 24),
-        // _buildNotesSearchFilters(theme),
-        // const SizedBox(height: 24),
         _buildNotesSection(theme),
         const SizedBox(height: 24),
       ];
@@ -89,8 +90,6 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         const SizedBox(height: 24),
         _buildPatientSection(theme),
         const SizedBox(height: 24),
-        // _buildNotesSearchFilters(theme),
-        // const SizedBox(height: 24),
         _buildNotesSection(theme),
         const SizedBox(height: 24),
       ];
@@ -106,29 +105,27 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
   }
 
   Future<void> _fetchPatientData(int patientId) async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
     try {
-      final config = await NotetakerConfigService.getUserNotetakerConfig(
-        patientId,
-        context,
-      );
       final patientNotes = await NotetakerConfigService.getPatientNotes(
         patientId,
       );
-      if (config != null) {
+      if (mounted) {
+        List<PatientNote> sortedNotes = List.from(patientNotes);
+        sortedNotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
         setState(() {
-          _currentConfig = config;
-          _isEnabled = config.isEnabled;
-          _permitCaregiverAccess = config.permitCaregiverAccess;
           _currentPatientNotes = patientNotes;
+          _filteredNotes = sortedNotes;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Failed to load Patient\'s Notetaker configuration: $e',
-            ),
+            content: Text('Failed to load Patient\'s Notetaker notes: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -173,106 +170,23 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
-      }
-    }
-
-    if (_isPatient) {
-      _fetchPatientData(_user!.patientId!);
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  //TODO
-  Future<void> _saveEditNote() async {
-    setState(() => _isSaving = true);
-    try {
-      if (_user == null) throw Exception('User not found');
-      List<PatientNotetakerKeyword> keywordList = [];
-      final config = PatientNotetakerConfigDTO(
-        id: _currentConfig?.id,
-        patientId: _isPatient
-            ? _user!.patientId!
-            : int.parse(_selectedPatientId ?? '-1'),
-        isEnabled: _isEnabled,
-        permitCaregiverAccess: _permitCaregiverAccess,
-        triggerKeywords: keywordList,
-      );
-      // Use NotetakerConfigService to update config
-      final savedConfig = await NotetakerConfigService.saveUserNotetakerConfig(
-        config,
-        userId: _user!.id,
-      );
-
-      if (savedConfig != null) {
-        setState(() => _currentConfig = savedConfig);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Notetaker configuration saved successfully!',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
-        }
-      } else {
-        throw Exception('Failed to save configuration');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save configuration: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        setState(() => _isLoading = false);
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
+      if (_isPatient) {
+        if (_user?.patientId != null) {
+          await _fetchPatientData(_user!.patientId!);
+        } else {
+          if (mounted) {
+            setState(() => _isLoading = false);
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
-  }
-
-  Widget _buildNotesSection(ThemeData theme) {
-    return new Container();
-  }
-
-  Widget _buildPatientSection(ThemeData theme) {
-    return _buildSection(
-      theme,
-      'Select patient',
-      Icons.person, // Changed from Icons.psychology for better compatibility
-      [
-        DropdownButtonFormField<String>(
-          value: _selectedPatientId,
-          decoration: InputDecoration(labelText: 'Select an option'),
-          items: _patientList
-              .map(
-                (patient) => DropdownMenuItem(
-                  value: patient['id'],
-                  child: Text(patient['name']!),
-                ),
-              )
-              .toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedPatientId = value!;
-            });
-            _fetchPatientData(int.parse(_selectedPatientId!));
-          },
-          validator: (value) {
-            if (value == null) {
-              return 'Please select an option';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
   }
 
   Widget _buildSection(
@@ -316,6 +230,211 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         ],
       ),
     );
+  }
+
+  void _filterNotes() {
+    if (_currentPatientNotes == null) {
+      _filteredNotes = [];
+      return;
+    }
+
+    List<PatientNote> notes = List.from(_currentPatientNotes!);
+
+    final searchText = _searchController.text.toLowerCase();
+    if (searchText.isNotEmpty) {
+      notes = notes.where((note) {
+        return note.note.toLowerCase().contains(searchText);
+      }).toList();
+    }
+
+    if (_startDate != null) {
+      final startDate = DateTime(
+        _startDate!.year,
+        _startDate!.month,
+        _startDate!.day,
+      );
+      notes = notes.where((note) {
+        final noteDate = DateTime(
+          note.createdAt.year,
+          note.createdAt.month,
+          note.createdAt.day,
+        );
+        return noteDate.isAfter(startDate.subtract(const Duration(days: 1)));
+      }).toList();
+    }
+    if (_endDate != null) {
+      final endDate = DateTime(_endDate!.year, _endDate!.month, _endDate!.day);
+      notes = notes.where((note) {
+        final noteDate = DateTime(
+          note.createdAt.year,
+          note.createdAt.month,
+          note.createdAt.day,
+        );
+        return noteDate.isBefore(endDate.add(const Duration(days: 1)));
+      }).toList();
+    }
+    notes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    setState(() {
+      _filteredNotes = notes;
+    });
+  }
+
+  void _onNoteSelected(PatientNote note) {
+    // Navigate to detail view with note
+    context.go('/notetaker/detail/${note.id}', extra: note);
+  }
+
+  Widget _buildNotesSection(ThemeData theme) {
+    return _buildSection(theme, 'Patient Notes', Icons.note, [
+      TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          labelText: 'Search notes',
+          prefixIcon: Icon(Icons.search),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (value) => _filterNotes(),
+      ),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Expanded(
+            child: TextButton.icon(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _startDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() => _startDate = picked);
+                  _filterNotes();
+                }
+              },
+              icon: Icon(Icons.calendar_today),
+              label: Text(
+                _startDate != null
+                    ? 'Start: ${_startDate!.toString().split(' ')[0]}'
+                    : 'Start Date',
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextButton.icon(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _endDate ?? DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null) {
+                  setState(() => _endDate = picked);
+                  _filterNotes();
+                }
+              },
+              icon: Icon(Icons.calendar_today),
+              label: Text(
+                _endDate != null
+                    ? 'End: ${_endDate!.toString().split(' ')[0]}'
+                    : 'End Date',
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _startDate = null;
+                _endDate = null;
+                _searchController.clear();
+              });
+              _filterNotes();
+            },
+            icon: Icon(Icons.clear),
+            tooltip: 'Clear filters',
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      // Notes list
+      if (_filteredNotes.isEmpty)
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(
+              'No notes found',
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 16,
+              ),
+            ),
+          ),
+        )
+      else
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: _filteredNotes.length,
+          itemBuilder: (context, index) {
+            final note = _filteredNotes[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                title: Text(
+                  note.note.length > 100
+                      ? '${note.note.substring(0, 100)}...'
+                      : note.note,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                subtitle: Text(
+                  'Created: ${note.createdAt.toString().split(' ')[0]}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () => _onNoteSelected(note),
+              ),
+            );
+          },
+        ),
+    ]);
+  }
+
+  Widget _buildPatientSection(ThemeData theme) {
+    return _buildSection(theme, 'Select patient', Icons.person, [
+      DropdownButtonFormField<String>(
+        value: _selectedPatientId,
+        decoration: InputDecoration(labelText: 'Select an option'),
+        items: _patientList
+            .map(
+              (patient) => DropdownMenuItem(
+                value: patient['id'],
+                child: Text(patient['name']!),
+              ),
+            )
+            .toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedPatientId = value!;
+          });
+          _fetchPatientData(int.parse(_selectedPatientId!));
+        },
+        validator: (value) {
+          if (value == null) {
+            return 'Please select an option';
+          }
+          return null;
+        },
+      ),
+    ]);
   }
 
   Widget _buildInfoCard(ThemeData theme, String text) {

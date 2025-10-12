@@ -126,6 +126,12 @@ public class PatientNotetakerController {
     @DeleteMapping("/{patientId}/notes/{id}")
     public ResponseEntity<Void> deletePatientNote(@PathVariable Long patientId, 
         @PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(null);
+        try {
+            patientNotetakerService.deleteNoteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (AppException ex) {
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

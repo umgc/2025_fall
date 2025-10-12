@@ -190,22 +190,75 @@ class NotetakerConfigService {
     try {
       final authHeaders = await ApiService.getAuthHeaders();
       final uri = Uri.parse('$baseUrl/${patientId.toString()}/notes');
-      print('❌ Getting Patient Notes for patientId $patientId from: $uri');
       final response = await http.get(uri, headers: authHeaders);
-      print('❌ Patient Notes response status: ${response.statusCode}');
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as List<dynamic>;
-        return data.map((noteJson) => PatientNote.fromJson(noteJson)).toList();
+        final decoded = jsonDecode(response.body);
+        List<dynamic> data;
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded is Map && decoded.containsKey('data')) {
+          data = decoded['data'] as List<dynamic>;
+        } else if (decoded is Map && decoded.containsKey('notes')) {
+          data = decoded['notes'] as List<dynamic>;
+        } else {
+          return [];
+        }
+        final notes = <PatientNote>[];
+        for (var i = 0; i < data.length; i++) {
+          final noteJson = data[i];
+          try {
+            final note = PatientNote.fromJson(noteJson);
+            notes.add(note);
+          } catch (e) {
+            // Skip malformed notes
+          }
+        }
+        return notes;
       } else if (response.statusCode == 404) {
-        print('❌ No Patient Notes found for patientId $patientId');
         return [];
       } else {
-        print('❌ Failed to get Patient Notes: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('❌ Error getting Patient Notes: $e');
       return [];
+    }
+  }
+
+  static Future<PatientNote> updatePatientNote(PatientNote note) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      authHeaders['Content-Type'] = 'application/json';
+      authHeaders['Accept'] = '*/*';
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/${note.patientId}/notes/${note.id}'),
+        headers: authHeaders,
+        body: jsonEncode(note.toJson()),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return PatientNote.fromJson(data);
+      } else {
+        throw Exception('Failed to update note: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error updating note: $e');
+    }
+  }
+
+  static Future<void> deletePatientNote(String noteId, int patientId) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/${patientId.toString()}/notes/$noteId'),
+        headers: authHeaders,
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return;
+      }
+    } catch (e) {
+      print('Error deleting note: $e');
+      return;
     }
   }
 }

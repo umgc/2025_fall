@@ -15,11 +15,15 @@ class PatientNote {
 
   factory PatientNote.fromJson(Map<String, dynamic> json) {
     return PatientNote(
-      id: json['id'] as String,
-      patientId: json['patientId'] as String,
-      note: json['note'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: json['id']?.toString() ?? '',
+      patientId: json['patientId']?.toString() ?? '',
+      note: json['note']?.toString() ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
     );
   }
 
