@@ -83,8 +83,8 @@ export const handler = async (event, context) => {
       lms_service = ${lms} AND
       (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
       (${studentId} = -1 OR student_id = ${studentId}) AND
-      date_trunc('day', time) >= date_trunc('day', ${startDate} AT TIME ZONE 'UTC') AND
-      date_trunc('day', time) <= date_trunc('day', ${endDate} AT TIME ZONE 'UTC');`;
+      time >= ${startDate} AT TIME ZONE 'UTC' AND
+      time <= ${endDate} AT TIME ZONE 'UTC';`;
     }
     catch (error) {
       console.error("Failed to get logs ", error);

@@ -43,7 +43,7 @@ public class CaregiverController {
     public ResponseEntity<Caregiver> getCaregiver(@PathVariable Long caregiverId, HttpServletRequest request) {
         // SecurityUtil.UserInfo user = securityUtil.getCurrentUser(request);
         Caregiver caregiver = caregiverService.getCaregiverById(caregiverId);
-
+        // TODO - add caregiver verification
         // if (user.role != Role.CAREGIVER || !caregiver.getEmail().equals(user.email)) {
         //     return ResponseEntity.status(403).build(); 
         // }

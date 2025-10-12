@@ -13,6 +13,7 @@ import 'view_submission_detail.dart';
 import '../Api/llm/perplexity_api.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:learninglens_app/services/prompt_builder_service.dart';
 
 class SubmissionList extends StatefulWidget {
   final int assignmentId;
@@ -32,13 +33,14 @@ class SubmissionListState extends State<SubmissionList> {
   LmsInterface api = LmsFactory.getLmsService();
   Map<int, bool> isLoadingMap = {};
   Map<int, LlmType> llmSelectionMap = {};
+  Map<int, String> toneSelectionMap = {};
+  Map<int, String> voiceSelectionMap = {};
+  Map<int, String> detailLevelSelectionMap = {};
 
   late Future<List<SubmissionWithGrade>> futureSubmissionsWithGrades =
       api.getSubmissionsWithGrades(widget.assignmentId);
   late Future<List<Participant>> futureParticipants =
       api.getCourseParticipants(widget.courseId);
-
-  final LlmType defaultLlm = LlmType.PERPLEXITY;
 
   final perplexityApiKey = LocalStorageService.getPerplexityKey();
   final openApiKey = LocalStorageService.getOpenAIKey();
@@ -77,6 +79,26 @@ class SubmissionListState extends State<SubmissionList> {
     });
   }
 
+  LlmType getDefaultLlm() {
+    final openApiKey = LocalStorageService.getOpenAIKey();
+    final grokApiKey = LocalStorageService.getGrokKey();
+    final deepseekApiKey = LocalStorageService.getDeepseekKey();
+    final perplexityApiKey = LocalStorageService.getPerplexityKey();
+
+    if (openApiKey.isNotEmpty) {
+      return LlmType.CHATGPT;
+    } else if (grokApiKey.isNotEmpty) {
+      return LlmType.GROK;
+    } else if (deepseekApiKey.isNotEmpty) {
+      return LlmType.DEEPSEEK;
+    } else if (perplexityApiKey.isNotEmpty) {
+      return LlmType.PERPLEXITY;
+    } else {
+      // fallback if none are available
+      return LlmType.CHATGPT;
+    }
+  }
+
   void _handleLLMChanged(int participantId, LlmType? newValue) {
     setState(() {
       if (newValue != null) {
@@ -96,6 +118,30 @@ class SubmissionListState extends State<SubmissionList> {
   void _handleFullNameFilterChanged(String newValue) {
     setState(() {
       fullNameFilter = newValue;
+    });
+  }
+
+  void _handleToneChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        toneSelectionMap[participantId] = newValue;
+      }
+    });
+  }
+
+  void _handleVoiceChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        voiceSelectionMap[participantId] = newValue;
+      }
+    });
+  }
+
+  void _handleDetailChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        detailLevelSelectionMap[participantId] = newValue;
+      }
     });
   }
 
@@ -263,7 +309,7 @@ class SubmissionListState extends State<SubmissionList> {
                                       isLoadingMap[participant.id] ?? false;
                                   LlmType selectedLLM =
                                       llmSelectionMap[participant.id] ??
-                                          defaultLlm;
+                                          getDefaultLlm();
                                   return SizedBox(
                                     width:
                                         MediaQuery.of(context).size.width < 450
@@ -361,6 +407,93 @@ class SubmissionListState extends State<SubmissionList> {
                                                       }).toList(),
                                                     ),
                                                     SizedBox(height: 4),
+                                                    // Tone Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value: toneSelectionMap[
+                                                              participant.id] ??
+                                                          'Formal',
+                                                      decoration:
+                                                          InputDecoration(
+                                                              labelText:
+                                                                  'Tone'),
+                                                      onChanged: (newValue) =>
+                                                          _handleToneChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Formal',
+                                                        'Straightforward',
+                                                        'Casual'
+                                                      ]
+                                                          .map((tone) =>
+                                                              DropdownMenuItem(
+                                                                value: tone,
+                                                                child:
+                                                                    Text(tone),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
+
+                                                    // Voice Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value: voiceSelectionMap[
+                                                              participant.id] ??
+                                                          'Supportive',
+                                                      decoration:
+                                                          InputDecoration(
+                                                              labelText:
+                                                                  'Voice'),
+                                                      onChanged: (newValue) =>
+                                                          _handleVoiceChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Supportive',
+                                                        'Neutral',
+                                                        'Constructive'
+                                                      ]
+                                                          .map((voice) =>
+                                                              DropdownMenuItem(
+                                                                value: voice,
+                                                                child:
+                                                                    Text(voice),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
+
+                                                    // Level of Detail Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value:
+                                                          detailLevelSelectionMap[
+                                                                  participant
+                                                                      .id] ??
+                                                              'Neutral',
+                                                      decoration: InputDecoration(
+                                                          labelText:
+                                                              'Level of Detail'),
+                                                      onChanged: (newValue) =>
+                                                          _handleDetailChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Basic',
+                                                        'Neutral',
+                                                        'Detailed'
+                                                      ]
+                                                          .map((detail) =>
+                                                              DropdownMenuItem(
+                                                                value: detail,
+                                                                child: Text(
+                                                                    detail),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
                                                   ],
                                                 )
                                               else
@@ -434,90 +567,20 @@ class SubmissionListState extends State<SubmissionList> {
                                                                               .toJson());
                                                                 }
 
-                                                                String
-                                                                    queryPrompt =
-                                                                    '''
-                                                  I am building a program that generates essay rubric assignments that teachers can distribute to students
-                                                  who can then submit their responses to be graded. Here is an example format of a rubric roughly:
-                                                  [
-                                                      {
-                                                          "id": 82,
-                                                          "rubric_criteria": [
-                                                              {
-                                                                  "id": 52,
-                                                                  "description": "Content",
-                                                                  "levels": [
-                                                                      {
-                                                                          "id": 157,
-                                                                          "score": 1,
-                                                                          "definition": "Poor"
-                                                                      },
-                                                                      {
-                                                                          "id": 156,
-                                                                          "score": 3,
-                                                                          "definition": "Good"
-                                                                      },
-                                                                      {
-                                                                          "id": 155,
-                                                                          "score": 5,
-                                                                          "definition": "Excellent"
-                                                                      }
-                                                                  ]
-                                                              },
-                                                              {
-                                                                  "id": 53,
-                                                                  "description": "Clarity",
-                                                                  "levels": [
-                                                                      {
-                                                                          "id": 160,
-                                                                          "score": 1,
-                                                                          "definition": "Unclear"
-                                                                      },
-                                                                      {
-                                                                          "id": 159,
-                                                                          "score": 3,
-                                                                          "definition": "Somewhat Clear"
-                                                                      },
-                                                                      {
-                                                                          "id": 158,
-                                                                          "score": 5,
-                                                                          "definition": "Very Clear"
-                                                                      }
-                                                                  ]
-                                                              }
-                                                          ]
-                                                      }
-                                                  ]
-
-                                                  I have the following generated essay rubric:
-                                                  Rubric: $fetchedRubric
-
-                                                  Grade the following submission based on that rubric: 
-                                                  Submission: $submissionText 
-
-                                                  You must reply with a representation of the rubric in JSON format that matches this example format, 
-                                                  obviously put your generated scores in and be specific with the remarks on the scoring and give specific examples from the 
-                                                  submitted assignment that were either good or bad depending on the score given. Also cut out anything that is not
-                                                  the json response. No extraneous comments outside that: 
-                                                [
-                                                  {
-                                                      "criterionid": 67,
-                                                      "criterion_description": "Content",
-                                                      "levelid": 236,
-                                                      "level_description": "Essay is mostly well-organized, with few issues in flow",
-                                                      "score": 6,
-                                                      "remark": "The essay has a clear structure and transitions between paragraphs. Each paragraph focuses on a different aspect of having a park, such as relaxation, activity, and aesthetics. However, there are a few places where the flow could be improved, like the transition between the third and fourth paragraphs."
-                                                  },
-                                                  {
-                                                      "criterionid": 68,
-                                                      "criterion_description": "Use of Evidence",
-                                                      "levelid": 243,
-                                                      "level_description": "Good use of evidence with occasional gaps",
-                                                      "score": 6,
-                                                      "remark": "The essay uses good evidence to support its claims, such as 'Spending time outside can make us feel happier and less anxious, which would help us do better in class.' However, there are occasional gaps where more specific or detailed evidence could strengthen the arguments further."
-                                                  }
-                                                ]
-                                                ''';
+                                                                String queryPrompt = buildLlmPrompt(
+                                                                    submissionText:
+                                                                        submissionText,
+                                                                    fetchedRubric:
+                                                                        fetchedRubric,
+                                                                    tone: toneSelectionMap[participant
+                                                                            .id] ??
+                                                                        'Formal',
+                                                                    voice: voiceSelectionMap[participant
+                                                                            .id] ??
+                                                                        'Supportive',
+                                                                    detailLevel:
+                                                                        detailLevelSelectionMap[participant.id] ??
+                                                                            'Neutral');
 
                                                                 String apiKey =
                                                                     getApiKey(
