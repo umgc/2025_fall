@@ -126,6 +126,31 @@ public class TaskServiceV2 {
         log.info("Creating task for patient: " + patient.getId());
         log.debug("Task details: " + taskDto);
 
+        // --- Normalize recurrence for imported/partial tasks --------------------
+        if (taskDto.getFrequency() != null && taskDto.getCount() == null && taskDto.getDate() != null) {
+            try {
+                // Determine start and end (use start date + frequency to estimate)
+                LocalDate startDate = LocalDate.parse(taskDto.getDate().substring(0, 10));
+
+                // If frontend provided an implied end date (e.g., from UNTIL) inside
+                // description or elsewhere,
+                // you can skip this — otherwise default to a small horizon so backend can
+                // compute count safely.
+                LocalDate impliedEnd = startDate.plusMonths(3);
+
+                int computedCount = calculateCount(
+                        startDate,
+                        impliedEnd,
+                        taskDto.getFrequency(),
+                        Optional.ofNullable(taskDto.getInterval()).orElse(1),
+                        taskDto.getDaysOfWeek());
+
+                taskDto.setCount(computedCount);
+            } catch (Exception ex) {
+                log.warn("Could not normalize recurrence count for imported task: " + ex.getMessage());
+            }
+        }
+
         Task parentTask = Task.builder()
                 .name(taskDto.getName())
                 .description(taskDto.getDescription())
@@ -195,25 +220,48 @@ public class TaskServiceV2 {
                 : taskRepository.findById(parentId)
                         .orElseThrow(() -> new ParentTaskNotFoundException(parentId));
 
-        // Snapshot old fields
-        String oldFreq = parentTask.getFrequency();
-        Integer oldInterval = parentTask.getTaskInterval();
-        Integer oldCount = parentTask.getDoCount();
-        String oldDays = parentTask.getDaysOfWeek();
+        // Snapshot old recurrence fields BEFORE applying edits
+        String originalParentDate = parentTask.getDate();
+        String originalFreq = parentTask.getFrequency();
+        Integer originalInterval = parentTask.getTaskInterval();
+        Integer originalCount = parentTask.getDoCount();
+        String originalDays = parentTask.getDaysOfWeek();
 
-        // Original implied end (before changes)
+        // Original implied end before change
         LocalDate originalEnd = impliedEndDateFromSaved(parentTask);
 
-        // 1) Update parent itself
+        // Apply updates but preserve recurrence fields and start date if editing a
+        // later occurrence
         applyTaskUpdates(parentTask, taskDto, true);
-        taskRepository.save(parentTask);
 
-        // Detect changes
-        boolean freqChanged = !Objects.equals(oldFreq, parentTask.getFrequency())
-                || !Objects.equals(oldInterval, parentTask.getTaskInterval());
-        boolean daysChanged = !Objects.equals(oldDays, parentTask.getDaysOfWeek());
-        boolean intvChanged = !Objects.equals(oldInterval, parentTask.getTaskInterval());
-        boolean countChanged = !Objects.equals(oldCount, parentTask.getDoCount());
+        // Force parent to keep its original recurrence anchor
+        parentTask.setDate(originalParentDate);
+        if (originalFreq != null)
+            parentTask.setFrequency(originalFreq);
+        if (originalInterval != null)
+            parentTask.setTaskInterval(originalInterval);
+        if (originalCount != null)
+            parentTask.setDoCount(originalCount);
+        if (originalDays != null)
+            parentTask.setDaysOfWeek(originalDays);
+
+        taskRepository.save(parentTask);
+        // ---- Detect changes (compare DTO vs original series values) ----
+        List<Boolean> originalDaysList = TaskMapper.parseDays(originalDays);
+
+        boolean freqChanged = taskDto.getFrequency() != null &&
+                !Objects.equals(
+                        taskDto.getFrequency().toLowerCase(),
+                        Optional.ofNullable(originalFreq).map(String::toLowerCase).orElse(null));
+
+        boolean intvChanged = taskDto.getInterval() != null &&
+                !Objects.equals(taskDto.getInterval(), originalInterval);
+
+        boolean countChanged = taskDto.getCount() != null &&
+                !Objects.equals(taskDto.getCount(), originalCount);
+
+        boolean daysChanged = taskDto.getDaysOfWeek() != null &&
+                !Objects.equals(taskDto.getDaysOfWeek(), originalDaysList);
 
         boolean recurrenceChanged = freqChanged || intvChanged || countChanged || daysChanged;
 
@@ -245,6 +293,16 @@ public class TaskServiceV2 {
                 parentTask.setDoCount(newCount);
                 taskRepository.save(parentTask);
                 newParams = newParams.withCount(newCount);
+            }
+            List<LocalDate> targetDates = generateDates(newParams, null);
+            if (!targetDates.isEmpty()) {
+                LocalDate earliest = targetDates.get(0);
+                LocalDate parentDate = onlyDate(parentTask.getDate());
+                if (earliest.isBefore(parentDate)) {
+                    log.info("Adjusting parent date from {} → {}", parentDate, earliest);
+                    parentTask.setDate(earliest.toString());
+                    taskRepository.save(parentTask);
+                }
             }
             if ("weekly".equalsIgnoreCase(newParams.frequency) && daysChanged) {
                 // Weekly days changed → keep the same calendar END, recompute COUNT
@@ -817,8 +875,11 @@ public class TaskServiceV2 {
                             LocalDate occ = weekStart.with(dow);
                             if (!occ.isBefore(p.startDate)) {
                                 if (endCap != null) {
-                                    if (occ.isAfter(endCap))
-                                        return out;
+                                    if (occ.isAfter(endCap)) {
+                                        // If same day as endCap, still include
+                                        if (!occ.isEqual(endCap))
+                                            return out;
+                                    }
                                     out.add(occ);
                                 } else {
                                     out.add(occ);
@@ -954,6 +1015,30 @@ public class TaskServiceV2 {
             taskRepository.deleteAll(toDelete);
             log.info("Reconcile: deleted {} old tasks", toDelete.size());
         }
+        // -------------------------------------------------------
+        // Safety check: ensure full recurrence count exists
+        // -------------------------------------------------------
+        List<Task> currentSeries = taskRepository.findByParentTaskId(parentId);
+        int expectedCount = Optional.ofNullable(parentTask.getDoCount()).orElse(1);
+
+        // +1 accounts for the parent itself
+        if (currentSeries.size() + 1 < expectedCount) {
+            log.warn("Series undercount detected (have {}, expected {}). Rebuilding...",
+                    currentSeries.size() + 1, expectedCount);
+
+            // Regenerate any missing occurrences
+            generateOccurrences(parentTask, mapToDto(parentTask), parentTask.getPatient());
+        }
+
+        if (currentSeries.size() + 1 < expectedCount) {
+            log.warn("Series undercount detected (have {}, expected {}). Rebuilding...",
+                    currentSeries.size() + 1, expectedCount);
+            generateOccurrences(parentTask, mapToDto(parentTask), parentTask.getPatient());
+        } else {
+            log.info("Series count OK (have {}, expected {})",
+                    currentSeries.size() + 1, expectedCount);
+        }
+
     }
 
 }
