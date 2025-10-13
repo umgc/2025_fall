@@ -384,7 +384,7 @@ class QuizMoodleState extends State<QuizMoodle> {
                                   await Future.delayed(Duration(seconds: 2));
                                   await courses
                                       .firstWhere(
-                                          (c) => c.fullName == selectedCourse)
+                                          (c) => c.id.toString() == selectedCourse)
                                       .refreshQuizzes();
 
                                   if (mounted) {
@@ -475,7 +475,7 @@ class QuizMoodleState extends State<QuizMoodle> {
                                   await Future.delayed(Duration(seconds: 2));
                                   await courses
                                       .firstWhere(
-                                          (c) => c.fullName == selectedCourse)
+                                          (c) => c.id.toString() == selectedCourse)
                                       .refreshQuizzes();
                                   if (mounted) {
                                     Navigator.pop(context);

@@ -154,8 +154,8 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
           print('Assignment created successfully!');
           await GoogleLmsService()
               .courses
-              ?.firstWhereOrNull((c) => c.id.toString() == _selectedCourseId)
-              ?.refreshQuizzes();
+              ?.firstWhere((c) => c.id.toString() == _selectedCourseId)
+              .refreshQuizzes();
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
