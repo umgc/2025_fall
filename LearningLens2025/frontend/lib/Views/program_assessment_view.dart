@@ -31,11 +31,10 @@ class EvaluationDataSource extends DataTableSource {
     required this.lmsService,
   });
 
-  String _formatDateTime(String? dateString) {
-    if (dateString == null) return '';
+  String _formatDateTime(DateTime? dateTime) {
+    if (dateTime == null) return '';
 
-    // Parse the input string into a DateTime object
-    final dateTime = DateTime.parse(dateString).toLocal();
+    dateTime = dateTime.toLocal();
 
     // Format date and time
     final datePart = DateFormat('MM/dd/yyyy').format(dateTime);
@@ -53,21 +52,22 @@ class EvaluationDataSource extends DataTableSource {
         courses.firstWhere((c) => c.id.toString() == result['course_id']);
     final assignment = course.essays!
         .firstWhere((a) => a.id.toString() == result['assignment_id']);
-    final jobStatus = result['status'];
 
-    final startTime = _formatDateTime(result['start_time']);
-    final finishTime = _formatDateTime(result['finish_time']);
+    final assessmentResult = ProrgramAssessmentJob(result);
+
+    final startTime = _formatDateTime(assessmentResult.startTime);
+    final finishTime = _formatDateTime(assessmentResult.finishTime);
 
     return DataRow(color: MaterialStatePropertyAll(Colors.white), cells: [
       DataCell(Text(course.fullName)),
       DataCell(Text(assignment.name)),
-      DataCell(Text(result['language'])),
-      DataCell(Text(result['status'])),
+      DataCell(Text(assessmentResult.language)),
+      DataCell(Text(assessmentResult.status)),
       DataCell(Text(startTime)),
       DataCell(Text(finishTime)),
       DataCell(Row(spacing: 8, children: [
         ElevatedButton(
-          onPressed: jobStatus == 'JOB FINISHED'
+          onPressed: assessmentResult.status == 'JOB FINISHED'
               ? () async {
                   final participants = await lmsService
                       .getCourseParticipants(course.id.toString());
@@ -75,7 +75,7 @@ class EvaluationDataSource extends DataTableSource {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ProgramAsessmentResultsView(
-                        evaluation: result,
+                        evaluation: ProrgramAssessmentJob(result),
                         assignment: assignment,
                         course: course,
                         participants: participants,
@@ -105,7 +105,6 @@ class EvaluationDataSource extends DataTableSource {
   int get selectedRowCount => 0;
 }
 
-// --------------------- WIDGET ---------------------
 class EvaluationTable extends StatelessWidget {
   final List<dynamic> evaluationResults;
   final List<Course> courses;
@@ -148,6 +147,36 @@ class EvaluationTable extends StatelessWidget {
       columnSpacing: 24,
       dataRowHeight: 64,
     );
+  }
+}
+
+
+/// Represents a program assessment job
+/// Check the handleGET method in code_eval/index.mjs for properties
+class ProrgramAssessmentJob{
+  late String courseId;
+  late String assignmentId;
+  late String expectedOutput;
+  /// Programming langauge code was written in
+  late String language;
+  /// username of the user that started the assessment
+  late String username;
+  late String status;
+  /// List of results that contain information about each student's code submission
+  late dynamic resultsJson;
+  late DateTime startTime;
+  DateTime? finishTime;
+
+  ProrgramAssessmentJob(dynamic result){
+    courseId = result['course_id'];
+    assignmentId = result['assignment_id'];
+    expectedOutput = result['expected_output'];
+    language = result['language'];
+    username = result['username'];
+    status = result['status'];
+    resultsJson = result['results_json'] == null ? null : jsonDecode(result['results_json']);
+    startTime = DateTime.parse(result['start_time']);
+    finishTime = result['finish_time'] == null ? null : DateTime.parse(result['finish_time']);
   }
 }
 
@@ -207,34 +236,81 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else {
-                  return _buildMainLayout();
+                  return Padding(
+                          padding: EdgeInsets.all(12),
+                          child: _buildMainLayout()
+                        );
                 }
               });
         }));
   }
 
+  Widget _buildCreateButton(VoidCallback onPressed) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.deepPurpleAccent, // Use Theme.of(context).colorScheme.primary for dynamic theming
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 4,
+      ),
+      label: const Text(
+        'New Assessment Job',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      icon: const Icon(Icons.add, size: 20),
+      iconAlignment: IconAlignment.end, // ensures icon is on the right (Flutter 3.16+)
+    );
+  }
+  
   Widget _buildMainLayout() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // First row with Create button aligned right
-        ProgramAssessmentForm(
-            courses: _courses,
-            onEvaluationStarted: (course, assignment, expectedOutput) async {
-              final results = await _getEvaluations(lmsService.userName!);
-              setState(() {
-                _evaluationResults = results;
-              });
+        Row(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildCreateButton((){
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => 
+                  ProgramAssessmentForm(
+                    courses: _courses,
+                    onEvaluationStarted: (course, assignment, expectedOutput) async {
+                      final results = await _getEvaluations(lmsService.userName!);
+                      setState(() {
+                        _evaluationResults = results;
+                      });
+                    }
+                  )
+                )
+              );
             }),
+            ElevatedButton(
+              onPressed: () async {
+                await _getEvaluations(lmsService.userName!);
+                // To get view to reload
+                setState(() {});
+              },
+              child: Text("Refresh"),
+            )
+          ],
+        ),
         const SizedBox(height: 16),
         // Second row with DataTable
-        Padding(
-          padding: EdgeInsets.all(12),
-          child: EvaluationTable(
+        EvaluationTable(
               evaluationResults: _evaluationResults,
               courses: _courses,
-              lmsService: lmsService),
-        )
+              lmsService: lmsService
+        ),
       ],
     );
   }

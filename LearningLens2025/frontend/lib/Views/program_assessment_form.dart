@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/services/api_service.dart';
@@ -26,6 +28,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
 
   List<Course> courses = [];
+  /// Program arguments
+  final TextEditingController argsController = TextEditingController();
   final TextEditingController outputController = TextEditingController();
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
@@ -37,6 +41,11 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   Assignment? selectedAssignment;
   String? selectedLanguage;
 
+  /// File containing the expected input
+  PlatformFile? inputFile;
+  /// File containing the expected output
+  PlatformFile? outputFile;
+
   bool _isLoading = false;
 
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
@@ -44,8 +53,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   // Helper to check if form is valid
   bool get isFormValid =>
       selectedCourse != null &&
-      selectedAssignment != null &&
-      outputController.text.trim().isNotEmpty;
+      selectedAssignment != null;
 
   @override
   void initState() {
@@ -70,15 +78,75 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     }
   }
 
+  String _getFileContents(PlatformFile file) => utf8.decode(outputFile!.bytes!.toList());
+
+  bool isFilesValid(){
+    if(outputFile == null || outputFile?.bytes == null) return false;
+    // Assumes file is utf-8 encoded
+    if(inputFile != null){
+      final outputFileContent = _getFileContents(outputFile!);
+      final inputFileContent = _getFileContents(inputFile!);
+      if(outputFileContent.split('\n').length != inputFileContent.split('\n').length){
+        _showLineCountMismatchDialog(context);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Future<void> _showLineCountMismatchDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: const [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber,
+                size: 28,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Line Count Mismatch',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: const Text(
+            'The number of lines in the expected input file does not match '
+            'the number of lines in the expected output file.',
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _startEvaluation(Course course, Assignment assignment,
-      String expectedOutput, String language) async {
+      String input, String expectedOutput, String language) async {
+    if(!isFilesValid()) return;
+
     final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
         body: jsonEncode({
           'courseId': course.id,
           'assignmentId': assignment.id.toString(),
+          'input': input,
           'expectedOutput': expectedOutput,
           'username': lmsService.userName,
-          'language': language
+          'language': language,
         }));
 
     if (response.statusCode != 200) {
@@ -101,104 +169,140 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     if (onEvaluationStarted != null) {
       await onEvaluationStarted!(course, assignment, expectedOutput);
     }
+    
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+     return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: CustomAppBar(
+          title: 'New Assessment Job',
+          userprofileurl: lmsService.profileImage ?? '',
+        ),
+        body: LayoutBuilder(builder: (context, constraints) {
+          return Center(
+            child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: _buildForm(context)
+                  )
+          );
+        })
+     );  
+  }
+
+  Widget _buildForm(BuildContext context) {
     return Form(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row with 3 inputs
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            Text("New Program Assessment", style: TextStyle(fontSize: 24)),
                 // Courses Dropdown
-                Expanded(
-                  child: DropdownButtonFormField<Course>(
-                    decoration: InputDecoration(
-                      labelText: "Courses",
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedCourse,
-                    items: courses.map((course) {
+            DropdownButtonFormField<Course>(
+              decoration: InputDecoration(
+                labelText: "Courses",
+                border: OutlineInputBorder(),
+              ),
+              value: selectedCourse,
+              items: courses.map((course) {
+                return DropdownMenuItem(
+                  value: course,
+                  child: Text(course.fullName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCourse = value;
+                  selectedAssignment = null;
+                });
+              },
+            ),
+            // Assignments Dropdown
+            DropdownButtonFormField<Assignment>(
+              decoration: InputDecoration(
+                labelText: "Assignments",
+                border: OutlineInputBorder(),
+              ),
+              value: selectedAssignment,
+              items: selectedCourse == null
+                  ? []
+                  : courses
+                      .firstWhere((c) => c == selectedCourse)
+                      .essays!
+                      .map((assignment) {
                       return DropdownMenuItem(
-                        value: course,
-                        child: Text(course.fullName),
+                        value: assignment,
+                        child: Text(assignment.name),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCourse = value;
-                        selectedAssignment = null;
-                      });
-                    },
-                  ),
-                ),
-                SizedBox(width: 12),
+              onChanged: (value) {
+                setState(() {
+                  selectedAssignment = value;
+                });
+              },
+            ),
+            // Language selection dropdown
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: "Language",
+                border: OutlineInputBorder(),
+              ),
+              value: languages[0],
+              items: languages
+                  .map((lang) => DropdownMenuItem(
+                        value: lang,
+                        child: Text(lang),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedLanguage = value;
+                });
+              }
+            ),
+            Row(
+              spacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Input File'),
+                  onPressed: () async {
+                    final result = await FilePicker.platform.pickFiles();
+                    final file = result?.files.single;
+                    if(file == null) return;
 
-                // Assignments Dropdown
-                Expanded(
-                  child: DropdownButtonFormField<Assignment>(
-                    decoration: InputDecoration(
-                      labelText: "Assignments",
-                      border: OutlineInputBorder(),
-                    ),
-                    value: selectedAssignment,
-                    items: selectedCourse == null
-                        ? []
-                        : courses
-                            .firstWhere((c) => c == selectedCourse)
-                            .essays!
-                            .map((assignment) {
-                            return DropdownMenuItem(
-                              value: assignment,
-                              child: Text(assignment.name),
-                            );
-                          }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedAssignment = value;
-                      });
-                    },
-                  ),
+                    setState(() {
+                      inputFile = file;
+                    });
+                  }
                 ),
-                SizedBox(width: 12),
+                if(inputFile != null)
+                  Text(inputFile!.name),
+              ]
+            ),
+            Row(
+              spacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Expected Output File'),
+                  onPressed: () async {
+                    final result = await FilePicker.platform.pickFiles();
+                    final file = result?.files.single;
+                    if(file == null) return;
 
-                // Language selection dropdown
-                Expanded(
-                    child: DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: "Language",
-                          border: OutlineInputBorder(),
-                        ),
-                        value: languages[0],
-                        items: languages
-                            .map((lang) => DropdownMenuItem(
-                                  value: lang,
-                                  child: Text(lang),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedLanguage = value;
-                          });
-                        })),
-                SizedBox(width: 12),
-
-                // Expected Output TextField
-                Expanded(
-                  child: TextFormField(
-                    maxLines: null,
-                    controller: outputController,
-                    decoration: InputDecoration(
-                      labelText: "Expected Output",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
+                    setState(() {
+                      outputFile = file;
+                    });
+                  }
                 ),
-              ],
+                if(outputFile != null)
+                  Text(outputFile!.name)
+              ]
             ),
             SizedBox(height: 20),
             if (_isLoading)
@@ -248,7 +352,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                           await _startEvaluation(
                               selectedCourse!,
                               selectedAssignment!,
-                              outputController.text,
+                              inputFile != null ? _getFileContents(outputFile!) : '',
+                              _getFileContents(outputFile!),
                               selectedLanguage!);
                         } finally {
                           setState(() {
@@ -263,4 +368,4 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       ),
     );
   }
-}
+  }

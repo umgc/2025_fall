@@ -1,14 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
+import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 
 class ProgramAsessmentResultsView extends StatefulWidget {
-  final dynamic evaluation;
+  final ProrgramAssessmentJob evaluation;
   final Course course;
   final Assignment assignment;
   final List<Participant> participants;
@@ -29,7 +28,7 @@ class ProgramAsessmentResultsView extends StatefulWidget {
 
 class _ProgramAsessmentResultsViewState
     extends State<ProgramAsessmentResultsView> {
-  final dynamic evaluation;
+  final ProrgramAssessmentJob evaluation;
   final Course course;
   final Assignment assignment;
   final List<Participant> participants;
@@ -62,7 +61,7 @@ class _ProgramAsessmentResultsViewState
   }
 
   Widget _buildMainLayout() {
-    List<dynamic> resultsJson = jsonDecode(evaluation['results_json']);
+    List<dynamic> resultsJson = evaluation.resultsJson;
     final children = resultsJson.map(_buildPanel).toList();
 
     return ExpansionPanelList(
@@ -76,7 +75,7 @@ class _ProgramAsessmentResultsViewState
 
   bool _isOutputCorrect(dynamic result) {
     bool error = result['error'];
-    final expectedOutput = evaluation['expected_output'].toString().trimRight();
+    final expectedOutput = evaluation.expectedOutput.trimRight();
     final actualOutput = result['output'].toString().trimRight();
 
     return !error && expectedOutput == actualOutput;
@@ -116,7 +115,7 @@ class _ProgramAsessmentResultsViewState
     final student = participants
         .firstWhere((p) => p.id.toString() == result['studentId'].toString());
     final actualOutput = result['output'].toString();
-    final expectedOutput = evaluation['expected_output'].toString();
+    final expectedOutput = evaluation.expectedOutput;
     bool error = result['error'];
 
     final outputIsCorrect = _isOutputCorrect(result);

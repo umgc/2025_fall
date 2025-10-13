@@ -211,6 +211,10 @@ resource "aws_ecs_task_definition" "eval_c" {
         {
           name  = "COURSE_ID"
           value = "" # Fill this with id of the course the evalation is for at runtime
+        },
+        {
+          name  = "LANGUAGE"
+          value = "" # Fill this with programming language the submissions are supposed to be at runtime
         }
       ]
 

@@ -9,9 +9,10 @@ import { createSubmissionsZip, updateGrade } from './moodle.js';
  * @param {string} s3Uri s3Uri S3 URI for zip file containing student submissions
  * @param {string|number} assignmentId 
  * @param {string|number} courseId 
+ * @param {language} language 
  * @returns 
  */
-async function startECSTask(s3Uri, assignmentId, courseId){
+async function startECSTask(s3Uri, assignmentId, courseId, language){
     const ecsClient = new ECSClient({ region: process.env.AWS_REGION });
     const subnets = process.env.SUBNET_IDS.split(",");
     const securityGroups = process.env.SECURITY_GROUP_IDS.split(",");
@@ -53,6 +54,7 @@ async function startECSTask(s3Uri, assignmentId, courseId){
                             { name: "LAMBDA_NAME", value: functionName },
                             { name: "ASSIGNMENT_ID", value: assignmentId.toString() },
                             { name: "COURSE_ID", value: courseId.toString() },
+                            { name: "LANGUAGE", value: language },
                         ],
                     },
                 ],
@@ -69,9 +71,9 @@ async function startECSTask(s3Uri, assignmentId, courseId){
     }
 }
 
-async function startEvaluation(body){
-    const { assignmentId, courseId, expectedOutput } = body
-    const zipFile = await createSubmissionsZip(assignmentId)
+async function startEvaluation(bodyJson){
+    const { assignmentId, courseId, input, expectedOutput, language } = bodyJson
+    const zipFile = await createSubmissionsZip(assignmentId, expectedOutput, input)
     const s3Client = new S3Client({ region: "us-east-1" });
     console.log('uploading to S3')
     const key = `${courseId}/${assignmentId}/submissions.zip`;
@@ -86,16 +88,16 @@ async function startEvaluation(body){
         })
     );
 
-    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId)
+    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId, language)
 }
 
 
 /**
  * 
  * @param {postgres.Sql<{}>} client 
- * @param {*} courseId 
- * @param {*} assignmentId 
- * @param {*} evaluation 
+ * @param {string} courseId 
+ * @param {string} assignmentId 
+ * @param {Array<Object>} evaluation 
  */
 async function storeEvaluationResults(client, courseId, assignmentId, evaluation){
     await client`
@@ -143,19 +145,13 @@ async function handleGET(client, event, context){
                     language varchar NOT NULL,
                     username varchar NOT NULL,
                     status varchar NOT NULL,
+                    input varchar,
                     results_json text,
                     start_time timestamptz NOT NULL DEFAULT now(),
                     finish_time timestamptz,
+                    suggested_grade int,
                     primary key (course_id, assignment_id, username)
                 );`
-           /*  case 'start':
-                const body = JSON.parse(event.body)
-                const taskDef = await startEvaluation(body)
-                
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify(taskDef)
-                } */
         }
     }
 
@@ -180,9 +176,9 @@ async function handleGET(client, event, context){
  * @param {object} context 
  */
 async function handlePOST(client, event, context){
-    const body = JSON.parse(event.body)
-    
-    if(!body.assignmentId || !body.courseId){
+    const bodyJson = JSON.parse(event.body)
+    console.log('event.body', bodyJson)
+    if(!bodyJson.assignmentId || !bodyJson.courseId){
         return {
             statusCode: 400,
             body: 'Missing assignmentId, courseId, or both',
@@ -197,15 +193,17 @@ async function handlePOST(client, event, context){
      */
     await client`
         INSERT INTO code_evaluation VALUES (
-            ${body.courseId},
-            ${body.assignmentId},
-            ${body.expectedOutput},
-            ${body.language},
-            ${body.username},
-            'JOB STARTED'
+            ${bodyJson.courseId},
+            ${bodyJson.assignmentId},
+            ${bodyJson.expectedOutput},
+            ${bodyJson.language},
+            ${bodyJson.username},
+            'JOB STARTED',
+            ${bodyJson.input ?? null}
         )
         ON CONFLICT (assignment_id, course_id, username) DO UPDATE
         SET status = EXCLUDED.status,
+            input = EXCLUDED.input,
             expected_output = EXCLUDED.expected_output,
             language = EXCLUDED.language,
             results_json = NULL,
@@ -213,7 +211,7 @@ async function handlePOST(client, event, context){
             finish_time = NULL;
     `
 
-    const taskDef = await startEvaluation(body)
+    const taskDef = await startEvaluation(bodyJson)
     console.log('Task Definition', taskDef)
     
     return {

@@ -92,9 +92,11 @@ async function downloadFile(url) {
 /**
  * Creates a zip file containing the submissions
  * @param {string|number} assignmentId 
+ * @param {string} expectedOutput
+ * @param {string | undefined} input
  * @returns An in-memory stream of the zip 
  */
-export async function createSubmissionsZip(assignmentId) {
+export async function createSubmissionsZip(assignmentId, expectedOutput, input) {
   // 1. Get submissions from Moodle
     const token = await getAuthToken()
     const submissions = await getAssignmentSubmissions(token, assignmentId);
@@ -106,6 +108,12 @@ export async function createSubmissionsZip(assignmentId) {
     archive.pipe(zipStream);
 
     zipStream.on("data", chunk => chunks.push(chunk));
+
+    // Input is optional
+    if(input){
+        archive.append(input, { name: 'input' })
+    }
+    archive.append(expectedOutput, { name: 'expectedOutput' })
 
     // 3. Loop through each submission
     for (const submission of submissions) {
