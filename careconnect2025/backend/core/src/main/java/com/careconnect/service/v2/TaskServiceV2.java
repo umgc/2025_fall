@@ -30,7 +30,6 @@ import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.TaskRepository;
 import com.careconnect.util.TaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * Service layer for managing tasks (API v2).
  *
