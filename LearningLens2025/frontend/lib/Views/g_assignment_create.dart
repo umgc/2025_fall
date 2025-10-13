@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/google_classroom/google_classroom_api.dart';
+import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -150,6 +152,10 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
 
         if (response.statusCode == 200) {
           print('Assignment created successfully!');
+          await GoogleLmsService()
+              .courses
+              ?.firstWhereOrNull((c) => c.id.toString() == _selectedCourseId)
+              ?.refreshQuizzes();
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
