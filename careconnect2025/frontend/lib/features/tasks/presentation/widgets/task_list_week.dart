@@ -1,6 +1,7 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -45,8 +46,8 @@ class TaskListWeek extends StatelessWidget {
         child: Text("No tasks this week"),
       );
     }
-    // Extract Task objects from the calendar events
-    // and sort them by date, then by time, then by name.
+
+    // Extract Task objects and sort by date/time/name
     final tasks = events.map((e) => e.event!).toList()
       ..sort((a, b) {
         final cmpDate = a.date.compareTo(b.date);
@@ -60,7 +61,7 @@ class TaskListWeek extends StatelessWidget {
         if (b.timeOfDay != null) return 1;
         return a.name.compareTo(b.name);
       });
-    // Render a vertical column of ListTiles, one per task.
+
     return Column(
       children: tasks.map((task) {
         final assignedName = task.assignedPatientId != null
@@ -68,36 +69,108 @@ class TaskListWeek extends StatelessWidget {
             : "Unassigned";
         final color = manager.getColor(task.taskType);
         final icon = manager.getIcon(task.taskType);
-        return ListTile(
-          leading: Icon(icon, color: color),
-          title: Text(
-            task.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${task.date.month}/${task.date.day} • "
-                "${task.timeOfDay != null ? task.timeOfDay!.format(context) : "All day"}",
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
               ),
-              if (assignedName.isNotEmpty && assignedName != "Unassigned")
-                Text("👤 $assignedName"),
-            ],
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => onEdit(task),
+              leading: Icon(icon, color: color),
+              title: Text(
+                task.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => onDelete(task),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Use Wrap to avoid overflow on small screens
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4, // adds a little space when wrapping
+                    children: [
+                      Text(
+                        "${task.date.month}/${task.date.day} • "
+                        "${task.timeOfDay != null ? task.timeOfDay!.format(context) : "All day"}",
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: task.isComplete
+                              ? Colors.white
+                              : Colors.green,
+                          backgroundColor: task.isComplete
+                              ? Colors.green
+                              : Colors.transparent,
+                          side: BorderSide(
+                            color: task.isComplete ? Colors.green : Colors.grey,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          minimumSize: const Size(
+                            0,
+                            28,
+                          ), // keeps button compact
+                        ),
+                        icon: task.isComplete
+                            ? const Icon(Icons.check, size: 14)
+                            : const SizedBox.shrink(),
+                        label: Text(
+                          task.isComplete ? "Completed" : "Mark as Complete",
+                          style: TextStyle(
+                            color: task.isComplete
+                                ? Colors.white
+                                : Colors.green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onPressed: () async {
+                          final newStatus = !task.isComplete;
+                          setState(() => task.isComplete = newStatus);
+
+                          // Optional backend sync
+                          try {
+                            await ApiService.updateTaskCompletionV2(
+                              task.id!,
+                              newStatus,
+                            );
+                          } catch (e) {
+                            // Roll back the change if API failed
+                            setState(() => task.isComplete = !newStatus);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Failed to update task")),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  if (assignedName.isNotEmpty && assignedName != "Unassigned")
+                    Text("👤 $assignedName"),
+                ],
               ),
-            ],
-          ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => onEdit(task),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => onDelete(task),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       }).toList(),
     );
