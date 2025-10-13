@@ -1,6 +1,7 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -135,8 +136,13 @@ class TaskListDay extends StatelessWidget {
 
                           // Optional backend sync
                           try {
-                            // await ApiService().updateTaskCompletion(task.id!, newStatus);
+                            await ApiService.updateTaskCompletionV2(
+                              task.id!,
+                              newStatus,
+                            );
                           } catch (e) {
+                            // Roll back the change if API failed
+                            setState(() => task.isComplete = !newStatus);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text("Failed to update task")),
                             );

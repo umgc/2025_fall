@@ -30,6 +30,7 @@ import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.TaskRepository;
 import com.careconnect.util.TaskMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
  * Service layer for managing tasks (API v2).
  *
@@ -190,6 +191,37 @@ public class TaskServiceV2 {
 
         return mapToDto(savedParent);
 
+    }
+
+    /**
+     * Updates the completion status of a specific task.
+     *
+     * <p>
+     * This method retrieves the task by its unique identifier, updates its
+     * {@code isComplete} flag to the given value, and persists the change to the
+     * database. It is typically called when a user marks a task as complete or
+     * incomplete from the front-end interface.
+     * </p>
+     *
+     * <p>
+     * This operation is transactional to ensure data consistency — if the task
+     * is not found, a {@link TaskNotFoundException} is thrown and no changes are
+     * committed.
+     * </p>
+     *
+     * @param id         the unique identifier of the task to update
+     * @param isComplete the new completion state (true = completed, false = not
+     *                   completed)
+     * @return a {@link TaskDtoV2} representing the updated task
+     * @throws TaskNotFoundException if no task exists with the given ID
+     */
+    public TaskDtoV2 updateCompletionStatus(Long id, boolean isComplete) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+
+        task.setCompleted(isComplete);
+        Task saved = taskRepository.save(task);
+        return mapToDto(saved);
     }
 
     /**
