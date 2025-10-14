@@ -19,6 +19,7 @@ class ProgramAsessmentResultsView extends StatefulWidget {
       required this.assignment,
       required this.participants});
 
+  @override
   _ProgramAsessmentResultsViewState createState() =>
       _ProgramAsessmentResultsViewState(
           evaluation: evaluation,
