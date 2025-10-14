@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Games/quiz_game.dart';
+import 'package:learninglens_app/Games/matching_game.dart';
+import 'package:learninglens_app/Games/flashcard_game.dart';
+import 'package:learninglens_app/services/ai_file_service.dart';
 
 class GamificationView extends StatefulWidget {
   const GamificationView({super.key});
@@ -15,6 +19,24 @@ class _GamificationViewState extends State<GamificationView> {
   String? _selectedGameType;
   String? _selectedDifficulty;
   bool isTeacher = true;
+  bool _isGameCreated = false;
+  List<Map<String, dynamic>>? _generatedGameData;
+
+  void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text("Generating game..."),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +44,7 @@ class _GamificationViewState extends State<GamificationView> {
         UserRole.teacher; // TEMP: Change to logic check later
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Gamification')),
+      appBar: AppBar(title: const Text('Generate a Game')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: isTeacher ? _buildTeacherUI(context) : _buildStudentUI(),
@@ -35,7 +57,7 @@ class _GamificationViewState extends State<GamificationView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Gamify a Lesson',
+          'Generate a Game from a Lesson: ',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
@@ -111,13 +133,109 @@ class _GamificationViewState extends State<GamificationView> {
         Center(
           child: ElevatedButton(
             child: const Text('Create Game'),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Game Created!')),
-              );
+            onPressed: () async {
+              if (_selectedFile == null || _selectedGameType == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content:
+                          Text('Please upload a file and select a game type.')),
+                );
+                return;
+              }
+
+              showLoadingDialog(context);
+
+              try {
+                final bytes = _selectedFile!.bytes;
+                if (bytes == null) throw Exception("No file content found");
+
+                final text = await AIFileService.extractTextFromPDF(bytes);
+                late final List<Map<String, dynamic>> response;
+
+                if (_selectedGameType == 'Quiz Hero') {
+                  response = await AIFileService.generateGameFromText(text);
+                } else if (_selectedGameType == 'Matching') {
+                  response =
+                      await AIFileService.generateMatchingPairsFromText(text);
+                } else if (_selectedGameType == 'Flashcards') {
+                  response =
+                      await AIFileService.generateFlashcardsFromText(text);
+                } else {
+                  throw Exception("Unknown game type: $_selectedGameType");
+                }
+
+                setState(() {
+                  _generatedGameData = response;
+                  _isGameCreated = true;
+                });
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Game Created!')),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error: ${e.toString()}')),
+                );
+              }
             },
           ),
-        )
+        ),
+        if (_isGameCreated)
+          Center(
+            child: ElevatedButton(
+              child: const Text('Preview Game'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    Widget previewContent;
+
+                    final List<Map<String, dynamic>> _gameData =
+                        _generatedGameData ?? [];
+
+                    switch (_selectedGameType) {
+                      case 'Quiz Hero':
+                        previewContent = QuizGame(
+                          questions: _gameData,
+                          onComplete: () {},
+                          previewMode: true,
+                        );
+                        break;
+                      case 'Matching':
+                        previewContent = MatchingGame(
+                          pairs: _gameData,
+                          onComplete: () {},
+                          previewMode: true,
+                        );
+                        break;
+                      case 'Flashcards':
+                        previewContent = FlashcardGame(
+                          questions: _gameData,
+                          onComplete: () {},
+                          previewMode: true,
+                        );
+                        break;
+                      default:
+                        previewContent = const Text('No game type selected.');
+                    }
+
+                    return AlertDialog(
+                      title: const Text('Game Preview'),
+                      content: previewContent,
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
       ],
     );
   }
@@ -140,7 +258,7 @@ class _GamificationViewState extends State<GamificationView> {
 
   Widget _buildStudentUI() {
     return const Center(
-      child: Text('Gamification for Students Coming Soon'),
+      child: Text('Game for kids Here'),
     );
   }
 }
