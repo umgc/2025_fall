@@ -176,7 +176,7 @@ $text
     }
 
     try {
-      final parsedList = _parseJsonList<Map<String, String>>(safeJson!, (item) {
+      final parsedList = _parseJsonList<Map<String, String>>(safeJson, (item) {
         if (item is Map)
           return Map<String, String>.from(
               item.map((k, v) => MapEntry(k.toString(), v.toString())));
@@ -240,7 +240,7 @@ $text
     }
 
     try {
-      final parsedList = _parseJsonList<Map<String, String>>(safeJson!, (item) {
+      final parsedList = _parseJsonList<Map<String, String>>(safeJson, (item) {
         if (item is Map) {
           final term = item['term']?.toString();
           final match = item['match']?.toString();
