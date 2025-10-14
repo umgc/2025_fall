@@ -61,8 +61,8 @@ class _MatchingGameState extends State<MatchingGame> {
 
   bool isGameComplete() {
     return userMatches.length == leftItems.length &&
-        userMatches.entries.every((entry) =>
-            correctMatches[entry.key] == entry.value);
+        userMatches.entries
+            .every((entry) => correctMatches[entry.key] == entry.value);
   }
 
   @override
@@ -76,11 +76,13 @@ class _MatchingGameState extends State<MatchingGame> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
-          Text('Score: $score / ${leftItems.length}', style: const TextStyle(fontSize: 16)),
+          Text('Score: $score / ${leftItems.length}',
+              style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 20),
           ...results.map((r) => ListTile(
                 title: Text(r['term'] ?? ''),
-                subtitle: Text('Your Match: ${r['selected']}\nCorrect: ${r['correct']}'),
+                subtitle: Text(
+                    'Your Match: ${r['selected']}\nCorrect: ${r['correct']}'),
                 trailing: Text(r['status'] ?? ''),
               )),
           const SizedBox(height: 20),
@@ -122,10 +124,12 @@ class _MatchingGameState extends State<MatchingGame> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           color: Colors.blueAccent,
-                          child: Text(term, style: const TextStyle(color: Colors.white)),
+                          child: Text(term,
+                              style: const TextStyle(color: Colors.white)),
                         ),
                       ),
-                      childWhenDragging: Opacity(opacity: 0.5, child: Text(term)),
+                      childWhenDragging:
+                          Opacity(opacity: 0.5, child: Text(term)),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         child: Text(term),
@@ -142,14 +146,17 @@ class _MatchingGameState extends State<MatchingGame> {
                 child: Column(
                   children: rightItems.map((definition) {
                     final matchedTerm = userMatches.entries
-                        .firstWhere((e) => e.value == definition, orElse: () => MapEntry('', ''))
+                        .firstWhere((e) => e.value == definition,
+                            orElse: () => MapEntry('', ''))
                         .key;
                     return DragTarget<String>(
                       builder: (context, candidateData, rejectedData) {
                         return Container(
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           padding: const EdgeInsets.all(8),
-                          color: matchedTerm.isNotEmpty ? Colors.greenAccent : Colors.grey.shade200,
+                          color: matchedTerm.isNotEmpty
+                              ? Colors.greenAccent
+                              : Colors.grey.shade200,
                           child: Text(
                             matchedTerm.isNotEmpty
                                 ? '$matchedTerm → $definition'

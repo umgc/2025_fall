@@ -136,7 +136,9 @@ class _GamificationViewState extends State<GamificationView> {
             onPressed: () async {
               if (_selectedFile == null || _selectedGameType == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please upload a file and select a game type.')),
+                  const SnackBar(
+                      content:
+                          Text('Please upload a file and select a game type.')),
                 );
                 return;
               }
@@ -153,9 +155,11 @@ class _GamificationViewState extends State<GamificationView> {
                 if (_selectedGameType == 'Quiz Hero') {
                   response = await AIFileService.generateGameFromText(text);
                 } else if (_selectedGameType == 'Matching') {
-                  response = await AIFileService.generateMatchingPairsFromText(text);
+                  response =
+                      await AIFileService.generateMatchingPairsFromText(text);
                 } else if (_selectedGameType == 'Flashcards') {
-                  response = await AIFileService.generateFlashcardsFromText(text);
+                  response =
+                      await AIFileService.generateFlashcardsFromText(text);
                 } else {
                   throw Exception("Unknown game type: $_selectedGameType");
                 }
@@ -188,7 +192,8 @@ class _GamificationViewState extends State<GamificationView> {
                   builder: (context) {
                     Widget previewContent;
 
-                    final List<Map<String, dynamic>> _gameData = _generatedGameData ?? [];
+                    final List<Map<String, dynamic>> _gameData =
+                        _generatedGameData ?? [];
 
                     switch (_selectedGameType) {
                       case 'Quiz Hero':

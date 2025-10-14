@@ -25,7 +25,9 @@ class _QuizGameState extends State<QuizGame> {
 
   void checkAnswer(String selected) {
     final correctAnswerIndex = widget.questions[currentIndex]['answer'] as int;
-    final correctAnswerText = widget.questions[currentIndex]['options'][correctAnswerIndex].toString();
+    final correctAnswerText = widget.questions[currentIndex]['options']
+            [correctAnswerIndex]
+        .toString();
     final correct = correctAnswerText == selected;
     userAnswers.add({
       'question': widget.questions[currentIndex]['question'],
@@ -108,7 +110,9 @@ class _QuizGameState extends State<QuizGame> {
               title: Text(option),
               leading: Radio<String>(
                 value: option,
-                groupValue: showResult ? question['options'][question['answer'] as int].toString() : null,
+                groupValue: showResult
+                    ? question['options'][question['answer'] as int].toString()
+                    : null,
                 onChanged: showResult ? null : (_) => checkAnswer(option),
               ),
             );
@@ -132,7 +136,10 @@ class _QuizGameState extends State<QuizGame> {
             padding: EdgeInsets.only(bottom: 16),
             child: Text(
               'Preview Mode',
-              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey),
+              style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey),
             ),
           ),
       ],

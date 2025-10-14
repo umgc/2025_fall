@@ -29,7 +29,8 @@ class AIFileService {
     String url = _openaiChatUrl,
     int timeoutSeconds = 60,
   }) async {
-    final dio = Dio(BaseOptions(connectTimeout: Duration(seconds: timeoutSeconds)));
+    final dio =
+        Dio(BaseOptions(connectTimeout: Duration(seconds: timeoutSeconds)));
     late Response resp;
     try {
       resp = await dio.post(
@@ -81,12 +82,14 @@ class AIFileService {
     if (decoded is List) {
       return decoded.map(mapper).toList();
     }
-    throw Exception('Expected JSON array from model but got: ${decoded.runtimeType}');
+    throw Exception(
+        'Expected JSON array from model but got: ${decoded.runtimeType}');
   }
 
   /// Generate multiple choice quiz questions. Returns list of maps:
   /// { "question": "...", "options": ["A","B","C","D"], "answer": <index> }
-  static Future<List<Map<String, dynamic>>> generateGameFromText(String text, {int questionCount = 5}) async {
+  static Future<List<Map<String, dynamic>>> generateGameFromText(String text,
+      {int questionCount = 5}) async {
     final openaiKey = dotenv.env['openai_apikey'];
     print('🧪 Loaded OpenAI Key: $openaiKey');
     if (openaiKey == null || openaiKey.isEmpty) {
@@ -108,7 +111,8 @@ class AIFileService {
       ]
     };
 
-    final raw = await _postChatCompletion(openaiKey: openaiKey, payload: payload);
+    final raw =
+        await _postChatCompletion(openaiKey: openaiKey, payload: payload);
 
     try {
       final parsedList = _parseJsonList<Map<String, dynamic>>(raw, (item) {
@@ -119,12 +123,15 @@ class AIFileService {
       print('✅ Game generated: $parsedList');
       return parsedList;
     } catch (e) {
-      throw Exception('OpenAI response was not valid JSON (generateGameFromText). $e\nResponse:\n$raw');
+      throw Exception(
+          'OpenAI response was not valid JSON (generateGameFromText). $e\nResponse:\n$raw');
     }
   }
 
   /// Generate flashcards: returns List<Map<String,String>> with {"term","definition"}
-  static Future<List<Map<String, String>>> generateFlashcardsFromText(String text, {int cardCount = 5}) async {
+  static Future<List<Map<String, String>>> generateFlashcardsFromText(
+      String text,
+      {int cardCount = 5}) async {
     final openaiKey = dotenv.env['openai_apikey'];
     print('🧪 Loaded OpenAI Key: $openaiKey');
     if (openaiKey == null || openaiKey.isEmpty) {
@@ -158,7 +165,8 @@ $text
       ]
     };
 
-    final raw = await _postChatCompletion(openaiKey: openaiKey, payload: payload);
+    final raw =
+        await _postChatCompletion(openaiKey: openaiKey, payload: payload);
     print('🧪 RAW Flashcard JSON: $raw');
     // Extract only the first valid JSON array to avoid malformed multi-array issues
     final match = RegExp(r'\[\s*{[\s\S]*?}\s*\]').firstMatch(raw);
@@ -169,19 +177,24 @@ $text
 
     try {
       final parsedList = _parseJsonList<Map<String, String>>(safeJson!, (item) {
-        if (item is Map) return Map<String, String>.from(item.map((k, v) => MapEntry(k.toString(), v.toString())));
+        if (item is Map)
+          return Map<String, String>.from(
+              item.map((k, v) => MapEntry(k.toString(), v.toString())));
         throw Exception('Item is not an object');
       });
       print('✅ Used OpenAI GPT model.');
       print('✅ Flashcards generated: $parsedList');
       return parsedList;
     } catch (e) {
-      throw Exception('OpenAI response was not valid JSON (generateFlashcardsFromText). $e\nResponse:\n$raw');
+      throw Exception(
+          'OpenAI response was not valid JSON (generateFlashcardsFromText). $e\nResponse:\n$raw');
     }
   }
 
   /// Generate matching pairs: returns List<Map<String,String>> with {"term","match"}
-  static Future<List<Map<String, String>>> generateMatchingPairsFromText(String text, {int pairCount = 5}) async {
+  static Future<List<Map<String, String>>> generateMatchingPairsFromText(
+      String text,
+      {int pairCount = 5}) async {
     final openaiKey = dotenv.env['openai_apikey'];
     print('🧪 Loaded OpenAI Key: $openaiKey');
     if (openaiKey == null || openaiKey.isEmpty) {
@@ -215,7 +228,8 @@ $text
       ]
     };
 
-    final raw = await _postChatCompletion(openaiKey: openaiKey, payload: payload);
+    final raw =
+        await _postChatCompletion(openaiKey: openaiKey, payload: payload);
     print('🧪 RAW Matching JSON: $raw');
 
     // Extract only the first valid JSON array to avoid malformed multi-array issues
@@ -241,12 +255,15 @@ $text
       print('✅ Matching pairs generated: $parsedList');
       return parsedList;
     } catch (e) {
-      throw Exception('OpenAI response was not valid JSON (generateMatchingPairsFromText). $e\nResponse:\n$raw');
+      throw Exception(
+          'OpenAI response was not valid JSON (generateMatchingPairsFromText). $e\nResponse:\n$raw');
     }
   }
 
   /// Generate math questions: returns List<Map<String,String>> with {"question","answer"}
-  static Future<List<Map<String, String>>> generateMathQuestionsFromText(String text, {int questionCount = 5}) async {
+  static Future<List<Map<String, String>>> generateMathQuestionsFromText(
+      String text,
+      {int questionCount = 5}) async {
     final openaiKey = dotenv.env['openai_apikey'];
     print('🧪 Loaded OpenAI Key: $openaiKey');
     if (openaiKey == null || openaiKey.isEmpty) {
@@ -265,18 +282,22 @@ $text
       ]
     };
 
-    final raw = await _postChatCompletion(openaiKey: openaiKey, payload: payload);
+    final raw =
+        await _postChatCompletion(openaiKey: openaiKey, payload: payload);
 
     try {
       final parsedList = _parseJsonList<Map<String, String>>(raw, (item) {
-        if (item is Map) return Map<String, String>.from(item.map((k, v) => MapEntry(k.toString(), v.toString())));
+        if (item is Map)
+          return Map<String, String>.from(
+              item.map((k, v) => MapEntry(k.toString(), v.toString())));
         throw Exception('Item is not an object');
       });
       print('✅ Used OpenAI GPT model.');
       print('✅ Math questions generated: $parsedList');
       return parsedList;
     } catch (e) {
-      throw Exception('OpenAI response was not valid JSON (generateMathQuestionsFromText). $e\nResponse:\n$raw');
+      throw Exception(
+          'OpenAI response was not valid JSON (generateMathQuestionsFromText). $e\nResponse:\n$raw');
     }
   }
 }

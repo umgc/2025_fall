@@ -53,13 +53,16 @@ class _FlashcardGameState extends State<FlashcardGame> {
           onTap: () => setState(() => _showAnswer = !_showAnswer),
           child: Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Container(
               padding: const EdgeInsets.all(24),
               width: double.infinity,
               child: Center(
                 child: Text(
-                  _showAnswer ? current['definition'] ?? 'No definition' : current['term'] ?? 'No term',
+                  _showAnswer
+                      ? current['definition'] ?? 'No definition'
+                      : current['term'] ?? 'No term',
                   style: const TextStyle(fontSize: 20),
                   textAlign: TextAlign.center,
                 ),
@@ -72,7 +75,8 @@ class _FlashcardGameState extends State<FlashcardGame> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             ElevatedButton(
-              onPressed: _currentIndex > 0 ? () => _goTo(_currentIndex - 1) : null,
+              onPressed:
+                  _currentIndex > 0 ? () => _goTo(_currentIndex - 1) : null,
               child: const Text('Back'),
             ),
             ElevatedButton(
