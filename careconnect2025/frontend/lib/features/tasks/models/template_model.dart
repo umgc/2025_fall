@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../notifications/models/notification_model.dart';
+
+import '../../notifications/models/scheduled_notification_model.dart';
 
 class Template {
   final int id;
@@ -11,7 +12,7 @@ class Template {
   final List<bool>? daysOfWeek;
   final TimeOfDay? timeOfDay;
   final int iconCode; // <-- store codePoint, not Icon
-  final List<Notification_dto>? notifications;
+  final List<ScheduledNotification>? notifications;
 
   Template({
     required this.id,
@@ -52,8 +53,8 @@ class Template {
       iconCode: json['icon'] ?? 0xe057, // <-- store codePoint
       notifications: (json['notifications'] != null
           ? (json['notifications'] as List)
-              .map((n) => Notification_dto.fromJson(n))
-              .toList()
+                .map((n) => ScheduledNotification.fromJson(n))
+                .toList()
           : null),
     );
   }
