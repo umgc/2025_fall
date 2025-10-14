@@ -1,5 +1,6 @@
 import 'package:care_connect_app/features/dashboard/presentation/sosscreen.dart';
 import 'package:care_connect_app/features/health/medication-tracker/pages/medication-tracker.dart';
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
@@ -50,6 +51,21 @@ class PatientMoreFeaturesBottomDrawerWidget extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => const CalendarAssistantScreen(),
+            ),
+          );
+        },
+      ),
+      FeatureItem(
+        icon: Icons.health_and_safety,
+        iconColor: Colors.blue,
+        title: 'Virtual Check-In',
+        subtitle: 'Virtual Check-In',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PatientVirtualCheckIn(),
             ),
           );
         },
