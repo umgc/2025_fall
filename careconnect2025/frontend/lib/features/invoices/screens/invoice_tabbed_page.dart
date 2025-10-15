@@ -42,7 +42,7 @@ class _InvoiceTabbedPageState extends State<InvoiceTabbedPage>
     final showBack = widget.quickFilter != null; // filtered route
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoice Assistant'),
+        title: const Text('Invoice Assistant'), 
         leading: showBack ? BackButton(onPressed: () => Navigator.of(context).maybePop()) : null,
         bottom: TabBar(
           unselectedLabelColor: Theme.of(context).secondaryHeaderColor,

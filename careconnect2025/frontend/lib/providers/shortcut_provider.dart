@@ -4,18 +4,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Import your generated localizations to resolve labels at render-time.
+import 'package:care_connect_app/l10n/app_localizations.dart';
+
 class ShortcutDef {
-  final String key;                 // unique id for persistence
+  final String key;               // unique id for persistence
   final IconData icon;
-  final String label;
-  final String routeTemplate;       // supports {userId}, etc.
-  final Set<String>? visibleFor;    // e.g. {'CAREGIVER','ADMIN','FAMILY_LINK'}
-  final bool defaultSelected;       // used on first run
+  final String label;             // fallback (English) if labelKey not provided
+  final String? labelKey;         // optional i18n key (maps to AppLocalizations)
+  final String routeTemplate;     // supports {userId}, etc.
+  final Set<String>? visibleFor;  // e.g. {'CAREGIVER','ADMIN','FAMILY_LINK'}
+  final bool defaultSelected;     // used on first run
 
   const ShortcutDef({
     required this.key,
     required this.icon,
     required this.label,
+    this.labelKey,
     required this.routeTemplate,
     this.visibleFor,
     this.defaultSelected = false,
@@ -30,6 +35,33 @@ class ShortcutDef {
     var r = routeTemplate;
     ctx.forEach((k, v) => r = r.replaceAll('{$k}', v));
     return r;
+  }
+
+  // Returns localized label if labelKey is present, otherwise falls back to `label`.
+  String localizedLabel(AppLocalizations t) {
+    if (labelKey == null) return label;
+    switch (labelKey) {
+      case 'dashboard':
+        return t.dashboard;
+      case 'invoiceAssistant':
+        return t.invoiceAssistant;
+      case 'calendarAssistant':
+        return t.calendarAssistant;
+      case 'socialFeed':
+        return t.socialFeed;
+      case 'medicationManagement':
+        return t.medicationManagement;
+      case 'evv':
+        return t.evv;
+      case 'wearables':
+        return t.wearables;
+      case 'fileManagement':
+        return t.fileManagement;
+      case 'gamification':
+        return t.gamification;
+      default:
+        return label; // unknown key, use fallback
+    }
   }
 }
 
@@ -135,13 +167,15 @@ class ShortcutProvider extends ChangeNotifier {
         key: 'dash',
         icon: Icons.dashboard,
         label: 'Dashboard',
+        labelKey: 'dashboard',  
         routeTemplate: '/dashboard',
         defaultSelected: true,
       ),
       'inv': ShortcutDef(
         key: 'inv',
         icon: Icons.receipt,
-        label: 'Invoices',
+        label: 'Invoice Assistant',
+        labelKey: 'invoiceAssistant',
         routeTemplate: '/invoice-assistant/dashboard',
         visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
         defaultSelected: true,
@@ -149,21 +183,24 @@ class ShortcutProvider extends ChangeNotifier {
       'cal': ShortcutDef(
         key: 'cal',
         icon: Icons.calendar_today,
-        label: 'Calendar',
+        label: 'Calendar Assistant',
+        labelKey: 'calendarAssistant',
         routeTemplate: '/calendar',
         defaultSelected: true,
       ),
       'feed': ShortcutDef(
         key: 'feed',
         icon: Icons.forum,
-        label: 'Feed',
+        label: 'Social Feed',
+        labelKey: 'socialFeed',
         routeTemplate: '/social-feed?userId={userId}',
         defaultSelected: true,
       ),
       'meds': ShortcutDef(
         key: 'meds',
         icon: Icons.medical_information,
-        label: 'Meds',
+        label: 'Medication Management',
+        labelKey: 'medicationManagement',
         routeTemplate: '/medication',
         defaultSelected: true,
       ),
@@ -171,6 +208,7 @@ class ShortcutProvider extends ChangeNotifier {
         key: 'evv',
         icon: Icons.shield,
         label: 'EVV',
+        labelKey: 'evv',
         routeTemplate: '/evv',
         visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
         defaultSelected: true,
@@ -179,13 +217,15 @@ class ShortcutProvider extends ChangeNotifier {
         key: 'wear',
         icon: Icons.watch,
         label: 'Wearables',
+        labelKey: 'wearables',
         routeTemplate: '/wearables',
         defaultSelected: true,
       ),
       'files': ShortcutDef(
         key: 'files',
         icon: Icons.folder,
-        label: 'Files',
+        label: 'File Management',
+        labelKey: 'fileManagement',
         routeTemplate: '/file-management',
         defaultSelected: true,
       ),
@@ -194,6 +234,7 @@ class ShortcutProvider extends ChangeNotifier {
         key: 'gam',
         icon: Icons.emoji_events,
         label: 'Gamification',
+        labelKey: 'gamification',
         routeTemplate: '/gamification',
         defaultSelected: false,
       ),

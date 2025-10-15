@@ -1,7 +1,8 @@
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'dart:convert'; 
 import '../../../../config/env_constant.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -24,9 +25,9 @@ class _WelcomePageState extends State<WelcomePage> {
   Future<void> _checkBackendHealth() async {
     try {
       final String baseUrl = getBackendBaseUrl();
-      final response = await http.get(
-        Uri.parse('$baseUrl/v1/api/test/health'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$baseUrl/v1/api/test/health'))
+          .timeout(const Duration(seconds: 5));
 
       if (mounted) {
         setState(() {
@@ -45,7 +46,6 @@ class _WelcomePageState extends State<WelcomePage> {
         });
       }
     } finally {
-      // Show spinner for at least 5 seconds
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) {
         setState(() {
@@ -58,6 +58,7 @@ class _WelcomePageState extends State<WelcomePage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final t = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Container(
@@ -68,8 +69,8 @@ class _WelcomePageState extends State<WelcomePage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF4A5FBF), // Blue gradient top
-              Color(0xFF3B4DBF), // Blue gradient bottom
+              Color(0xFF4A5FBF),
+              Color(0xFF3B4DBF),
             ],
           ),
         ),
@@ -84,7 +85,7 @@ class _WelcomePageState extends State<WelcomePage> {
               children: [
                 const Spacer(),
 
-                // Logo container with SVG
+                // Logo container
                 Container(
                   width: isMobile ? 100 : 200,
                   height: isMobile ? 100 : 200,
@@ -100,8 +101,8 @@ class _WelcomePageState extends State<WelcomePage> {
                           'assets/images/CareConnectLogo.png',
                           width: isMobile ? 90 : 190,
                           fit: BoxFit.contain,
-                          color: Colors.white, // Optional: to tint the image white
-                          colorBlendMode: BlendMode.srcIn, // Optional: for white tinting
+                          color: Colors.white,
+                          colorBlendMode: BlendMode.srcIn,
                         ),
                       ],
                     ),
@@ -110,7 +111,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
                 SizedBox(height: isMobile ? 40 : 48),
 
-                // Main title
+                // Main title (brand name can stay as-is)
                 Text(
                   'CareConnect',
                   style: TextStyle(
@@ -122,48 +123,50 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
 
                 SizedBox(height: isMobile ? 12 : 16),
+ 
+            // Subtitle
+            Text(
+              AppLocalizations.of(context)!.welcome_subtitle,
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 20,
+                color: Colors.white.withValues(alpha: 0.9),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
 
-                // Subtitle
-                Text(
-                  'Connecting Care, Empowering Health',
-                  style: TextStyle(
-                    fontSize: isMobile ? 18 : 20,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+            SizedBox(height: isMobile ? 32 : 40),
 
-                SizedBox(height: isMobile ? 32 : 40),
+            // Description text
+            Text(
+              AppLocalizations.of(context)!.welcome_description,
+              style: TextStyle(
+                fontSize: isMobile ? 16 : 18,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
 
-                // Description text
-                Text(
-                  'Your healthcare companion for',
-                  style: TextStyle(
-                    fontSize: isMobile ? 16 : 18,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+            SizedBox(height: isMobile ? 8 : 12),
 
-                SizedBox(height: isMobile ? 8 : 12),
+            // Tagline
+            Text(
+              AppLocalizations.of(context)!.welcome_tagline,
+              style: TextStyle(
+                fontSize: isMobile ? 18 : 20,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
 
-                Text(
-                  'Better Care • Better Outcomes • Better Life',
-                  style: TextStyle(
-                    fontSize: isMobile ? 18 : 20,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
 
                 SizedBox(height: isMobile ? 40 : 48),
 
                 // Loading state or ready message
                 if (_isLoading) ...[
                   Text(
-                    'Initializing your healthcare experience...',
+                    t.welcomeInitializingHealthcare,
                     style: TextStyle(
                       fontSize: isMobile ? 16 : 18,
                       color: Colors.white.withValues(alpha: 0.9),
@@ -181,7 +184,7 @@ class _WelcomePageState extends State<WelcomePage> {
                   ),
                 ] else ...[
                   Text(
-                    'Ready to connect your care!',
+                    t.welcomeReadyToConnect,
                     style: TextStyle(
                       fontSize: isMobile ? 18 : 20,
                       color: Colors.white,
@@ -215,7 +218,7 @@ class _WelcomePageState extends State<WelcomePage> {
                           const SizedBox(width: 12),
                           Flexible(
                             child: Text(
-                              'Backend service is not healthy. The application has limited capabilities.',
+                              t.welcomeBackendNotHealthyWarning,
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 16,
                                 color: Colors.white,
@@ -232,8 +235,7 @@ class _WelcomePageState extends State<WelcomePage> {
                   // Continue button
                   ElevatedButton(
                     onPressed: () {
-                      // Navigate to the original welcome page or next screen
-                      context.go('/dashboard'); // Update this route as needed
+                      context.go('/dashboard');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -251,7 +253,7 @@ class _WelcomePageState extends State<WelcomePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Continue',
+                          t.welcomeContinue,
                           style: TextStyle(
                             fontSize: isMobile ? 16 : 18,
                             fontWeight: FontWeight.w600,
@@ -276,9 +278,9 @@ class _WelcomePageState extends State<WelcomePage> {
                     mainAxisSize: MainAxisSize.min,
                     spacing: 8,
                     children: [
-                      _buildComplianceBadge('🔒 HIPAA Compliant', isMobile),
-                      _buildComplianceBadge('♿ WCAG AA', isMobile),
-                      _buildComplianceBadge('🛡️ Secure', isMobile),
+                      _buildComplianceBadge(t.welcomeComplianceBadgeHipaa, isMobile),
+                      _buildComplianceBadge(t.welcomeComplianceBadgeWcag, isMobile),
+                      _buildComplianceBadge(t.welcomeComplianceBadgeSecure, isMobile),
                     ],
                   ),
                 ),

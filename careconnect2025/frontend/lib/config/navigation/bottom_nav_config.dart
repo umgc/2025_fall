@@ -2,6 +2,7 @@ import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/ca
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
@@ -25,6 +26,7 @@ import '../../screens/tabs/caregiver_tabs.dart';
 /// Either [screen] or [onPress] must be provided, but not both.
 class BottomNavItem {
   final String label;
+  final String? labelKey;   // i18n key
   final IconData icon;
   final IconData? activeIcon;
   final String routeName;
@@ -44,6 +46,7 @@ class BottomNavItem {
   /// * [onPress] - Optional callback function executed when the item is pressed
   const BottomNavItem({
     required this.label,
+    this.labelKey,
     required this.icon,
     this.activeIcon,
     required this.routeName,
@@ -54,6 +57,20 @@ class BottomNavItem {
          screen != null || onPress != null,
          'Either screen or onPress must be provided',
        );
+
+   String localizedLabel(AppLocalizations t) {
+    switch (labelKey) {
+      case 'nav_home': return t.navHome;
+      case 'nav_symptoms': return t.navSymptoms;
+      case 'nav_health': return t.navHealth;
+      case 'nav_messages': return t.navMessages;
+      case 'nav_menu': return t.navMenu;
+      case 'nav_patientList': return t.navPatientList;
+      case 'nav_analytics': return t.navAnalytics;
+      case 'nav_more': return t.navMore;
+      default: return label;
+    }
+  }
 }
 
 /// Configuration class for bottom navigation bar items.
@@ -74,6 +91,7 @@ class BottomNavConfig {
     return [
       BottomNavItem(
         label: 'Home',
+        labelKey: 'nav_home',
         icon: Icons.home_outlined,
         activeIcon: Icons.home,
         routeName: 'home',
@@ -81,6 +99,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Symptoms',
+        labelKey: 'nav_symptoms',
         icon: Icons.medical_information_outlined,
         activeIcon: Icons.medical_information,
         routeName: 'symptoms',
@@ -88,6 +107,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Health',
+        labelKey: 'nav_health',
         icon: Icons.health_and_safety_outlined,
         activeIcon: Icons.health_and_safety,
         routeName: 'health',
@@ -95,6 +115,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Messages',
+        labelKey: 'nav_messages',
         icon: Icons.message_outlined,
         activeIcon: Icons.message,
         routeName: 'messages',
@@ -102,6 +123,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Menu',
+        labelKey: 'nav_menu',
         icon: Icons.menu_open_outlined,
         activeIcon: Icons.menu,
         routeName: 'menupage',
@@ -109,16 +131,13 @@ class BottomNavConfig {
         onPress: (context, builder) {
           showModalBottomSheet<void>(
             context: context,
-            builder: (BuildContext context) {
-              return const MenuPage();
-            },
-            isScrollControlled: true
+            isScrollControlled: true,
+            builder: (_) => const MenuPage(),
           );
         },
       ),
     ];
   }
-
   /// Returns the bottom navigation items for caregiver users.
   ///
   /// Creates a list of navigation items specifically designed for caregivers,
@@ -127,10 +146,11 @@ class BottomNavConfig {
   ///
   /// Returns:
   /// * List<BottomNavItem> - A list of navigation items for caregiver interface
-  static List<BottomNavItem> getCaregiverNavItems() {
+static List<BottomNavItem> getCaregiverNavItems() {
     return [
       BottomNavItem(
         label: 'Home',
+        labelKey: 'nav_home',
         icon: Icons.home_outlined,
         activeIcon: Icons.home,
         routeName: 'home',
@@ -138,6 +158,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Patient List',
+        labelKey: 'nav_patientList',
         icon: Icons.person_2_outlined,
         activeIcon: Icons.person_2,
         routeName: 'tasks',
@@ -145,6 +166,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Analytics',
+        labelKey: 'nav_analytics',
         icon: Icons.analytics_outlined,
         activeIcon: Icons.analytics,
         routeName: 'analytics',
@@ -152,6 +174,7 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'Messages',
+        labelKey: 'nav_messages',
         icon: Icons.message_outlined,
         activeIcon: Icons.message,
         routeName: 'messages',
@@ -159,23 +182,20 @@ class BottomNavConfig {
       ),
       BottomNavItem(
         label: 'More',
+        labelKey: 'nav_more',
         icon: Icons.more_horiz_outlined,
         activeIcon: Icons.more,
         routeName: 'profile',
         onPress: (context, builder) {
           showModalBottomSheet<void>(
             context: context,
-            builder: (BuildContext context) {
-              return const MenuPage();
-            },
-            isScrollControlled:
-                true, // This will make bottom drawer full height
+            isScrollControlled: true,
+            builder: (_) => const MenuPage(),
           );
         },
       ),
     ];
   }
-
   /// Returns navigation items based on the specified user role.
   ///
   /// This method acts as a factory that returns the appropriate navigation

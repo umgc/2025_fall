@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../l10n/app_localizations.dart';
 import '../providers/user_provider.dart';
 import '../widgets/theme_toggle_switch.dart';
 import '../models/notification_settings.dart';
@@ -30,11 +32,13 @@ class _SettingsPageState extends State<SettingsPage> {
     if (user != null) {
       final settings =
           await NotificationSettingsService.getNotificationSettings(user.id);
+      if (!mounted) return;
       setState(() {
         _notificationSettings = settings;
         _loadingSettings = false;
       });
     } else {
+      if (!mounted) return;
       setState(() {
         _loadingSettings = false;
       });
@@ -62,31 +66,31 @@ class _SettingsPageState extends State<SettingsPage> {
         updatedSettings = _notificationSettings!.copyWith(sms: value);
         break;
       case 'significantVitals':
-        updatedSettings = _notificationSettings!.copyWith(
-          significantVitals: value,
-        );
+        updatedSettings =
+            _notificationSettings!.copyWith(significantVitals: value);
         break;
       default:
         return;
     }
 
-    final saved = await NotificationSettingsService.saveNotificationSettings(
-      updatedSettings,
-    );
+    final saved =
+        await NotificationSettingsService.saveNotificationSettings(updatedSettings);
+    if (!mounted) return;
+
     if (saved != null) {
       setState(() {
         _notificationSettings = saved;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('✅ Notification settings updated'),
+          content: Text('✅ ${AppLocalizations.of(context)!.settingsSnackUpdated}'),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('❌ Failed to update settings'),
+          content: Text('❌ ${AppLocalizations.of(context)!.settingsSnackUpdateFailed}'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -99,9 +103,9 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
       ),
     );
   }
@@ -126,9 +130,9 @@ class _SettingsPageState extends State<SettingsPage> {
         title: Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w500,
-          ),
+                color: textColor,
+                fontWeight: FontWeight.w500,
+              ),
         ),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: Icon(
@@ -159,9 +163,9 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
         ),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: Switch(
@@ -174,6 +178,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildThemeCard(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -183,13 +188,13 @@ class _SettingsPageState extends State<SettingsPage> {
           size: 24,
         ),
         title: Text(
-          'Dark Mode',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
+          t.darkMode,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
         ),
         subtitle: Text(
-          'Toggle between light and dark theme',
+          t.settingsToggleThemeDesc,  
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: const ThemeToggleSwitch(showIcon: false, showLabel: false),
@@ -198,29 +203,28 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showClearCacheDialog(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text(
-          'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.',
-        ),
+        title: Text(t.settingsClearCache),
+        content: Text(t.settingsClearCacheDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('✅ Cache cleared successfully'),
+                  content: Text('✅ ${t.settingsCacheCleared}'),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                 ),
               );
             },
-            child: const Text('Clear Cache'),
+            child: Text(t.settingsClearCache),
           ),
         ],
       ),
@@ -228,15 +232,16 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showSignOutDialog(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: Text(t.settingsSignOut),
+        content: Text(t.settingsSignOutConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.cancel),
           ),
           ElevatedButton(
             onPressed: () {
@@ -247,7 +252,7 @@ class _SettingsPageState extends State<SettingsPage> {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: Text(
-              'Sign Out',
+              t.settingsSignOut,
               style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
           ),
@@ -257,29 +262,26 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Delete Account',
+          t.settingsDeleteAccount,
           style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
-        content: const Text(
-          'This action cannot be undone. All your data will be permanently deleted.',
-        ),
+        content: Text(t.settingsDeleteAccountDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text(
-                    'Account deletion requested. Please contact support.',
-                  ),
+                  content: Text(t.settingsDeleteAccountRequested),
                   backgroundColor: Theme.of(context).colorScheme.secondary,
                 ),
               );
@@ -288,7 +290,7 @@ class _SettingsPageState extends State<SettingsPage> {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: Text(
-              'Delete Account',
+              t.settingsDeleteAccountAction,
               style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
           ),
@@ -299,18 +301,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
-    // Check if user is Patient or Family Member to hide subscription management
-    final shouldHideSubscription =
-        user != null &&
+    final shouldHideSubscription = user != null &&
         (user.role.toLowerCase() == 'patient' ||
             user.role.toLowerCase() == 'family member');
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(t.settings), // use existing "Settings" key
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: IconButton(
@@ -329,11 +330,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     CircleAvatar(
                       radius: 36,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.1),
-                      child:
-                          (user != null &&
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      child: (user != null &&
                               user.name != null &&
                               user.name!.isNotEmpty)
                           ? Text(
@@ -356,7 +355,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               user.name != null &&
                               user.name!.isNotEmpty)
                           ? user.name!
-                          : 'User',
+                          : t.fallbackUser,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
@@ -367,24 +366,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-              _buildSectionHeader(context, 'Appearance'),
+
+              // Appearance
+              _buildSectionHeader(context, t.settingsAppearance),
               _buildThemeCard(context),
               const SizedBox(height: 24),
-              _buildSectionHeader(context, 'Notifications'),
+
+              // Notifications
+              _buildSectionHeader(context, t.settingsNotifications),
               if (_loadingSettings)
-                const Card(
-                  margin: EdgeInsets.only(bottom: 8),
+                Card(
+                  margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: CircularProgressIndicator(),
-                    title: Text('Loading notification settings...'),
+                    leading: const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    title: Text(t.settingsLoadingNotificationSettings),
                   ),
                 )
               else if (_notificationSettings != null) ...[
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.emergency,
-                  title: 'Emergency Alerts',
-                  subtitle: 'Critical health alerts and emergencies',
+                  title: t.settingsNotifEmergency,
+                  subtitle: t.settingsNotifEmergencyDesc,
                   value: _notificationSettings!.emergency,
                   onChanged: (value) =>
                       _updateNotificationSetting('emergency', value),
@@ -393,8 +400,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.video_call,
-                  title: 'Video Call Notifications',
-                  subtitle: 'Incoming video call alerts',
+                  title: t.settingsNotifVideoCall,
+                  subtitle: t.settingsNotifVideoCallDesc,
                   value: _notificationSettings!.videoCall,
                   onChanged: (value) =>
                       _updateNotificationSetting('videoCall', value),
@@ -402,8 +409,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.call,
-                  title: 'Audio Call Notifications',
-                  subtitle: 'Incoming audio call alerts',
+                  title: t.settingsNotifAudioCall,
+                  subtitle: t.settingsNotifAudioCallDesc,
                   value: _notificationSettings!.audioCall,
                   onChanged: (value) =>
                       _updateNotificationSetting('audioCall', value),
@@ -411,8 +418,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.favorite,
-                  title: 'Significant Vitals',
-                  subtitle: 'Important changes in vital signs',
+                  title: t.settingsNotifSignificantVitals,
+                  subtitle: t.settingsNotifSignificantVitalsDesc,
                   value: _notificationSettings!.significantVitals,
                   onChanged: (value) =>
                       _updateNotificationSetting('significantVitals', value),
@@ -420,8 +427,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.sms,
-                  title: 'SMS Notifications',
-                  subtitle: 'Text message alerts to your phone',
+                  title: t.settingsNotifSMS,
+                  subtitle: t.settingsNotifSMSDesc,
                   value: _notificationSettings!.sms,
                   onChanged: (value) =>
                       _updateNotificationSetting('sms', value),
@@ -429,8 +436,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.stars,
-                  title: 'Gamification',
-                  subtitle: 'Achievement and progress notifications',
+                  title: t.settingsNotifGamification,
+                  subtitle: t.settingsNotifGamificationDesc,
                   value: _notificationSettings!.gamification,
                   onChanged: (value) =>
                       _updateNotificationSetting('gamification', value),
@@ -443,57 +450,67 @@ class _SettingsPageState extends State<SettingsPage> {
                       Icons.error_outline,
                       color: Theme.of(context).colorScheme.error,
                     ),
-                    title: const Text('Unable to load notification settings'),
+                    title: Text(t.settingsUnableToLoadNotificationSettings),
                     trailing: IconButton(
                       icon: const Icon(Icons.refresh),
                       onPressed: _loadNotificationSettings,
                     ),
                   ),
                 ),
+
               const SizedBox(height: 24),
-              _buildSectionHeader(context, 'AI Assistant'),
+
+              // AI Assistant
+              _buildSectionHeader(context, t.settingsAIAssistant),
               _buildSettingsCard(
                 context,
                 icon: Icons.smart_toy,
-                title: 'AI Configuration',
-                subtitle: 'Customize your AI assistant settings',
+                title: t.settingsAIConfiguration,
+                subtitle: t.settingsAIConfigurationDesc,
                 onTap: () => context.push('/ai-configuration'),
               ),
+
               const SizedBox(height: 24),
-              // Only show subscription management for non-patient/family member users
+
+              // Subscription (hide for patient/family member)
               if (!shouldHideSubscription) ...[
-                _buildSectionHeader(context, 'Subscription'),
+                _buildSectionHeader(context, t.settingsSubscription),
                 _buildSettingsCard(
                   context,
                   icon: Icons.subscriptions,
-                  title: 'Manage Subscription',
-                  subtitle: 'View or update your subscription plan',
+                  title: t.settingsManageSubscription,
+                  subtitle: t.settingsManageSubscriptionDesc,
                   onTap: () => context.push('/select-package'),
                 ),
                 const SizedBox(height: 24),
               ],
-              _buildSectionHeader(context, 'Notetaker Assistant'),
+
+              // Notetaker
+              _buildSectionHeader(context, t.settingsNotetakerAssistant),
               _buildSettingsCard(
                 context,
                 icon: Icons.edit_note,
-                title: 'Notetaker Configuration',
-                subtitle: 'Customize your Notetaker assistant settings',
+                title: t.settingsNotetakerConfiguration,
+                subtitle: t.settingsNotetakerConfigurationDesc,
                 onTap: () => context.push('/notetaker-configuration'),
               ),
+
               const SizedBox(height: 24),
-              _buildSectionHeader(context, 'General'),
+
+              // General
+              _buildSectionHeader(context, t.settingsGeneral),
               _buildSettingsCard(
                 context,
                 icon: Icons.cleaning_services,
-                title: 'Clear Cache',
-                subtitle: 'Remove temporary files and cache data',
+                title: t.settingsClearCache,
+                subtitle: t.settingsClearCacheShortDesc,
                 onTap: () => _showClearCacheDialog(context),
               ),
               _buildSettingsCard(
                 context,
                 icon: Icons.logout,
-                title: 'Sign Out',
-                subtitle: 'Sign out of your account',
+                title: t.settingsSignOut,
+                subtitle: t.settingsSignOutDesc,
                 onTap: () => _showSignOutDialog(context),
                 textColor: Theme.of(context).colorScheme.error,
                 iconColor: Theme.of(context).colorScheme.error,
@@ -501,12 +518,13 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsCard(
                 context,
                 icon: Icons.delete_forever,
-                title: 'Delete Account',
-                subtitle: 'Permanently delete your account',
+                title: t.settingsDeleteAccount,
+                subtitle: t.settingsDeleteAccountShortDesc,
                 onTap: () => _showDeleteAccountDialog(context),
                 textColor: Theme.of(context).colorScheme.error,
                 iconColor: Theme.of(context).colorScheme.error,
               ),
+
               const SizedBox(height: 24),
             ],
           ),
