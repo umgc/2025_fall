@@ -1,8 +1,9 @@
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
-import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -15,8 +16,10 @@ import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
+import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
@@ -25,7 +28,6 @@ import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
-import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
@@ -41,8 +43,19 @@ import '../../features/analytics/analytics_page.dart';
 import '../../features/payments/presentation/pages/payment_success_page.dart';
 import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
+import '../../features/evv/presentation/pages/evv_dashboard.dart';
+import '../../features/evv/presentation/pages/evv_participant_management.dart';
+import '../../features/evv/presentation/pages/evv_record_creation.dart';
+import '../../features/evv/presentation/pages/evv_record_review.dart';
+import '../../features/evv/presentation/pages/evv_visit_history.dart';
+import '../../features/evv/presentation/pages/evv_corrections.dart';
+import '../../features/evv/presentation/pages/evv_offline_sync.dart';
 import '../../providers/user_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
 Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
@@ -551,6 +564,36 @@ final GoRouter appRouter = GoRouter(
       path: '/medication',
       builder: (_, __) => const MedicationManagementScreen(),
     ),
+    
+    // EVV Routes
+    GoRoute(
+      path: '/evv',
+      builder: (_, __) => const EvvDashboard(),
+    ),
+    GoRoute(
+      path: '/evv/participants',
+      builder: (_, __) => const EvvParticipantManagementPage(),
+    ),
+    GoRoute(
+      path: '/evv/create-record',
+      builder: (_, __) => const EvvRecordCreationPage(),
+    ),
+    GoRoute(
+      path: '/evv/review-records',
+      builder: (_, __) => const EvvRecordReviewPage(),
+    ),
+    GoRoute(
+      path: '/evv/visit-history',
+      builder: (_, __) => const EvvVisitHistoryPage(),
+    ),
+    GoRoute(
+      path: '/evv/corrections',
+      builder: (_, __) => const EvvCorrectionsPage(),
+    ),
+    GoRoute(
+      path: '/evv/offline-sync',
+      builder: (_, __) => const EvvOfflineSyncPage(),
+    ),
     GoRoute(
       path: '/profile-settings',
       builder: (_, __) => const ProfileSettingsPage(),
@@ -687,5 +730,57 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+
+    GoRoute(
+      path: '/invoice-assistant',
+      redirect: (context, state) {
+        // redirect only if the path is exactly /invoice-assistant
+        if (state.uri.toString() == '/invoice-assistant') {
+          return '/invoice-assistant/upload';
+        }
+        return null;
+      },
+      routes: [ 
+         GoRoute(
+          path: 'dashboard',
+          name: 'invoiceDashboard',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 0),
+        ),
+        GoRoute(
+          path: 'upload',
+          name: 'invoiceUpload',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 1),
+        ),
+        GoRoute(
+          path: 'list',
+          name: 'invoiceList',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 2),
+          routes: [
+            GoRoute(
+              path: ':filter',
+              name: 'invoiceListFiltered',
+              builder: (context, state) => InvoiceTabbedPage(
+                initialTabIndex: 2,
+                quickFilter: state.pathParameters['filter'],
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'detail/:id',
+          name: 'invoiceDetail',
+          builder: (context, state) {
+            final invoice = state.extra as Invoice;
+            return InvoiceDetailPage(invoice: invoice);
+          },
+        ),       
+        
+      ],
+    ),
+        GoRoute(
+          path: 'menu',
+          name: 'menupage',
+          builder: (context, state) => const MenuPage(),
+        ),
   ],
 );
