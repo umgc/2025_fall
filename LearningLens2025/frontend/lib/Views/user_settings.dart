@@ -383,6 +383,7 @@ class UserSettingsState extends State<UserSettings> {
       setState(() => _modelsLoading = false);
     }
   }
+  
 
   // Dummy download method (for web logic placeholder)
   Future<void> _dummyDownloadModel(String modelId) async {
@@ -549,6 +550,7 @@ class UserSettingsState extends State<UserSettings> {
         ],
       );
     } else {
+      // Not a Web Build
       if (_modelsLoading) {
         return const Padding(
           padding: EdgeInsets.symmetric(vertical: 16),
@@ -564,6 +566,7 @@ class UserSettingsState extends State<UserSettings> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
+
           Row(
             children: [
               // Dropdown with checkmark
@@ -578,12 +581,34 @@ class UserSettingsState extends State<UserSettings> {
                     });
                   },
                   items: modelMap.keys.map((key) {
+                    final modelName = _ggufModelPath!
+                        .split('models\\')
+                        .last
+                        .split(".gguf")
+                        .first;
+                    final isSelected = key == modelName;
+
                     return DropdownMenuItem(
                       value: key,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(key),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(key),
+                              if (isSelected) ...[
+                                const SizedBox(width: 6),
+                                const Text(
+                                  '(Selected)',
+                                  style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                           ValueListenableBuilder<double>(
                             valueListenable:
                                 DownloadManager().progressNotifier(key),
@@ -680,7 +705,6 @@ class UserSettingsState extends State<UserSettings> {
                           .last
                           .split(".gguf")
                           .first;
-                      print(modelName);
                       if (modelName != selectedModel!) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

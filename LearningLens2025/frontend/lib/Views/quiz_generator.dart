@@ -41,6 +41,7 @@ class _AssessmentState extends State<CreateAssessment> {
   final _formKey = GlobalKey<FormState>();
   String? selectedSubject, selectedGradeLevel;
   LlmType? selectedLLM;
+  bool canceled = false;
   List<String> _subjects = [
     'Math',
     'Science',
@@ -57,81 +58,172 @@ class _AssessmentState extends State<CreateAssessment> {
 
   _AssessmentState();
 
-  void generateQuiz(Map<String, TextEditingController> fields) {
-    if (_formKey.currentState!.validate()) {
-      // Parse question counts, defaulting to 0 if empty
-      int multipleChoiceCount =
-          int.tryParse(fields['multipleChoice']!.text) ?? 0;
-      int trueFalseCount = int.tryParse(fields['trueFalse']!.text) ?? 0;
-      int shortAnswerCount = int.tryParse(fields['shortAns']!.text) ?? 0;
-
-      // Check if at least one type of question is greater than 1
-      if (multipleChoiceCount <= 0 &&
-          trueFalseCount <= 0 &&
-          shortAnswerCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Please ensure at least one type of question has a count greater than 0.'),
+  Future<bool> checkIfLoadedLocalLLMRecommended() async {
+    final String path = LocalStorageService.getLocalLLMPath().toLowerCase();
+    if (!path.contains("qwen")) {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('⚠️Warning:'),
+          content: Text(
+            'The current Local LLM does not consistently honor question type or count constraints in quiz generation.\n'
+            'Proceeding could result in invalid XML output error or the generation of irrelevant questions.\n\n'
+            'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
+            'Do you want to continue anyway?',
           ),
-        );
-        return;
-      }
-
-      AssignmentForm af = AssignmentForm(
-        subject: selectedSubject != null
-            ? selectedSubject.toString()
-            : fields['subject']!.text,
-        topic: fields['description']!.text,
-        gradeLevel: selectedGradeLevel.toString(),
-        title: fields['name']!.text,
-        trueFalseCount: trueFalseCount,
-        shortAnswerCount: shortAnswerCount,
-        multipleChoiceCount: multipleChoiceCount,
-        maximumGrade: 100,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false), // Cancel
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true), // Continue
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
       );
-      generateQuestions(af);
+
+      return result ?? false;
+    } else {
+      return true;
+    }
+  }
+
+  void generateQuiz(Map<String, TextEditingController> fields) async {
+    canceled = false;
+    if (await checkIfLoadedLocalLLMRecommended()) {
+      if (!mounted) return;
+      if (_formKey.currentState!.validate()) {
+        // Parse question counts, defaulting to 0 if empty
+        int multipleChoiceCount =
+            int.tryParse(fields['multipleChoice']!.text) ?? 0;
+        int trueFalseCount = int.tryParse(fields['trueFalse']!.text) ?? 0;
+        int shortAnswerCount = int.tryParse(fields['shortAns']!.text) ?? 0;
+
+        // Check if at least one type of question is greater than 1
+        if (multipleChoiceCount <= 0 &&
+            trueFalseCount <= 0 &&
+            shortAnswerCount <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Please ensure at least one type of question has a count greater than 0.'),
+            ),
+          );
+          return;
+        }
+
+        AssignmentForm af = AssignmentForm(
+          subject: selectedSubject != null
+              ? selectedSubject.toString()
+              : fields['subject']!.text,
+          topic: fields['description']!.text,
+          gradeLevel: selectedGradeLevel.toString(),
+          title: fields['name']!.text,
+          trueFalseCount: trueFalseCount,
+          shortAnswerCount: shortAnswerCount,
+          multipleChoiceCount: multipleChoiceCount,
+          maximumGrade: 100,
+        );
+        generateQuestions(af);
+      }
     }
   }
 
   Future<void> generateQuestions(AssignmentForm af) async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-      final LLM aiModel;
-      if (selectedLLM == LlmType.CHATGPT) {
-        aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-      } else if (selectedLLM == LlmType.GROK) {
-        aiModel = GrokLLM(LocalStorageService.getGrokKey());
-      } else if (selectedLLM == LlmType.PERPLEXITY) {
-        aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
-      } else if (selectedLLM == LlmType.DEEPSEEK) {
-        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
-      } else if (selectedLLM == LlmType.LOCAL) {
-        aiModel = LocalLLMService();
-        // aiModel.configureToken(
-        //     maxTokens: 1100 +
-        //         (af.multipleChoiceCount * 180) +
-        //         (af.trueFalseCount * 120) +
-        //         (af.shortAnswerCount * 180));
-      } else {
-        aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-      }
-      var result = await aiModel.postToLlm(PromptEngine.generatePrompt(af));
-      if (result.isNotEmpty) {
-        setState(() {
-          _isLoading = false;
-        });
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => EditQuestions(result)));
-      }
-    } catch (e) {
-      print("Failure sending request to LLM: $e");
-      setState(() {
-        _isLoading = false;
-      });
+    //try {
+    setState(() {
+      _isLoading = true;
+    });
+    final LLM aiModel;
+    if (selectedLLM == LlmType.CHATGPT) {
+      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
+    } else if (selectedLLM == LlmType.GROK) {
+      aiModel = GrokLLM(LocalStorageService.getGrokKey());
+    } else if (selectedLLM == LlmType.PERPLEXITY) {
+      aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
+      // aiModel.configureToken(
+      //     maxTokens: 1100 +
+      //         (af.multipleChoiceCount * 180) +
+      //         (af.trueFalseCount * 120) +
+      //         (af.shortAnswerCount * 180));
+    } else {
+      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     }
+    final result = await aiModel.postToLlm(PromptEngine.generatePrompt(af));
+    if (!mounted) return;
+
+    if (result.isNotEmpty) {
+      print(result);
+      if (!mounted) return;
+
+      if(canceled){
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!canceled &&
+          selectedLLM == LlmType.LOCAL &&
+          !LocalLLMService().checkXMLValid(result)) {
+        final repairedXml = await LocalLLMService().handleInvalidXml(result);
+
+        if (repairedXml == null) {
+          // User cancelled or repair failed
+          setState(() => _isLoading = false);
+          return;
+        } else {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => EditQuestions(repairedXml)),
+          );
+        }
+      } else {
+        setState(() => _isLoading = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EditQuestions(result)),
+        );
+      }
+    }
+    // } catch (e) {
+    //   print("Failure sending request to LLM: $e");
+    //   setState(() {
+    //     _isLoading = false;
+    //   });
+    // }
+  }
+
+  Future<bool> showCancelConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Confirmation'),
+        content: Text('Are you sure you want to cancel the generation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // no
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+              canceled = true;
+            }, // yes
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false; // false if dismissed
   }
 
   @override
@@ -169,7 +261,26 @@ class _AssessmentState extends State<CreateAssessment> {
                                     'Generating Quiz Questions...',
                                     style: TextStyle(
                                         fontSize: 18, color: Colors.black54),
-                                  )
+                                  ),
+                                  SizedBox(height: paddingHeight),
+                                  TextButton(
+                                    onPressed: () async {
+                                      final decision =
+                                          await showCancelConfirmationDialog();
+                                      if (decision) {
+                                        LocalLLMService().cancel();
+                                      }
+                                    },
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.redAccent,
+                                    ),
+                                    child: const Text(
+                                      'Cancel Generation',
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
                                 ],
                               ),
                             )

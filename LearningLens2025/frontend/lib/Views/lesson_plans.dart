@@ -123,6 +123,8 @@ class _LessonPlanState extends State<LessonPlans> {
 
       String normalizedText = utf8.decode(result.codeUnits);
 
+      print(normalizedText);
+
       setState(() {
         manualEntryController.text = normalizeText(
             normalizedText); // Update the manual entry textbox with the AI response
@@ -359,18 +361,56 @@ class _LessonPlanState extends State<LessonPlans> {
                                                 });
                                               },
                                         child: isGeneratingLesson
-                                            ? SizedBox(
-                                                width: 24,
-                                                height: 24,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                          Color>(Colors.white),
-                                                ),
+                                            ? Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const SizedBox(
+                                                    width: 24,
+                                                    height: 24,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                                  Color>(
+                                                              Colors.white),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  if (selectedLLM ==
+                                                      LlmType.LOCAL)
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          isGeneratingLesson =
+                                                              false;
+                                                        });
+                                                        // Cancel inference from Local LLM (may break)
+                                                        LocalLLMService()
+                                                            .cancel();
+                                                      },
+                                                      style:
+                                                          TextButton.styleFrom(
+                                                        foregroundColor:
+                                                            Colors.black,
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        textStyle:
+                                                            const TextStyle(
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .underline,
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                          'Cancel Generation'),
+                                                    ),
+                                                ],
                                               )
-                                            : Text("Generate Lesson Plan"),
+                                            : const Text(
+                                                "Generate Lesson Plan"),
                                       ),
                                     ],
                                   ),

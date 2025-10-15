@@ -2,8 +2,13 @@ import 'package:fllama/fllama.dart';
 import 'package:flutter/foundation.dart';
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'dart:async';
-
+import 'package:xml/xml.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:flutter/material.dart';
+import 'package:learninglens_app/main.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:learninglens_app/services/download_manager.dart';
 
 class ToolFunction {
   final String name;
@@ -28,11 +33,13 @@ class LocalLLMService implements LLM {
   var _temperature = 0.5;
   var _topP = 1.0;
 
+  String errorMessage = "";
+
   // if longer than max tokens, output cuts off
   @override
-  int maxOutputTokens = 3000;
+  int maxOutputTokens = 4000;
   @override
-  int contextSize = 16000;
+  int contextSize = 15984;
   @override
   double tokenCount = .25;
   @override
@@ -181,6 +188,17 @@ class LocalLLMService implements LLM {
     }
   }
 
+  bool checkXMLValid(String input) {
+    try {
+      XmlDocument.parse(input);
+      return true; // well-formed XML
+    } catch (e) {
+      errorMessage = e.toString();
+      print('Invalid XML: $e');
+      return false;
+    }
+  }
+
   @override
   Future<String> chat(
       {List<Map<String, dynamic>>? context,
@@ -198,5 +216,271 @@ class LocalLLMService implements LLM {
   Future<String> generate(String prompt) {
     // TODO: implement generate
     throw UnimplementedError();
+  }
+
+  /// Main XML repair loop
+  Future<String?> handleInvalidXml(String brokenXml) async {
+    bool repairSuccessful = false;
+    bool cancelPressed = false;
+    String repairedXml = brokenXml;
+
+    while (!repairSuccessful && !cancelPressed) {
+      // Ask user if they want to attempt repair
+      final repairChoice =
+          await _showRepairPromptDialog(navigatorKey.currentContext!);
+      if (repairChoice != true) {
+        cancelPressed = true;
+        break;
+      }
+
+      // Show spinner dialog
+      _showRepairInProgressDialog(navigatorKey.currentContext!);
+
+      // try to repair
+      final attempt = await _attemptRepairWithLocalLLM(repairedXml);
+
+      // Close spinner safely
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null && Navigator.canPop(navigatorKey.currentContext!)) {
+        Navigator.pop(navigatorKey.currentContext!);
+      }
+
+      repairSuccessful = checkXMLValid(attempt);
+
+      if (repairSuccessful) {
+        repairedXml = attempt;
+        final ctx2 = navigatorKey.currentContext;
+        if (ctx2 != null) {
+          await _showRepairSuccessDialog(navigatorKey.currentContext!);
+        }
+      } else {
+        final retry =
+            await _showRepairFailedDialog(navigatorKey.currentContext!);
+        if (retry != true) cancelPressed = true;
+      }
+    }
+
+    if (cancelPressed && !repairSuccessful) {
+      final ctx3 = navigatorKey.currentContext;
+      if (ctx3 != null) {
+        await _showRepairCancelledDialog(navigatorKey.currentContext!);
+      }
+      return null;
+    }
+
+    return repairedXml;
+  }
+
+  // Call XML fix
+  Future<String> _attemptRepairWithLocalLLM(String xml) async {
+    String prompt =
+        '''You are a strict XML validator and repair assistant. Given a broken XML snippet, your task is to: 
+        1. Identify and describe the structural issues (e.g. unclosed tags, invalid nesting, missing attributes). 
+        2. Return a corrected version that is minimal, valid, and schema-compliant. 
+        3. Preserve original data and tag intent as much as possible, however if you need to delete data to make the XML valid, you can delete data.
+        Here is the error that the XML validator gave: $errorMessage. Use this to pinpoint the error.
+        Broken XML: $xml Return only the fixed XML. Do not include explanations or extra commentary.''';
+    String response = await runModel(prompt);
+    print(response);
+    return response;
+  }
+
+  // Dialogs
+  Future<bool?> _showRepairPromptDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Invalid XML Output'),
+        content: const Text(
+          'The Local LLM outputted invalid XML.\n\n'
+          'Would you like to attempt to repair it using the Local LLM?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Attempt Repair'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRepairInProgressDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // user cannot close
+      builder: (dialogContext) => AlertDialog(
+        content: Row(children: [
+          CircularProgressIndicator(),
+          SizedBox(width: 20),
+          Expanded(child: Text('Repair in progress...')),
+          TextButton(
+            onPressed: () async {
+              final shouldCancel = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Cancel Repair'),
+                    content: Text(
+                        'Are you sure you want to cancel the repair process?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text('No'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: Text('Yes'),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (shouldCancel == true) {
+                cancel();
+              }
+            },
+            child: Text('Cancel'),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _showRepairSuccessDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Repair Successful'),
+        content: const Text(
+          'The Local LLM successfully repaired the XML. You can continue.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<List<String>> fetchModelKeys() async {
+    final url = Uri.parse(
+      'https://raw.githubusercontent.com/ssung13/SWEN670F2025/main/models.csv',
+    );
+
+    final List<String> modelKeys = [];
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final csvContent = response.body;
+
+        for (var line in LineSplitter.split(csvContent)) {
+          if (line.trim().isEmpty) continue;
+          final parts = line.split(',');
+          if (parts.isNotEmpty) {
+            modelKeys.add(parts[0].trim());
+          }
+        }
+      } else {
+        print('Failed to fetch CSV: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching CSV: $e');
+    }
+
+    return modelKeys;
+  }
+
+  Future<bool?> _showRepairFailedDialog(BuildContext context) async {
+    String? selectedModel = LocalStorageService.getLocalLLMPath()
+        .split('models\\')
+        .last
+        .split(".gguf")
+        .first;
+
+    // Filter to only downloaded models
+    final keys = await fetchModelKeys();
+
+    final downloadedModels =
+        keys.where((k) => DownloadManager().isDownloaded(k)).toList();
+    return showDialog<bool>(
+      context: navigatorKey.currentContext!,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Repair Failed'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'The Local LLM failed to repair the XML. You can select another downloaded model and try again.',
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButton<String>(
+                    value: selectedModel,
+                    isExpanded: true,
+                    items: downloadedModels.map((key) {
+                      return DropdownMenuItem(
+                        value: key,
+                        child: Text(key),
+                      );
+                    }).toList(),
+                    onChanged: (value) async {
+                      setState(() {
+                        selectedModel = value!;
+                      });
+                      String modelPath =
+                          await DownloadManager().getFilePath(value!);
+                      print(modelPath);
+                      LocalStorageService.saveLocalLLMPath(modelPath);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('Use Selected Model'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showRepairCancelledDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Repair Cancelled'),
+        content: const Text(
+          'The XML remains invalid. Operation was cancelled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
