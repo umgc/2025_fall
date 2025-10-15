@@ -5,33 +5,33 @@
 -- ============================================
 
 -- ============================================
--- 1. USERS TABLE - Remove updated_at column
+-- 1. USERS TABLE - Match current schema (no name, last_login_date instead of last_login)
 -- ============================================
 
 -- Patient User
-INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('patient@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'PATIENT', 'ACTIVE', 'Mary Johnson', '2025-10-06 08:00:00', 'https://i.pravatar.cc/150?img=1', '2024-06-15 10:00:00');
+INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
+('patient@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'PATIENT', 'ACTIVE', '2025-10-06', '2024-06-15 10:00:00');
 
 -- Caregiver User
-INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('caregiver@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'CAREGIVER', 'ACTIVE', 'Jennifer Smith', '2025-10-06 07:45:00', 'https://i.pravatar.cc/150?img=20', '2024-05-01 09:00:00');
+INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
+('caregiver@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'CAREGIVER', 'ACTIVE', '2025-10-06', '2024-05-01 09:00:00');
 
 -- Family Member User
-INSERT INTO users (email, email_verified, password, role, status, name, last_login, profile_image_url, created_at) VALUES
-('family@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'FAMILY_MEMBER', 'ACTIVE', 'David Johnson', '2025-10-05 18:20:00', 'https://i.pravatar.cc/150?img=15', '2024-07-10 16:00:00');
+INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
+('family@careconnect.com', true, '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', '$2a$10$N9qo8uLOickgx2ZMRZoMye1J6HG.qm8M3GW7Xe.x5LxXwZ8x6rQ3S', 'FAMILY_MEMBER', 'ACTIVE', '2025-10-05', '2024-07-10 16:00:00');
 
 -- ============================================
 -- 2. PATIENT TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
 -- ============================================
 
-INSERT INTO patient (user_id, first_name, last_name, dob, email, phone, line1, line2, city, state, zip, gender) VALUES
+INSERT INTO patient (user_id, first_name, last_name, dob, email, phone, address_line1, address_line2, city, state, zip, gender) VALUES
 ((SELECT id FROM users WHERE email = 'patient@careconnect.com'), 'Mary', 'Johnson', '1958-03-15', 'patient@careconnect.com', '555-0101', '123 Maple Street', 'Apt 4B', 'Springfield', 'IL', '62701', 'FEMALE');
 
 -- ============================================
 -- 3. CAREGIVER TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
 -- ============================================
 
-INSERT INTO caregiver (user_id, first_name, last_name, dob, email, phone, line1, line2, city, state, zip, gender, caregiver_type) VALUES
+INSERT INTO caregiver (user_id, first_name, last_name, dob, email, phone, address_line1, address_line2, city, state, zip, gender, caregiver_type) VALUES
 ((SELECT id FROM users WHERE email = 'caregiver@careconnect.com'), 'Jennifer', 'Smith', '1985-09-12', 'caregiver@careconnect.com', '555-0200', '321 Healthcare Plaza', 'Suite 200', 'Chicago', 'IL', '60607', 'FEMALE', 'RN');
 
 -- ============================================
@@ -109,35 +109,28 @@ INSERT INTO wearable_metric (patient_user_id, metric, metric_value, recorded_at,
 -- 12. TASKS - Use isCompleted (boolean) not iscompleted, remove updated_at
 -- ============================================
 
-INSERT INTO tasks (patient_id, name, description, date, time_of_day, isCompleted, task_type, status, created_at) VALUES
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Morning Medications', 'Metformin, Lisinopril, Aspirin', '2025-10-06', '08:00:00', true, 'TASK', 'COMPLETED', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Check Blood Sugar', 'Fasting blood glucose reading', '2025-10-06', '07:30:00', true, 'TASK', 'COMPLETED', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Evening Medications', 'Metformin, Atorvastatin', '2025-10-06', '19:00:00', false, 'TASK', 'PENDING', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Daily Walk', '15-minute walk around the block', '2025-10-06', '14:00:00', false, 'TASK', 'PENDING', '2024-07-01 09:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Drink Water', '8 glasses throughout the day', '2025-10-06', '10:00:00', false, 'TASK', 'PENDING', '2024-07-01 09:00:00');
+INSERT INTO tasks (patient_id, name, description, date, time_of_day, iscompleted, task_type, days_of_week, status, created_at) VALUES
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Morning Medications', 'Metformin, Lisinopril, Aspirin', '2025-10-06', '08:00:00', true, 'TASK', '[]'::jsonb, 'COMPLETED', '2024-06-20 10:00:00'),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Check Blood Sugar', 'Fasting blood glucose reading', '2025-10-06', '07:30:00', true, 'TASK', '[]'::jsonb, 'COMPLETED', '2024-06-20 10:00:00'),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Evening Medications', 'Metformin, Atorvastatin', '2025-10-06', '19:00:00', false, 'TASK', '[]'::jsonb, 'PENDING', '2024-06-20 10:00:00'),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Daily Walk', '15-minute walk around the block', '2025-10-06', '14:00:00', false, 'TASK', '["MONDAY","WEDNESDAY","FRIDAY"]'::jsonb, 'PENDING', '2024-07-01 09:00:00'),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Drink Water', '8 glasses throughout the day', '2025-10-06', '10:00:00', false, 'TASK', '["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'PENDING', '2024-07-01 09:00:00');
 
 -- ============================================
--- 13. VITAL_SAMPLE - Use individual columns, not vital_type
+-- 13. VITAL_SAMPLE - Table doesn't exist, removing these entries
 -- ============================================
 
-INSERT INTO vital_sample (patient_id, heart_rate, spo2, systolic, diastolic, mood_value, pain_value, timestamp, created_at) VALUES
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 72.0, 97.0, 128, 82, 8, 3, '2025-10-06 08:00:00'::timestamp, '2025-10-06 08:00:00'::timestamp),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 75.0, 98.0, 132, 85, 7, 4, '2025-10-05 08:00:00'::timestamp, '2025-10-05 08:00:00'::timestamp),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 70.0, 97.0, 125, 80, 8, 2, '2025-10-04 08:00:00'::timestamp, '2025-10-04 08:00:00'::timestamp),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 74.0, 98.0, 130, 84, 9, 2, '2025-10-03 08:00:00'::timestamp, '2025-10-03 08:00:00'::timestamp);
+-- Note: vital_sample table not found in current schema, skipping vitals data
 
 -- ============================================
--- 14. PLAN
+-- 14. PLAN - Already exists in database, skipping
 -- ============================================
 
-INSERT INTO plan (code, name, price_cents, billing_period, is_active) VALUES
-('BASIC', 'Basic Care Plan', 2999, 'MONTHLY', true),
-('PREMIUM', 'Premium Care Plan', 4999, 'MONTHLY', true),
-('FAMILY', 'Family Care Plan', 7999, 'MONTHLY', true);
+-- Note: Plan data already exists from migrations, skipping duplicates
 
 -- ============================================
 -- 15. SUBSCRIPTIONS - Fixed to use single plan
 -- ============================================
 
-INSERT INTO subscriptions (user_id, plan_id, status, started_at, current_period_end) VALUES
+INSERT INTO subscription (user_id, plan_id, status, started_at, current_period_end) VALUES
 ((SELECT id FROM users WHERE email = 'patient@careconnect.com'), (SELECT id FROM plan WHERE code = 'PREMIUM' LIMIT 1), 'ACTIVE', '2024-06-15 10:00:00', '2025-11-15 10:00:00');

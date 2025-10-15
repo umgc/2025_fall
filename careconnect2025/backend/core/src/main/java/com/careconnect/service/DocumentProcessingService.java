@@ -24,7 +24,10 @@ import java.util.Base64;
 @Slf4j
 @Service
 public class DocumentProcessingService {
-    
+
+    private static final int MAX_DOCUMENT_CONTENT_LENGTH = 15000;
+    private static final int MAX_TEXT_CONTENT_LENGTH = 10000;
+
     private final Tika tika = new Tika();
     
     /**
@@ -95,8 +98,8 @@ public class DocumentProcessingService {
                 text = cleanExtractedText(text);
                 
                 // Limit content length for AI processing
-                if (text.length() > 15000) {
-                    text = text.substring(0, 15000) + "\n... [PDF content truncated for processing]";
+                if (text.length() > MAX_DOCUMENT_CONTENT_LENGTH) {
+                    text = text.substring(0, MAX_DOCUMENT_CONTENT_LENGTH) + "\n... [PDF content truncated for processing]";
                 }
                 
                 return text;
@@ -133,8 +136,8 @@ public class DocumentProcessingService {
                 text = cleanExtractedText(text);
                 
                 // Limit content length for AI processing
-                if (text.length() > 15000) {
-                    text = text.substring(0, 15000) + "\n... [DOC content truncated for processing]";
+                if (text.length() > MAX_DOCUMENT_CONTENT_LENGTH) {
+                    text = text.substring(0, MAX_DOCUMENT_CONTENT_LENGTH) + "\n... [DOC content truncated for processing]";
                 }
                 
                 return text;
@@ -180,8 +183,8 @@ public class DocumentProcessingService {
                 extractedText = cleanExtractedText(extractedText);
                 
                 // Limit content length for AI processing
-                if (extractedText.length() > 15000) {
-                    extractedText = extractedText.substring(0, 15000) + "\n... [DOCX content truncated for processing]";
+                if (extractedText.length() > MAX_DOCUMENT_CONTENT_LENGTH) {
+                    extractedText = extractedText.substring(0, MAX_DOCUMENT_CONTENT_LENGTH) + "\n... [DOCX content truncated for processing]";
                 }
                 
                 return extractedText;
@@ -211,8 +214,8 @@ public class DocumentProcessingService {
         }
         
         // Limit content length for AI processing
-        if (content.length() > 10000) {
-            content = content.substring(0, 10000) + "\n... [Text content truncated for processing]";
+        if (content.length() > MAX_TEXT_CONTENT_LENGTH) {
+            content = content.substring(0, MAX_TEXT_CONTENT_LENGTH) + "\n... [Text content truncated for processing]";
         }
         
         return content;
@@ -247,8 +250,8 @@ public class DocumentProcessingService {
         }
         
         // Limit content length
-        if (content.length() > 10000) {
-            content = content.substring(0, 10000) + "\n... [JSON content truncated for processing]";
+        if (content.length() > MAX_TEXT_CONTENT_LENGTH) {
+            content = content.substring(0, MAX_TEXT_CONTENT_LENGTH) + "\n... [JSON content truncated for processing]";
         }
         
         return content;
@@ -273,8 +276,8 @@ public class DocumentProcessingService {
         }
         
         // Limit content length
-        if (content.length() > 10000) {
-            content = content.substring(0, 10000) + "\n... [CSV content truncated for processing]";
+        if (content.length() > MAX_TEXT_CONTENT_LENGTH) {
+            content = content.substring(0, MAX_TEXT_CONTENT_LENGTH) + "\n... [CSV content truncated for processing]";
         }
         
         return content;
@@ -312,8 +315,8 @@ public class DocumentProcessingService {
                 extractedText = cleanExtractedText(extractedText);
                 
                 // Limit content length
-                if (extractedText.length() > 10000) {
-                    extractedText = extractedText.substring(0, 10000) + "\n... [Content truncated for processing]";
+                if (extractedText.length() > MAX_TEXT_CONTENT_LENGTH) {
+                    extractedText = extractedText.substring(0, MAX_TEXT_CONTENT_LENGTH) + "\n... [Content truncated for processing]";
                 }
                 
                 return extractedText;

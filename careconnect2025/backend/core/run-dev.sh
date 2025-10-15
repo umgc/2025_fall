@@ -30,7 +30,6 @@ required_vars=(
     "SECURITY_JWT_SECRET"
     "FIREBASE_PROJECT_ID"
     "FIREBASE_SENDER_ID"
-    "DEEPSEEK_API_KEY"
 )
 
 missing_vars=()

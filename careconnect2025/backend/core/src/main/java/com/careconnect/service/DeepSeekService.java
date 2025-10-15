@@ -9,7 +9,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
 public class DeepSeekService {
 
     @Value("${deepseek.api.key:}")

@@ -7,16 +7,23 @@ set -e  # Exit on error
 
 echo "Loading CareConnect environment variables..."
 
-# Check if .env file exists
-if [ ! -f ".env" ]; then
-    echo "Error: .env file not found in current directory"
+# Check if .env file exists (first check current directory, then parent)
+ENV_FILE=""
+if [ -f ".env" ]; then
+    ENV_FILE=".env"
+elif [ -f "../.env" ]; then
+    ENV_FILE="../.env"
+else
+    echo "Error: .env file not found in current directory or parent directory"
     echo "Please create a .env file based on the provided template"
     exit 1
 fi
 
+echo "Using .env file: $ENV_FILE"
+
 # Load environment variables from .env file
 set -a  # Automatically export all variables
-source .env
+source "$ENV_FILE"
 set +a  # Stop auto-exporting
 
 echo "Environment variables loaded successfully!"
