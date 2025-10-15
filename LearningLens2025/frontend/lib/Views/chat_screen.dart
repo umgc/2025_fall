@@ -1,187 +1,359 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
-import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
-import 'package:learninglens_app/Api/llm/openai_api.dart';
-import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // For saving/loading chat history
-import 'package:learninglens_app/Controller/custom_appbar.dart';
-import 'package:learninglens_app/services/local_storage_service.dart';
-import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
+import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
-import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
-import 'dart:convert'; // For encoding and decoding chat history
-import 'package:flutter/foundation.dart';
+import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
+
+import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/lms_interface.dart';
+
+import 'package:learninglens_app/beans/chatLog.dart';
+
+import 'package:learninglens_app/Controller/custom_appbar.dart';
+import 'package:learninglens_app/services/LLMContextBuilder.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key});
+
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  // --- UI controllers ---
   final TextEditingController _controller = TextEditingController();
-  List<Map<String, dynamic>> _messages = [];
-  bool _isLoading = false;
-  String _role = 'student'; // Role toggle for student/teacher
-  final ScrollController _scrollController =
-      ScrollController(); // For scrolling the chat
-  SharedPreferences? _prefs; // SharedPreferences for saving chat history
-  LlmType? selectedLLM;
-  bool _localLlmAvail = !kIsWeb;
+  final ScrollController _scrollController = ScrollController();
 
+  // --- State ---
+  final List<Map<String, dynamic>> _messages = <Map<String, dynamic>>[];
+  final List<ChatTurn> _chatHistory = <ChatTurn>[];
+  bool _isLoading = false;
+
+  // LLM selection
+  LlmType _selectedLLM = LlmType.CHATGPT;
+
+  // Check if user has API key for selected LLM
+  bool _hasKeyFor(LlmType llm) {
+    return LocalStorageService.userHasLlmKey(llm);
+  }
+
+  // Persistence
+  SharedPreferences? _prefs;
+  static const String kChatHistoryKey = 'chat_history';
+
+  /// Initialize the chat screen.
   @override
   void initState() {
     super.initState();
-    _loadChatHistory(); // Load chat history when screen is initialized
-    selectedLLM = LlmType.CHATGPT;
+    _init();
+  }
+
+  // Clean up controllers
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ---------- Init / persistence ----------
+
+  // Initialize state, load history
+  Future<void> _init() async {
+    await _loadChatHistory();
+  }
+
+  // Ensure SharedPreferences instance
+  Future<void> _ensurePrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
   }
 
   // Load chat history from SharedPreferences
   Future<void> _loadChatHistory() async {
-    _prefs = await SharedPreferences.getInstance();
-    String? savedMessages = _prefs?.getString('chat_history');
-    if (savedMessages != null) {
-      setState(() {
-        _messages = List<Map<String, dynamic>>.from(jsonDecode(savedMessages));
-      });
+    await _ensurePrefs();
+
+    try {
+      final saved = _prefs?.getString(kChatHistoryKey);
+      if (saved?.isNotEmpty == true) {
+        final List<dynamic> raw = jsonDecode(saved!);
+        _chatHistory
+          ..clear()
+          ..addAll(
+            raw.map((e) {
+              final map = (e is Map)
+                  ? Map<String, dynamic>.from(e)
+                  : <String, dynamic>{};
+              return ChatTurn.fromJson(map);
+            }),
+          );
+      } else {
+        _chatHistory.clear();
+      }
+    } catch (e, st) {
+      debugPrint('$e\n$st');
+      _chatHistory.clear();
+      await _prefs?.remove(kChatHistoryKey);
     }
+
+    // Rebuild UI messages
+    _rebuildMessagesFromHistory();
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   // Save chat history to SharedPreferences
   Future<void> _saveChatHistory() async {
-    if (_prefs != null) {
-      await _prefs?.setString('chat_history', jsonEncode(_messages));
-    }
-  }
-
-  // Function to handle user message sending and API response
-  Future<void> _sendMessage() async {
-    final input = _controller.text;
-    final aiPrompt =
-        "$input IMPORTANT: Do not use any Markdown syntax (e.g., #, *, **, etc.). Use plain text only.";
-
-    if (input.isEmpty) {
-      return;
-    }
-    final LLM aiModel;
-    if (selectedLLM == LlmType.CHATGPT) {
-      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-    } else if (selectedLLM == LlmType.GROK) {
-      aiModel = GrokLLM(LocalStorageService.getGrokKey());
-    } else if (selectedLLM == LlmType.PERPLEXITY) {
-      // aiModel = OpenAiLLM(perplexityApiKey);
-      aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
-    } else if (selectedLLM == LlmType.DEEPSEEK) {
-      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
-    } else if (selectedLLM == LlmType.LOCAL) {
-      aiModel = LocalLLMService();
-    } else {
-      // default
-      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-    }
-
-    // Update UI to show user's message and reset text field
-    setState(() {
-      _messages.add({'text': input, 'sender': 'user'});
-      _isLoading = true; // Show a loading indicator while waiting for response
-    });
-
-    _controller.clear(); // Clear the input field
-    _scrollToBottom(); // Scroll to the bottom after sending the message
-    await _saveChatHistory(); // Save chat history
-
+    await _ensurePrefs();
     try {
-      // Get ChatGPT response
-      // final chatGPTService = OpenAiLLM();
-      final prompt = _role == 'teacher'
-          ? "You are assisting a teacher. $aiPrompt"
-          : aiPrompt;
-      final response = await aiModel.getChatResponse(prompt);
-
-      setState(() {
-        _messages.add({'text': response, 'sender': 'bot'});
-        _isLoading = false;
-      });
-
-      _scrollToBottom(); // Scroll to the bottom after receiving the bot response
-      await _saveChatHistory(); // Save chat history after bot response
-    } catch (error) {
-      setState(() {
-        _messages.add({
-          'text': 'Error: Could not fetch response. Please try again.',
-          'sender': 'bot'
-        });
-        _isLoading = false;
-      });
+      final serialized =
+          jsonEncode(_chatHistory.map((t) => t.toJson()).toList());
+      await _prefs!.setString(kChatHistoryKey, serialized);
+    } catch (e, st) {
+      debugPrint('[chat] save failed: $e\n$st');
     }
   }
 
-  // Function to clear chat history
-  void _clearChat() {
-    setState(() {
-      _messages.clear();
-    });
-    _saveChatHistory(); // Save the empty state to clear saved chat history
+  // ---------- Helpers ----------
+
+  // Rebuild UI messages from chat history
+  void _rebuildMessagesFromHistory() {
+    _messages
+      ..clear()
+      ..addAll(
+        _chatHistory.map((t) => <String, dynamic>{
+              'text': t.content,
+              'sender': t.role == 'assistant' ? 'bot' : 'user',
+            }),
+      );
   }
 
-  // Function to toggle role (student/teacher)
-  // void _toggleRole() { ***** Not used *****
-  //   setState(() {
-  //     _role = _role == 'student' ? 'teacher' : 'student';
-  //   });
-  // }
+  // Determine user role from LMS service
+  UserRole _getUserRole() {
+    // Safe default to student
+    return LmsFactory.getLmsService().role ?? UserRole.student;
+  }
 
-  // Scroll to the bottom of the chat list
+  // Build system instructions based on user role
+  String _buildInstructions(UserRole role) {
+    if (role == UserRole.teacher) {
+      return '''
+    You are an AI assistant for teachers. Be concise, practical, accurate.
+    - Answer educator questions clearly.
+    - Explain concepts at any grade level.
+    - Offer strategies for planning, assessment, engagement, and inclusion.
+    - Maintain professional, supportive tone; respect privacy and academic ethics.
+    - Ask clarifying questions when uncertain.
+    IMPORTANT: Use plain text only (no Markdown).
+    ''';
+    }
+    // Student
+    return '''
+    You are an AI learning assistant for students. Be concise, supportive, and clear.
+    - Explain topics in student-friendly terms.
+    - Provide examples, hints, or step-by-step reasoning.
+    - Encourage problem-solving and study skills.
+    - Do not complete graded work outright; teach the reasoning.
+    - Ask clarifying questions when unsure.
+    IMPORTANT: Use plain text only (no Markdown).
+    ''';
+  }
+
+  //---------- Scrolling ----------
+  // Scroll to bottom of chat
   void _scrollToBottom() {
+    if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       _scrollController.position.maxScrollExtent,
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
   }
 
+  // Schedule scroll after frame
+  void _postFrameScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
+
+  // Append message bubble and scroll
+  void _appendMessageBubble(String text, String sender) {
+    _messages.add({'text': text, 'sender': sender});
+    _postFrameScroll();
+  }
+
+  // Show a SnackBar message
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ---------- Sending ----------
+
+  Future<void> _sendMessage() async {
+    if (_isLoading) return; // prevent double-send
+    await _ensurePrefs();
+
+    final input = _controller.text.trim();
+    if (input.isEmpty) return;
+
+    // Ensure selected model has a usable key before doing anything else
+    if (!_hasKeyFor(_selectedLLM)) {
+      _showSnack('Missing API key for ${_selectedLLM.displayName}.');
+      return;
+    }
+
+    // Select model
+    final LLM aiModel;
+    switch (_selectedLLM) {
+      case LlmType.CHATGPT:
+        final key = LocalStorageService.getOpenAIKey();
+        if (key.isEmpty) {
+          _showSnack('OpenAI API key is missing.');
+          return;
+        }
+        aiModel = OpenAiLLM(key);
+      case LlmType.GROK:
+        final key = LocalStorageService.getGrokKey();
+        if (key.isEmpty) {
+          _showSnack('Grok API key is missing.');
+          return;
+        }
+        aiModel = GrokLLM(key);
+      case LlmType.PERPLEXITY:
+        final key = LocalStorageService.getPerplexityKey();
+        if (key.isEmpty) {
+          _showSnack('Perplexity API key is missing.');
+          return;
+        }
+        aiModel = PerplexityLLM(key);
+      case LlmType.DEEPSEEK:
+        final key = LocalStorageService.getDeepseekKey();
+        if (key.isEmpty) {
+          _showSnack('DeepSeek API key is missing.');
+          return;
+        }
+        aiModel = DeepseekLLM(key);
+      case LlmType.LOCAL:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+    }
+
+    // Optimistic UI
+    setState(() {
+      _isLoading = true;
+      _appendMessageBubble(input, 'user');
+    });
+    _controller.clear();
+
+    // Persist user turn
+    _chatHistory.add(ChatTurn(role: 'user', content: input));
+    await _saveChatHistory();
+
+    // Build context & call model
+    final role = _getUserRole();
+    final instructions = _buildInstructions(role);
+
+    // Call model
+    try {
+      final ctx = generateContext(
+        permTokens: PermTokens(core: instructions),
+        chatHistory: _chatHistory,
+        userPrompt: input,
+        llmContextSize: aiModel.contextSize,
+        maxOutputTokens: 500,
+      );
+
+      final response = await aiModel.chat(context: ctx);
+
+      if (!mounted) return;
+      setState(() {
+        _chatHistory.add(ChatTurn(role: 'assistant', content: response));
+        _appendMessageBubble(response, 'bot');
+        _isLoading = false;
+      });
+      await _saveChatHistory();
+    } catch (e, st) {
+      debugPrint('[chat] error: $e\n$st');
+      if (!mounted) return;
+      const errText = 'Error: Could not fetch response. Please try again.';
+      setState(() {
+        // Keep error in history for transparency
+        _chatHistory.add(const ChatTurn(role: 'assistant', content: errText));
+        _appendMessageBubble(errText, 'bot');
+        _isLoading = false;
+      });
+      await _saveChatHistory();
+    }
+  }
+
+  // ---------- Clear ----------
+
+  // Clear chat history
+  Future<void> _clearChat() async {
+    setState(() {
+      _messages.clear();
+      _chatHistory.clear();
+    });
+    await _ensurePrefs();
+    await _prefs!.remove(kChatHistoryKey);
+    debugPrint('[chat] cleared history');
+  }
+
+  // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final canSend = !_isLoading &&
+        _hasKeyFor(_selectedLLM); // disable send when loading/missing key
+
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Ask Chatbot!',
         userprofileurl: LmsFactory.getLmsService().profileImage ?? '',
       ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: scheme.surface,
       body: Row(
         children: [
-          // Main chat content
           Expanded(
             child: Column(
               children: [
                 Expanded(
                   child: ListView.builder(
-                    controller:
-                        _scrollController, // Attach the ScrollController
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(12),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[index];
-                      final isUserMessage = message['sender'] == 'user';
+                      final isUser = message['sender'] == 'user';
+
+                      final bubbleColor =
+                          isUser ? scheme.primary : scheme.surfaceVariant;
+                      final textColor =
+                          isUser ? scheme.onPrimary : scheme.onSurfaceVariant;
 
                       return Align(
-                        alignment: isUserMessage
+                        alignment: isUser
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: isUserMessage
-                                ? Colors.deepPurple
-                                : Colors.grey[300],
+                            color: bubbleColor,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            message['text'],
+                            message['text'] ?? '',
                             style: TextStyle(
-                              color:
-                                  isUserMessage ? Colors.white : Colors.black87,
+                              color: textColor,
                               fontSize: 16,
                             ),
                           ),
@@ -191,74 +363,84 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 if (_isLoading)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(), // Loading indicator
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(),
                   ),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
                     children: [
+                      // Input
                       Expanded(
                         child: TextField(
                           controller: _controller,
+                          textInputAction: TextInputAction.send,
                           decoration: InputDecoration(
                             hintText: 'Enter your message...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 16),
+                            fillColor: Theme.of(context)
+                                    .inputDecorationTheme
+                                    .fillColor ??
+                                scheme.surface,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 16,
+                            ),
                           ),
-                          onSubmitted: (_) => _sendMessage(),
+                          onSubmitted: (_) {
+                            if (canSend) _sendMessage();
+                          },
+                          enabled: !_isLoading,
                         ),
                       ),
+
+                      // Send
                       IconButton(
-                        icon: Icon(Icons.send, color: Colors.purpleAccent),
-                        onPressed: _sendMessage,
+                        icon:
+                            const Icon(Icons.send, color: Colors.purpleAccent),
+                        onPressed: canSend ? _sendMessage : null,
+                        tooltip: canSend
+                            ? 'Send'
+                            : 'Unavailable (loading or missing API key)',
                       ),
+
+                      // Clear
                       IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: _clearChat, // Clear chat history
+                        icon: const Icon(Icons.clear),
+                        onPressed: _clearChat,
+                        tooltip: 'Clear chat history',
                       ),
-                      // IconButton(
-                      //   icon: Icon(Icons.switch_account),
-                      //   onPressed: _toggleRole, // Toggle role between teacher and student
-                      //   tooltip:
-                      //       'Switch role to ${_role == 'student' ? 'Teacher' : 'Student'}',
-                      // ),
+
+                      // LLM picker
                       DropdownButton<LlmType>(
-                          value: selectedLLM,
-                          onChanged: (LlmType? newValue) {
-                            setState(() {
-                              selectedLLM = newValue;
-                            });
-                          },
-                          items: LlmType.values.map((LlmType llm) {
-                            return DropdownMenuItem<LlmType>(
-                              value: llm,
-                              enabled: (llm == LlmType.LOCAL &&
-                                      LocalStorageService.getLocalLLMPath() !=
-                                          "" &&
-                                      _localLlmAvail) ||
-                                  LocalStorageService.userHasLlmKey(llm),
-                              child: Text(
-                                llm.displayName,
-                                style: TextStyle(
-                                  color: (llm == LlmType.LOCAL &&
-                                              LocalStorageService
-                                                      .getLocalLLMPath() !=
-                                                  "" &&
-                                              _localLlmAvail) ||
-                                          LocalStorageService.userHasLlmKey(llm)
-                                      ? Colors.black87
-                                      : Colors.grey,
-                                ),
+                        value: _selectedLLM,
+                        onChanged: (LlmType? newValue) {
+                          if (newValue == null) return;
+                          if (_hasKeyFor(newValue)) {
+                            setState(() => _selectedLLM = newValue);
+                          } else {
+                            _showSnack(
+                                'No API key set for ${newValue.displayName}.');
+                          }
+                        },
+                        items: LlmType.values.map((llm) {
+                          final enabled = _hasKeyFor(llm);
+                          return DropdownMenuItem<LlmType>(
+                            value: llm,
+                            enabled: enabled,
+                            child: Text(
+                              llm.displayName,
+                              style: TextStyle(
+                                color: enabled ? Colors.black87 : Colors.grey,
                               ),
-                            );
-                          }).toList()),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ],
                   ),
                 ),

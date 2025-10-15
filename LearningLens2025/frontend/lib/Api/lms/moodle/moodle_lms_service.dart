@@ -273,8 +273,8 @@ class MoodleLmsService implements LmsInterface {
 
     // Optionally fetch quizzes/essays for each course
     for (Course c in userCourses) {
-      c.quizzes = await getQuizzes(c.id);
-      c.essays = await getEssays(c.id);
+      await c.refreshQuizzes();
+      await c.refreshEssays();
     }
     return userCourses;
   }

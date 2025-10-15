@@ -73,7 +73,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
             child: IconButton(
               icon: Icon(Icons.chat_rounded),
               onPressed: () {
-                Navigator.pushReplacement(context,
+                Navigator.push(context,
                     MaterialPageRoute(builder: (context) => ChatScreen()));
               },
             ),
@@ -87,7 +87,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
               child: IconButton(
                 icon: Icon(Icons.fact_check),
                 onPressed: () {
-                  Navigator.pushReplacement(context,
+                  Navigator.push(context,
                       MaterialPageRoute(builder: (context) => AiLogScreen()));
                 },
               ),

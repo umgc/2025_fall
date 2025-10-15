@@ -1,16 +1,15 @@
 // Represents permanent tokens for a chat session
 class PermTokens {
-  final String core; // Perminant context. includes system role/instructions
-  final List<String>
-      modules; // Optinal Perminant context. Meant to be dynamically added/removed
+  final String core; // permanent system instructions
+  final List<String> modules; // optional extra system snippets
 
-  // Constructor that sets a default core if none is provided
   PermTokens({
     String? core,
-    this.modules = const [],
-  }) : core = (core == null || core.trim().isEmpty)
-            ? "You are LearningLens, an AI assistant designed to help Students and teachers learn and understand complex topics. You provide clear, concise, and accurate information in a friendly and approachable manner. Always aim to enhance the user's learning or teaching experience."
-            : core;
+    List<String> modules = const [],
+  })  : core = (core == null || core.trim().isEmpty)
+            ? 'You are LearningLens, an AI assistant designed to help Students and teachers learn and understand complex topics. You provide clear, concise, and accurate information in a friendly and approachable manner. Always aim to enhance the user\'s learning or teaching experience.'
+            : core,
+        modules = modules;
 }
 
 // Represents a single turn in a chat conversation
@@ -18,21 +17,27 @@ class ChatTurn {
   final String role; // 'user' | 'assistant' | 'system'
   final String content;
 
-  ChatTurn({required this.role, required this.content});
+  const ChatTurn({required this.role, required this.content});
 
-  // Converts the chatTurn to a JSON object
-  Map<String, String> toJson() {
-    return {'role': role, 'content': content};
-  }
+  // JSON should use Map<String, dynamic>
+  Map<String, dynamic> toJson() => {
+        'role': role,
+        'content': content,
+      };
 
-  // Factory constructor to create a chatTurn from a JSON object
+  // Defensive factory: tolerate missing/typed values
   factory ChatTurn.fromJson(Map<String, dynamic> json) {
-    return ChatTurn(
-      role: json['role'] as String,
-      content: json['content'] as String,
-    );
+    final rawRole = (json['role'] as String?)?.trim().toLowerCase() ?? 'user';
+    final allowed = {'user', 'assistant', 'system'};
+    final role = allowed.contains(rawRole) ? rawRole : 'user';
+
+    final val = json['content'];
+    // ensure content is a String
+    final content = val is String ? val : (val == null ? '' : val.toString());
+
+    return ChatTurn(role: role, content: content);
   }
-  // Helper methods to check the role of the chat turn
+
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
   bool get isSystem => role == 'system';

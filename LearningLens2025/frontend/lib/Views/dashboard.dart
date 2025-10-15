@@ -11,6 +11,7 @@ import 'package:learninglens_app/Views/g_lesson_plan.dart';
 import 'package:learninglens_app/Views/iep_page.dart';
 import 'package:learninglens_app/Views/lesson_plans.dart';
 import 'package:learninglens_app/Views/nav_card.dart';
+import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -283,8 +284,9 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.architecture_outlined
       },
       {
-        'title': 'Analytics',
-        'description': 'View performance analytics.',
+        'title': 'Actionable Analytics',
+        'description':
+            "View AI-powered insights into student performance and potential action items.",
         'onPressed': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AnalyticsPage()),
@@ -317,6 +319,16 @@ class TeacherDashboard extends StatelessWidget {
         'description': 'Create games for students to learn while having fun.',
         'onPressed': () => Navigator.pushNamed(context, '/gamification'),
         'icon': Icons.videogame_asset_outlined
+      },
+      {
+        'title': 'Program Assessment',
+        'description':
+            'Automatically evaluate student programming assignments.',
+        'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProgramAssessmentView()),
+            ),
+        'icon': Icons.terminal_outlined
       },
     ];
 
