@@ -34,14 +34,23 @@ macos/
 web/
 windows/
 Flutter/
-teama/linux/*
-teama/macos/*
-teama/windows/*
-teama/assets/api-keys.json
-teama/android/
+frontend/linux/*
+frontend/macos/*
+frontend/windows/*
+frontend/assets/api-keys.json
+frontend/android/
 
 terraform/terraformout.txt
 
 # Terraform
 .terraform*
 *.tfstate*
+
+# npm
+
+/lambda/code_eval/node_modules
+/lambda/gettoken/node_modules
+/lambda/gettoken/gettoken.zip
+/lambda/code_eval/code_eval.zip
+# Any extra javascript files for lambda functions
+!lambda/code_eval/*.js

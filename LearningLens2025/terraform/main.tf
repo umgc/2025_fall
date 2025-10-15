@@ -108,7 +108,7 @@ resource "aws_amplify_app" "edulenseweb" {
             - flutter config --no-analytics
             - flutter doctor
             - echo "Installing dependencies"
-            - cd LearningLens2025/teamA/
+            - cd LearningLens2025/frontend/
             - flutter pub get
             - flutter create . --platforms web
         build:
@@ -118,7 +118,7 @@ resource "aws_amplify_app" "edulenseweb" {
             - export ENV_FILE=
             - flutter build web
       artifacts:
-        baseDirectory: LearningLens2025/teamA/build/web/
+        baseDirectory: LearningLens2025/frontend/build/web/
         files:
           - '**/*'
           - '.env'
@@ -129,7 +129,7 @@ resource "aws_amplify_app" "edulenseweb" {
           commands:
             - echo "Exporting Artifacts"
       artifacts:
-        baseDirectory: LearningLens2025/teamA/build/web/
+        baseDirectory: LearningLens2025/frontend/build/web/
         files:
           - '**/*'
           - '.env'
@@ -140,7 +140,7 @@ resource "aws_amplify_app" "edulenseweb" {
   EOT
 
   environment_variables = {
-    ENV_FILE = file("../teamA/.env")
+    ENV_FILE = file("../frontend/.env")
   }
 }
 
@@ -241,6 +241,7 @@ resource "null_resource" "build_docker_c_image" {
     dep_id = time_sleep.after_python.triggers["dep_id"]
     script_hash = sha1(file("../docker/dockerupload.ps1"))
     docker_hash = sha1(file("../docker/Dockerc"))
+    docker_hash = sha1(file("../docker/runcode.sh"))
   }
   provisioner "local-exec" {
     working_dir = "../docker/"
@@ -302,11 +303,26 @@ resource "aws_iam_role_policy_attachment" "logging" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Run npm install before zipping
+resource "null_resource" "npm_install_gettoken" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/gettoken/package.json")
+    package_lock = filemd5("../lambda/gettoken/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/gettoken && npm install"
+  }
+}
+
 data "archive_file" "get_token" {
   type = "zip"
-  source_dir = "../lambda"
-  excludes = ["../lambda/gettoken.zip"]
-  output_path = "../lambda/gettoken.zip"
+  source_dir = "../lambda/gettoken"
+  excludes = ["../lambda/gettoken/gettoken.zip"]
+  output_path = "../lambda/gettoken/gettoken.zip"
+
+  depends_on = [null_resource.npm_install_gettoken]
 }
 
 data "archive_file" "zip_plugin" {

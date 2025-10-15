@@ -24,7 +24,7 @@ import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
 import '../../services/user_role_storage_service.dart';
-
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
@@ -624,6 +624,11 @@ final GoRouter appRouter = GoRouter(
       path: '/calendar',
       builder: (_, __) => const CalendarAssistantScreen(),
     ),
+    GoRoute(
+      path: '/virtual-checkin',
+      builder: (context, state) => const PatientVirtualCheckIn(),
+    ),
+    
 
     // Handle routes from legacy menus
     GoRoute(
@@ -707,6 +712,8 @@ final GoRouter appRouter = GoRouter(
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
+    
+    
     GoRoute(
       path: '/pre-defined-task',
       builder: (context, state) {
