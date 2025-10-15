@@ -74,9 +74,9 @@ async function startECSTask(s3Uri, assignmentId, courseId, language){
 async function startEvaluation(bodyJson){
     const { assignmentId, courseId, input, expectedOutput, language } = bodyJson
     const zipFile = await createSubmissionsZip(assignmentId, expectedOutput, input)
-    const s3Client = new S3Client({ region: "us-east-1" });
+    const s3Client = new S3Client({ region: "us-east-1" })
     console.log('uploading to S3')
-    const key = `${courseId}/${assignmentId}/submissions.zip`;
+    const key = `${courseId}/${assignmentId}/submissions.zip`
     
     const bucket = process.env.S3_BUCKET;
     await s3Client.send(
@@ -86,7 +86,7 @@ async function startEvaluation(bodyJson){
             Body: zipFile,
             ContentType: "application/zip",
         })
-    );
+    )
 
     return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId, language)
 }

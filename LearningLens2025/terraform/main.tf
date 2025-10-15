@@ -241,7 +241,8 @@ resource "null_resource" "build_docker_c_image" {
     dep_id = time_sleep.after_python.triggers["dep_id"]
     script_hash = sha1(file("../docker/dockerupload.ps1"))
     docker_hash = sha1(file("../docker/Dockerc"))
-    docker_hash = sha1(file("../docker/runcode.sh"))
+    runcode_hash = sha1(file("../docker/runcode.sh"))
+    evaluate = sha1(file("../docker/evaluate.py"))
   }
   provisioner "local-exec" {
     working_dir = "../docker/"

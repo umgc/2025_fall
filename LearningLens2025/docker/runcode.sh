@@ -8,6 +8,7 @@ unzip code.zip
 python3 ./evaluate.py $LANGUAGE
 ls -alh
 
+
 # Invoke lambda function and print response to stdout
 aws lambda invoke --cli-binary-format raw-in-base64-out \
     --function-name "$LAMBDA_NAME" \

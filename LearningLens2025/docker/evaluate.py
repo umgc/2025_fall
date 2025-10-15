@@ -9,12 +9,9 @@ from pathlib import Path
 def run_student_programs(language: str, base_dir="."):
     language = language.strip().lower()
     results = []
-    inputs = [None]
     
-    input_file = Path("input")
-    input_lines = input_file.read_text().splitlines()
-    if input_file.exists() and len(input_lines) > 0:
-        inputs = input_lines
+    # Expected output file should always exist
+    expected_outputs: list[dict] = json.loads(Path("expectedOutput").read_text())
 
     for dir_entry in Path(base_dir).iterdir():
         if not dir_entry.is_dir():
@@ -63,19 +60,26 @@ def run_student_programs(language: str, base_dir="."):
             print(f"Unsupported language: {language}")
             os.chdir("..")
             continue
-
+        
         if compile_error:
             results.append({
-                "output": [compile_error],
+                "outputs": [{ 'output': compile_error, "error": True }],
                 "studentId": student_id,
                 "assignmentId": assignment_id,
-                "error": True
             })
             os.chdir("..")
             continue
 
+        result = {
+            "outputs": [],
+            "studentId": student_id,
+            "assignmentId": assignment_id
+        }
         # -------------------- Execution --------------------
-        for line in inputs:
+        for item in expected_outputs:
+            line: str = item['input']
+            expected_output: str = item['expectedOutput']
+
             if language in ("c", "c++"):
                 cmd = [exe] if line is None else [exe, line]
             elif language == "java":
@@ -88,12 +92,16 @@ def run_student_programs(language: str, base_dir="."):
             proc = subprocess.run(cmd, capture_output=True, text=True)
             output_text = proc.stdout.strip() or proc.stderr.strip()
 
-            results.append({
-                "output": [output_text],
+            result['outputs'].append({
+                "input": line if line is not None else '',
+                'expectedOutput': expected_output,
+                "output": output_text,
                 "studentId": student_id,
                 "assignmentId": assignment_id,
                 "error": proc.returncode != 0
             })
+
+        results.append(result)
 
         # -------------------- Cleanup --------------------
         if exe and Path(exe).exists():

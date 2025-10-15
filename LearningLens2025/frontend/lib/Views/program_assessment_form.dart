@@ -153,7 +153,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       _showSnackBar(SnackBar(
           backgroundColor: Colors.red[700],
           content: Text(
-              'Unable to evaluate coding assignment: status code ${response.body}')));
+              'Unable to evaluate coding assignment: "${response.body}"')));
 
       debugPrint(response.body);
       return;
