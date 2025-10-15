@@ -224,6 +224,28 @@ class NotetakerConfigService {
     }
   }
 
+  static Future<PatientNote> createPatientNote(PatientNote note) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      authHeaders['Content-Type'] = 'application/json';
+      authHeaders['Accept'] = '*/*';
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/${note.patientId}/notes'),
+        headers: authHeaders,
+        body: jsonEncode(note.toJson()),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return PatientNote.fromJson(data);
+      } else {
+        throw Exception('Failed to update note: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error updating note: $e');
+    }
+  }
+
   static Future<PatientNote> updatePatientNote(PatientNote note) async {
     try {
       final authHeaders = await ApiService.getAuthHeaders();

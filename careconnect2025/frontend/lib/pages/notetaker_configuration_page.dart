@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/notetaker_config_service.dart';
-import '../widgets/common_drawer.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;

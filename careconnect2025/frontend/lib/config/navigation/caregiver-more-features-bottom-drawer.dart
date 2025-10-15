@@ -1,7 +1,10 @@
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
+import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
+
+import '../../features/notetaker/presentation/notetaker_search.dart';
 
 /// Widget for the More bottom drawer navigation item
 class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
@@ -13,7 +16,7 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
       FeatureItem(
         icon: Icons.note,
         iconColor: Colors.blue,
-        title: 'Notetake Configuration',
+        title: 'Notetaker Configuration',
         subtitle: 'Manage your Medical Notetaker Assistant Settings',
         onTap: () {
           Navigator.pop(context);
@@ -36,6 +39,36 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => const CalendarAssistantScreen(),
+            ),
+          );
+        },
+      ),
+      FeatureItem(
+        icon: Icons.file_open,
+        iconColor: Colors.blue,
+        title: 'File Management',
+        subtitle: 'Manage your files',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const FileManagementPage(),
+            ),
+          );
+        },
+      ),
+      FeatureItem(
+        icon: Icons.note_alt,
+        iconColor: Colors.blue,
+        title: 'Medical Notetaker',
+        subtitle: 'View Notetaker Notes',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NotetakerSearchPage(),
             ),
           );
         },

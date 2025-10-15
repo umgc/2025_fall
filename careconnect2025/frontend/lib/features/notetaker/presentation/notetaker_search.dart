@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:care_connect_app/config/router/app_router.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
@@ -54,7 +55,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         title: const Text('Notetaker Search'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => navigateToDashboard(context),
         ),
       ),
       body: _isLoading
