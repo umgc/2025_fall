@@ -458,11 +458,9 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                               bool? token = api.isLoggedIn();
 
                               if (token) {
-                                String courseId = courses
-                                    .firstWhere((course) =>
-                                        course.fullName == selectedCourse)
-                                    .id
-                                    .toString();
+                                Course course = courses.firstWhere(
+                                    (c) => c.fullName == selectedCourse);
+                                String courseId = course.id.toString();
                                 String assignmentName =
                                     _assignmentNameController.text;
                                 String sectionNumber = selectedSection;
@@ -492,6 +490,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(snackBar);
                                   await Future.delayed(snackBar.duration);
+                                  await course.refreshEssays();
                                   if (mounted) {
                                     Navigator.pop(context);
                                     Navigator.pushReplacement(

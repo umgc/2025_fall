@@ -269,9 +269,9 @@ class GoogleLmsService extends LmsInterface {
         }
       }
 
-      course.quizzes = await getQuizzes(course.id, topicId: course.quizTopicId);
+      await course.refreshQuizzes();
       // print('Quizzes for course ${course.id}: ${course.quizzes}');
-      course.essays = await getEssays(course.id, topicId: course.essayTopicId);
+      await course.refreshEssays();
       // print('Essays for course ${course.id}: ${course.essays}');
     }
 
