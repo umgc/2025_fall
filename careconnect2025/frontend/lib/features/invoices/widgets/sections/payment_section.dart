@@ -566,12 +566,16 @@ class PaymentSection extends StatelessWidget {
     final t = s.trim();
     if (t.isEmpty) return false;
     final uri = Uri.tryParse(t);
-    return uri != null && (uri.isScheme('http') || uri.isScheme('https'));
+    return uri != null;// && (uri.isScheme('http') || uri.isScheme('https'));
   }
 
   static Future<void> _openUrl(String url) async {
-    if (await canLaunchUrlString(url)) {
-      await launchUrlString(url, mode: LaunchMode.externalApplication);
+     final link = url.trim();
+     final normalized = link.startsWith('http')
+                              ? link
+                              : 'https://$link';
+    if (await canLaunchUrlString(normalized)) {
+      await launchUrlString(normalized, mode: LaunchMode.externalApplication);
     }
   }
 }

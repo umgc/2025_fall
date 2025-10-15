@@ -3,7 +3,7 @@ package com.careconnect.evv;
 import com.careconnect.model.evv.EvvRecord;
 import com.careconnect.model.evv.EvvAuditEvent;
 import com.careconnect.repository.evv.EvvAuditEventRepository;
-import com.careconnect.service.AuditLogger;
+import com.careconnect.service.evv.AuditLogger;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 

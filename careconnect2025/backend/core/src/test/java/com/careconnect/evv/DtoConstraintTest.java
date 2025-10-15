@@ -1,7 +1,7 @@
 package com.careconnect.evv;
 
-import com.careconnect.dto.CreateParticipationRequestDto;
-import com.careconnect.dto.EvvRecordRequestDto;
+import com.careconnect.dto.evv.CreateParticipationRequestDto;
+import com.careconnect.dto.evv.EvvRecordRequestDto;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeAll;

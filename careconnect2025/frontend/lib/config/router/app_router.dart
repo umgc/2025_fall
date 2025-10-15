@@ -4,7 +4,6 @@ import 'package:care_connect_app/features/integrations/presentation/pages/medica
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
-import 'package:care_connect_app/features/invoices/screens/upload_invoice.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -25,7 +24,7 @@ import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
 import '../../services/user_role_storage_service.dart';
-
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
@@ -52,7 +51,7 @@ import '../../features/evv/presentation/pages/evv_visit_history.dart';
 import '../../features/evv/presentation/pages/evv_corrections.dart';
 import '../../features/evv/presentation/pages/evv_offline_sync.dart';
 import '../../providers/user_provider.dart';
-import 'package:care_connect_app/features/invoices/screens/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
@@ -625,6 +624,11 @@ final GoRouter appRouter = GoRouter(
       path: '/calendar',
       builder: (_, __) => const CalendarAssistantScreen(),
     ),
+    GoRoute(
+      path: '/virtual-checkin',
+      builder: (context, state) => const PatientVirtualCheckIn(),
+    ),
+    
 
     // Handle routes from legacy menus
     GoRoute(
@@ -708,6 +712,8 @@ final GoRouter appRouter = GoRouter(
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
+    
+    
     GoRoute(
       path: '/pre-defined-task',
       builder: (context, state) {
@@ -748,13 +754,15 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: 'list',
           name: 'invoiceList',
-         builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 2),
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 2),
           routes: [
             GoRoute(
               path: ':filter',
               name: 'invoiceListFiltered',
-              builder: (context, state) =>
-                  InvoiceListPage(quickFilter: state.pathParameters['filter']),
+              builder: (context, state) => InvoiceTabbedPage(
+                initialTabIndex: 2,
+                quickFilter: state.pathParameters['filter'],
+              ),
             ),
           ],
         ),

@@ -2,7 +2,7 @@ package com.careconnect.evv;
 
 import com.careconnect.model.evv.EvvParticipant;
 import com.careconnect.model.evv.EvvRecord;
-import com.careconnect.service.EvvOutboxService;
+import com.careconnect.service.evv.EvvOutboxService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

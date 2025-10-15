@@ -1,13 +1,13 @@
 package com.careconnect.evv;
 
-import com.careconnect.dto.CreateParticipationRequestDto;
-import com.careconnect.dto.EvvRecordRequestDto;
+import com.careconnect.dto.evv.CreateParticipationRequestDto;
+import com.careconnect.dto.evv.EvvRecordRequestDto;
 import com.careconnect.model.evv.EvvParticipant;
 import com.careconnect.model.evv.EvvRecord;
 import com.careconnect.repository.evv.EvvParticipantRepository;
 import com.careconnect.repository.evv.EvvRecordRepository;
-import com.careconnect.service.AuditLogger;
-import com.careconnect.service.EvvService;
+import com.careconnect.service.evv.AuditLogger;
+import com.careconnect.service.evv.EvvService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;

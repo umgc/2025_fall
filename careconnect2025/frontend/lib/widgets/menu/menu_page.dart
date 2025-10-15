@@ -230,6 +230,7 @@ class _MenuPageState extends State<MenuPage> {
                 mainAxisExtent: 64,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
+                
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) => _ToolTile(item: items[index]),
@@ -423,6 +424,8 @@ class _ToolTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
