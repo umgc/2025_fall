@@ -16,7 +16,7 @@ public class Metrics {
     private String unit;
     private LocalDateTime timestamp;
     private Long patientId;
-    private String source; // "fitbit", "manual", etc.
+    private String source; // "manual", etc.
 
     // Explicit setters to ensure compilation works if Lombok isn't processing
     public void setMetricType(String metricType) { this.metricType = metricType; }

@@ -20,6 +20,7 @@ public class Allergy {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
+    @ToString.Exclude
     private Patient patient;
     
     @Column(name = "allergen", nullable = false)
