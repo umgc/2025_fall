@@ -225,6 +225,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
 
   Future<List<int>> _exportReportAsExcel() async {
     var excel = Excel.createExcel();
+    excel.rename('Sheet1', 'AI Logs');
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['AI Logs'];
     if (logSource.sortedData.isNotEmpty) {

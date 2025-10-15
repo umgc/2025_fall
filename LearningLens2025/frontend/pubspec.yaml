@@ -35,6 +35,7 @@ dependencies:
   syncfusion_flutter_pdf: ^24.1.41
 
   collection: any
+  flutter_to_pdf: ^0.4.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

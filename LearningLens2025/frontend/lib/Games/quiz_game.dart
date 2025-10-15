@@ -84,7 +84,7 @@ class _QuizGameState extends State<QuizGame> {
                     : '❌ Your answer: ${answer['selected']} | Correct: ${answer['correct']}',
               ),
             );
-          }).toList(),
+          }),
         ],
       );
     }

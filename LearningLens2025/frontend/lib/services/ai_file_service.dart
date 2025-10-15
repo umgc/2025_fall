@@ -177,9 +177,10 @@ $text
 
     try {
       final parsedList = _parseJsonList<Map<String, String>>(safeJson, (item) {
-        if (item is Map)
+        if (item is Map) {
           return Map<String, String>.from(
               item.map((k, v) => MapEntry(k.toString(), v.toString())));
+        }
         throw Exception('Item is not an object');
       });
       print('✅ Used OpenAI GPT model.');
@@ -287,9 +288,10 @@ $text
 
     try {
       final parsedList = _parseJsonList<Map<String, String>>(raw, (item) {
-        if (item is Map)
+        if (item is Map) {
           return Map<String, String>.from(
               item.map((k, v) => MapEntry(k.toString(), v.toString())));
+        }
         throw Exception('Item is not an object');
       });
       print('✅ Used OpenAI GPT model.');

@@ -1095,4 +1095,17 @@ class GoogleLmsService extends LmsInterface {
     // TODO: implement getQuizGradesForParticipants
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<Participant>> getEssayGradesForParticipants(
+      String courseId, int essayId) {
+    // TODO: implement getEssayGradesForParticipants
+    throw UnimplementedError();
+  }
+
+  @override
+  Future getQuizStatsForStudent(String quizId, int userId) {
+    // TODO: implement getQuizStatsForStudent
+    throw UnimplementedError();
+  }
 }
