@@ -4,6 +4,7 @@ import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.d
 import 'package:care_connect_app/features/invoices/widgets/review_photos_screen.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -41,32 +42,49 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     if (picked == null) return;
 
     String? ext(String? p) => p?.split('.').last.toLowerCase();
-    final imagePaths = <String>[];
+    final imageFiles = <XFile>[];
     final pdfPaths = <String>[];
 
     for (final f in picked.files) {
-      final path = f.path;
-      if (path == null) continue;     
-       final e = ext(f.name); 
+      final e = ext(f.name);
+
       if (e == 'png' || e == 'jpg' || e == 'jpeg') {
-        imagePaths.add(path);
+        // For images, create XFile properly for both web and mobile
+        if (kIsWeb) {
+          // On web, create XFile from bytes
+          if (f.bytes != null) {
+            imageFiles.add(XFile.fromData(f.bytes!, name: f.name));
+          }
+        } else {
+          // On mobile, use path if available
+          if (f.path != null) {
+            imageFiles.add(XFile(f.path!));
+          }
+        }
       } else if (e == 'pdf') {
-        pdfPaths.add(path);
+        // For PDFs, we still need paths for now
+        // TODO: Update PDF handling for web compatibility
+        if (f.path != null) {
+          pdfPaths.add(f.path!);
+        } else if (kIsWeb) {
+          _snack('PDF upload on web is not currently supported. Please use mobile device or upload images instead.');
+          return;
+        }
       }
     }
 
-    if (imagePaths.isEmpty && pdfPaths.isEmpty) {
+    if (imageFiles.isEmpty && pdfPaths.isEmpty) {
       _snack('No supported files selected');
       return;
     }
 
     // Images flow
-    if (imagePaths.isNotEmpty) {
+    if (imageFiles.isNotEmpty) {
       final reviewed = await Navigator.push<List<XFile>>(
         context,
         MaterialPageRoute(
           builder: (_) => ReviewPhotosScreen(
-            initialPhotos: imagePaths.map((p) => XFile(p)).toList(),
+            initialPhotos: imageFiles,
           ),
           fullscreenDialog: true,
         ),

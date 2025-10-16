@@ -1,4 +1,5 @@
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
@@ -281,10 +282,7 @@ final GoRouter appRouter = GoRouter(
           );
         }
 
-        return CaregiverDashboard(
-          caregiverId: caregiverId,
-          patientId: patientId,
-        );
+        return const CaregiverDashboard();
       },
     ),
     // Add a redirect route for authenticated users going to root

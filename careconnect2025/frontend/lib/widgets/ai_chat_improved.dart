@@ -171,7 +171,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         title: const Text('Delete Conversation'),
         content: const Text(
           'This will permanently delete this conversation. This action cannot be undone.\n\n'
-          'Your conversation will also be automatically deleted after 48 hours for privacy protection.',
+          'Your conversation will also be automatically deleted after 30 days for privacy protection.',
         ),
         actions: [
           TextButton(
@@ -339,7 +339,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
               ),
               SizedBox(height: 12),
               Text(
-                '• Chat conversations are automatically deleted after 48 hours',
+                '• Chat conversations are automatically deleted after 30 days',
                 style: TextStyle(fontSize: 14),
               ),
               SizedBox(height: 8),
@@ -923,7 +923,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Chat logs are automatically deleted after 48 hours for privacy protection.',
+                      'Chat logs are automatically deleted after 30 days for privacy protection.',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.blue.shade700,

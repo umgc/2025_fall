@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -48,6 +50,43 @@ Future<void> _addFromCamera() async {
 
   void _finish() {
     Navigator.of(context).pop<List<XFile>>(_photos);
+  }
+
+  Future<Widget> _buildImageWidget(XFile xfile) async {
+    if (kIsWeb) {
+      // On web, use Image.memory with the file bytes
+      try {
+        final Uint8List bytes = await xfile.readAsBytes();
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey.shade300,
+              child: const Icon(Icons.broken_image, color: Colors.grey),
+            );
+          },
+        );
+      } catch (e) {
+        return Container(
+          color: Colors.grey.shade300,
+          child: const Icon(Icons.error, color: Colors.red),
+        );
+      }
+    } else {
+      // On mobile, use Image.file with the file path
+      final file = File(xfile.path);
+      return Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.broken_image, color: Colors.grey),
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -128,11 +167,27 @@ Future<void> _addFromCamera() async {
                       crossAxisSpacing: 8,
                     ),
                     itemBuilder: (context, index) {
-                      final file = File(_photos[index].path);
                       return Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.file(file, fit: BoxFit.cover),
+                          FutureBuilder<Widget>(
+                            future: _buildImageWidget(_photos[index]),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData) {
+                                return snapshot.data!;
+                              } else if (snapshot.hasError) {
+                                return Container(
+                                  color: Colors.grey.shade300,
+                                  child: const Icon(Icons.error, color: Colors.red),
+                                );
+                              } else {
+                                return Container(
+                                  color: Colors.grey.shade300,
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              }
+                            },
+                          ),
                           Positioned(
                             top: 4,
                             right: 4,

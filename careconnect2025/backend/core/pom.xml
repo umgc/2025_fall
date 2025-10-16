@@ -329,7 +329,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.4.5</version>
                 <configuration>
-                    <skip>true</skip>
+                    <skip>false</skip>
                 </configuration>
             </plugin>
 
