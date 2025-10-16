@@ -29,7 +29,7 @@ public class AIChatServiceConfig {
 
     @Bean
     public ChatModel chatModel() {
-        log.info("🚀 Creating ChatModel bean with DeepSeek configuration:");
+        log.info("Creating ChatModel bean with DeepSeek configuration:");
         log.info("  - API Key: {}...", deepSeekApiKey.substring(0, Math.min(10, deepSeekApiKey.length())));
         log.info("  - Base URL: {}", deepSeekApiUrl);
         log.info("  - Model: deepseek-chat");
