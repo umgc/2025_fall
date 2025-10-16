@@ -714,27 +714,57 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       ),
     );
     if (result == null) return;
-    final draftTask = result['task'] as Task;
-    final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
+    final List<Task> baseTasks = result['tasks'] != null
+        ? (result['tasks'] as List<Task>)
+        : (result['task'] as List<Task>);
+
+    if (baseTasks.isEmpty) return;
 
     try {
-      final response = await ApiService.createTaskV2(
-        newTask.assignedPatientId!,
-        jsonEncode(newTask.toJson()),
-      );
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        await _loadTasksFromDb();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Task added successfully")),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to add task: ${response.statusCode}")),
-        );
+      final List<Task> expandedTasks = [];
+
+      for (final Task base in baseTasks) {
+        final Object? built = RecurrenceUtils.buildTask(baseTask: base);
+
+        if (built is List<Task>) {
+          expandedTasks.addAll(built);
+        } else if (built is Task) {
+          expandedTasks.add(built);
+        } else {
+          debugPrint(
+            "Unexpected return type from buildTask: ${built.runtimeType}",
+          );
+        }
       }
+
+      // Save each generated task
+      for (final Task newTask in expandedTasks) {
+        final response = await ApiService.createTaskV2(
+          newTask.assignedPatientId!,
+          jsonEncode(newTask.toJson()),
+        );
+
+        if (response.statusCode != 200) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to add task: ${response.statusCode}"),
+            ),
+          );
+        }
+      }
+
+      await _loadTasksFromDb();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            expandedTasks.length > 1
+                ? "${expandedTasks.length} tasks added successfully"
+                : "Task added successfully",
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -812,39 +842,67 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     if (result == null) return;
 
-    final editedTask = result['task'] as Task;
     final applyToSeries = result['applyToSeries'] as bool? ?? false;
+    final Object? returned = result['task'];
 
-    // normalize recurrence
-    final newTask = RecurrenceUtils.buildTask(baseTask: editedTask);
+    // Normalize into a list of Task objects (dialog always returns a list)
+    final List<Task> editedTasks = <Task>[];
+    if (returned is List<Task>) {
+      editedTasks.addAll(returned);
+    } else if (returned is Task) {
+      editedTasks.add(returned);
+    } else {
+      debugPrint("Unexpected task return type: ${returned.runtimeType}");
+      return;
+    }
 
-    try {
-      final response = await ApiService.editTaskV2(
-        newTask.id!,
-        newTask.toJson(),
-        updateSeries: applyToSeries,
-      );
+    // Expand recurrence safely
+    final List<Task> expandedTasks = <Task>[];
+    for (final Task base in editedTasks) {
+      final Object? built = RecurrenceUtils.buildTask(baseTask: base);
 
-      if (response.statusCode == 200) {
-        await _loadTasksFromDb();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              applyToSeries
-                  ? "Series updated successfully"
-                  : "Task updated successfully",
-            ),
-          ),
-        );
+      if (built is List<Task>) {
+        expandedTasks.addAll(built);
+      } else if (built is Task) {
+        expandedTasks.add(built);
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to update task: ${response.statusCode}"),
-          ),
+        debugPrint(
+          " Unexpected type from RecurrenceUtils.buildTask: ${built.runtimeType}",
         );
       }
+    }
+
+    try {
+      for (final Task updated in expandedTasks) {
+        final response = await ApiService.editTaskV2(
+          updated.id!,
+          updated.toJson(),
+          updateSeries: applyToSeries,
+        );
+
+        if (response.statusCode != 200) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to update task: ${response.statusCode}"),
+            ),
+          );
+        }
+      }
+
+      await _loadTasksFromDb();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            applyToSeries
+                ? "Series updated successfully"
+                : (expandedTasks.length > 1
+                      ? "${expandedTasks.length} tasks updated successfully"
+                      : "Task updated successfully"),
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
