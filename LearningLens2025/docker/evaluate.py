@@ -35,21 +35,21 @@ def run_student_programs(language: str, base_dir="."):
 
         # -------------------- Compilation --------------------
         if language == "c":
-            exe = "./main.out"
+            exe = "./entry.out"
             compile_cmd = ["g++", *map(str, Path(".").glob("*.c")), "-o", exe]
             proc = subprocess.run(compile_cmd, capture_output=True, text=True)
             if proc.returncode != 0:
                 compile_error = proc.stderr.strip()
 
         elif language == "c++":
-            exe = "./main.out"
+            exe = "./entry.out"
             compile_cmd = ["g++", *map(str, Path(".").glob("*.cpp")), "-o", exe]
             proc = subprocess.run(compile_cmd, capture_output=True, text=True)
             if proc.returncode != 0:
                 compile_error = proc.stderr.strip()
 
         elif language == "java":
-            proc = subprocess.run(["javac", "main.java"], capture_output=True, text=True)
+            proc = subprocess.run(["javac", "entry.java"], capture_output=True, text=True)
             if proc.returncode != 0:
                 compile_error = proc.stderr.strip()
 
@@ -77,15 +77,16 @@ def run_student_programs(language: str, base_dir="."):
         }
         # -------------------- Execution --------------------
         for item in expected_outputs:
-            line: str = item['input']
+            # input is optional
+            line: str = item.get('input', '')
             expected_output: str = item['expectedOutput']
 
             if language in ("c", "c++"):
                 cmd = [exe] if line is None else [exe, line]
             elif language == "java":
-                cmd = ["java", "main"] if line is None else ["java", "main", line]
+                cmd = ["java", "entry"] if line is None else ["java", "entry", line]
             elif language == "python":
-                cmd = ["python3", "main.py"] if line is None else ["python3", "main.py", line]
+                cmd = ["python3", "entry.py"] if line is None else ["python3", "entry.py", line]
             else:
                 cmd = []
 

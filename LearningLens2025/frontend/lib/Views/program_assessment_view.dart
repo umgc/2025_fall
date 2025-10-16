@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
@@ -9,8 +6,8 @@ import 'package:learninglens_app/Views/program_assessment_form.dart';
 import 'package:learninglens_app/Views/program_assessment_results_view.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
-import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/services/program_assessment_service.dart';
 
 class ProgramAssessmentView extends StatefulWidget {
   ProgramAssessmentView();
@@ -20,15 +17,17 @@ class ProgramAssessmentView extends StatefulWidget {
 
 class EvaluationDataSource extends DataTableSource {
   final BuildContext context;
-  final List<dynamic> results;
+  final List<ProrgramAssessmentJob> results;
   final List<Course> courses;
   final dynamic lmsService;
+  final Future<void> Function(Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
 
   EvaluationDataSource({
     required this.context,
     required this.results,
     required this.courses,
     required this.lmsService,
+    required this.onDelete,
   });
 
   String _formatDateTime(DateTime? dateTime) {
@@ -39,7 +38,7 @@ class EvaluationDataSource extends DataTableSource {
     // Format date and time
     final datePart = DateFormat('MM/dd/yyyy').format(dateTime);
     final timePart = DateFormat('hh:mm a').format(dateTime);
-
+    
     return '$datePart at $timePart';
   }
 
@@ -49,25 +48,25 @@ class EvaluationDataSource extends DataTableSource {
     final result = results[index];
 
     final course =
-        courses.firstWhere((c) => c.id.toString() == result['course_id']);
+        courses.firstWhere((c) => c.id.toString() == result.courseId);
     final assignment = course.essays!
-        .firstWhere((a) => a.id.toString() == result['assignment_id']);
+        .firstWhere((a) => a.id.toString() == result.assignmentId);
 
-    final assessmentResult = ProrgramAssessmentJob(result);
+    final startTime = _formatDateTime(result.startTime);
+    final finishTime = _formatDateTime(result.finishTime);
 
-    final startTime = _formatDateTime(assessmentResult.startTime);
-    final finishTime = _formatDateTime(assessmentResult.finishTime);
+    final bool thirtySecondsPassed = DateTime.now().difference(result.startTime).inSeconds >= 30;
 
     return DataRow(color: MaterialStatePropertyAll(Colors.white), cells: [
       DataCell(Text(course.fullName)),
       DataCell(Text(assignment.name)),
-      DataCell(Text(assessmentResult.language)),
-      DataCell(Text(assessmentResult.status)),
+      DataCell(Text(result.language)),
+      DataCell(Text(result.status)),
       DataCell(Text(startTime)),
       DataCell(Text(finishTime)),
       DataCell(Row(spacing: 8, children: [
         ElevatedButton(
-          onPressed: assessmentResult.status == 'JOB FINISHED'
+          onPressed: result.status == 'JOB FINISHED'
               ? () async {
                   final participants = await lmsService
                       .getCourseParticipants(course.id.toString());
@@ -75,7 +74,7 @@ class EvaluationDataSource extends DataTableSource {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ProgramAsessmentResultsView(
-                        evaluation: ProrgramAssessmentJob(result),
+                        evaluation: result,
                         assignment: assignment,
                         course: course,
                         participants: participants,
@@ -86,11 +85,54 @@ class EvaluationDataSource extends DataTableSource {
               : null,
           child: const Text("View"),
         ),
-        // ElevatedButton(
-        //   onPressed: jobStatus == 'JOB Started'
-        //       ? () async {} : null,
-        //   child: const Text("Refresh"),
-        // ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red, // red background
+            foregroundColor: Colors.white, // white text and icon
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          // Enable the delete button only if the job is finished or 30 seconds have passed
+          onPressed: result.status == 'JOB FINISHED' || thirtySecondsPassed
+              ? () async {
+                  final confirmDelete = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Confirm Deletion'),
+                        content: Text(
+                          'Are you sure you want to delete the evaluation for assignment "${assignment.name}?'
+                          ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if(confirmDelete == true){
+                    await onDelete(course, assignment, result);
+                  }
+                }
+              : null,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Delete"),
+              SizedBox(width: 8),
+              Icon(Icons.delete, color: Colors.white),
+            ],
+          ),
+        ),
       ])),
     ]);
   }
@@ -106,16 +148,19 @@ class EvaluationDataSource extends DataTableSource {
 }
 
 class EvaluationTable extends StatelessWidget {
-  final List<dynamic> evaluationResults;
+  final List<ProrgramAssessmentJob> evaluationResults;
   final List<Course> courses;
   final dynamic lmsService;
+  final Future<void> Function(Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
 
   const EvaluationTable({
     super.key,
     required this.evaluationResults,
     required this.courses,
     required this.lmsService,
+    required this.onDelete,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +169,7 @@ class EvaluationTable extends StatelessWidget {
       results: evaluationResults,
       courses: courses,
       lmsService: lmsService,
+      onDelete: onDelete
     );
 
     const headingStyle =
@@ -143,64 +189,24 @@ class EvaluationTable extends StatelessWidget {
         DataColumn(label: Text("Action", style: headingStyle)),
       ],
       source: dataSource,
-      rowsPerPage: 10,
+      rowsPerPage: 5,
       columnSpacing: 24,
-      dataRowHeight: 64,
+      dataRowHeight: 82,
     );
-  }
-}
-
-/// Represents a program assessment job
-/// Check the handleGET method in code_eval/index.mjs for properties
-class ProrgramAssessmentJob {
-  late String courseId;
-  late String assignmentId;
-  late String expectedOutput;
-
-  /// Programming langauge code was written in
-  late String language;
-
-  /// username of the user that started the assessment
-  late String username;
-  late String status;
-
-  /// List of results that contain information about each student's code submission
-  late dynamic resultsJson;
-  late DateTime startTime;
-  DateTime? finishTime;
-
-  ProrgramAssessmentJob(dynamic result) {
-    courseId = result['course_id'];
-    assignmentId = result['assignment_id'];
-    expectedOutput = result['expected_output'];
-    language = result['language'];
-    username = result['username'];
-    status = result['status'];
-    resultsJson = result['results_json'] == null
-        ? null
-        : jsonDecode(result['results_json']);
-    startTime = DateTime.parse(result['start_time']);
-    finishTime = result['finish_time'] == null
-        ? null
-        : DateTime.parse(result['finish_time']);
   }
 }
 
 class ProgramAssessmentState extends State<ProgramAssessmentView> {
   final lmsService = LmsFactory.getLmsService();
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
+  final _assessmentService = ProgramAssessmentService();
+
   List<Course> _courses = [];
   List<Assignment> assignments = [];
-  List<dynamic> _evaluationResults = [];
+  List<ProrgramAssessmentJob> _evaluationResults = [];
 
   Course? selectedCourse;
   Assignment? selectedAssignment;
-
-  static Future<void> createDb() async {
-    final url =
-        Uri.parse("${LocalStorageService.getCodeEvalUrl()}/?command=createDb");
-    await http.get(url);
-  }
 
   @override
   void initState() {
@@ -213,15 +219,22 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
   }
 
   // Gets code evaluations for all assignments in a course
-  Future<List<dynamic>> _getEvaluations(String username) async {
-    final response = await ApiService().httpGet(
-      Uri.parse('$codeEvalUrl/?username=$username'),
-    );
-
-    if (response.statusCode != 200) return [];
-
-    _evaluationResults = jsonDecode(response.body) as List<dynamic>;
+  Future<List<ProrgramAssessmentJob>> _getEvaluations(String username) async {
+    _evaluationResults = await _assessmentService.getEvaluations(lmsService.userName!);
     return _evaluationResults;
+  }
+
+  Future<void> _refreshEvaluations() async{
+    await _getEvaluations(lmsService.userName!);
+    // To get view to reload
+    setState(() {});
+  }
+
+  // Helper to show status messages (should probably make a service)
+  void _showSnackBar(SnackBar snackBar) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    }
   }
 
   @override
@@ -292,18 +305,14 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
                           onEvaluationStarted:
                               (course, assignment, expectedOutput) async {
                             final results =
-                                await _getEvaluations(lmsService.userName!);
+                                await _assessmentService.getEvaluations(lmsService.userName!);
                             setState(() {
                               _evaluationResults = results;
                             });
                           })));
             }),
             ElevatedButton(
-              onPressed: () async {
-                await _getEvaluations(lmsService.userName!);
-                // To get view to reload
-                setState(() {});
-              },
+              onPressed: _refreshEvaluations,
               child: Text("Refresh"),
             )
           ],
@@ -313,7 +322,33 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
         EvaluationTable(
             evaluationResults: _evaluationResults,
             courses: _courses,
-            lmsService: lmsService),
+            lmsService: lmsService,
+            onDelete: (course, assignment, job) async {
+              final deleteSuccessful = await ProgramAssessmentService().deleteEvaluation(
+                course: course, 
+                assignment: assignment, 
+                username: LmsFactory.getLmsService().userName!
+              );
+
+              if(deleteSuccessful){
+                _showSnackBar(SnackBar(
+                  backgroundColor: Colors.green[700],
+                  content: Text(
+                      'Evaluation removed successfully')
+                ));
+              }
+              else{
+                _showSnackBar(SnackBar(
+                  backgroundColor: Colors.red[700],
+                  content: Text(
+                      'Unable to remove evaluation')
+                ));
+
+              }
+
+              await _refreshEvaluations();
+            },
+          ),
       ],
     );
   }

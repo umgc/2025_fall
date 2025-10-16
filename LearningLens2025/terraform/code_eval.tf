@@ -164,7 +164,7 @@ resource "aws_lambda_function_url" "code_eval_url" {
   function_name = aws_lambda_function.code_eval_lambda.function_name
   authorization_type = "NONE"
   cors {
-    allow_methods = ["GET", "POST"]
+    allow_methods = ["GET", "POST", "DELETE"]
     allow_origins = ["*"]
     allow_headers = ["content-type"]
   }

@@ -6,8 +6,8 @@ import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
-import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/services/program_assessment_service.dart';
 
 class ProgramAssessmentForm extends StatefulWidget {
   final List<Course> courses;
@@ -26,6 +26,7 @@ class ProgramAssessmentForm extends StatefulWidget {
 class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final lmsService = LmsFactory.getLmsService();
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
+  final _assessmentService = ProgramAssessmentService();
 
   List<Course> courses = [];
 
@@ -35,8 +36,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
-  // final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
-  final List<String> languages = ['C', 'C++'];
+  final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
 
   Course? selectedCourse;
   Assignment? selectedAssignment;
@@ -79,17 +79,18 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   }
 
   String _getFileContents(PlatformFile file) =>
-      utf8.decode(outputFile!.bytes!.toList());
+      utf8.decode(file.bytes!.toList());
 
-  bool isFilesValid() {
+  Future<bool> isFilesValid() async{
     if (outputFile == null || outputFile?.bytes == null) return false;
     // Assumes file is utf-8 encoded
     if (inputFile != null) {
       final outputFileContent = _getFileContents(outputFile!);
       final inputFileContent = _getFileContents(inputFile!);
-      if (outputFileContent.split('\n').length !=
-          inputFileContent.split('\n').length) {
-        _showLineCountMismatchDialog(context);
+      final outputFileLineCount = outputFileContent.split('\n').length;
+      final inputFileLineCount = inputFileContent.split('\n').length;
+      if (outputFileLineCount != inputFileLineCount) {
+        await _showLineCountMismatchDialog(context, inputFileLineCount, outputFileLineCount);
         return false;
       }
     }
@@ -97,7 +98,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     return true;
   }
 
-  Future<void> _showLineCountMismatchDialog(BuildContext context) async {
+  Future<void> _showLineCountMismatchDialog(BuildContext context, int inputFileLineCount, int outputFileLineCount) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -116,9 +117,9 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
               ),
             ],
           ),
-          content: const Text(
-            'The number of lines in the expected input file does not match '
-            'the number of lines in the expected output file.',
+          content: Text(
+            'The number of lines in the expected input file ($inputFileLineCount) does not match '
+            'the number of lines in the expected output file ($outputFileLineCount).',
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -139,18 +140,16 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
   Future<void> _startEvaluation(Course course, Assignment assignment,
       String input, String expectedOutput, String language) async {
-    if (!isFilesValid()) return;
+    if (!(await isFilesValid())) return;
 
-    final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
-        body: jsonEncode({
-          'courseId': course.id,
-          'assignmentId': assignment.id.toString(),
-          'input': input,
-          'expectedOutput': expectedOutput,
-          'username': lmsService.userName,
-          'language': language,
-        }));
-
+    final response = await _assessmentService.startEvaluation(
+      course: course, 
+      assignment: assignment, 
+      input: input, 
+      expectedOutput: expectedOutput, 
+      language: language
+    );
+    
     if (response.statusCode != 200) {
       _showSnackBar(SnackBar(
           backgroundColor: Colors.red[700],
@@ -172,6 +171,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       await onEvaluationStarted!(course, assignment, expectedOutput);
     }
 
+    // Navigate back to previous page
     Navigator.of(context).pop();
   }
 
@@ -194,9 +194,9 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   Widget _buildForm(BuildContext context) {
     return Form(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
-          spacing: 8,
+          spacing: 12,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("New Program Assessment", style: TextStyle(fontSize: 24)),
@@ -262,7 +262,13 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                     selectedLanguage = value;
                   });
                 }),
+            Text(
+              'Note that students MUST submit a .zip file with the entry point '
+              'of the program being in a file named entry.(c, cpp, java, py).',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             Row(spacing: 8, children: [
+              // Expected input file upload
               ElevatedButton.icon(
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Input File'),
@@ -278,6 +284,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
               if (inputFile != null) Text(inputFile!.name),
             ]),
             Row(spacing: 8, children: [
+              // Expected output file upload
               ElevatedButton.icon(
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Expected Output File'),
@@ -341,7 +348,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                               selectedCourse!,
                               selectedAssignment!,
                               inputFile != null
-                                  ? _getFileContents(outputFile!)
+                                  ? _getFileContents(inputFile!)
                                   : '',
                               _getFileContents(outputFile!),
                               selectedLanguage!);

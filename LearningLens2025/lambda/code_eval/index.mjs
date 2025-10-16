@@ -133,6 +133,23 @@ async function storeEvaluationResults(client, courseId, assignmentId, evaluation
  * @param {object} event 
  * @param {object} context 
  */
+async function handleDELETE(client, event, context){
+    const bodyJson = JSON.parse(event.body)
+    console.log('Removing code evaluation', bodyJson)
+    return await client`
+        DELETE FROM code_evaluation
+        WHERE course_id = ${bodyJson.courseId}
+        AND assignment_id = ${bodyJson.assignmentId}
+        AND username = ${bodyJson.username}
+    `
+}
+
+/**
+ * Retrieves the results of code evaluations for a course
+ * @param {postgres.Sql} client 
+ * @param {object} event 
+ * @param {object} context 
+ */
 async function handleGET(client, event, context){
     const cmd = event.queryStringParameters?.command
     if(cmd){
@@ -251,12 +268,17 @@ export const handler = async (event, context) => {
     }
 
     const method = event["requestContext"]["http"]["method"];
-
+    console.log('Request method', method)
+    
     if(method === 'POST'){
         return await handlePOST(client, event, context)
     }
 
     if(method === 'GET'){
         return await handleGET(client, event, context)
+    }
+
+    if(method === 'DELETE'){
+        return await handleDELETE(client, event, context)
     }
 };

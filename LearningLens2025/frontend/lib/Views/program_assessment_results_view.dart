@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
-import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
+import 'package:learninglens_app/services/program_assessment_service.dart';
 
 class ProgramAsessmentResultsView extends StatefulWidget {
   final ProrgramAssessmentJob evaluation;
@@ -225,7 +225,8 @@ class _ProgramAsessmentResultsViewState
         Wrap(
           spacing: 12,
           children: [
-            _codeOutput('Input', input),
+            if(input.trim().isNotEmpty)
+              _codeOutput('Input', input),
             _codeOutput('Expected Output', expectedOutput),
             _codeOutput('Actual Output', actualOutput)
           ],
