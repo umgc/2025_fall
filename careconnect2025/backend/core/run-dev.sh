@@ -9,7 +9,7 @@ echo "Loading CareConnect environment variables..."
 
 # Check if .env file exists
 if [ ! -f ".env" ]; then
-    echo "Error: .env file not found in backend directory"
+    echo "Error: .env file not found in current directory"
     echo "Please create a .env file based on the provided template"
     exit 1
 fi
