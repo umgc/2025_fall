@@ -503,12 +503,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     Sheet studentSheet = excel['Student Breakdown'];
     if (_studentBreakdown.isNotEmpty) {
       // Get headers dynamically from the first map.
-      var studentHeaders = _studentBreakdown.first.keys.toList();
+      var studentHeaders = _studentBreakdown.first.keys
+          .toList()
+          .map((e) => TextCellValue(e))
+          .toList();
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
       for (var student in _studentBreakdown) {
-        studentSheet.appendRow(
-            student.values.map((value) => value.toString()).toList());
+        studentSheet.appendRow(student.values
+            .map((value) => TextCellValue(value.toString()))
+            .toList());
       }
     }
 
@@ -516,23 +520,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (isQuiz() && _questionBreakdown.isNotEmpty) {
       Sheet questionSheet = excel['Question Breakdown'];
       questionSheet.appendRow([
-        'Q#',
-        'Question Type',
-        'Question',
-        '% Answered Correct',
-        '# Correct',
-        '# Incorrect',
-        '# Total Attempts'
+        TextCellValue('Q#'),
+        TextCellValue('Question Type'),
+        TextCellValue('Question'),
+        TextCellValue('% Answered Correct'),
+        TextCellValue('# Correct'),
+        TextCellValue('# Incorrect'),
+        TextCellValue('# Total Attempts')
       ]);
       for (var q in _questionBreakdown) {
         questionSheet.appendRow([
-          q.id,
-          q.questionType,
-          q.questionText,
-          "${computePercentCorrect(q).toStringAsFixed(2)}%",
-          q.numCorrect,
-          q.numIncorrect,
-          q.totalAttempts,
+          TextCellValue(q.id.toString()),
+          TextCellValue(q.questionType),
+          TextCellValue(q.questionText),
+          TextCellValue("${computePercentCorrect(q).toStringAsFixed(2)}%"),
+          TextCellValue(q.numCorrect.toString()),
+          TextCellValue(q.numIncorrect.toString()),
+          TextCellValue(q.totalAttempts.toString()),
         ]);
       }
     }
@@ -637,17 +641,147 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Future<List<int>> _exportAIAnalysisAsExcel() async {
     var excel = Excel.createExcel();
-    excel.rename('Sheet1', 'AI Analysis Success');
-    Sheet sheet = excel['AI Analysis'];
-    sheet.appendRow(['Student', 'Status', 'Comments']);
-    for (var row in _aiAnalysisSuccess) {
-      sheet.appendRow([
-        row['Student']?.toString() ?? '',
-        row['Status']?.toString() ?? '',
-        row['Comments']?.toString() ?? '',
-      ]);
+    _buildExcelChild(
+        "Areas of Understanding",
+        _aiAnalysisSuccess.isEmpty ||
+                !_aiAnalysisSuccess[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisSuccess[0]["Summary"],
+        _aiAnalysisSuccess.length < 2 ||
+                !_aiAnalysisSuccess[1].containsKey("Data")
+            ? null
+            : _aiAnalysisSuccess[1]["Data"],
+        "Top Areas of Understanding",
+        ["Topic", "Percentage"],
+        excel,
+        true);
+    _buildExcelChild(
+        "Areas of Misunderstanding",
+        _aiAnalysisFail.isEmpty || !_aiAnalysisFail[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisFail[0]["Summary"],
+        _aiAnalysisFail.length < 2 || !_aiAnalysisFail[1].containsKey("Data")
+            ? null
+            : _aiAnalysisFail[1]["Data"],
+        "Top Areas of Misunderstanding",
+        ["Topic", "Percentage"],
+        excel);
+    _buildExcelChild(
+        "Course Improvements",
+        _aiAnalysisCourse.isEmpty ||
+                !_aiAnalysisCourse[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisCourse[0]["Summary"],
+        _aiAnalysisCourse.length < 2 ||
+                !_aiAnalysisCourse[1].containsKey("Data")
+            ? null
+            : _aiAnalysisCourse[1]["Data"],
+        "Suggested Assignments",
+        ["Name", "Description"],
+        excel);
+    _buildExcelChild(
+        "Assignment Improvements",
+        _aiAnalysisAssignment.isEmpty ||
+                !_aiAnalysisAssignment[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisAssignment[0]["Summary"],
+        _aiAnalysisAssignment.length < 2 ||
+                !_aiAnalysisAssignment[1].containsKey("Data")
+            ? null
+            : _aiAnalysisAssignment[1]["Data"],
+        "Suggested References",
+        [
+          "URL",
+          "Description",
+        ],
+        excel);
+    _buildExcelChild(
+        "Student Trends",
+        _aiAnalysisStudent.isEmpty ||
+                !_aiAnalysisStudent[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisStudent[0]["Summary"],
+        _selectedStudent == null
+            ? _studentCourseData
+            : _studentCourseData
+                .where((element) =>
+                    int.parse(element['Student ID']!) ==
+                    _selectedStudent!["id"])
+                .toList(),
+        "Student Grades Over Time",
+        [
+          "Student ID",
+          "Student Name",
+          "Assessment",
+          "Type",
+          "Due Date",
+          "Grade"
+        ],
+        excel);
+    if (!_lastAnalysisQuiz) {
+      _buildExcelChild(
+          "AI Use Areas",
+          _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisAi[0]["Summary"],
+          _aiAnalysisAi.length < 2 || !_aiAnalysisAi[1].containsKey("Data")
+              ? null
+              : _aiAnalysisAi[1]["Data"],
+          "Top AI Use Cases",
+          ["Area", "Percentage"],
+          excel);
     }
     return excel.encode()!;
+  }
+
+  void _buildExcelChild(String sheetName, String? summary, List<dynamic>? data,
+      String chartName, List<String> dataKeys, Excel file,
+      [bool renameFirstSheet = false]) {
+    if (renameFirstSheet) {
+      file.rename('Sheet1', sheetName);
+    }
+    Sheet sheet = file[sheetName];
+    sheet.appendRow([TextCellValue('Summary'), TextCellValue('Chart Name')]);
+    sheet.appendRow([
+      TextCellValue(summary ?? "No AI Analysis Summary Found"),
+      TextCellValue(chartName)
+    ]);
+    sheet.appendRow(
+        [TextCellValue(''), ...dataKeys.map((e) => TextCellValue(e))]);
+    if (data != null && data.isNotEmpty) {
+      data = data.where((e) {
+        for (String k in dataKeys) {
+          if (!e.containsKey(k)) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
+      if (dataKeys.contains("URL")) {
+        data = data
+            .where((element) =>
+                element.containsKey("ValidURL") && element["ValidURL"])
+            .toList();
+      }
+    }
+    if (data == null || data.isEmpty) {
+      sheet.appendRow(
+          [TextCellValue(''), TextCellValue("No AI Analysis Data found.")]);
+    } else {
+      for (dynamic m in data) {
+        List<TextCellValue> row = [TextCellValue('')];
+        for (String k in dataKeys) {
+          if (k == "Due Date") {
+            row.add(TextCellValue(DateFormat.yMd().format(
+                DateTime.fromMillisecondsSinceEpoch(
+                    int.parse(m[k].toString())))));
+          } else {
+            row.add(TextCellValue(m[k].toString()));
+          }
+        }
+        sheet.appendRow(row);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1850,6 +1984,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     try {
       setState(() {
+        _aiAnalysisAi = [];
+        _aiAnalysisSuccess = [];
+        _aiAnalysisFail = [];
+        _aiAnalysisStudent = [];
+        _aiAnalysisAssignment = [];
+        _aiAnalysisCourse = [];
+
         _isAnalyzingSuccess = true;
         _isAnalyzingFail = true;
         _isAnalyzingAssignment = true;
@@ -1873,11 +2014,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 int.parse(element['Student ID']!) == selectedParticipant.id)
             .toList();
       }
-      String studentGrades = studentCourseData.map((data) {
-        return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
-      }).join("\n");
-      print(studentGrades);
-      futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+
+      if (studentCourseData.isNotEmpty) {
+        String studentGrades = studentCourseData.map((data) {
+          return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
+        }).join("\n");
+
+        futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+      } else {
+        setState(() {
+          _isAnalyzingStudents = false;
+        });
+      }
 
       // Build a summary string from the student breakdown data.
       if (selectedAssessment.type == "essay") {
@@ -1920,14 +2068,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
         }).join("\n");
 
-        futures.addAll([
-          _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
-              studentSummary, selectedGradeLevel),
-          _analyzeEssayMisunderstanding(selectedAssessment.name,
-              assignmentDescription, studentSummary, selectedGradeLevel),
-          _analyzeEssayAiUse(selectedAssessment.name, assignmentDescription,
-              aiSummary, selectedGradeLevel)
-        ]);
+        if (studentSummary.trim().isNotEmpty) {
+          futures.addAll([
+            _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
+                studentSummary, selectedGradeLevel),
+            _analyzeEssayMisunderstanding(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel),
+          ]);
+        } else {
+          setState(() {
+            _isAnalyzingSuccess = false;
+            _isAnalyzingFail = false;
+          });
+        }
+
+        if (aiSummary.trim().isNotEmpty) {
+          futures.add(_analyzeEssayAiUse(selectedAssessment.name,
+              assignmentDescription, aiSummary, selectedGradeLevel));
+        } else {
+          setState(() {
+            _isAnalyzingAi = false;
+          });
+        }
       } else {
         if (questionBreakdown == null) {
           setState(() {
@@ -1949,30 +2111,45 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           studentSummary = studentData.map((question) {
             return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
           }).join("\n");
-          await Future.wait([
-            _analyzeStudentQuizSuccess(
-                selectedAssessment.name,
-                assignmentDescription,
-                studentSummary,
-                selectedParticipant.fullname,
-                selectedGradeLevel),
-            _analyzeStudentQuizMisunderstanding(
-                selectedAssessment.name,
-                assignmentDescription,
-                studentSummary,
-                selectedParticipant.fullname,
-                selectedGradeLevel)
-          ]);
+
+          if (studentSummary.trim().isNotEmpty) {
+            await Future.wait([
+              _analyzeStudentQuizSuccess(
+                  selectedAssessment.name,
+                  assignmentDescription,
+                  studentSummary,
+                  selectedParticipant.fullname,
+                  selectedGradeLevel),
+              _analyzeStudentQuizMisunderstanding(
+                  selectedAssessment.name,
+                  assignmentDescription,
+                  studentSummary,
+                  selectedParticipant.fullname,
+                  selectedGradeLevel)
+            ]);
+          } else {
+            setState(() {
+              _isAnalyzingSuccess = false;
+              _isAnalyzingFail = false;
+            });
+          }
         } else {
           studentSummary = questionBreakdown.map((q) {
             return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
           }).join("\n");
-          futures.addAll([
-            _analyzeCourseQuizSuccess(selectedAssessment.name,
-                assignmentDescription, studentSummary, selectedGradeLevel),
-            _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
-                assignmentDescription, studentSummary, selectedGradeLevel)
-          ]);
+          if (studentSummary.trim().isNotEmpty) {
+            futures.addAll([
+              _analyzeCourseQuizSuccess(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel),
+              _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel)
+            ]);
+          } else {
+            setState(() {
+              _isAnalyzingSuccess = false;
+              _isAnalyzingFail = false;
+            });
+          }
         }
       }
       await Future.wait(futures);

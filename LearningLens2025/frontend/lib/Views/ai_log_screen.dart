@@ -231,28 +231,28 @@ class _AiLogScreenState extends State<AiLogScreen> {
     if (logSource.sortedData.isNotEmpty) {
       // Get headers dynamically from the first map.
       var studentHeaders = [
-        AiLog.getHeaderForColumn(0),
-        AiLog.getHeaderForColumn(1),
-        AiLog.getHeaderForColumn(2),
-        AiLog.getHeaderForColumn(3),
-        AiLog.getHeaderForColumn(4),
-        AiLog.getHeaderForColumn(5),
-        AiLog.getHeaderForColumn(6),
-        AiLog.getHeaderForColumn(7),
+        TextCellValue(AiLog.getHeaderForColumn(0)),
+        TextCellValue(AiLog.getHeaderForColumn(1)),
+        TextCellValue(AiLog.getHeaderForColumn(2)),
+        TextCellValue(AiLog.getHeaderForColumn(3)),
+        TextCellValue(AiLog.getHeaderForColumn(4)),
+        TextCellValue(AiLog.getHeaderForColumn(5)),
+        TextCellValue(AiLog.getHeaderForColumn(6)),
+        TextCellValue(AiLog.getHeaderForColumn(7)),
       ];
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
       for (var log in logSource.sortedData) {
         studentSheet.appendRow(
           [
-            log.getStringForColumn(0),
-            log.getStringForColumn(1),
-            log.getStringForColumn(2),
-            log.getStringForColumn(3),
-            log.getStringForColumn(4),
-            log.getStringForColumn(5),
-            log.getStringForColumn(6),
-            log.getStringForColumn(7),
+            TextCellValue(log.getStringForColumn(0)),
+            TextCellValue(log.getStringForColumn(1)),
+            TextCellValue(log.getStringForColumn(2)),
+            TextCellValue(log.getStringForColumn(3)),
+            TextCellValue(log.getStringForColumn(4)),
+            TextCellValue(log.getStringForColumn(5)),
+            TextCellValue(log.getStringForColumn(6)),
+            TextCellValue(log.getStringForColumn(7)),
           ],
         );
       }
