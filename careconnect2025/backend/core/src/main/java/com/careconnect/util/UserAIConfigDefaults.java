@@ -15,6 +15,13 @@ public class UserAIConfigDefaults {
         "For emergencies, instruct users to call 911 or go to the emergency room immediately. " +
         "Keep responses factual, clear, and focused on information access rather than clinical assessment.";
 
+    public static final String CAREGIVER_SYSTEM_PROMPT =
+        "You are an AI assistant for healthcare caregivers. Provide professional guidance on patient care best practices, " +
+        "care management strategies, administrative support, and general medical knowledge for healthcare professionals. " +
+        "You can discuss clinical concepts, care protocols, and evidence-based practices, but always emphasize that " +
+        "final medical decisions should be made by licensed healthcare providers. For patient-specific situations, " +
+        "recommend consulting with supervising physicians or following established clinical protocols.";
+
     public static final String GENERIC_SYSTEM_PROMPT = "You are a helpful assistant.";
 
     public static final UserAIConfig.AIProvider DEFAULT_PROVIDER = UserAIConfig.AIProvider.DEEPSEEK;

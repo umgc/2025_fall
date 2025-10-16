@@ -39,6 +39,7 @@ public class DefaultAIChatService implements AIChatService {
     private final PatientContextRetrievalService patientContextRetrievalService;
     private final ChatMemoryFactory chatMemoryFactory;
     private final ChatAuditService chatAuditService;
+    private final CaregiverPatientLinkService caregiverPatientLinkService;
 
     @Autowired
     public DefaultAIChatService(ChatModel chatModel,
@@ -49,7 +50,8 @@ public class DefaultAIChatService implements AIChatService {
                               MedicalContextService medicalContextService,
                               PatientContextRetrievalService patientContextRetrievalService,
                               ChatMemoryFactory chatMemoryFactory,
-                              ChatAuditService chatAuditService) {
+                              ChatAuditService chatAuditService,
+                              CaregiverPatientLinkService caregiverPatientLinkService) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
@@ -59,6 +61,7 @@ public class DefaultAIChatService implements AIChatService {
         this.patientContextRetrievalService = patientContextRetrievalService;
         this.chatMemoryFactory = chatMemoryFactory;
         this.chatAuditService = chatAuditService;
+        this.caregiverPatientLinkService = caregiverPatientLinkService;
     }
     // Helper: Get or create patient AI config
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
@@ -412,13 +415,21 @@ public class DefaultAIChatService implements AIChatService {
 
     @Transactional
     public ChatResponse processChat(ChatRequest request) {
-        // Validate patientId is not null
-        if (request.getPatientId() == null) {
-            throw new IllegalArgumentException("Patient ID is required");
+        // Validate that we have either a patient ID or a user ID
+        if (request.getPatientId() == null && request.getUserId() == null) {
+            throw new IllegalArgumentException("Either Patient ID or User ID is required");
         }
-        
-        Patient patient = patientRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+
+        Patient patient = null;
+        if (request.getPatientId() != null) {
+            // Patient chat - validate patient exists
+            patient = patientRepository.findById(request.getPatientId())
+                    .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        } else {
+            // Caregiver or other user chat - try to find associated patient through user
+            // For now, we'll allow caregiver chats without a specific patient context
+            log.info("Processing chat request for user ID: {} without specific patient context", request.getUserId());
+        }
 
         // Always use LangChain4j chatModel for all chat requests
         if (request.getConversationId() != null && request.getConversationId().trim().isEmpty()) {
@@ -460,12 +471,35 @@ public class DefaultAIChatService implements AIChatService {
                    log.info("AIChatService (LangChain4j + DeepSeek) - Using model: {} for patient: {}, user: {}",
                        aiConfig.getDeepseekModel(), request.getPatientId(), request.getUserId());
 
-            // Build medical context
-            String medicalContext = medicalContextService.buildPatientContext(
-                    request.getPatientId(),
-                    request,
-                    aiConfig
-            );
+            // Build medical context (only for patient-specific chats)
+            String medicalContext = "";
+            if (request.getPatientId() != null) {
+                // For caregiver requests, validate they have access to the patient
+                if (patient == null) {
+                    // This is a caregiver request accessing a specific patient
+                    boolean hasAccess = caregiverPatientLinkService.hasAccessToPatient(
+                            request.getUserId(),
+                            request.getPatientId()
+                    );
+
+                    if (!hasAccess) {
+                        log.warn("Caregiver {} attempted to access patient {} without permission",
+                                request.getUserId(), request.getPatientId());
+                        return buildErrorResponse(request,
+                                "Access denied: You are not authorized to access this patient's information");
+                    }
+
+                    // Load the patient for context building
+                    patient = patientRepository.findById(request.getPatientId())
+                            .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+                }
+
+                medicalContext = medicalContextService.buildPatientContext(
+                        request.getPatientId(),
+                        request,
+                        aiConfig
+                );
+            }
             // Debug logging removed for cleaner logs
 
             // System prompt
@@ -480,7 +514,14 @@ public class DefaultAIChatService implements AIChatService {
                 } catch (Exception ignore) {}
             }
             if (systemPrompt == null) {
-                systemPrompt = UserAIConfigDefaults.getSystemPrompt(aiConfig);
+                // Use caregiver-specific prompt for caregiver-only chats (no patient context)
+                // Use medical prompt when caregiver is accessing specific patient data
+                if (request.getPatientId() == null) {
+                    systemPrompt = UserAIConfigDefaults.CAREGIVER_SYSTEM_PROMPT;
+                } else {
+                    // When caregiver has patient context, use medical prompt
+                    systemPrompt = UserAIConfigDefaults.MEDICAL_SYSTEM_PROMPT;
+                }
             }
 
             // Create ChatMemory for this conversation (session-based with 15-minute timeout)
