@@ -8,7 +8,7 @@ set -e  # Exit on error
 echo "Loading CareConnect environment variables..."
 
 # Check if .env file exists
-if [ ! -f "../.env" ]; then
+if [ ! -f ".env" ]; then
     echo "Error: .env file not found in backend directory"
     echo "Please create a .env file based on the provided template"
     exit 1
@@ -16,7 +16,7 @@ fi
 
 # Load environment variables from .env file
 set -a  # Automatically export all variables
-source ../.env
+source .env
 set +a  # Stop auto-exporting
 
 echo "Environment variables loaded successfully!"
