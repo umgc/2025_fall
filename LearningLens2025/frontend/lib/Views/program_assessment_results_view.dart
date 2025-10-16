@@ -1,4 +1,6 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/Views/program_assessment_view.dart';
@@ -36,7 +38,7 @@ class _ProgramAsessmentResultsViewState
   final lmsService = LmsFactory.getLmsService();
 
   // For expansion tiles
-  bool _isExpanded = false;
+  List<bool> expandedTiles = [];
 
   _ProgramAsessmentResultsViewState(
       {required this.evaluation,
@@ -47,6 +49,36 @@ class _ProgramAsessmentResultsViewState
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _publishGrade(Participant student, String grade, String feedback) async{
+    final moodleLms = LmsFactory.getLmsServiceMoodle();
+    bool publishedSuccessfully = await moodleLms.publishGrade(
+      assignment.id.toString(), 
+      student.id.toString(), 
+      feedback, 
+      grade
+    );
+
+    SnackBar snackbar;
+    if(publishedSuccessfully){
+      snackbar = SnackBar(
+                  backgroundColor: Colors.green,
+                  content:
+                      Text('Grade for ${student.fullname} published successfully.'),
+                  duration: Duration(seconds: 8),
+                );
+    }
+    else{
+      snackbar = SnackBar(
+                  backgroundColor: Colors.red[700],
+                  content: Text('Unable to publish grade for ${student.fullname}'),
+                );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    }
   }
 
   @override
@@ -62,12 +94,12 @@ class _ProgramAsessmentResultsViewState
 
   Widget _buildMainLayout() {
     List<dynamic> resultsJson = evaluation.resultsJson;
-    final children = resultsJson.map(_buildPanel).toList();
+    final children = resultsJson.mapIndexed(_buildPanel).toList();
 
     return ExpansionPanelList(
         expansionCallback: (int index, bool isExpanded) {
           setState(() {
-            _isExpanded = !_isExpanded;
+            expandedTiles[index] = isExpanded;
           });
         },
         children: children
@@ -112,14 +144,67 @@ class _ProgramAsessmentResultsViewState
     );
   }
 
-  ExpansionPanel _buildPanel(dynamic result) {
+
+  ExpansionPanel _buildPanel(int idx, dynamic result) {
     List<dynamic> outputs = result['outputs'];
+
     final student = participants
         .firstWhere((p) => p.id.toString() == result['studentId'].toString());
-    
+    final allOutputCorrectness = outputs.map(_isOutputCorrect);
+
     List<Widget> children = [];
 
-    final isAllOutputCorrect = outputs.map(_isOutputCorrect).every((correct) => correct == true);
+    final suggestedGrade = allOutputCorrectness.where((o) => o == true).length / allOutputCorrectness.length;
+
+    final gradeController = TextEditingController();
+    gradeController.text = (suggestedGrade * 100).toInt().toString();
+    final feedbackController = TextEditingController();
+    // Add UI for submitting suggested grade
+    children.add(
+      ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 300),
+        child: Column(
+          spacing: 8,
+          children: [
+            TextField(
+              controller: gradeController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly, // Only allows digits
+                FilteringTextInputFormatter.allow(RegExp(r'^[1-9][0-9]*$|^0$')) // Allows only positive nubmers and zero
+              ],
+              decoration: InputDecoration(
+                labelText: 'Suggested Grade',
+                border: OutlineInputBorder(),
+              )
+            ),
+            TextField(
+              maxLines: 3,
+              keyboardType: TextInputType.multiline,
+              controller: feedbackController,
+              decoration: InputDecoration(
+                labelText: 'Feeback',
+                border: OutlineInputBorder(),
+              )
+            ),
+            ElevatedButton(
+              onPressed: () async{
+                if(int.parse(gradeController.text) > 100 && mounted){
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: Colors.red[700],
+                    content: Text('Grade cannot be more than 100%'),
+                  ));
+                }
+                
+                await _publishGrade(student, gradeController.text, feedbackController.text);
+              },
+              child: Text("Publish"),
+            )
+          ],
+        ),
+      )
+    );
+
 
     for(dynamic entry in outputs){
       final actualOutput = entry['output'].toString();
@@ -146,36 +231,39 @@ class _ProgramAsessmentResultsViewState
           Text('Actual output matched what was expected')
         else
           Text('Actual output did not match what was expected'),
-        SizedBox(height: 12),
-        Row(
+        Wrap(
           spacing: 12,
           children: [
             _codeOutput('Input', input),
             _codeOutput('Expected Output', expectedOutput),
             _codeOutput('Actual Output', actualOutput)
           ],
-        )
+        ),
+        SizedBox(height: 4)
       ]);
     }
 
+    // set state for expansion tile
+    expandedTiles.add(false);
+
     return ExpansionPanel(
-        headerBuilder: (context, isExpanded) {
-          return ListTile(
-              leading: _getIcon(isAllOutputCorrect),
-              title: Text(
-                student.fullname,
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ));
-        },
-        body: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 12,
-            children: children
-          ),
+      headerBuilder: (context, isExpanded) {
+        return ListTile(
+            leading: _getIcon(allOutputCorrectness.every((correct) => correct == true)),
+            title: Text(
+              student.fullname,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ));
+      },
+      body: Padding(
+        padding: EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: children
         ),
-        isExpanded: _isExpanded
+      ),
+      isExpanded: expandedTiles[idx]
     );
   }
 
