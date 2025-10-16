@@ -301,4 +301,28 @@ class AIChatService {
       return 'Sorry, I encountered an error analyzing the file. Please try again later.';
     }
   }
+
+  /// Get chat retention period in days
+  static Future<int> getRetentionPeriodDays() async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/config/retention-period'),
+        headers: authHeaders,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['retentionDays'] ?? 30;
+      } else {
+        // Fallback to default if endpoint doesn't exist yet
+        return 30;
+      }
+    } catch (e) {
+      print('⚠️ Warning: Could not fetch retention period from backend: $e');
+      // Return default retention period
+      return 30;
+    }
+  }
 }
