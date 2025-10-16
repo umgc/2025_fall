@@ -99,9 +99,9 @@ public class DevDataLoader implements CommandLineRunner {
 
             log.info("✅ Mock data loaded successfully!");
             log.info("📧 Login credentials:");
-            log.info("   Patient:  patient@careconnect.com / password123");
-            log.info("   Caregiver: caregiver@careconnect.com / password123");
-            log.info("   Family:    family@careconnect.com / password123");
+            log.info("   Patient:  patient@careconnect.com / password");
+            log.info("   Caregiver: caregiver@careconnect.com / password");
+            log.info("   Family:    family@careconnect.com / password");
 
         } catch (Exception e) {
             log.error("❌ Failed to load mock data: {}", e.getMessage(), e);

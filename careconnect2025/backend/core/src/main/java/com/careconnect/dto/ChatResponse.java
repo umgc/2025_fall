@@ -1,6 +1,8 @@
 package com.careconnect.dto;
 
 import lombok.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -9,6 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class ChatResponse {
     
     private String conversationId;

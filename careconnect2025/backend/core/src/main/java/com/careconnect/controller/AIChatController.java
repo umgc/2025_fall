@@ -3,6 +3,7 @@ package com.careconnect.controller;
 import com.careconnect.dto.*;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.service.AIChatService;
+import com.careconnect.service.ChatCleanupService;
 import com.careconnect.service.UserAIConfigService;
 import com.careconnect.repository.ChatConversationRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,7 @@ public class AIChatController {
     private final AIChatService aiChatService;
     private final UserAIConfigService userAIConfigService;
     private final ChatConversationRepository chatConversationRepository;
+    private final ChatCleanupService chatCleanupService;
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIChatController.class);
 
     @PostMapping("/chat")
@@ -273,6 +275,26 @@ public class AIChatController {
         } catch (Exception e) {
             log.error("Error deactivating AI config for user: {}, patient: {}: ", userId, patientId, e);
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/retention-policy")
+    @Operation(
+        summary = "Get chat retention policy information",
+        description = "Returns information about how long chat conversations are retained"
+    )
+    @ApiResponse(responseCode = "200", description = "Retention policy information retrieved successfully")
+    public ResponseEntity<Map<String, String>> getRetentionPolicy() {
+        try {
+            String policyInfo = chatCleanupService.getRetentionPolicyInfo();
+            Map<String, String> response = new HashMap<>();
+            response.put("retentionPolicy", policyInfo);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving retention policy info: ", e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Unable to retrieve retention policy information");
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 }

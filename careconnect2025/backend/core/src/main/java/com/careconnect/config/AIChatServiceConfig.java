@@ -9,13 +9,13 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 
 @Configuration
-@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class AIChatServiceConfig {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIChatServiceConfig.class);
 
     public AIChatServiceConfig() {
-        log.info(" AIChatServiceConfig initialized - DeepSeek ChatModel configuration ACTIVE");
+        log.info("🔧 AIChatServiceConfig initialized - DeepSeek ChatModel configuration ACTIVE");
     }
 
     @Value("${deepseek.api.key:}")
@@ -29,7 +29,7 @@ public class AIChatServiceConfig {
 
     @Bean
     public ChatModel chatModel() {
-        log.info(" Creating ChatModel bean with DeepSeek configuration:");
+        log.info("🚀 Creating ChatModel bean with DeepSeek configuration:");
         log.info("  - API Key: {}...", deepSeekApiKey.substring(0, Math.min(10, deepSeekApiKey.length())));
         log.info("  - Base URL: {}", deepSeekApiUrl);
         log.info("  - Model: deepseek-chat");

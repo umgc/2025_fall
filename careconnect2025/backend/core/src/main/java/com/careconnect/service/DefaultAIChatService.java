@@ -6,6 +6,7 @@ import com.careconnect.dto.ChatConversationSummary;
 import com.careconnect.dto.ChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
+import com.careconnect.util.UserAIConfigDefaults;
 import lombok.Builder;
 import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,6 @@ import java.util.stream.Collectors;
 
 @Service
 @Primary
-@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = false)
 public class DefaultAIChatService implements AIChatService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultAIChatService.class);
 
@@ -68,23 +68,7 @@ public class DefaultAIChatService implements AIChatService {
 
     // Helper: Create default AI config
     private UserAIConfig createDefaultUserAIConfig(Long userId, Long patientId) {
-        UserAIConfig config = UserAIConfig.builder()
-                .userId(userId)
-                .patientId(patientId)
-                .preferredAiProvider(UserAIConfig.AIProvider.DEEPSEEK)
-                .openaiModel("gpt-3.5-turbo")
-                .deepseekModel("deepseek-chat")
-                .maxTokens(1000)
-                .temperature(0.7)
-                .conversationHistoryLimit(20)
-                .includeVitalsByDefault(true)
-                .includeMedicationsByDefault(true)
-                .includeNotesByDefault(true)
-                .includeMoodPainByDefault(true)
-                .includeAllergiesByDefault(true)
-                .isActive(true)
-                .systemPrompt("You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.")
-                .build();
+        UserAIConfig config = UserAIConfigDefaults.createMedicalDefaultConfig(userId, patientId);
         return userAIConfigRepository.save(config);
     }
 
@@ -162,7 +146,7 @@ public class DefaultAIChatService implements AIChatService {
         // System prompt as system message
         String prompt = (systemPrompt != null && !systemPrompt.trim().isEmpty())
             ? systemPrompt
-            : "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
+            : UserAIConfigDefaults.MEDICAL_SYSTEM_PROMPT;
         messages.add(dev.langchain4j.data.message.SystemMessage.from(prompt));
         if (medicalContext != null && !medicalContext.trim().isEmpty()) {
             messages.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
@@ -428,6 +412,14 @@ public class DefaultAIChatService implements AIChatService {
 
     @Transactional
     public ChatResponse processChat(ChatRequest request) {
+        // Validate patientId is not null
+        if (request.getPatientId() == null) {
+            throw new IllegalArgumentException("Patient ID is required");
+        }
+        
+        Patient patient = patientRepository.findById(request.getPatientId())
+                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+
         // Always use LangChain4j chatModel for all chat requests
         if (request.getConversationId() != null && request.getConversationId().trim().isEmpty()) {
             request.setConversationId(null);
@@ -447,8 +439,7 @@ public class DefaultAIChatService implements AIChatService {
                 return buildErrorResponse(request, "Message content or at least one file is required");
             }
             // Validate patient exists and user has access
-            Patient patient = patientRepository.findById(request.getPatientId())
-                    .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+            
 
             // Get or create user AI configuration
             UserAIConfig aiConfig = getOrCreateUserAIConfig(request.getUserId(), request.getPatientId());
@@ -489,7 +480,7 @@ public class DefaultAIChatService implements AIChatService {
                 } catch (Exception ignore) {}
             }
             if (systemPrompt == null) {
-                systemPrompt = "You are an AI assistant that helps patients access their health information. You are NOT a medical professional and cannot provide medical advice, diagnosis, or treatment. State facts from the patient's records without clinical interpretation. For medical concerns, direct users to contact their healthcare provider. For emergencies, instruct users to call 911 or go to the emergency room immediately. Keep responses factual, clear, and focused on information access rather than clinical assessment.";
+                systemPrompt = UserAIConfigDefaults.getSystemPrompt(aiConfig);
             }
 
             // Create ChatMemory for this conversation (session-based with 15-minute timeout)

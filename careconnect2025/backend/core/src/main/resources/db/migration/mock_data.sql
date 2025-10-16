@@ -24,14 +24,14 @@ INSERT INTO users (email, email_verified, password, password_hash, role, status,
 -- 2. PATIENT TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
 -- ============================================
 
-INSERT INTO patient (user_id, first_name, last_name, dob, email, phone, address_line1, address_line2, city, state, zip, gender) VALUES
+INSERT INTO patient (user_id, first_name, last_name, dob, email, phone, line1, line2, city, state, zip, gender) VALUES
 ((SELECT id FROM users WHERE email = 'patient@careconnect.com'), 'Mary', 'Johnson', '1958-03-15', 'patient@careconnect.com', '555-0101', '123 Maple Street', 'Apt 4B', 'Springfield', 'IL', '62701', 'FEMALE');
 
 -- ============================================
 -- 3. CAREGIVER TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
 -- ============================================
 
-INSERT INTO caregiver (user_id, first_name, last_name, dob, email, phone, address_line1, address_line2, city, state, zip, gender, caregiver_type) VALUES
+INSERT INTO caregiver (user_id, first_name, last_name, dob, email, phone, line1, line2, city, state, zip, gender, caregiver_type) VALUES
 ((SELECT id FROM users WHERE email = 'caregiver@careconnect.com'), 'Jennifer', 'Smith', '1985-09-12', 'caregiver@careconnect.com', '555-0200', '321 Healthcare Plaza', 'Suite 200', 'Chicago', 'IL', '60607', 'FEMALE', 'RN');
 
 -- ============================================
@@ -109,12 +109,12 @@ INSERT INTO wearable_metric (patient_user_id, metric, metric_value, recorded_at,
 -- 12. TASKS - Use isCompleted (boolean) not iscompleted, remove updated_at
 -- ============================================
 
-INSERT INTO tasks (patient_id, name, description, date, time_of_day, iscompleted, task_type, days_of_week, status, created_at) VALUES
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Morning Medications', 'Metformin, Lisinopril, Aspirin', '2025-10-06', '08:00:00', true, 'TASK', '[]'::jsonb, 'COMPLETED', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Check Blood Sugar', 'Fasting blood glucose reading', '2025-10-06', '07:30:00', true, 'TASK', '[]'::jsonb, 'COMPLETED', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Evening Medications', 'Metformin, Atorvastatin', '2025-10-06', '19:00:00', false, 'TASK', '[]'::jsonb, 'PENDING', '2024-06-20 10:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Daily Walk', '15-minute walk around the block', '2025-10-06', '14:00:00', false, 'TASK', '["MONDAY","WEDNESDAY","FRIDAY"]'::jsonb, 'PENDING', '2024-07-01 09:00:00'),
-((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Drink Water', '8 glasses throughout the day', '2025-10-06', '10:00:00', false, 'TASK', '["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb, 'PENDING', '2024-07-01 09:00:00');
+INSERT INTO tasks (patient_id, name, description, date, time_of_day, is_completed, task_type, days_of_week) VALUES
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Morning Medications', 'Metformin, Lisinopril, Aspirin', '2025-10-06', '08:00:00', true, 'MEDICATION', '[]'::jsonb),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Check Blood Sugar', 'Fasting blood glucose reading', '2025-10-06', '07:30:00', true, 'HEALTH_CHECK', '[]'::jsonb),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Take Evening Medications', 'Metformin, Atorvastatin', '2025-10-06', '19:00:00', false, 'MEDICATION', '[]'::jsonb),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Daily Walk', '15-minute walk around the block', '2025-10-06', '14:00:00', false, 'EXERCISE', '["MONDAY","WEDNESDAY","FRIDAY"]'::jsonb),
+((SELECT p.id FROM patient p JOIN users u ON p.user_id = u.id WHERE u.email = 'patient@careconnect.com'), 'Drink Water', '8 glasses throughout the day', '2025-10-06', '10:00:00', false, 'WELLNESS', '["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]'::jsonb);
 
 -- ============================================
 -- 13. VITAL_SAMPLE - Table doesn't exist, removing these entries

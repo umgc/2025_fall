@@ -1,5 +1,6 @@
 package com.careconnect.service;
 
+import com.careconnect.config.ChatMemoryConfig;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.model.ChatMessage;
 import com.careconnect.repository.ChatConversationRepository;
@@ -15,10 +16,11 @@ import java.util.List;
 
 /**
  * Service for automatic cleanup of chat conversations and messages
- * 
- * Privacy Policy: Chat logs are automatically deleted after 48 hours
- * to protect user privacy and comply with healthcare data retention policies.
- * 
+ *
+ * Healthcare Compliance: Chat logs are retained for 30 days by default
+ * to support patient care continuity while balancing privacy requirements.
+ *
+ * Configurable retention period supports both privacy and clinical needs.
  * Only metadata and anonymized analytics are retained long-term.
  */
 @Service
@@ -29,23 +31,26 @@ public class ChatCleanupService {
     private final ChatConversationRepository chatConversationRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatAnalyticsService chatAnalyticsService;
-    
-    // 48 hours in minutes
-    private static final int RETENTION_HOURS = 48;
+    private final ChatMemoryConfig chatMemoryConfig;
     
     /**
      * Scheduled cleanup task that runs every hour
-     * Deletes conversations and messages older than 48 hours
+     * Deletes conversations and messages older than configured retention period
      */
     @Scheduled(fixedRate = 3600000) // Run every hour (3600000 ms)
     @Transactional
     public void cleanupOldChats() {
         try {
-            LocalDateTime cutoffTime = LocalDateTime.now().minusHours(RETENTION_HOURS);
-            
-            log.info("Starting chat cleanup - deleting conversations older than {} hours", RETENTION_HOURS);
-            
-            // Find conversations older than 48 hours
+            if (!chatMemoryConfig.isAutoCleanup()) {
+                log.debug("Auto cleanup is disabled, skipping chat cleanup");
+                return;
+            }
+
+            LocalDateTime cutoffTime = LocalDateTime.now().minusDays(chatMemoryConfig.getCleanupAfterDays());
+
+            log.info("Starting chat cleanup - deleting conversations older than {} days", chatMemoryConfig.getCleanupAfterDays());
+
+            // Find conversations older than configured retention period
             List<ChatConversation> oldConversations = chatConversationRepository
                 .findByCreatedAtBeforeAndIsActiveTrue(cutoffTime);
             
@@ -122,10 +127,15 @@ public class ChatCleanupService {
      * Get retention policy information for user transparency
      */
     public String getRetentionPolicyInfo() {
-        return String.format(
-            "Your chat conversations are automatically deleted after %d hours to protect your privacy. " +
-            "You can delete conversations immediately anytime. Only anonymized usage statistics are retained long-term.",
-            RETENTION_HOURS
-        );
+        if (chatMemoryConfig.isAutoCleanup()) {
+            return String.format(
+                "Your chat conversations are automatically deleted after %d days to balance patient care continuity with privacy protection. " +
+                "You can delete conversations immediately anytime. Only anonymized usage statistics are retained long-term.",
+                chatMemoryConfig.getCleanupAfterDays()
+            );
+        } else {
+            return "Automatic chat deletion is currently disabled. You can manually delete conversations anytime. " +
+                   "Only anonymized usage statistics are retained long-term.";
+        }
     }
 }

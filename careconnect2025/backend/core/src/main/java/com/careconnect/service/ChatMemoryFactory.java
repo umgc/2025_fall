@@ -2,6 +2,7 @@ package com.careconnect.service;
 
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import com.careconnect.config.ChatMemoryConfig;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.model.UserAIConfig;
 import com.careconnect.repository.ChatMessageRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class ChatMemoryFactory {
     
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatMemoryConfig chatMemoryConfig;
     
     /**
      * Create a ChatMemory instance for the given conversation and configuration
@@ -98,12 +100,14 @@ public class ChatMemoryFactory {
     }
     
     /**
-     * Get the maximum number of messages from AI config or use default
+     * Get the maximum number of messages from AI config or use configured defaults
      */
     private int getMaxMessages(UserAIConfig aiConfig) {
         if (aiConfig != null && aiConfig.getConversationHistoryLimit() != null) {
             return aiConfig.getConversationHistoryLimit();
         }
-        return 20; // Default limit
+        // TODO: Check if user has premium subscription
+        // For now, use default limit
+        return chatMemoryConfig.getDefaultMaxMessages();
     }
 }
