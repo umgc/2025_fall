@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "node-fetch": "^3.3.2",
+    "postgres": "^3.4.7"
+  },
+  "type": "module"
+}

@@ -1,12 +1,19 @@
+<<<<<<< HEAD
 import 'package:care_connect_app/config/navigation/caregiver_more_features_bottom_drawer.dart';
+=======
+>>>>>>> origin/developer
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
+import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
+<<<<<<< HEAD
 import 'patient_more_features_bottom_drawer.dart';
+=======
+>>>>>>> origin/developer
 
 /// Represents a single item in the bottom navigation bar.
 ///
@@ -102,16 +109,18 @@ class BottomNavConfig {
         screen: MessagesListPage(),
       ),
       BottomNavItem(
-        label: 'More',
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more,
-        routeName: 'more',
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu,
+        routeName: 'menupage',
+        screen: const MenuPage(),
         onPress: (context, builder) {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return const PatientMoreFeaturesBottomDrawerWidget();
+              return const MenuPage();
             },
+            isScrollControlled: true
           );
         },
       ),
@@ -165,11 +174,12 @@ class BottomNavConfig {
           showModalBottomSheet<void>(
             context: context,
             builder: (BuildContext context) {
-              return const CaregiverMoreFeaturesBottomDrawerWidget();
+              return const MenuPage();
             },
+            isScrollControlled:
+                true, // This will make bottom drawer full height
           );
         },
-
       ),
     ];
   }

@@ -99,36 +99,6 @@ class _PatientDashboardState extends State<PatientDashboard> {
         return;
       }
 
-      // TODO - this needs to be updated to fetch patient data with updated
-      //        backend logic
-      // Fetch patient details
-      // final authHeaders = await ApiService.getAuthHeaders();
-      // final patientRes = await http.get(
-      //   Uri.parse('${ApiConstants.baseUrl}patients/$id'),
-      //   headers: authHeaders,
-      // );
-      //
-      // if (patientRes.statusCode == 200) {
-      //   patient = json.decode(patientRes.body);
-      // } else {
-      //   throw Exception('Failed to load patient details');
-      // }
-      //
-      // // Fetch caregivers
-      // final caregiversRes = await http.get(
-      //   Uri.parse('${ApiConstants.baseUrl}patients/$id/caregivers'),
-      //   headers: authHeaders,
-      // );
-      //
-      // if (caregiversRes.statusCode == 200) {
-      //   caregivers = List<Map<String, dynamic>>.from(
-      //     json.decode(caregiversRes.body),
-      //   );
-      // }
-      //
-      // // Load family members
-      // await _loadFamilyMembers();
-
       // Check for alerts
       _checkForAlerts();
 
@@ -412,10 +382,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-
       appBar: DashboardAppHeader(
-        // TODO - the conditional needs to be removed. There is a bug in the
-        //        backend where patient and caregiver data is not fetched.
         userName: user?.name ?? '',
         role: user?.role as String,
       ),
