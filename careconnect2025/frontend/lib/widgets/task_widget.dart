@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
+
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/tasks/models/template_model.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:flutter/material.dart';
 
 class TaskFormDialog extends StatefulWidget {
   final int patientId;
@@ -127,7 +128,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
         await ApiService.createTask(widget.patientId, jsonEncode(taskData));
       } else {
         // Edit
-        await ApiService.editTask(widget.existingTask!.id, taskData);
+        await ApiService.editTask(widget.existingTask!.id!, taskData);
       }
     } catch (e) {
       print('Error saving task: $e');
@@ -154,7 +155,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                       description: selectedTemplateForForm!.description,
                       date: DateTime.now(),
                       timeOfDay: selectedTemplateForForm!.timeOfDay,
-                      userId: widget.patientId,
+                      assignedPatientId: widget.patientId,
                       isComplete: false,
                       notifications: null,
                       frequency: selectedTemplateForForm!.frequency,
@@ -311,7 +312,7 @@ class _TaskFormState extends State<TaskForm> {
         description: widget.initialTask!.description,
         date: widget.initialTask!.date,
         timeOfDay: widget.initialTask!.timeOfDay,
-        userId: widget.initialTask!.userId,
+        assignedPatientId: widget.initialTask!.assignedPatientId,
         isComplete: widget.initialTask!.isComplete,
         notifications: widget.initialTask!.notifications,
         frequency: widget.initialTask!.frequency,
@@ -327,7 +328,7 @@ class _TaskFormState extends State<TaskForm> {
         description: widget.template!.description,
         date: DateTime.now(),
         timeOfDay: widget.template!.timeOfDay,
-        userId: widget.patientId,
+        assignedPatientId: widget.patientId,
         isComplete: false,
         notifications: null,
         frequency: widget.template!.frequency,
@@ -342,7 +343,7 @@ class _TaskFormState extends State<TaskForm> {
         description: '',
         date: DateTime.now(),
         timeOfDay: null,
-        userId: widget.patientId,
+        assignedPatientId: widget.patientId,
         isComplete: false,
         notifications: null,
         frequency: null,

@@ -130,9 +130,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Navigate back to dashboard with role parameter
-          final role = user.role;
-          navigateToDashboard(context, role: role);
+          // Navigate back to dashboard
+          navigateToDashboard(context);
         } else {
           setState(() {
             _isLoading = false;

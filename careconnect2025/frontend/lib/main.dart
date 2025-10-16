@@ -1,3 +1,4 @@
+import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -16,20 +17,19 @@ import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Global error handling for Flutter errors
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // Optionally log to a remote server
-    debugPrint(
-      'FlutterError: \\n${details.exceptionAsString()}\\n${details.stack}',
-    );
-  };
-
   // Global error handling for unhandled Dart errors
   runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Global error handling for Flutter errors
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        // Optionally log to a remote server
+        debugPrint(
+          'FlutterError: \\n${details.exceptionAsString()}\\n${details.stack}',
+        );
+      };
       // Performance optimization: Set preferred orientations
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
@@ -54,6 +54,7 @@ Future<void> main() async {
           providers: [
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()..init()),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),
@@ -108,10 +109,13 @@ class _CareConnectAppWithErrorBoundaryState
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // Try to restart the app by popping all routes
-                      runApp(CareConnectAppWithErrorBoundary());
+                      // Navigate to home instead of calling runApp again
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        '/',
+                        (route) => false,
+                      );
                     },
-                    child: const Text('Restart App'),
+                    child: const Text('Go Home'),
                   ),
                 ],
               ),
