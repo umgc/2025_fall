@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
-
+import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,8 +15,11 @@ import 'package:simple_audio_trimmer/simple_audio_trimmer.dart';
 
 import '../../config/theme/app_theme.dart';
 import '../../providers/user_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/comprehensive_file_service.dart';
 import '../../services/enhanced_file_service.dart';
+import '../../services/notetaker_config_service.dart';
+import '../notetaker/models/patient_note_model.dart';
 import './utils.dart';
 
 // Remember to change `assets` in ../pubspec.yaml
@@ -124,6 +128,10 @@ class _StreamingAsrAndDiarizationScreenState
 
   StreamSubscription<RecordState>? _recordSub;
   RecordState _recordState = RecordState.stop;
+  String? _patientId;
+  List<Map<String, String>> _patientList = [];
+  bool _isPatient = false;
+  UserSession? _user;
 
   @override
   void initState() {
@@ -132,8 +140,41 @@ class _StreamingAsrAndDiarizationScreenState
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
-
+    _loadConfiguration();
     super.initState();
+  }
+
+  Future<void> _loadConfiguration() async {
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      setState(() {
+         _user = userProvider.user;
+        if (_user == null) throw Exception('User not found');
+        final userRole = _user!.role;
+        _isPatient = userRole.toUpperCase() == 'PATIENT';
+        if(_isPatient) {
+          _patientId = _user!.patientId.toString();
+        }
+      });
+      if(!_isPatient && _user!.caregiverId != null) {
+        http.Response patientResponse = await ApiService.getCaregiverPatients(_user!.caregiverId!);
+        setState(() {
+          _patientList = (jsonDecode(patientResponse.body) as List<dynamic>).map((patientWLink)=> {
+            'id': patientWLink['patient']['id'].toString(),
+            'name': '${patientWLink['patient']['firstName']} ${patientWLink['patient']['lastName']}'
+          }).toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load user profile: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   List<FileCategory> get _availableCategories {
@@ -487,10 +528,11 @@ class _StreamingAsrAndDiarizationScreenState
         text: _textToDisplay,
         selection: TextSelection.collapsed(offset: _textToDisplay.length),
       );
+
       //Delete Temporary Files
       if (directory != null) {
-        File('${directory.path}/temporary.wav').deleteSync();
-        Directory('${directory.path}/temporary/').deleteSync();
+        File('${directory.path}/temporary.wav').delete();
+        Directory('${directory.path}/temporary/').delete(recursive: true);
       }
     }
     setState(() {
@@ -586,7 +628,26 @@ class _StreamingAsrAndDiarizationScreenState
 
     await _uploadSpeechToTextFileToWeb(fileName, fileBytes);
 
-    ScaffoldMessenger.of(
+    print("PATIENT ID: $_patientId");
+    final createdNote = PatientNote(
+      id: '',
+      patientId: _patientId!,
+      note: _textToDisplay,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+
+    print('Created Note $createdNote');
+
+    await NotetakerConfigService.createPatientNote(createdNote);
+
+    print('NOTE CREATED');
+
+    setState(() {
+      _patientId = null;
+    });
+
+      ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Speech-to-text file saved')));
   }
@@ -771,7 +832,60 @@ class _StreamingAsrAndDiarizationScreenState
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: _textToDisplay.isNotEmpty ? _saveRecognizedText : null,
+          onPressed: () {
+              if(_textToDisplay.isNotEmpty) {
+                if(!_isPatient && _patientId == null) {
+                  print("PATIENT LIST: ${_patientList}");
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Expanded(
+                        child: SimpleDialog(
+                        title: Text("Select a patient"),
+                          children: <Widget> [
+                            Padding(
+                              padding: EdgeInsets.all(10.0),
+                              child: DropdownButtonFormField<String>(
+                                value: _patientId,
+                                decoration: InputDecoration(labelText: 'Select an option'),
+                                items: _patientList
+                                    .map((patient) => DropdownMenuItem(
+                                  value: patient['id'],
+                                  child: Text(patient['name']!),
+                                )).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _patientId = value!;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null) {
+                                    return 'Please select an option';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            SimpleDialogOption(
+                            onPressed: () {
+                              if(_patientId != null) {
+                                Navigator.of(context).pop();
+                                _saveRecognizedText();
+                              }
+                            },
+                            child:const Text('Select'),
+                            )
+                          ]
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  _saveRecognizedText();
+                }
+              }
+          },
           child: const Text('Save to File'),
         ),
       ],
