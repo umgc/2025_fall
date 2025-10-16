@@ -15,7 +15,7 @@ public class AIChatServiceConfig {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIChatServiceConfig.class);
 
     public AIChatServiceConfig() {
-        log.info("🔧 AIChatServiceConfig initialized - DeepSeek ChatModel configuration ACTIVE");
+        log.info("AIChatServiceConfig initialized - DeepSeek ChatModel configuration ACTIVE");
     }
 
     @Value("${deepseek.api.key:}")
