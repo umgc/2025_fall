@@ -163,15 +163,27 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     }
   }
 
+  /// Fetch retention period from backend
+  Future<int> _getRetentionPeriod() async {
+    try {
+      // Replace with actual backend call if available
+      return await AIChatService.getRetentionPeriodDays();
+    } catch (e) {
+      // Fallback to default if backend call fails
+      return 30;
+    }
+  }
+
   /// Clear chat completely (user-initiated deletion)
   Future<void> _clearChatCompletely() async {
+    final retentionDays = await _getRetentionPeriod();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Conversation'),
-        content: const Text(
+        content: Text(
           'This will permanently delete this conversation. This action cannot be undone.\n\n'
-          'Your conversation will also be automatically deleted after 30 days for privacy protection.',
+          'Your conversation will also be automatically deleted after $retentionDays days for privacy protection.',
         ),
         actions: [
           TextButton(
