@@ -321,15 +321,15 @@ class TeacherDashboard extends StatelessWidget {
       },
       {
         'title': 'Program Assessment',
-        'description':
-          isMoodle() 
-          ? 'Automatically evaluate student programming assignments.'
-          : 'Not implemented for Google Classroom',
-        'onPressed': isMoodle() 
+        'description': isMoodle()
+            ? 'Automatically evaluate student programming assignments.'
+            : 'Not implemented for Google Classroom',
+        'onPressed': isMoodle()
             ? () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProgramAssessmentView()),
-            )
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ProgramAssessmentView()),
+                )
             : null,
         'icon': Icons.terminal_outlined
       },

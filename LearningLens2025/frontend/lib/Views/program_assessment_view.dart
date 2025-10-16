@@ -150,33 +150,39 @@ class EvaluationTable extends StatelessWidget {
   }
 }
 
-
 /// Represents a program assessment job
 /// Check the handleGET method in code_eval/index.mjs for properties
-class ProrgramAssessmentJob{
+class ProrgramAssessmentJob {
   late String courseId;
   late String assignmentId;
   late String expectedOutput;
+
   /// Programming langauge code was written in
   late String language;
+
   /// username of the user that started the assessment
   late String username;
   late String status;
+
   /// List of results that contain information about each student's code submission
   late dynamic resultsJson;
   late DateTime startTime;
   DateTime? finishTime;
 
-  ProrgramAssessmentJob(dynamic result){
+  ProrgramAssessmentJob(dynamic result) {
     courseId = result['course_id'];
     assignmentId = result['assignment_id'];
     expectedOutput = result['expected_output'];
     language = result['language'];
     username = result['username'];
     status = result['status'];
-    resultsJson = result['results_json'] == null ? null : jsonDecode(result['results_json']);
+    resultsJson = result['results_json'] == null
+        ? null
+        : jsonDecode(result['results_json']);
     startTime = DateTime.parse(result['start_time']);
-    finishTime = result['finish_time'] == null ? null : DateTime.parse(result['finish_time']);
+    finishTime = result['finish_time'] == null
+        ? null
+        : DateTime.parse(result['finish_time']);
   }
 }
 
@@ -237,9 +243,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else {
                   return Padding(
-                          padding: EdgeInsets.all(12),
-                          child: _buildMainLayout()
-                        );
+                      padding: EdgeInsets.all(12), child: _buildMainLayout());
                 }
               });
         }));
@@ -249,7 +253,8 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
     return ElevatedButton.icon(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.deepPurpleAccent, // Use Theme.of(context).colorScheme.primary for dynamic theming
+        backgroundColor: Colors
+            .deepPurpleAccent, // Use Theme.of(context).colorScheme.primary for dynamic theming
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(
@@ -265,10 +270,11 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
         ),
       ),
       icon: const Icon(Icons.add, size: 20),
-      iconAlignment: IconAlignment.end, // ensures icon is on the right (Flutter 3.16+)
+      iconAlignment:
+          IconAlignment.end, // ensures icon is on the right (Flutter 3.16+)
     );
   }
-  
+
   Widget _buildMainLayout() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -277,22 +283,20 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
           spacing: 8,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildCreateButton((){
+            _buildCreateButton(() {
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => 
-                  ProgramAssessmentForm(
-                    courses: _courses,
-                    onEvaluationStarted: (course, assignment, expectedOutput) async {
-                      final results = await _getEvaluations(lmsService.userName!);
-                      setState(() {
-                        _evaluationResults = results;
-                      });
-                    }
-                  )
-                )
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ProgramAssessmentForm(
+                          courses: _courses,
+                          onEvaluationStarted:
+                              (course, assignment, expectedOutput) async {
+                            final results =
+                                await _getEvaluations(lmsService.userName!);
+                            setState(() {
+                              _evaluationResults = results;
+                            });
+                          })));
             }),
             ElevatedButton(
               onPressed: () async {
@@ -307,10 +311,9 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
         const SizedBox(height: 16),
         // Second row with DataTable
         EvaluationTable(
-              evaluationResults: _evaluationResults,
-              courses: _courses,
-              lmsService: lmsService
-        ),
+            evaluationResults: _evaluationResults,
+            courses: _courses,
+            lmsService: lmsService),
       ],
     );
   }

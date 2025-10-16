@@ -28,6 +28,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final codeEvalUrl = LocalStorageService.getCodeEvalUrl();
 
   List<Course> courses = [];
+
   /// Program arguments
   final TextEditingController argsController = TextEditingController();
   final TextEditingController outputController = TextEditingController();
@@ -43,6 +44,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
   /// File containing the expected input
   PlatformFile? inputFile;
+
   /// File containing the expected output
   PlatformFile? outputFile;
 
@@ -51,9 +53,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
   // Helper to check if form is valid
-  bool get isFormValid =>
-      selectedCourse != null &&
-      selectedAssignment != null;
+  bool get isFormValid => selectedCourse != null && selectedAssignment != null;
 
   @override
   void initState() {
@@ -78,15 +78,17 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     }
   }
 
-  String _getFileContents(PlatformFile file) => utf8.decode(outputFile!.bytes!.toList());
+  String _getFileContents(PlatformFile file) =>
+      utf8.decode(outputFile!.bytes!.toList());
 
-  bool isFilesValid(){
-    if(outputFile == null || outputFile?.bytes == null) return false;
+  bool isFilesValid() {
+    if (outputFile == null || outputFile?.bytes == null) return false;
     // Assumes file is utf-8 encoded
-    if(inputFile != null){
+    if (inputFile != null) {
       final outputFileContent = _getFileContents(outputFile!);
       final inputFileContent = _getFileContents(inputFile!);
-      if(outputFileContent.split('\n').length != inputFileContent.split('\n').length){
+      if (outputFileContent.split('\n').length !=
+          inputFileContent.split('\n').length) {
         _showLineCountMismatchDialog(context);
         return false;
       }
@@ -137,7 +139,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
   Future<void> _startEvaluation(Course course, Assignment assignment,
       String input, String expectedOutput, String language) async {
-    if(!isFilesValid()) return;
+    if (!isFilesValid()) return;
 
     final response = await ApiService().httpPost(Uri.parse(codeEvalUrl),
         body: jsonEncode({
@@ -169,13 +171,13 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     if (onEvaluationStarted != null) {
       await onEvaluationStarted!(course, assignment, expectedOutput);
     }
-    
+
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-     return Scaffold(
+    return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: CustomAppBar(
           title: 'New Assessment Job',
@@ -183,13 +185,10 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
         ),
         body: LayoutBuilder(builder: (context, constraints) {
           return Center(
-            child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: _buildForm(context)
-                  )
-          );
-        })
-     );  
+              child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: _buildForm(context)));
+        }));
   }
 
   Widget _buildForm(BuildContext context) {
@@ -201,7 +200,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text("New Program Assessment", style: TextStyle(fontSize: 24)),
-                // Courses Dropdown
+            // Courses Dropdown
             DropdownButtonFormField<Course>(
               decoration: InputDecoration(
                 labelText: "Courses",
@@ -247,63 +246,52 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
             ),
             // Language selection dropdown
             DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: "Language",
-                border: OutlineInputBorder(),
-              ),
-              value: languages[0],
-              items: languages
-                  .map((lang) => DropdownMenuItem(
-                        value: lang,
-                        child: Text(lang),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedLanguage = value;
-                });
-              }
-            ),
-            Row(
-              spacing: 8,
-              children: [
-                ElevatedButton.icon(
+                decoration: InputDecoration(
+                  labelText: "Language",
+                  border: OutlineInputBorder(),
+                ),
+                value: languages[0],
+                items: languages
+                    .map((lang) => DropdownMenuItem(
+                          value: lang,
+                          child: Text(lang),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedLanguage = value;
+                  });
+                }),
+            Row(spacing: 8, children: [
+              ElevatedButton.icon(
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Input File'),
                   onPressed: () async {
                     final result = await FilePicker.platform.pickFiles();
                     final file = result?.files.single;
-                    if(file == null) return;
+                    if (file == null) return;
 
                     setState(() {
                       inputFile = file;
                     });
-                  }
-                ),
-                if(inputFile != null)
-                  Text(inputFile!.name),
-              ]
-            ),
-            Row(
-              spacing: 8,
-              children: [
-                ElevatedButton.icon(
+                  }),
+              if (inputFile != null) Text(inputFile!.name),
+            ]),
+            Row(spacing: 8, children: [
+              ElevatedButton.icon(
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Expected Output File'),
                   onPressed: () async {
                     final result = await FilePicker.platform.pickFiles();
                     final file = result?.files.single;
-                    if(file == null) return;
+                    if (file == null) return;
 
                     setState(() {
                       outputFile = file;
                     });
-                  }
-                ),
-                if(outputFile != null)
-                  Text(outputFile!.name)
-              ]
-            ),
+                  }),
+              if (outputFile != null) Text(outputFile!.name)
+            ]),
             SizedBox(height: 20),
             if (_isLoading)
               ElevatedButton(
@@ -352,7 +340,9 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                           await _startEvaluation(
                               selectedCourse!,
                               selectedAssignment!,
-                              inputFile != null ? _getFileContents(outputFile!) : '',
+                              inputFile != null
+                                  ? _getFileContents(outputFile!)
+                                  : '',
                               _getFileContents(outputFile!),
                               selectedLanguage!);
                         } finally {
@@ -368,4 +358,4 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       ),
     );
   }
-  }
+}
