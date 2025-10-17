@@ -62,7 +62,6 @@ enum AnalysisDataType { bar, list, line }
 /// A simple wrapper to hold either an essay assignment or a quiz.
 /// The `type` property distinguishes between the two.
 
-
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
 

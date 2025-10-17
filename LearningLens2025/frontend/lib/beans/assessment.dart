@@ -34,8 +34,7 @@ class Assessment {
   String get description {
     if (type == "essay") {
       return (assessment as Assignment).description;
-    }
-    else {
+    } else {
       return (assessment as Quiz).description ?? "";
     }
   }

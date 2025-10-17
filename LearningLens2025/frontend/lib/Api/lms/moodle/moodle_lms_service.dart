@@ -127,7 +127,12 @@ class MoodleLmsService implements LmsInterface {
   }
 
   Future<void> refreshOverrides() async {
-    overrides = await getAssignmentOverrides();
+    List<Future<List<Override>>> futures = [
+      _getQuizOverrides(),
+      _getEssayOverrides()
+    ];
+    List<List<Override>> data = await Future.wait(futures);
+    overrides = [...data[0], ...data[1]];
   }
 
   @override
@@ -283,14 +288,46 @@ class MoodleLmsService implements LmsInterface {
     return userCourses;
   }
 
-  Future<List<Override>> getAssignmentOverrides() async {
+  Future<List<Override>> _getQuizOverrides() async {
     // Returns courses the user is enrolled in
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
     final response =
         await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
       'wstoken': _userToken,
-      'wsfunction': 'local_learninglens_get_all_overrides',
+      'wsfunction': 'local_learninglens_get_quiz_overrides',
+      'moodlewsrestformat': 'json',
+    });
+
+    if (response.statusCode != 200) {
+      throw HttpException(response.body);
+    }
+
+    final decodedJson = jsonDecode(response.body);
+    List<Override> quizOverrides;
+
+    if (decodedJson is List) {
+      quizOverrides =
+          decodedJson.map((i) => Override.empty().fromMoodleJson(i)).toList();
+    } else if (decodedJson is Map<String, dynamic>) {
+      final courseList = decodedJson['courses'] as List<dynamic>;
+      quizOverrides =
+          courseList.map((i) => Override.empty().fromMoodleJson(i)).toList();
+    } else {
+      throw StateError('Unexpected response format from Moodle');
+    }
+
+    return quizOverrides;
+  }
+
+  Future<List<Override>> _getEssayOverrides() async {
+    // Returns courses the user is enrolled in
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+
+    final response =
+        await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
+      'wstoken': _userToken,
+      'wsfunction': 'local_learninglens_get_essay_overrides',
       'moodlewsrestformat': 'json',
     });
 
@@ -300,20 +337,20 @@ class MoodleLmsService implements LmsInterface {
 
     final decodedJson = jsonDecode(response.body);
     print(decodedJson);
-    List<Override> assignmentOverrides;
+    List<Override> essayOverrides;
 
     if (decodedJson is List) {
-      assignmentOverrides =
+      essayOverrides =
           decodedJson.map((i) => Override.empty().fromMoodleJson(i)).toList();
     } else if (decodedJson is Map<String, dynamic>) {
       final courseList = decodedJson['courses'] as List<dynamic>;
-      assignmentOverrides =
+      essayOverrides =
           courseList.map((i) => Override.empty().fromMoodleJson(i)).toList();
     } else {
       throw StateError('Unexpected response format from Moodle');
     }
 
-    return assignmentOverrides;
+    return essayOverrides;
   }
 
   @override

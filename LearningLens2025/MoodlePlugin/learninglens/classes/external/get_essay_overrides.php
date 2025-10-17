@@ -11,7 +11,7 @@ use external_multiple_structure;
 use external_value;
 use external_api;
 
-class get_all_overrides extends external_api {
+class get_essay_overrides extends external_api {
 
     public static function execute_parameters() {
         return new external_function_parameters([]);
@@ -20,36 +20,15 @@ class get_all_overrides extends external_api {
     public static function execute() {
         global $DB;
 
-        $questions = self::get_overrides();
+        $questions = self::get_essay_overrides();
 
         return $questions;
     }
 
-    private static function get_overrides() {
+    private static function get_essay_overrides() {
         global $DB;
 
         $sql = "
-            SELECT
-                qo.id AS override_id,
-                'quiz' AS assignment_type,
-                qo.quiz AS assignment_id,
-                q.name AS assignment_name,
-                q.course AS course_id,
-                c.fullname AS course_name,
-                qo.userid,
-                CONCAT(u.firstname, ' ', u.lastname) AS fullname,
-                qo.timeopen AS start_time,
-                qo.timeclose AS end_time,
-                qo.timelimit,
-                NULL AS cutoff_time,
-                qo.attempts,
-                qo.password,
-                NULL AS sortorder
-            FROM mdl_quiz_overrides qo
-            LEFT JOIN mdl_quiz q ON qo.quiz = q.id
-            LEFT JOIN mdl_course c ON q.course = c.id
-            LEFT JOIN mdl_user u ON qo.userid = u.id
-            UNION ALL
             SELECT
                 ao.id AS override_id,
                 'essay' AS assignment_type,
