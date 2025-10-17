@@ -1,9 +1,10 @@
-import 'dart:io' show File; // For non-web file I/O
+import 'dart:io' show File, Platform; // For non-web file I/O
 import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
+import 'package:flutter_to_pdf/flutter_to_pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
@@ -15,8 +16,11 @@ import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
     if (dart.library.html) 'dart:html' as html;
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw; // PDF package
 import 'package:excel/excel.dart'; // Excel package
+import 'package:path/path.dart' as path;
 
 // Import the LMS services using prefixes so that type checks work correctly.
 import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart'
@@ -96,6 +100,7 @@ class AnalyticsPage extends StatefulWidget {
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
   final lmsService = LmsFactory.getLmsService();
+  final exp = ExportDelegate();
   // Live analytics data fetched from the LMS.
   Map<String, dynamic>? analyticsData;
   bool isLoading = false;
@@ -141,8 +146,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _isAnalyzingAssignment = false;
   bool _isAnalyzingStudents = false;
   bool _lastAnalysisQuiz = false;
+  String _lastAnalysisCourse = "";
+  String _lastAnalysisAssignment = "";
+  String _lastAnalysisStudent = "";
+  String _lastAnalysisCompletionTime = "";
 
   List<int> _expandedPanels = [0, 1, 2, 3, 4, 5];
+
+  List<List<String>> _exportFrameIds = [];
 
   LlmType? selectedLLM;
 
@@ -198,8 +209,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         // Fetch quizzes (if available).
         List<Quiz> quizList = [];
         try {
-          quizList = await (lmsService as moodle.MoodleLmsService)
-              .getQuizzes(_selectedCourse!.id);
+          quizList = await lmsService.getQuizzes(_selectedCourse!.id,
+              topicId: _selectedCourse!.quizTopicId);
         } catch (e) {
           print("getQuizzes not available or failed: $e");
         }
@@ -254,9 +265,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       if (isQuiz()) {
         // Grab participants for this quiz.
         int quizId = _selectedAssessment!.assessment.id;
-        _participantsData = await (lmsService as moodle.MoodleLmsService)
-            .getQuizGradesForParticipants(
-                _selectedCourse!.id.toString(), quizId);
+        _participantsData = await lmsService.getQuizGradesForParticipants(
+            _selectedCourse!.id.toString(), quizId);
         // Filter out non-students, if needed.
         _participantsData = _participantsData
             .where((i) => i.roles.contains('student'))
@@ -264,9 +274,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       } else if (isEssay()) {
         // Grab participants for this essay.
         int assignmentId = _selectedAssessment!.assessment.id;
-        _participantsData = await (lmsService as moodle.MoodleLmsService)
-            .getEssayGradesForParticipants(
-                _selectedCourse!.id.toString(), assignmentId);
+        _participantsData = await lmsService.getEssayGradesForParticipants(
+            _selectedCourse!.id.toString(), assignmentId);
       } else {
         throw Exception("Unsupported Assessment Type");
       }
@@ -347,6 +356,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             content:
                 Text('Report exported as $extension via browser download.')),
       );
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        List<int> bytes = await _exportReportAsExcel();
+        var dir = await getApplicationDocumentsDirectory();
+        File(path.join('${dir.path}/$defaultName'))
+          ..createSync(recursive: true)
+          ..writeAsBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Report saved to Excel at:\n$dir')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save report: $e')),
+        );
+      }
     } else {
       final savePath = await _pickFileLocation(defaultName);
       if (savePath == null) return;
@@ -473,17 +497,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // ---------------------------------------------------------------------------
   Future<List<int>> _exportReportAsExcel() async {
     var excel = Excel.createExcel();
+    excel.rename('Sheet1', 'Student Breakdown');
 
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['Student Breakdown'];
     if (_studentBreakdown.isNotEmpty) {
       // Get headers dynamically from the first map.
-      var studentHeaders = _studentBreakdown.first.keys.toList();
+      var studentHeaders = _studentBreakdown.first.keys
+          .toList()
+          .map((e) => TextCellValue(e))
+          .toList();
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
       for (var student in _studentBreakdown) {
-        studentSheet.appendRow(
-            student.values.map((value) => value.toString()).toList());
+        studentSheet.appendRow(student.values
+            .map((value) => TextCellValue(value.toString()))
+            .toList());
       }
     }
 
@@ -491,23 +520,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (isQuiz() && _questionBreakdown.isNotEmpty) {
       Sheet questionSheet = excel['Question Breakdown'];
       questionSheet.appendRow([
-        'Q#',
-        'Question Type',
-        'Question',
-        '% Answered Correct',
-        '# Correct',
-        '# Incorrect',
-        '# Total Attempts'
+        TextCellValue('Q#'),
+        TextCellValue('Question Type'),
+        TextCellValue('Question'),
+        TextCellValue('% Answered Correct'),
+        TextCellValue('# Correct'),
+        TextCellValue('# Incorrect'),
+        TextCellValue('# Total Attempts')
       ]);
       for (var q in _questionBreakdown) {
         questionSheet.appendRow([
-          q.id,
-          q.questionType,
-          q.questionText,
-          "${computePercentCorrect(q).toStringAsFixed(2)}%",
-          q.numCorrect,
-          q.numIncorrect,
-          q.totalAttempts,
+          TextCellValue(q.id.toString()),
+          TextCellValue(q.questionType),
+          TextCellValue(q.questionText),
+          TextCellValue("${computePercentCorrect(q).toStringAsFixed(2)}%"),
+          TextCellValue(q.numCorrect.toString()),
+          TextCellValue(q.numIncorrect.toString()),
+          TextCellValue(q.totalAttempts.toString()),
         ]);
       }
     }
@@ -536,7 +565,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     final format = await _chooseExportFormat();
     if (format == null) return;
     String extension = (format == ExportFormat.pdf) ? 'pdf' : 'xlsx';
-    String defaultName = 'ai_analysis_report.$extension';
+    String defaultName =
+        'ai_analysis_report_${_lastAnalysisCourse}_${_lastAnalysisAssignment}_${_lastAnalysisStudent}_$_lastAnalysisCompletionTime.$extension';
 
     if (kIsWeb) {
       List<int> bytes = (format == ExportFormat.pdf)
@@ -556,6 +586,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             content: Text(
                 'AI Analysis exported as $extension via browser download.')),
       );
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        List<int> bytes = (format == ExportFormat.pdf)
+            ? await _exportAIAnalysisAsPdf()
+            : await _exportAIAnalysisAsExcel();
+        var dir = await getApplicationDocumentsDirectory();
+        File(path.join('${dir.path}/$defaultName'))
+          ..createSync(recursive: true)
+          ..writeAsBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Report saved to Excel at:\n$dir')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save report: $e')),
+        );
+      }
     } else {
       final savePath = await _pickFileLocation(defaultName);
       if (savePath == null) return;
@@ -578,45 +625,163 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Future<List<int>> _exportAIAnalysisAsPdf() async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.MultiPage(
-        build: (pw.Context context) {
-          if (_aiAnalysisSuccess.isEmpty) {
-            return [
-              pw.Center(child: pw.Text("No AI Analysis Data available."))
-            ];
-          }
-          final headers = ['Student', 'Status', 'Comments'];
-          final data = _aiAnalysisSuccess
-              .map((row) => [
-                    row['Student']?.toString() ?? '',
-                    row['Status']?.toString() ?? '',
-                    row['Comments']?.toString() ?? '',
-                  ])
-              .toList();
-          return [
-            pw.Header(level: 0, child: pw.Text("AI Analysis Summary")),
-            pw.Table.fromTextArray(headers: headers, data: data),
-          ];
-        },
-      ),
-    );
+    pw.Document pdf = pw.Document();
+    for (List<String> idPair in _exportFrameIds) {
+      pw.Widget header = await exp.exportToPdfWidget(idPair[0]);
+      pw.Widget body = await exp.exportToPdfWidget(idPair[1]);
+      pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          build: (context) {
+            List<pw.Widget> widgets = [header, pw.SizedBox(height: 20), body];
+            return widgets;
+          }));
+    }
     return pdf.save();
   }
 
   Future<List<int>> _exportAIAnalysisAsExcel() async {
     var excel = Excel.createExcel();
-    Sheet sheet = excel['AI Analysis'];
-    sheet.appendRow(['Student', 'Status', 'Comments']);
-    for (var row in _aiAnalysisSuccess) {
-      sheet.appendRow([
-        row['Student']?.toString() ?? '',
-        row['Status']?.toString() ?? '',
-        row['Comments']?.toString() ?? '',
-      ]);
+    _buildExcelChild(
+        "Areas of Understanding",
+        _aiAnalysisSuccess.isEmpty ||
+                !_aiAnalysisSuccess[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisSuccess[0]["Summary"],
+        _aiAnalysisSuccess.length < 2 ||
+                !_aiAnalysisSuccess[1].containsKey("Data")
+            ? null
+            : _aiAnalysisSuccess[1]["Data"],
+        "Top Areas of Understanding",
+        ["Topic", "Percentage"],
+        excel,
+        true);
+    _buildExcelChild(
+        "Areas of Misunderstanding",
+        _aiAnalysisFail.isEmpty || !_aiAnalysisFail[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisFail[0]["Summary"],
+        _aiAnalysisFail.length < 2 || !_aiAnalysisFail[1].containsKey("Data")
+            ? null
+            : _aiAnalysisFail[1]["Data"],
+        "Top Areas of Misunderstanding",
+        ["Topic", "Percentage"],
+        excel);
+    _buildExcelChild(
+        "Course Improvements",
+        _aiAnalysisCourse.isEmpty ||
+                !_aiAnalysisCourse[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisCourse[0]["Summary"],
+        _aiAnalysisCourse.length < 2 ||
+                !_aiAnalysisCourse[1].containsKey("Data")
+            ? null
+            : _aiAnalysisCourse[1]["Data"],
+        "Suggested Assignments",
+        ["Name", "Description"],
+        excel);
+    _buildExcelChild(
+        "Assignment Improvements",
+        _aiAnalysisAssignment.isEmpty ||
+                !_aiAnalysisAssignment[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisAssignment[0]["Summary"],
+        _aiAnalysisAssignment.length < 2 ||
+                !_aiAnalysisAssignment[1].containsKey("Data")
+            ? null
+            : _aiAnalysisAssignment[1]["Data"],
+        "Suggested References",
+        [
+          "URL",
+          "Description",
+        ],
+        excel);
+    _buildExcelChild(
+        "Student Trends",
+        _aiAnalysisStudent.isEmpty ||
+                !_aiAnalysisStudent[0].containsKey("Summary")
+            ? null
+            : _aiAnalysisStudent[0]["Summary"],
+        _selectedStudent == null
+            ? _studentCourseData
+            : _studentCourseData
+                .where((element) =>
+                    int.parse(element['Student ID']!) ==
+                    _selectedStudent!["id"])
+                .toList(),
+        "Student Grades Over Time",
+        [
+          "Student ID",
+          "Student Name",
+          "Assessment",
+          "Type",
+          "Due Date",
+          "Grade"
+        ],
+        excel);
+    if (!_lastAnalysisQuiz) {
+      _buildExcelChild(
+          "AI Use Areas",
+          _aiAnalysisAi.isEmpty || !_aiAnalysisAi[0].containsKey("Summary")
+              ? null
+              : _aiAnalysisAi[0]["Summary"],
+          _aiAnalysisAi.length < 2 || !_aiAnalysisAi[1].containsKey("Data")
+              ? null
+              : _aiAnalysisAi[1]["Data"],
+          "Top AI Use Cases",
+          ["Area", "Percentage"],
+          excel);
     }
     return excel.encode()!;
+  }
+
+  void _buildExcelChild(String sheetName, String? summary, List<dynamic>? data,
+      String chartName, List<String> dataKeys, Excel file,
+      [bool renameFirstSheet = false]) {
+    if (renameFirstSheet) {
+      file.rename('Sheet1', sheetName);
+    }
+    Sheet sheet = file[sheetName];
+    sheet.appendRow([TextCellValue('Summary'), TextCellValue('Chart Name')]);
+    sheet.appendRow([
+      TextCellValue(summary ?? "No AI Analysis Summary Found"),
+      TextCellValue(chartName)
+    ]);
+    sheet.appendRow(
+        [TextCellValue(''), ...dataKeys.map((e) => TextCellValue(e))]);
+    if (data != null && data.isNotEmpty) {
+      data = data.where((e) {
+        for (String k in dataKeys) {
+          if (!e.containsKey(k)) {
+            return false;
+          }
+        }
+        return true;
+      }).toList();
+      if (dataKeys.contains("URL")) {
+        data = data
+            .where((element) =>
+                element.containsKey("ValidURL") && element["ValidURL"])
+            .toList();
+      }
+    }
+    if (data == null || data.isEmpty) {
+      sheet.appendRow(
+          [TextCellValue(''), TextCellValue("No AI Analysis Data found.")]);
+    } else {
+      for (dynamic m in data) {
+        List<TextCellValue> row = [TextCellValue('')];
+        for (String k in dataKeys) {
+          if (k == "Due Date") {
+            row.add(TextCellValue(DateFormat.yMd().format(
+                DateTime.fromMillisecondsSinceEpoch(
+                    int.parse(m[k].toString())))));
+          } else {
+            row.add(TextCellValue(m[k].toString()));
+          }
+        }
+        sheet.appendRow(row);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1057,14 +1222,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       futureList.add(() async {
         List<Participant> participants = [];
         if (assessment.type == "quiz") {
-          participants = await (lmsService as moodle.MoodleLmsService)
-              .getQuizGradesForParticipants(
+          participants = await lmsService.getQuizGradesForParticipants(
             _selectedCourse!.id.toString(),
             assessment.id,
           );
         } else if (assessment.type == "essay") {
-          participants = await (lmsService as moodle.MoodleLmsService)
-              .getEssayGradesForParticipants(
+          participants = await lmsService.getEssayGradesForParticipants(
             _selectedCourse!.id.toString(),
             assessment.id,
           );
@@ -1270,11 +1433,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               ElevatedButton(
-                onPressed: _aiAnalysisSuccess.isNotEmpty ||
-                        _aiAnalysisFail.isNotEmpty ||
-                        _aiAnalysisAssignment.isNotEmpty ||
-                        _aiAnalysisAi.isNotEmpty ||
-                        _aiAnalysisCourse.isNotEmpty
+                onPressed: (_aiAnalysisSuccess.isNotEmpty ||
+                            _aiAnalysisFail.isNotEmpty ||
+                            _aiAnalysisAssignment.isNotEmpty ||
+                            _aiAnalysisAi.isNotEmpty ||
+                            _aiAnalysisCourse.isNotEmpty) &&
+                        !_isAnalyzingAi &&
+                        !_isAnalyzingAssignment &&
+                        !_isAnalyzingCourse &&
+                        !_isAnalyzingStudents &&
+                        !_isAnalyzingFail &&
+                        !_isAnalyzingSuccess
                     ? _exportAIAnalysis
                     : null,
                 child: const Text('Export AI Analysis'),
@@ -1314,6 +1483,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   // Builds the overall AI analyisis summary below the 2x2 grid.
   // ---------------------------------------------------------------------------
   Widget _buildAIAnalysisList() {
+    _exportFrameIds = [];
     return SelectionArea(
         child: ExpansionPanelList(
             expandedHeaderPadding: EdgeInsets.zero,
@@ -1462,140 +1632,166 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       }
     }
 
-    final ScrollController listController = ScrollController();
+    final aiExportItems = ["aiExport${title}Header", "aiExport${title}Body"];
+    _exportFrameIds.add(aiExportItems);
     return ExpansionPanel(
         backgroundColor:
             Theme.of(context).colorScheme.primaryContainer.withOpacity(1),
         canTapOnHeader: true,
         headerBuilder: (context, isExpanded) {
-          return Container(
-              padding: EdgeInsets.all(10),
-              child: Row(children: [
-                Text(
-                  title,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Spacer(),
-                Visibility(visible: wait, child: CircularProgressIndicator())
-              ]));
-        },
-        body: Container(
-            color: Colors.grey[200],
-            padding: EdgeInsets.all(10),
-            child: Row(children: [
-              Expanded(
-                  child: Text(
-                wait
-                    ? "Loading AI Analysis..."
-                    : (bodyText ?? "No AI Analysis Summary Found"),
-                softWrap: true,
-              )),
-              SizedBox(width: 10),
-              Visibility(
-                  visible: !wait && bodyText != null,
-                  child: Column(children: [
-                    Text(graphicTitle,
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(
-                      height: 10,
+          return ExportFrame(
+              frameId: aiExportItems[0],
+              exportDelegate: exp,
+              child: Container(
+                  padding: EdgeInsets.all(10),
+                  child: Row(children: [
+                    Text(
+                      title,
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    Container(
-                        height: 320,
-                        width: 370,
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: BoxBorder.all(
-                                color: Theme.of(context).colorScheme.primary)),
-                        child: data == null || data.isEmpty
-                            ? Text("No AI Analysis Data found.")
-                            : dataType == AnalysisDataType.bar
-                                ? BarChart(BarChartData(
-                                    gridData: FlGridData(
-                                        drawVerticalLine: false,
-                                        horizontalInterval: 25),
-                                    barTouchData: BarTouchData(enabled: false),
-                                    minY: 0,
-                                    maxY: 100,
-                                    alignment: BarChartAlignment.spaceAround,
-                                    barGroups: data.map((e) {
-                                      HSLColor hsl = HSLColor.fromColor(
-                                          Theme.of(context)
-                                              .colorScheme
-                                              .primaryContainer);
-                                      return BarChartGroupData(
-                                          x: data!.indexOf(e),
-                                          barRods: [
-                                            BarChartRodData(
-                                                toY: e[key2],
-                                                width: 20,
-                                                borderRadius: BorderRadius.zero,
-                                                color: hsl
-                                                    .withLightness((hsl
-                                                                .lightness -
-                                                            data.indexOf(e) /
-                                                                10.0)
-                                                        .clamp(0, 1))
-                                                    .toColor())
-                                          ]);
-                                    }).toList(),
-                                    titlesData: FlTitlesData(
-                                        bottomTitles: AxisTitles(
-                                            sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 100,
-                                          getTitlesWidget: (value, meta) =>
-                                              SideTitleWidget(
-                                                  meta: meta,
-                                                  child: SizedBox(
-                                                      width: 100,
-                                                      child: Text(
-                                                        data![value.toInt()]
-                                                                [key1]
-                                                            .toString(),
-                                                        softWrap: true,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        maxLines: 5,
-                                                        style: TextStyle(
-                                                            fontSize: 12),
-                                                      ))),
-                                        )),
-                                        topTitles: AxisTitles(
-                                            sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 50,
-                                          getTitlesWidget: (value, meta) =>
-                                              SideTitleWidget(
-                                                  space: 20,
-                                                  meta: meta,
-                                                  child: Text(
-                                                    "${data![value.toInt()][key2].toString()}%",
-                                                    softWrap: true,
-                                                  )),
-                                        )),
-                                        rightTitles: AxisTitles(
-                                          sideTitles:
-                                              SideTitles(showTitles: false),
-                                        ),
-                                        leftTitles: AxisTitles(
-                                            sideTitles: SideTitles(
-                                          interval: 25,
-                                          reservedSize: 50,
-                                          showTitles: true,
-                                          getTitlesWidget: (value, meta) =>
-                                              SideTitleWidget(
-                                                  meta: meta,
-                                                  child: Text("$value%")),
-                                        )))))
-                                : dataType == AnalysisDataType.list
-                                    ? Scrollbar(
-                                        thumbVisibility: true,
-                                        controller: listController,
-                                        child: ListView.builder(
-                                            controller: listController,
+                    Spacer(),
+                    Visibility(
+                        visible: wait, child: CircularProgressIndicator())
+                  ])));
+        },
+        body: ExportFrame(
+            frameId: aiExportItems[1],
+            exportDelegate: exp,
+            child: Container(
+                color: Colors.grey[200],
+                padding: EdgeInsets.all(10),
+                child: Row(children: [
+                  Expanded(
+                      child: Text(
+                    wait
+                        ? "Loading AI Analysis..."
+                        : (bodyText ?? "No AI Analysis Summary Found"),
+                    softWrap: true,
+                  )),
+                  SizedBox(width: 10),
+                  Visibility(
+                      visible: !wait && bodyText != null,
+                      child: Column(children: [
+                        Text(graphicTitle,
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        SizedBox(
+                          height: 10,
+                        ),
+                        Container(
+                            height: 320,
+                            width: 370,
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: BoxBorder.all(
+                                    color:
+                                        Theme.of(context).colorScheme.primary)),
+                            child: data == null || data.isEmpty
+                                ? Text("No AI Analysis Data found.")
+                                : dataType == AnalysisDataType.bar
+                                    ? CaptureWrapper(
+                                        key: Key('${title}BarChart'),
+                                        child: BarChart(BarChartData(
+                                            gridData: FlGridData(
+                                                drawVerticalLine: false,
+                                                horizontalInterval: 25),
+                                            barTouchData:
+                                                BarTouchData(enabled: false),
+                                            minY: 0,
+                                            maxY: 100,
+                                            alignment:
+                                                BarChartAlignment.spaceAround,
+                                            barGroups: data.map((e) {
+                                              HSLColor hsl = HSLColor.fromColor(
+                                                  Theme.of(context)
+                                                      .colorScheme
+                                                      .primaryContainer);
+                                              return BarChartGroupData(
+                                                  x: data!.indexOf(e),
+                                                  barRods: [
+                                                    BarChartRodData(
+                                                        toY: e[key2],
+                                                        width: 20,
+                                                        borderRadius:
+                                                            BorderRadius.zero,
+                                                        color: hsl
+                                                            .withLightness((hsl
+                                                                        .lightness -
+                                                                    data.indexOf(
+                                                                            e) /
+                                                                        10.0)
+                                                                .clamp(0, 1))
+                                                            .toColor())
+                                                  ]);
+                                            }).toList(),
+                                            titlesData: FlTitlesData(
+                                                bottomTitles: AxisTitles(
+                                                    sideTitles: SideTitles(
+                                                  showTitles: true,
+                                                  reservedSize: 100,
+                                                  getTitlesWidget: (value,
+                                                          meta) =>
+                                                      SideTitleWidget(
+                                                          meta: meta,
+                                                          child: SizedBox(
+                                                              width: 95,
+                                                              child: Text(
+                                                                data![value.toInt()]
+                                                                        [key1]
+                                                                    .toString(),
+                                                                softWrap: true,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                                maxLines: 5,
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        12),
+                                                              ))),
+                                                )),
+                                                topTitles: AxisTitles(
+                                                    sideTitles: SideTitles(
+                                                  showTitles: true,
+                                                  reservedSize: 50,
+                                                  getTitlesWidget:
+                                                      (value, meta) =>
+                                                          SideTitleWidget(
+                                                              space: 20,
+                                                              meta: meta,
+                                                              child: Text(
+                                                                "${data![value.toInt()][key2].toString()}%",
+                                                                softWrap: true,
+                                                              )),
+                                                )),
+                                                rightTitles: AxisTitles(
+                                                  sideTitles: SideTitles(
+                                                    showTitles: true,
+                                                    reservedSize: 10,
+                                                    getTitlesWidget: (value,
+                                                            meta) =>
+                                                        SideTitleWidget(
+                                                            meta: meta,
+                                                            child: SizedBox()),
+                                                  ),
+                                                ),
+                                                leftTitles: AxisTitles(
+                                                    sideTitles: SideTitles(
+                                                  interval: 25,
+                                                  reservedSize: 50,
+                                                  showTitles: true,
+                                                  getTitlesWidget: (value,
+                                                          meta) =>
+                                                      SideTitleWidget(
+                                                          meta: meta,
+                                                          child:
+                                                              Text("$value%")),
+                                                ))))))
+                                    : dataType == AnalysisDataType.list
+                                        ? ListView.builder(
                                             itemCount: data.length,
                                             itemBuilder: (context, index) {
                                               Widget firstItem = Text(
@@ -1624,98 +1820,113 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                                     : firstItem,
                                                 Text(data[index][key2])
                                               ]);
-                                            }))
-                                    : ScatterChart(ScatterChartData(
-                                        minY: 0,
-                                        maxY: 100,
-                                        scatterTouchData: ScatterTouchData(
-                                            touchTooltipData:
-                                                ScatterTouchTooltipData(
-                                                    getTooltipColor: (touchedSpot) =>
-                                                        contrastColors[int.parse(
-                                                                data![touchedSpot
-                                                                        .renderPriority]
-                                                                    [
-                                                                    'Student ID']) %
-                                                            Colors.primaries
-                                                                .length][1],
-                                                    fitInsideHorizontally: true,
-                                                    fitInsideVertically: true,
-                                                    getTooltipItems:
-                                                        (touchedSpot) {
-                                                      final defaultSp =
-                                                          defaultScatterTooltipItem(
-                                                              touchedSpot);
-                                                      return ScatterTooltipItem(
-                                                          "Student: ${data![touchedSpot.renderPriority]['Student Name']}\nAssignment: ${data[touchedSpot.renderPriority]['Assessment']} (${data[touchedSpot.renderPriority]['Type']})\nDue: ${DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(int.parse(data[touchedSpot.renderPriority]['Due Date'])))}\nGrade:${data[touchedSpot.renderPriority]['Grade']}\n",
-                                                          textStyle: defaultSp
-                                                              ?.textStyle);
-                                                    })),
-                                        scatterSpots: data.map((e) {
-                                          String grade = e['Grade'];
-                                          return ScatterSpot(
-                                              dotPainter: FlDotCirclePainter(
-                                                  color: contrastColors[
-                                                      int.parse(
-                                                              e['Student ID']) %
-                                                          Colors.primaries
-                                                              .length][0],
-                                                  radius: 7),
-                                              double.parse(e['Due Date']),
-                                              double.parse(grade.substring(
-                                                  0, grade.length - 1)),
-                                              renderPriority: data!.indexOf(e));
-                                        }).toList(),
-                                        titlesData: FlTitlesData(
-                                            bottomTitles: AxisTitles(
-                                                sideTitles: SideTitles(
-                                              showTitles: true,
-                                              minIncluded: true,
-                                              maxIncluded: false,
-                                              reservedSize: 100,
-                                              getTitlesWidget: (value, meta) =>
-                                                  SideTitleWidget(
-                                                      meta: meta,
-                                                      angle: -70,
-                                                      child: SizedBox(
-                                                          width: 100,
-                                                          child: Text(
-                                                            (DateFormat.yMd().format(
-                                                                DateTime.fromMillisecondsSinceEpoch(
-                                                                        value
-                                                                            .toInt())
-                                                                    .toLocal())),
-                                                            softWrap: true,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            maxLines: 1,
-                                                            style: TextStyle(
-                                                                fontSize: 12),
-                                                          ))),
-                                            )),
-                                            topTitles: AxisTitles(
-                                              sideTitles:
-                                                  SideTitles(showTitles: false),
-                                            ),
-                                            rightTitles: AxisTitles(
-                                              sideTitles:
-                                                  SideTitles(showTitles: false),
-                                            ),
-                                            leftTitles: AxisTitles(
-                                                sideTitles: SideTitles(
-                                              interval: 10,
-                                              reservedSize: 50,
-                                              showTitles: true,
-                                              getTitlesWidget: (value, meta) =>
-                                                  SideTitleWidget(
-                                                      meta: meta,
-                                                      child: Text("$value%")),
-                                            ))))))
-                  ]))
-            ])),
+                                            })
+                                        : CaptureWrapper(
+                                            key: Key('${title}ScatterPlot'),
+                                            child: ScatterChart(ScatterChartData(
+                                                minY: 0,
+                                                maxY: 100,
+                                                scatterTouchData: ScatterTouchData(
+                                                    touchTooltipData: ScatterTouchTooltipData(
+                                                        getTooltipColor: (touchedSpot) => contrastColors[int.parse(data![touchedSpot.renderPriority]['Student ID']) % Colors.primaries.length][1],
+                                                        fitInsideHorizontally: true,
+                                                        fitInsideVertically: true,
+                                                        getTooltipItems: (touchedSpot) {
+                                                          final defaultSp =
+                                                              defaultScatterTooltipItem(
+                                                                  touchedSpot);
+                                                          return ScatterTooltipItem(
+                                                              "Student: ${data![touchedSpot.renderPriority]['Student Name']}\nAssignment: ${data[touchedSpot.renderPriority]['Assessment']} (${data[touchedSpot.renderPriority]['Type']})\nDue: ${DateFormat.yMd().format(DateTime.fromMillisecondsSinceEpoch(int.parse(data[touchedSpot.renderPriority]['Due Date'])))}\nGrade:${data[touchedSpot.renderPriority]['Grade']}\n",
+                                                              textStyle: defaultSp
+                                                                  ?.textStyle);
+                                                        })),
+                                                scatterSpots: data.map((e) {
+                                                  String grade = e['Grade'];
+                                                  return ScatterSpot(
+                                                      dotPainter: FlDotCirclePainter(
+                                                          color: contrastColors[int.parse(e[
+                                                                  'Student ID']) %
+                                                              Colors.primaries
+                                                                  .length][0],
+                                                          radius: 7),
+                                                      double.parse(
+                                                          e['Due Date']),
+                                                      double.parse(grade.substring(
+                                                          0, grade.length - 1)),
+                                                      renderPriority:
+                                                          data!.indexOf(e));
+                                                }).toList(),
+                                                titlesData: FlTitlesData(
+                                                    bottomTitles: AxisTitles(
+                                                        sideTitles: SideTitles(
+                                                      showTitles: true,
+                                                      minIncluded: true,
+                                                      maxIncluded: false,
+                                                      reservedSize: 100,
+                                                      getTitlesWidget: (value,
+                                                              meta) =>
+                                                          SideTitleWidget(
+                                                              meta: meta,
+                                                              angle: -70,
+                                                              child: SizedBox(
+                                                                  width: 100,
+                                                                  child: Text(
+                                                                    (DateFormat
+                                                                            .yMd()
+                                                                        .format(
+                                                                            DateTime.fromMillisecondsSinceEpoch(value.toInt()).toLocal())),
+                                                                    softWrap:
+                                                                        true,
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                    maxLines: 1,
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            12),
+                                                                  ))),
+                                                    )),
+                                                    topTitles: AxisTitles(
+                                                      sideTitles: SideTitles(
+                                                        showTitles: true,
+                                                        reservedSize: 10,
+                                                        getTitlesWidget: (value,
+                                                                meta) =>
+                                                            SideTitleWidget(
+                                                                meta: meta,
+                                                                child:
+                                                                    SizedBox()),
+                                                      ),
+                                                    ),
+                                                    rightTitles: AxisTitles(
+                                                      sideTitles: SideTitles(
+                                                        showTitles: true,
+                                                        reservedSize: 10,
+                                                        getTitlesWidget: (value,
+                                                                meta) =>
+                                                            SideTitleWidget(
+                                                                meta: meta,
+                                                                child:
+                                                                    SizedBox()),
+                                                      ),
+                                                    ),
+                                                    leftTitles: AxisTitles(
+                                                        sideTitles: SideTitles(
+                                                      interval: 10,
+                                                      reservedSize: 50,
+                                                      showTitles: true,
+                                                      getTitlesWidget: (value,
+                                                              meta) =>
+                                                          SideTitleWidget(
+                                                              meta: meta,
+                                                              child: Text(
+                                                                  "$value%")),
+                                                    )))))))
+                      ]))
+                ]))),
         isExpanded: _expandedPanels.contains(index));
   }
 
@@ -1773,6 +1984,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     try {
       setState(() {
+        _aiAnalysisAi = [];
+        _aiAnalysisSuccess = [];
+        _aiAnalysisFail = [];
+        _aiAnalysisStudent = [];
+        _aiAnalysisAssignment = [];
+        _aiAnalysisCourse = [];
+
         _isAnalyzingSuccess = true;
         _isAnalyzingFail = true;
         _isAnalyzingAssignment = true;
@@ -1780,6 +1998,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingStudents = true;
         _isAnalyzingAi = selectedAssessment.type == "essay";
         _lastAnalysisQuiz = selectedAssessment.type == "quiz";
+        _lastAnalysisCourse = selectedCourse.fullName;
+        _lastAnalysisAssignment =
+            '${selectedAssessment.name} (${selectedAssessment.type.toUpperCase()})';
+        _lastAnalysisStudent = selectedParticipant?.fullname ?? "Course";
       });
 
       String assignmentDescription;
@@ -1792,11 +2014,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 int.parse(element['Student ID']!) == selectedParticipant.id)
             .toList();
       }
-      String studentGrades = studentCourseData.map((data) {
-        return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
-      }).join("\n");
-      print(studentGrades);
-      futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+
+      if (studentCourseData.isNotEmpty) {
+        String studentGrades = studentCourseData.map((data) {
+          return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
+        }).join("\n");
+
+        futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+      } else {
+        setState(() {
+          _isAnalyzingStudents = false;
+        });
+      }
 
       // Build a summary string from the student breakdown data.
       if (selectedAssessment.type == "essay") {
@@ -1839,14 +2068,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           return "Prompt: ${logEntry.prompt}, Reflection: ${logEntry.reflection}";
         }).join("\n");
 
-        futures.addAll([
-          _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
-              studentSummary, selectedGradeLevel),
-          _analyzeEssayMisunderstanding(selectedAssessment.name,
-              assignmentDescription, studentSummary, selectedGradeLevel),
-          _analyzeEssayAiUse(selectedAssessment.name, assignmentDescription,
-              aiSummary, selectedGradeLevel)
-        ]);
+        if (studentSummary.trim().isNotEmpty) {
+          futures.addAll([
+            _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
+                studentSummary, selectedGradeLevel),
+            _analyzeEssayMisunderstanding(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel),
+          ]);
+        } else {
+          setState(() {
+            _isAnalyzingSuccess = false;
+            _isAnalyzingFail = false;
+          });
+        }
+
+        if (aiSummary.trim().isNotEmpty) {
+          futures.add(_analyzeEssayAiUse(selectedAssessment.name,
+              assignmentDescription, aiSummary, selectedGradeLevel));
+        } else {
+          setState(() {
+            _isAnalyzingAi = false;
+          });
+        }
       } else {
         if (questionBreakdown == null) {
           setState(() {
@@ -1862,37 +2105,51 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         assignmentDescription =
             (selectedAssessment.assessment as Quiz).description ?? "";
         if (selectedParticipant != null) {
-          List studentData = await (lmsService as moodle.MoodleLmsService)
-              .getQuizStatsForStudent(
-                  (selectedAssessment.assessment as Quiz).id!.toString(),
-                  selectedParticipant.id);
+          List studentData = await lmsService.getQuizStatsForStudent(
+              (selectedAssessment.assessment as Quiz).id!.toString(),
+              selectedParticipant.id);
           studentSummary = studentData.map((question) {
             return "Question: ${question['questiontext']}, Type: ${question['qtype']}, Correct Answer: ${question['qright']}, Selected Answer: ${question['qanswer']}, State: ${question['qstate']}";
           }).join("\n");
-          await Future.wait([
-            _analyzeStudentQuizSuccess(
-                selectedAssessment.name,
-                assignmentDescription,
-                studentSummary,
-                selectedParticipant.fullname,
-                selectedGradeLevel),
-            _analyzeStudentQuizMisunderstanding(
-                selectedAssessment.name,
-                assignmentDescription,
-                studentSummary,
-                selectedParticipant.fullname,
-                selectedGradeLevel)
-          ]);
+
+          if (studentSummary.trim().isNotEmpty) {
+            await Future.wait([
+              _analyzeStudentQuizSuccess(
+                  selectedAssessment.name,
+                  assignmentDescription,
+                  studentSummary,
+                  selectedParticipant.fullname,
+                  selectedGradeLevel),
+              _analyzeStudentQuizMisunderstanding(
+                  selectedAssessment.name,
+                  assignmentDescription,
+                  studentSummary,
+                  selectedParticipant.fullname,
+                  selectedGradeLevel)
+            ]);
+          } else {
+            setState(() {
+              _isAnalyzingSuccess = false;
+              _isAnalyzingFail = false;
+            });
+          }
         } else {
           studentSummary = questionBreakdown.map((q) {
             return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
           }).join("\n");
-          futures.addAll([
-            _analyzeCourseQuizSuccess(selectedAssessment.name,
-                assignmentDescription, studentSummary, selectedGradeLevel),
-            _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
-                assignmentDescription, studentSummary, selectedGradeLevel)
-          ]);
+          if (studentSummary.trim().isNotEmpty) {
+            futures.addAll([
+              _analyzeCourseQuizSuccess(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel),
+              _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel)
+            ]);
+          } else {
+            setState(() {
+              _isAnalyzingSuccess = false;
+              _isAnalyzingFail = false;
+            });
+          }
         }
       }
       await Future.wait(futures);
@@ -1912,6 +2169,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
             selectedGradeLevel)
       ]);
+      setState(() {
+        _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1926,6 +2186,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _isAnalyzingCourse = false;
         _isAnalyzingAi = false;
         _isAnalyzingStudents = false;
+        _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
       });
       return;
     }
