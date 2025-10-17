@@ -43,21 +43,21 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           );
         },
       ),
-      FeatureItem(
-        icon: Icons.file_open,
-        iconColor: Colors.blue,
-        title: 'File Management',
-        subtitle: 'Manage your files',
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const FileManagementPage(),
-            ),
-          );
-        },
-      ),
+      // FeatureItem(
+      //   icon: Icons.file_open,
+      //   iconColor: Colors.blue,
+      //   title: 'File Management',
+      //   subtitle: 'Manage your files',
+      //   onTap: () {
+      //     Navigator.pop(context);
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(
+      //         builder: (context) => const FileManagementPage(),
+      //       ),
+      //     );
+      //   },
+      // ),
       FeatureItem(
         icon: Icons.note_alt,
         iconColor: Colors.blue,

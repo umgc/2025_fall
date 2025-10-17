@@ -497,43 +497,43 @@ class _FileManagementPageState extends State<FileManagementPage>
               ),
             ),
             const SizedBox(height: 24),
+            // // Speech to Text Section
+            // Card(
+            //   child: StreamingAsrAndDiarizationScreen(
+            //     patientId: _userId,
+            //     onUploadSuccess: (response) {
+            //       _loadFiles(); // Refresh the files list
+            //     },
+            //     onUploadError: (error) {
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         SnackBar(
+            //           content: Text(error),
+            //           backgroundColor: Theme.of(context).colorScheme.error,
+            //         ),
+            //       );
+            //     },
+            //   ),
+            // ),
             // Speech to Text Section
             Card(
-              child: StreamingAsrAndDiarizationScreen(
-                patientId: _userId,
-                onUploadSuccess: (response) {
-                  _loadFiles(); // Refresh the files list
-                },
-                onUploadError: (error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(error),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SpeechToTextCard(
+                  patientId: _userId,
+                  onUploadSuccess: (response) {
+                    _loadFiles(); // Refresh the files list
+                  },
+                  onUploadError: (error) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(error),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            // Speech to Text Section
-            // Card(
-            //   child: Padding(
-            //     padding: const EdgeInsets.all(16),
-            //     child: SpeechToTextCard(
-            //       patientId: _userId,
-            //       onUploadSuccess: (response) {
-            //         _loadFiles(); // Refresh the files list
-            //       },
-            //       onUploadError: (error) {
-            //         ScaffoldMessenger.of(context).showSnackBar(
-            //           SnackBar(
-            //             content: Text(error),
-            //             backgroundColor: Theme.of(context).colorScheme.error,
-            //           ),
-            //         );
-            //       },
-            //     ),
-            //   ),
-            // )
+            )
           ],
         ),
       ),

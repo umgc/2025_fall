@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+import '../../streaming_asr_with_diarization/streaming_asr_and_diarization_native.dart';
+
 class NotetakerSearchPage extends StatefulWidget {
   const NotetakerSearchPage({super.key});
 
@@ -52,7 +54,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notetaker Search'),
+        title: const Text('Notetaker'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => navigateToDashboard(context),
@@ -74,6 +76,26 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
       childWidgets = [
         _buildInfoCard(theme, successText),
         const SizedBox(height: 24),
+        // Speech to Text Section
+        Card(
+          child: StreamingAsrAndDiarizationScreen(
+            patientId: _selectedPatientId,
+            onUploadSuccess: (note) {
+              setState(() {
+                _currentPatientNotes?.add(note);
+              });
+            },
+            onUploadError: (error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
         _buildNotesSection(theme),
         const SizedBox(height: 24),
       ];
@@ -90,6 +112,27 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         _buildInfoCard(theme, successText),
         const SizedBox(height: 24),
         _buildPatientSection(theme),
+        const SizedBox(height: 24),
+        // Speech to Text Section
+        Card(
+          child: StreamingAsrAndDiarizationScreen(
+            patientId: _selectedPatientId,
+            onUploadSuccess: (note) {
+              setState(() {
+                _currentPatientNotes?.add(note);
+                _filterNotes();
+              });
+            },
+            onUploadError: (error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            },
+          ),
+        ),
         const SizedBox(height: 24),
         _buildNotesSection(theme),
         const SizedBox(height: 24),
@@ -161,6 +204,10 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
                 },
               )
               .toList();
+        });
+      } else {
+        setState(() {
+          _selectedPatientId = _user!.patientId.toString();
         });
       }
     } catch (e) {

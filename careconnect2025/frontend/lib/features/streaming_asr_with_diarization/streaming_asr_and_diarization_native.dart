@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,12 +10,8 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:simple_audio_trimmer/simple_audio_trimmer.dart';
-
 import '../../config/theme/app_theme.dart';
 import '../../providers/user_provider.dart';
-import '../../services/api_service.dart';
-import '../../services/comprehensive_file_service.dart';
-import '../../services/enhanced_file_service.dart';
 import '../../services/notetaker_config_service.dart';
 import '../notetaker/models/patient_note_model.dart';
 import './utils.dart';
@@ -91,16 +85,14 @@ Future<sherpa_onnx.OfflineRecognizer> createOfflineRecognizer() async {
 }
 
 class StreamingAsrAndDiarizationScreen extends StatefulWidget {
-  final List<FileCategory>? allowedCategories;
-  final int? patientId;
-  final Function(FileUploadResponse)? onUploadSuccess;
+  final Function(PatientNote)? onUploadSuccess;
   final Function(String)? onUploadError;
+  final String? patientId;
   const StreamingAsrAndDiarizationScreen({
     super.key,
-    this.allowedCategories,
-    this.patientId,
     this.onUploadSuccess,
     this.onUploadError,
+    this.patientId
   });
 
   @override
@@ -117,8 +109,6 @@ class _StreamingAsrAndDiarizationScreenState
   String _last = '';
   int _index = 0;
   bool _isInitialized = false;
-  final _fileNameController = TextEditingController();
-  FileCategory? _selectedCategory;
   bool _isLoading = false;
 
   sherpa_onnx.OnlineRecognizer? _recognizer;
@@ -128,10 +118,6 @@ class _StreamingAsrAndDiarizationScreenState
 
   StreamSubscription<RecordState>? _recordSub;
   RecordState _recordState = RecordState.stop;
-  String? _patientId;
-  List<Map<String, String>> _patientList = [];
-  bool _isPatient = false;
-  UserSession? _user;
 
   @override
   void initState() {
@@ -140,50 +126,7 @@ class _StreamingAsrAndDiarizationScreenState
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
-    _loadConfiguration();
     super.initState();
-  }
-
-  Future<void> _loadConfiguration() async {
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      setState(() {
-         _user = userProvider.user;
-        if (_user == null) throw Exception('User not found');
-        final userRole = _user!.role;
-        _isPatient = userRole.toUpperCase() == 'PATIENT';
-        if(_isPatient) {
-          _patientId = _user!.patientId.toString();
-        }
-      });
-      if(!_isPatient && _user!.caregiverId != null) {
-        http.Response patientResponse = await ApiService.getCaregiverPatients(_user!.caregiverId!);
-        setState(() {
-          _patientList = (jsonDecode(patientResponse.body) as List<dynamic>).map((patientWLink)=> {
-            'id': patientWLink['patient']['id'].toString(),
-            'name': '${patientWLink['patient']['firstName']} ${patientWLink['patient']['lastName']}'
-          }).toList();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load user profile: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  List<FileCategory> get _availableCategories {
-    if (widget.allowedCategories != null &&
-        widget.allowedCategories!.isNotEmpty) {
-      return widget.allowedCategories!;
-    } else {
-      return FileCategory.values;
-    }
   }
 
   Future<void> _start() async {
@@ -623,105 +566,23 @@ class _StreamingAsrAndDiarizationScreenState
       return;
     }
 
-    final fileName = _fileNameController.text.trim();
-    final fileBytes = Uint8List.fromList(_textToDisplay.codeUnits);
-
-    await _uploadSpeechToTextFileToWeb(fileName, fileBytes);
-
-    print("PATIENT ID: $_patientId");
     final createdNote = PatientNote(
       id: '',
-      patientId: _patientId!,
+      patientId: widget.patientId!,
       note: _textToDisplay,
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     );
+    
+    PatientNote newNote = await NotetakerConfigService.createPatientNote(createdNote);
 
-    print('Created Note $createdNote');
+    if(widget.onUploadSuccess != null) {
+      widget.onUploadSuccess!(newNote);
+    }
 
-    await NotetakerConfigService.createPatientNote(createdNote);
-
-    print('NOTE CREATED');
-
-    setState(() {
-      _patientId = null;
-    });
-
-      ScaffoldMessenger.of(
+    ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Speech-to-text file saved')));
-  }
-
-  Future<void> _uploadSpeechToTextFileToWeb(
-    String fileName,
-    List<int> fileBytes,
-  ) async {
-    if (_selectedCategory == null || fileBytes.isEmpty || fileName.isEmpty) {
-      return;
-    }
-
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final user = userProvider.user;
-      if (user == null) {
-        throw Exception('User not logged in');
-      }
-
-      //Save File To Local
-      Directory? directory = await getExternalStorageDirectory();
-      if (directory != null) {
-        File localFile = await File(
-          '${directory.path}/notetaker_files/$fileName.txt',
-        ).create(recursive: true);
-        localFile.writeAsBytesSync(Uint8List.fromList(fileBytes));
-      } else if (widget.onUploadError != null) {
-        widget.onUploadError!('Could not save the file locally');
-      }
-
-      FileUploadResponse? response;
-
-      // Use the existing enhanced file service for other categories
-      response = await EnhancedFileService.uploadFileWeb(
-        fileBytes: Uint8List.fromList(fileBytes),
-        fileName: '$fileName.txt',
-        category: _selectedCategory!.value,
-        patientId: widget.patientId,
-      );
-
-      if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('File uploaded successfully: ${response.fileName}'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
-
-        // Reset form
-        setState(() {
-          _selectedCategory = null;
-          _fileNameController.clear();
-          _textToDisplay = '';
-        });
-
-        // Callback
-        if (widget.onUploadSuccess != null) {
-          widget.onUploadSuccess!(response);
-        }
-      } else {
-        throw Exception('Upload failed - no response received');
-      }
-    } catch (e, stacktrace) {
-      print('Upload Exception: $e');
-      print('Stacktrace: $stacktrace');
-      final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
-
-      if (widget.onUploadError != null) {
-        widget.onUploadError!(errorMessage);
-      }
-    }
+    ).showSnackBar(const SnackBar(content: Text('Note saved')));
   }
 
   Widget _buildHeader() {
@@ -731,63 +592,12 @@ class _StreamingAsrAndDiarizationScreenState
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Speech to Text',
+            'Record A Note',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
         ),
       ],
     );
-  }
-
-  Widget _buildCategorySelector() {
-    final categories = _availableCategories;
-
-    if (categories.isEmpty) {
-      return const Text('No categories available.');
-    }
-
-    return DropdownButtonFormField<FileCategory>(
-      items: categories.map((category) {
-        return DropdownMenuItem<FileCategory>(
-          value: category,
-          child: Text('${category.icon} ${category.displayName}'),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedCategory = value;
-        });
-      },
-      validator: (value) {
-        if (value == null) {
-          return 'Please select a file category';
-        }
-        return null;
-      },
-      initialValue: _selectedCategory,
-      // Starts as null!
-      hint: const Text('Select Category'),
-      // This shows when value is null
-      decoration: InputDecoration(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectCategory() async {
-    if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a file category first'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
-      return;
-    }
   }
 
   @override
@@ -796,25 +606,6 @@ class _StreamingAsrAndDiarizationScreenState
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildHeader(),
-        const SizedBox(height: 16),
-        _buildCategorySelector(),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _fileNameController,
-          decoration: const InputDecoration(
-            labelText: 'File Name',
-            hintText: 'Enter file name (no extension)',
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'File name cannot be empty';
-            }
-            if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(value.trim())) {
-              return 'Invalid characters in file name';
-            }
-            return null;
-          },
-        ),
         const SizedBox(height: 16),
         _isLoading
             ? Column(
@@ -834,59 +625,10 @@ class _StreamingAsrAndDiarizationScreenState
         ElevatedButton(
           onPressed: () {
               if(_textToDisplay.isNotEmpty) {
-                if(!_isPatient && _patientId == null) {
-                  print("PATIENT LIST: ${_patientList}");
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return Expanded(
-                        child: SimpleDialog(
-                        title: Text("Select a patient"),
-                          children: <Widget> [
-                            Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: DropdownButtonFormField<String>(
-                                value: _patientId,
-                                decoration: InputDecoration(labelText: 'Select an option'),
-                                items: _patientList
-                                    .map((patient) => DropdownMenuItem(
-                                  value: patient['id'],
-                                  child: Text(patient['name']!),
-                                )).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _patientId = value!;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select an option';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            SimpleDialogOption(
-                            onPressed: () {
-                              if(_patientId != null) {
-                                Navigator.of(context).pop();
-                                _saveRecognizedText();
-                              }
-                            },
-                            child:const Text('Select'),
-                            )
-                          ]
-                        ),
-                      );
-                    },
-                  );
-                } else {
                   _saveRecognizedText();
-                }
               }
           },
-          child: const Text('Save to File'),
+          child: const Text('Save Note'),
         ),
       ],
     );
@@ -920,11 +662,7 @@ class _StreamingAsrAndDiarizationScreenState
         child: InkWell(
           child: SizedBox(width: 56, height: 56, child: icon),
           onTap: () {
-            if (_selectedCategory == null) {
-              _selectCategory();
-            } else {
-              (_recordState != RecordState.stop) ? _stop() : _start();
-            }
+            (_recordState != RecordState.stop) ? _stop() : _start();
           },
         ),
       ),
