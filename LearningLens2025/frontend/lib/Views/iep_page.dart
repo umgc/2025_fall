@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import "package:flutter/material.dart";
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
@@ -45,6 +46,7 @@ class _IepPageState extends State<IepPage> {
   Assessment? selectedAssignment;
   double? epochTime;
   double? epochTime2;
+  int attempts = 1;
   List<Override>? overrides = [];
   TextEditingController _attemptsController = TextEditingController();
   TextEditingController iepSummaryController = TextEditingController();
@@ -70,7 +72,7 @@ class _IepPageState extends State<IepPage> {
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _dueController.text = "${picked.toLocal()}".split(' ')[0];
+        _dueController.value = TextEditingValue(text: "${picked.toLocal()}".split(' ')[0]);
         epochTime = picked.millisecondsSinceEpoch / 1000.round();
       });
     }
@@ -85,7 +87,7 @@ class _IepPageState extends State<IepPage> {
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _deadlineController.text = "${picked.toLocal()}".split(' ')[0];
+        _deadlineController.value = TextEditingValue(text: "${picked.toLocal()}".split(' ')[0]);
         epochTime2 = picked.millisecondsSinceEpoch / 1000.round();
       });
     }
@@ -182,7 +184,7 @@ class _IepPageState extends State<IepPage> {
                         participants = handleSelection(selectedValue);
                         if (selectedValue != null) {
                           assignments =
-                              handleEssaySelection(int.parse(selectedValue));
+                              handleAssessmentSelection(int.parse(selectedValue));
                         } else {
                           print('Selected Value is Null');
                         }
@@ -198,15 +200,16 @@ class _IepPageState extends State<IepPage> {
                             return CircularProgressIndicator();
                           } else if (snapshot.hasError) {
                             return Text('Error: ${snapshot.error}');
-                          } else if (snapshot.hasData) {
+                          } else {
                             List<DropdownMenuEntry<String>> dropdownEntries =
-                                snapshot.data!.map((Participant participant) {
+                                snapshot.data?.map((Participant participant) {
                               return DropdownMenuEntry<String>(
                                 value: participant.id.toString(),
                                 label: participant.fullname,
                               );
-                            }).toList();
+                            }).toList() ?? [];
                             return DropdownMenu(
+                              enabled: snapshot.hasData,
                               label: Text('Participants'),
                               // helperText: 'Participants',
                               hintText: 'Select Participants',
@@ -222,16 +225,8 @@ class _IepPageState extends State<IepPage> {
                                 });
                               },
                             );
-                          } else {
-                            return DropdownMenu(
-                              label: Text('Participants'),
-                              hintText: 'Select A Course To View Participants',
-                              // helperText: 'Participants',
-                              width: 350,
-                              dropdownMenuEntries: [],
-                            );
-                          }
-                        },
+                          } 
+                            }
                     ),
                     SizedBox(height: 10),
                       FutureBuilder<List<Assessment>>(
@@ -243,15 +238,16 @@ class _IepPageState extends State<IepPage> {
                             return CircularProgressIndicator();
                           } else if (snapshot.hasError) {
                             return Text('Error: ${snapshot.error}');
-                          } else if (snapshot.hasData) {
+                          } else {
                             List<DropdownMenuEntry<Assessment>> dropdownEntries =
-                                snapshot.data!.map((Assessment assignment) {
+                                snapshot.data?.map((Assessment assignment) {
                               return DropdownMenuEntry<Assessment>(
                                 value: assignment,
-                                label: assignment.name,
+                                label: "${assignment.name} (${assignment.type.toUpperCase()})",
                               );
-                            }).toList();
+                            }).toList() ?? [];
                             return DropdownMenu(
+                              enabled: snapshot.hasData,
                               label: Text('Assignment'),
                               // helperText: 'Essays',
                               hintText: 'Select Assignment',
@@ -261,25 +257,20 @@ class _IepPageState extends State<IepPage> {
                                 setState(() {
                                   if (selectedAssessment != null) {
                                     selectedAssignment = selectedAssessment;
+                                    if (selectedAssessment.type == "essay") {
+                                      _attemptsController.value = TextEditingValue(text: attempts.toString());
+                                    }
                                   } else {
                                     print('Assessment was Null');
                                   }
                                 });
                               },
                             );
-                          } else {
-                            return DropdownMenu(
-                              hintText: 'Select A Course To View Assignments',
-                              label: Text('Essays'),
-                              // helperText: 'Essays',
-                              width: 350,
-                              dropdownMenuEntries: [],
-                            );
                           }
-                        },
+                            }
                     ),
                     SizedBox(height: 10),
-                    SizedBox( width: 350, child: TextField(decoration: InputDecoration(labelText: "IEP Summary", border: OutlineInputBorder(
+                    SizedBox( width: 350, child: TextField(enabled: selectedAssignment != null, decoration: InputDecoration(alignLabelWithHint: true, labelText: "IEP Summary", border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       )), controller: iepSummaryController, textAlignVertical: TextAlignVertical.top, keyboardType: TextInputType.multiline, minLines: 10, maxLines: 10,)),
                     SizedBox(height: 10),
@@ -308,7 +299,7 @@ class _IepPageState extends State<IepPage> {
                 }).toList()))),
                 SizedBox(width: 350, child: Align(alignment: AlignmentGeometry.topRight, child: ElevatedButton(onPressed: selectedAssignment != null &&
                         selectedLLM != null
-                    ? () => recommendIEP(selectedAssignment!, iepSummaryController.text)
+                    ? () => recommendIEP(selectedAssignment!, iepSummaryController.value.text)
                     : null, child: _isAIRecommending
                     ? const SizedBox(
                         width: 24,
@@ -316,11 +307,18 @@ class _IepPageState extends State<IepPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : Text('Recommend IEP')))),
-                 SizedBox( width: 350, child: TextField(decoration: InputDecoration(labelText: "IEP Recommendations", border: OutlineInputBorder(
+                 SizedBox( width: 350, child: TextField(decoration: InputDecoration(alignLabelWithHint: true, enabled: recommendationsController.value.text.isNotEmpty, labelText: "IEP Recommendations", border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       )), readOnly: true, controller: recommendationsController, textAlignVertical: TextAlignVertical.top, keyboardType: TextInputType.multiline, minLines: 10, maxLines: 10,)),
                 SizedBox(height: 10),
-                    SizedBox( width: 350, child: TextField(controller: _attemptsController, keyboardType: TextInputType.number, enabled: selectedAssignment?.type == "quiz", decoration: InputDecoration(labelText: "Attempts (0 for Unlimited)", border: OutlineInputBorder(
+                    SizedBox( width: 350, child: TextField(controller: _attemptsController, onChanged: (value) => setState(() {
+                      int? val = int.tryParse(value);
+                      if (val != null && (val < 0 || val > 10)) {
+                        _attemptsController.value = TextEditingValue(text: val.clamp(0, 10).toString());
+                        return;
+                      }
+                      attempts = int.tryParse(value)?.clamp(0, 10) ?? 1;
+                    }), keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], enabled: selectedAssignment?.type == "quiz", decoration: InputDecoration(alignLabelWithHint: true, labelText: "Attempts (0 for Unlimited to 10)", border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                     )), textAlignVertical: TextAlignVertical.top,)),
                     SizedBox(height: 10),
@@ -339,24 +337,24 @@ class _IepPageState extends State<IepPage> {
                                   border: Border.all(color: Colors.black),
                                 ),
                                 child: Text(
-                                  _dueController.text,
+                                  _dueController.value.text,
                                   style: TextStyle(fontSize: 20),
                                 ),
                               )),
                               SizedBox(width: 180, child: 
-                              Opacity(opacity: selectedAssignment != null ? 1 : .5, child: ElevatedButton(
+                              ElevatedButton(
                                 onPressed:  selectedAssignment != null ? () => _selectDate(
                                     context) : null, // Correct usage of named parameter `onTap`
                                   child: Text(
                                     'Select Due Date',
                                   ),
-                              ))),
+                              )),
                             ],
                           ),
                           SizedBox(height: 20),
                           Row(
                             children: [
-                              Container(
+                              Opacity(opacity: selectedAssignment != null ? 1 : .5, child: Container(
                                 width: 250,
                                 margin: EdgeInsets.only(right: 20),
                                 padding: EdgeInsets.symmetric(
@@ -366,10 +364,10 @@ class _IepPageState extends State<IepPage> {
                                   border: Border.all(color: Colors.black),
                                 ),
                                 child: Text(
-                                  _deadlineController.text,
+                                  _deadlineController.value.text,
                                   style: TextStyle(fontSize: 20),
                                 ),
-                              ),
+                              )),
                               SizedBox(width: 180, child: 
                               ElevatedButton(
                                 onPressed: selectedAssignment != null ? () => _selectCutOffDate(
@@ -391,11 +389,12 @@ class _IepPageState extends State<IepPage> {
                     Container(
                         padding: EdgeInsets.only(top: 50, left: 160),
                         child: ElevatedButton(
-                          onPressed: selectedAssignment != null && (selectedAssignment?.type != "quiz" || int.tryParse(_attemptsController.text) != null) &&
+                          onPressed: selectedAssignment != null &&
                           epochTime != null && epochTime2 != null ?  () {
                             if (selectedAssignment?.type == 'quiz') {
                               quizOver(
-                                  epochTime, selectedAssignment?.id, userId, int.parse(_attemptsController.text).clamp(0, 10));
+                                  epochTime, selectedAssignment?.id, userId, attempts);
+                              
                             } else if (selectedAssignment?.type == 'essay') {
                               essayOver(epochTime, selectedAssignment?.id, userId, epochTime2);
                             }
@@ -540,7 +539,7 @@ Future<List<Participant>> handleSelection(String? courseID) async {
   }
 }
 
-Future<List<Assessment>> handleEssaySelection(int? courseID) async {
+Future<List<Assessment>> handleAssessmentSelection(int? courseID) async {
   if (courseID != null) {
     List<Assignment> essayList =
             await MoodleLmsService().getEssays(courseID);
@@ -566,31 +565,22 @@ Future<List<Assessment>> handleEssaySelection(int? courseID) async {
   }
 }
 
-Future<List<Quiz>> handleQuizSelection(int? courseID) async {
-  if (courseID != null) {
-    List<Quiz>? quizzes = await MoodleLmsService().getQuizzes(courseID);
-    if (quizzes.isNotEmpty) {
-      return quizzes;
-    } else {
-      return [];
-    }
-  } else {
-    return [];
-  }
-}
-
 void quizOver(epochTime, quizId, userId, attempts) async {
   QuizOverride override = await MoodleLmsService().addQuizOverride(
       quizId: quizId, userId: userId, timeClose: epochTime, attempts: attempts);
-  print('Override: $override');
   await MoodleLmsService().refreshOverrides();
   setState(() {
     overrides = MoodleLmsService().overrides;
   });
+  ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Successfully created quiz IEP.")),
+      );
 }
 
 void essayOver(epochTime, essayId, userId, epochTime2) async {
-  String essayOverride = await MoodleLmsService().addEssayOverride(
+ await MoodleLmsService().addEssayOverride(
       assignid: essayId,
       userId: userId,
       dueDate: epochTime,
@@ -599,7 +589,11 @@ void essayOver(epochTime, essayId, userId, epochTime2) async {
   setState(() {
     overrides = MoodleLmsService().overrides;
   });
-  
+        ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                "Successfully created essay IEP.")),
+      );
 }
 
 String formatDate(String? dateString) {
@@ -743,11 +737,11 @@ Future<void> recommendIEP(Assessment selectedAssignment, String text) async {
     setState(() {
       _isAIRecommending = false;
       setState(() {
-        recommendationsController.text = summary;
-        _attemptsController.text = attempts.toString();
-        _dueController.text = DateFormat.yMd().format(due);
+        recommendationsController.value = TextEditingValue(text: summary);
+        _attemptsController.value = TextEditingValue(text: attempts.toString());
+        _dueController.value = TextEditingValue(text: DateFormat.yMd().format(due));
         epochTime = due.millisecondsSinceEpoch / 1000.round();
-        _deadlineController.text =  DateFormat.yMd().format(deadline);
+        _deadlineController.value =  TextEditingValue(text: DateFormat.yMd().format(deadline));
         epochTime2 = deadline.millisecondsSinceEpoch / 1000.round();
       });
     });
