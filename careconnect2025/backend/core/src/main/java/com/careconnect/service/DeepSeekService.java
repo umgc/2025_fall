@@ -18,41 +18,16 @@ public class DeepSeekService {
     @Value("${deepseek.api.url:https://api.deepseek.com/v1}")
     private String apiUrl;
 
-    private final org.springframework.web.client.RestTemplate restTemplate;
-
     public DeepSeekService() {
-        this.restTemplate = new org.springframework.web.client.RestTemplate();
     }
 
     public DeepSeekResponse sendChatRequest(DeepSeekChatRequest request) {
         if (apiKey == null || apiKey.trim().isEmpty()) {
             throw new IllegalStateException("DeepSeek API key is not configured");
         }
-
         log.info("Sending chat request to DeepSeek with model: {}", request.getModel());
-
-        try {
-            // Use reusable RestTemplate instance for HTTP communication
-            var headers = new org.springframework.http.HttpHeaders();
-            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(apiKey);
-
-            var entity = new org.springframework.http.HttpEntity<>(request, headers);
-            var response = restTemplate.postForEntity(
-                apiUrl + "/chat/completions",
-                entity,
-                DeepSeekResponse.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            } else {
-                throw new DeepSeekException("DeepSeek API request failed with status: " + response.getStatusCode(), null);
-            }
-        } catch (Exception e) {
-            log.error("Error calling DeepSeek API", e);
-            throw new DeepSeekException("Failed to call DeepSeek API: " + e.getMessage(), e);
-        }
+        // TODO: Replace with synchronous HTTP client logic (e.g., using HttpURLConnection, HttpClient, or RestTemplate)
+        throw new UnsupportedOperationException("Synchronous DeepSeek call not yet implemented");
     }
 
     // DTO Classes
