@@ -43,8 +43,8 @@ class _IepPageState extends State<IepPage> {
   Future<List<Participant>>? participants;
   Future<List<Assessment>>? assignments;
   Assessment? selectedAssignment;
-  double? epochTime;
-  double? epochTime2;
+  int? epochTime;
+  int? epochTime2;
   int? attempts;
   List<Override>? overrides = [];
   TextEditingController _attemptsController = TextEditingController();
@@ -58,6 +58,7 @@ class _IepPageState extends State<IepPage> {
   void initState() {
     super.initState();
     overrides = MoodleLmsService().overrides;
+    overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     selectedLLM = LlmType.values
         .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
   }
@@ -75,7 +76,7 @@ class _IepPageState extends State<IepPage> {
       setState(() {
         _dueController.value =
             TextEditingValue(text: DateFormat.yMd().format(picked));
-        epochTime = picked.millisecondsSinceEpoch / 1000.round();
+        epochTime = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
   }
@@ -93,7 +94,7 @@ class _IepPageState extends State<IepPage> {
       setState(() {
         _deadlineController.value =
             TextEditingValue(text: DateFormat.yMd().format(picked));
-        epochTime2 = picked.millisecondsSinceEpoch / 1000.round();
+        epochTime2 = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
   }
@@ -485,12 +486,12 @@ class _IepPageState extends State<IepPage> {
                                     epochTime2 != null)
                             ? () {
                                 if (selectedAssignment?.type == 'quiz') {
-                                  quizOver(epochTime, selectedAssignment?.id,
-                                      userId, attempts);
+                                  quizOver(epochTime!, selectedAssignment!.id,
+                                      userId!, attempts!);
                                 } else if (selectedAssignment?.type ==
                                     'essay') {
-                                  essayOver(epochTime, selectedAssignment?.id,
-                                      userId, epochTime2);
+                                  essayOver(epochTime!, selectedAssignment!.id,
+                                      userId!, epochTime2!);
                                 }
                                 resetForm(false);
                               }
@@ -682,17 +683,23 @@ class _IepPageState extends State<IepPage> {
     });
   }
 
-  void quizOver(epochTime, quizId, userId, attempts) async {
+  void quizOver(int epochTime, int quizId, int userId, int attempts) async {
+    await MoodleLmsService().addQuizOverride(
+        quizId: quizId,
+        userId: userId,
+        timeClose: epochTime,
+        attempts: attempts);
     await MoodleLmsService().refreshOverrides();
     setState(() {
       overrides = MoodleLmsService().overrides;
+      overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Successfully created quiz IEP.")),
     );
   }
 
-  void essayOver(epochTime, essayId, userId, epochTime2) async {
+  void essayOver(int epochTime, int essayId, int userId, int epochTime2) async {
     await MoodleLmsService().addEssayOverride(
         assignid: essayId,
         userId: userId,
@@ -701,6 +708,7 @@ class _IepPageState extends State<IepPage> {
     await MoodleLmsService().refreshOverrides();
     setState(() {
       overrides = MoodleLmsService().overrides;
+      overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Successfully created essay IEP.")),
@@ -865,13 +873,13 @@ class _IepPageState extends State<IepPage> {
             ? TextEditingValue.empty
             : TextEditingValue(text: DateFormat.yMd().format(due));
         epochTime =
-            due == null ? null : due.millisecondsSinceEpoch / 1000.round();
+            due == null ? null : (due.millisecondsSinceEpoch / 1000).round();
         _deadlineController.value = deadline == null
             ? TextEditingValue.empty
             : TextEditingValue(text: DateFormat.yMd().format(deadline));
         epochTime2 = deadline == null
             ? null
-            : deadline.millisecondsSinceEpoch / 1000.round();
+            : (deadline.millisecondsSinceEpoch / 1000).round();
       });
     });
   }
