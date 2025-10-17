@@ -151,7 +151,7 @@ resource "aws_lambda_function" "code_eval_lambda" {
       MOODLE_USERNAME = var.moodle_username
       MOODLE_PASSWORD = var.moodle_password
       MOODLE_URL = "http://${aws_instance.moodle_instance.public_dns}"
-      ECS_TASK_NAME = aws_ecs_task_definition.eval_c.family
+      ECS_TASK_NAME = aws_ecs_task_definition.eval_code_task.family
       ECS_CLUSTER_ARN = aws_ecs_cluster.eval_code_cluster.arn
       SUBNET_IDS      = join(",", data.aws_subnets.default.ids)
       SECURITY_GROUP_IDS = data.aws_security_group.default.id
@@ -171,13 +171,13 @@ resource "aws_lambda_function_url" "code_eval_url" {
 }
 
 # Logging for ECS containers
-resource "aws_cloudwatch_log_group" "eval_c_logs" {
-  name              = "/ecs/eval_c"
+resource "aws_cloudwatch_log_group" "eval_code_logs" {
+  name              = "/ecs/eval_code"
   retention_in_days = 14
 }
 
-resource "aws_ecs_task_definition" "eval_c" {
-  family                   = "eval_c"
+resource "aws_ecs_task_definition" "eval_code_task" {
+  family                   = "eval_code"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024"   # 1 vCPU
   memory                   = "3072"   # 3 GB
@@ -191,8 +191,8 @@ resource "aws_ecs_task_definition" "eval_c" {
 
   container_definitions = jsonencode([
     {
-      name      = "edulense_program_grader_c"
-      image     = aws_ecr_repository.edulense_program_grader_c.repository_url
+      name      = "edulense_program_grader"
+      image     = aws_ecr_repository.edulense_program_grader.repository_url
       essential = true
 
       environment = [
@@ -221,7 +221,7 @@ resource "aws_ecs_task_definition" "eval_c" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.eval_c_logs.name
+          awslogs-group         = aws_cloudwatch_log_group.eval_code_logs.name
           awslogs-region        = data.aws_region.current.region
           awslogs-stream-prefix = "ecs"
         }
@@ -231,8 +231,6 @@ resource "aws_ecs_task_definition" "eval_c" {
 
   
 }
-
-# TODO Add task definitions for Java and Python
 
 resource "aws_ecs_cluster" "eval_code_cluster" {
   name = "eval-code-cluster"
@@ -266,7 +264,7 @@ data "aws_iam_policy_document" "lambda_ecs_permissions" {
 
     resources = [
       aws_ecs_cluster.eval_code_cluster.arn,
-      "${aws_ecs_task_definition.eval_c.arn_without_revision}:*"
+      "${aws_ecs_task_definition.eval_code_task.arn_without_revision}:*"
     ]
   }
 

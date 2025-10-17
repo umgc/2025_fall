@@ -90,157 +90,97 @@ variable "github_token" {
   type = string
 }
 
-# resource "aws_amplify_app" "edulenseweb" {
-#   name = "EduLenseApp"
-#   repository = "https://github.com/rappleb1/2025_fall/"
-#   access_token = var.github_token
-#   enable_branch_auto_build = true
+resource "aws_amplify_app" "edulenseweb" {
+  name = "EduLenseApp"
+  repository = "https://github.com/rappleb1/2025_fall/"
+  access_token = var.github_token
+  enable_branch_auto_build = true
 
-#   build_spec = <<-EOT
-#     version: 1
-#     frontend:
-#       phases:
-#         preBuild:
-#           commands:
-#             - echo "Installing Flutter SDK"
-#             - git clone https://github.com/flutter/flutter.git -b stable --depth 1
-#             - export PATH="$PATH:$(pwd)/flutter/bin"
-#             - flutter config --no-analytics
-#             - flutter doctor
-#             - echo "Installing dependencies"
-#             - cd LearningLens2025/frontend/
-#             - flutter pub get
-#             - flutter create . --platforms web
-#         build:
-#           commands:
-#             - echo "Building Flutter web application"
-#             - echo "$ENV_FILE" > .env
-#             - export ENV_FILE=
-#             - flutter build web
-#       artifacts:
-#         baseDirectory: LearningLens2025/frontend/build/web/
-#         files:
-#           - '**/*'
-#           - '.env'
-#           - 'assets/.env'
-#     test:
-#       phases:
-#         test:
-#           commands:
-#             - echo "Exporting Artifacts"
-#       artifacts:
-#         baseDirectory: LearningLens2025/frontend/build/web/
-#         files:
-#           - '**/*'
-#           - '.env'
-#           - 'assets/.env'
-#     cache:
-#       paths:
-#         - flutter/.pub-cache
-#   EOT
+  build_spec = <<-EOT
+    version: 1
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - echo "Installing Flutter SDK"
+            - git clone https://github.com/flutter/flutter.git -b stable --depth 1
+            - export PATH="$PATH:$(pwd)/flutter/bin"
+            - flutter config --no-analytics
+            - flutter doctor
+            - echo "Installing dependencies"
+            - cd LearningLens2025/frontend/
+            - flutter pub get
+            - flutter create . --platforms web
+        build:
+          commands:
+            - echo "Building Flutter web application"
+            - echo "$ENV_FILE" > .env
+            - export ENV_FILE=
+            - flutter build web
+      artifacts:
+        baseDirectory: LearningLens2025/frontend/build/web/
+        files:
+          - '**/*'
+          - '.env'
+          - 'assets/.env'
+    test:
+      phases:
+        test:
+          commands:
+            - echo "Exporting Artifacts"
+      artifacts:
+        baseDirectory: LearningLens2025/frontend/build/web/
+        files:
+          - '**/*'
+          - '.env'
+          - 'assets/.env'
+    cache:
+      paths:
+        - flutter/.pub-cache
+  EOT
 
-#   environment_variables = {
-#     ENV_FILE = file("../frontend/.env")
-#   }
-# }
+  environment_variables = {
+    ENV_FILE = file("../frontend/.env")
+  }
+}
 
-# resource "aws_amplify_branch" "master" {
-#   app_id      = aws_amplify_app.edulenseweb.id
-#   branch_name = "team_e"
+resource "aws_amplify_branch" "master" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = "team_e"
 
-#   stage = "PRODUCTION"
-# }
+  stage = "PRODUCTION"
+}
 
-# resource "aws_amplify_webhook" "deploy" {
-#   app_id      = aws_amplify_app.edulenseweb.id
-#   branch_name = aws_amplify_branch.master.branch_name
-#   description = "deployapp"
-# }
+resource "aws_amplify_webhook" "deploy" {
+  app_id      = aws_amplify_app.edulenseweb.id
+  branch_name = aws_amplify_branch.master.branch_name
+  description = "deployapp"
+}
 
-# data "http" "deploy" {
-#   url = aws_amplify_webhook.deploy.url
+data "http" "deploy" {
+  url = aws_amplify_webhook.deploy.url
 
-#   method = "POST"
+  method = "POST"
 
-#   request_headers = {
-#     Accept = "application/json"
-#   }
-# }
+  request_headers = {
+    Accept = "application/json"
+  }
+}
 
-# output "response" {
-#   value = data.http.deploy.response_body
-# }
+output "response" {
+  value = data.http.deploy.response_body
+}
 
 data "aws_region" "current" {}
 
-resource "aws_ecr_repository" "edulense_program_grader_java" {
-  name = "edulense-program-grader-ecr-java"
+resource "aws_ecr_repository" "edulense_program_grader" {
+  name = "edulense-program-grader"
 }
 
-resource "null_resource" "build_docker_java_image" {
+resource "null_resource" "build_docker_image" {
   triggers = {
     script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerjava"))
-  }
-  provisioner "local-exec" {
-    working_dir = "../docker/"
-    command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
-    environment = {
-      AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_java.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_java.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_java.name
-      ENV_LANG = "java"
-    }
-  }
-}
-
-resource "time_sleep" "after_java" {
-  triggers = {
-    dep_id = null_resource.build_docker_java_image.id
-  }
-  create_duration = "10s"
-}
-
-resource "aws_ecr_repository" "edulense_program_grader_python" {
-  name = "edulense-program-grader-ecr-python"
-}
-
-resource "null_resource" "build_docker_python_image" {
-  triggers = {
-    dep_id = time_sleep.after_java.triggers["dep_id"]
-    script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerpython"))
-  }
-  provisioner "local-exec" {
-    working_dir = "../docker/"
-    command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
-    environment = {
-      AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_python.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_python.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_python.name
-      ENV_LANG = "python"
-    }
-  }
-}
-
-resource "time_sleep" "after_python" {
-  triggers = {
-    dep_id = null_resource.build_docker_python_image.id
-  }
-  create_duration = "10s"
-}
-
-resource "aws_ecr_repository" "edulense_program_grader_c" {
-  name = "edulense-program-grader-ecr-c"
-}
-
-resource "null_resource" "build_docker_c_image" {
-  triggers = {
-    dep_id = time_sleep.after_python.triggers["dep_id"]
-    script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerc"))
+    docker_hash = sha1(file("../docker/Docker"))
     runcode_hash = sha1(file("../docker/runcode.sh"))
     evaluate = sha1(file("../docker/evaluate.py"))
   }
@@ -249,10 +189,9 @@ resource "null_resource" "build_docker_c_image" {
     command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
     environment = {
       AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_c.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_c.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_c.name
-      ENV_LANG = "c"
+      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader.repository_url
+      AWS_REG_ID = aws_ecr_repository.edulense_program_grader.registry_id
+      AWS_NAME = aws_ecr_repository.edulense_program_grader.name
     }
   }
 }
