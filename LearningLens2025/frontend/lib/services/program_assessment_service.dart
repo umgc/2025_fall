@@ -8,7 +8,6 @@ import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
-
 /// Represents a program assessment job
 /// Check the handleGET method in code_eval/index.mjs for properties
 class ProrgramAssessmentJob {
@@ -58,21 +57,21 @@ class ProgramAssessmentService {
   }
 
   /// Starts a program assessment
-  Future<http.Response> startEvaluation({
-    required Course course, required Assignment assignment,
-      required String input, required String expectedOutput, required String language}) async {
-
-    return await ApiService().httpPost(
-      Uri.parse(codeEvalUrl),
-      body: jsonEncode({
-        'courseId': course.id,
-        'assignmentId': assignment.id.toString(),
-        'input': input,
-        'expectedOutput': expectedOutput,
-        'username': lmsService.userName,
-        'language': language,
-      })
-    );
+  Future<http.Response> startEvaluation(
+      {required Course course,
+      required Assignment assignment,
+      required String input,
+      required String expectedOutput,
+      required String language}) async {
+    return await ApiService().httpPost(Uri.parse(codeEvalUrl),
+        body: jsonEncode({
+          'courseId': course.id,
+          'assignmentId': assignment.id.toString(),
+          'input': input,
+          'expectedOutput': expectedOutput,
+          'username': lmsService.userName,
+          'language': language,
+        }));
   }
 
   /// Gets code evaluations for all assignments in a course
@@ -87,23 +86,21 @@ class ProgramAssessmentService {
     return evaluations.map((eval) => ProrgramAssessmentJob(eval)).toList();
   }
 
-  Future<bool> deleteEvaluation({
-    required Course course, required Assignment assignment, required String username}) async {
-      try{
-        final response = await http.delete(
-          Uri.parse(codeEvalUrl),
+  Future<bool> deleteEvaluation(
+      {required Course course,
+      required Assignment assignment,
+      required String username}) async {
+    try {
+      final response = await http.delete(Uri.parse(codeEvalUrl),
           body: jsonEncode({
             'username': username,
             'assignmentId': assignment.id.toString(),
             'courseId': course.id.toString()
-          })
-        );
+          }));
 
-        return response.statusCode == 200;
-      }
-      catch(ex){
-        return false;
-      }
-
+      return response.statusCode == 200;
+    } catch (ex) {
+      return false;
+    }
   }
 }

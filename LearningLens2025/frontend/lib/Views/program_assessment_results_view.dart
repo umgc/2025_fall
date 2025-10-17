@@ -225,8 +225,7 @@ class _ProgramAsessmentResultsViewState
         Wrap(
           spacing: 12,
           children: [
-            if(input.trim().isNotEmpty)
-              _codeOutput('Input', input),
+            if (input.trim().isNotEmpty) _codeOutput('Input', input),
             _codeOutput('Expected Output', expectedOutput),
             _codeOutput('Actual Output', actualOutput)
           ],

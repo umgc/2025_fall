@@ -20,7 +20,8 @@ class EvaluationDataSource extends DataTableSource {
   final List<ProrgramAssessmentJob> results;
   final List<Course> courses;
   final dynamic lmsService;
-  final Future<void> Function(Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
+  final Future<void> Function(
+      Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
 
   EvaluationDataSource({
     required this.context,
@@ -38,7 +39,7 @@ class EvaluationDataSource extends DataTableSource {
     // Format date and time
     final datePart = DateFormat('MM/dd/yyyy').format(dateTime);
     final timePart = DateFormat('hh:mm a').format(dateTime);
-    
+
     return '$datePart at $timePart';
   }
 
@@ -55,7 +56,8 @@ class EvaluationDataSource extends DataTableSource {
     final startTime = _formatDateTime(result.startTime);
     final finishTime = _formatDateTime(result.finishTime);
 
-    final bool thirtySecondsPassed = DateTime.now().difference(result.startTime).inSeconds >= 30;
+    final bool thirtySecondsPassed =
+        DateTime.now().difference(result.startTime).inSeconds >= 30;
 
     return DataRow(color: MaterialStatePropertyAll(Colors.white), cells: [
       DataCell(Text(course.fullName)),
@@ -100,8 +102,7 @@ class EvaluationDataSource extends DataTableSource {
                       return AlertDialog(
                         title: const Text('Confirm Deletion'),
                         content: Text(
-                          'Are you sure you want to delete the evaluation for assignment "${assignment.name}?'
-                          ),
+                            'Are you sure you want to delete the evaluation for assignment "${assignment.name}?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
@@ -119,7 +120,7 @@ class EvaluationDataSource extends DataTableSource {
                     },
                   );
 
-                  if(confirmDelete == true){
+                  if (confirmDelete == true) {
                     await onDelete(course, assignment, result);
                   }
                 }
@@ -151,7 +152,8 @@ class EvaluationTable extends StatelessWidget {
   final List<ProrgramAssessmentJob> evaluationResults;
   final List<Course> courses;
   final dynamic lmsService;
-  final Future<void> Function(Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
+  final Future<void> Function(
+      Course course, Assignment assignment, ProrgramAssessmentJob job) onDelete;
 
   const EvaluationTable({
     super.key,
@@ -161,16 +163,14 @@ class EvaluationTable extends StatelessWidget {
     required this.onDelete,
   });
 
-
   @override
   Widget build(BuildContext context) {
     final dataSource = EvaluationDataSource(
-      context: context,
-      results: evaluationResults,
-      courses: courses,
-      lmsService: lmsService,
-      onDelete: onDelete
-    );
+        context: context,
+        results: evaluationResults,
+        courses: courses,
+        lmsService: lmsService,
+        onDelete: onDelete);
 
     const headingStyle =
         TextStyle(fontWeight: FontWeight.bold, color: Colors.white);
@@ -220,11 +220,12 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
 
   // Gets code evaluations for all assignments in a course
   Future<List<ProrgramAssessmentJob>> _getEvaluations(String username) async {
-    _evaluationResults = await _assessmentService.getEvaluations(lmsService.userName!);
+    _evaluationResults =
+        await _assessmentService.getEvaluations(lmsService.userName!);
     return _evaluationResults;
   }
 
-  Future<void> _refreshEvaluations() async{
+  Future<void> _refreshEvaluations() async {
     await _getEvaluations(lmsService.userName!);
     // To get view to reload
     setState(() {});
@@ -304,8 +305,8 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
                           courses: _courses,
                           onEvaluationStarted:
                               (course, assignment, expectedOutput) async {
-                            final results =
-                                await _assessmentService.getEvaluations(lmsService.userName!);
+                            final results = await _assessmentService
+                                .getEvaluations(lmsService.userName!);
                             setState(() {
                               _evaluationResults = results;
                             });
@@ -320,35 +321,29 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
         const SizedBox(height: 16),
         // Second row with DataTable
         EvaluationTable(
-            evaluationResults: _evaluationResults,
-            courses: _courses,
-            lmsService: lmsService,
-            onDelete: (course, assignment, job) async {
-              final deleteSuccessful = await ProgramAssessmentService().deleteEvaluation(
-                course: course, 
-                assignment: assignment, 
-                username: LmsFactory.getLmsService().userName!
-              );
+          evaluationResults: _evaluationResults,
+          courses: _courses,
+          lmsService: lmsService,
+          onDelete: (course, assignment, job) async {
+            final deleteSuccessful = await ProgramAssessmentService()
+                .deleteEvaluation(
+                    course: course,
+                    assignment: assignment,
+                    username: LmsFactory.getLmsService().userName!);
 
-              if(deleteSuccessful){
-                _showSnackBar(SnackBar(
+            if (deleteSuccessful) {
+              _showSnackBar(SnackBar(
                   backgroundColor: Colors.green[700],
-                  content: Text(
-                      'Evaluation removed successfully')
-                ));
-              }
-              else{
-                _showSnackBar(SnackBar(
+                  content: Text('Evaluation removed successfully')));
+            } else {
+              _showSnackBar(SnackBar(
                   backgroundColor: Colors.red[700],
-                  content: Text(
-                      'Unable to remove evaluation')
-                ));
+                  content: Text('Unable to remove evaluation')));
+            }
 
-              }
-
-              await _refreshEvaluations();
-            },
-          ),
+            await _refreshEvaluations();
+          },
+        ),
       ],
     );
   }

@@ -36,7 +36,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   final Future<void> Function(
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
-  final List<String> languages = [ 'C', 'C++', 'Java', 'Python' ];
+  final List<String> languages = ['C', 'C++', 'Java', 'Python'];
 
   Course? selectedCourse;
   Assignment? selectedAssignment;
@@ -53,7 +53,10 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
   // Helper to check if form is valid
-  bool get isFormValid => selectedCourse != null && selectedAssignment != null && outputFile != null;
+  bool get isFormValid =>
+      selectedCourse != null &&
+      selectedAssignment != null &&
+      outputFile != null;
 
   @override
   void initState() {
@@ -81,7 +84,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   String _getFileContents(PlatformFile file) =>
       utf8.decode(file.bytes!.toList());
 
-  Future<bool> isFilesValid() async{
+  Future<bool> isFilesValid() async {
     if (outputFile == null || outputFile?.bytes == null) return false;
     // Assumes file is utf-8 encoded
     if (inputFile != null) {
@@ -90,7 +93,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       final outputFileLineCount = outputFileContent.split('\n').length;
       final inputFileLineCount = inputFileContent.split('\n').length;
       if (outputFileLineCount != inputFileLineCount) {
-        await _showLineCountMismatchDialog(context, inputFileLineCount, outputFileLineCount);
+        await _showLineCountMismatchDialog(
+            context, inputFileLineCount, outputFileLineCount);
         return false;
       }
     }
@@ -98,7 +102,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     return true;
   }
 
-  Future<void> _showLineCountMismatchDialog(BuildContext context, int inputFileLineCount, int outputFileLineCount) async {
+  Future<void> _showLineCountMismatchDialog(BuildContext context,
+      int inputFileLineCount, int outputFileLineCount) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
@@ -143,13 +148,12 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     if (!(await isFilesValid())) return;
 
     final response = await _assessmentService.startEvaluation(
-      course: course, 
-      assignment: assignment, 
-      input: input, 
-      expectedOutput: expectedOutput, 
-      language: language
-    );
-    
+        course: course,
+        assignment: assignment,
+        input: input,
+        expectedOutput: expectedOutput,
+        language: language);
+
     if (response.statusCode != 200) {
       _showSnackBar(SnackBar(
           backgroundColor: Colors.red[700],
