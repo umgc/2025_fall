@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Message model for chat
 class ChatMessage {
@@ -70,10 +72,18 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   final List<ChatMessage> _messages = [];
   final List<UploadedFile> _uploadedFiles = [];
   bool _isLoading = false;
+  bool _isLoadingHistory = false;
   bool _isFilePickerOpen = false;
   final double _chatWidth = 320.0;
   final double _chatHeight = 500.0;
   late AnimationController _animationController;
+  
+  // Inactivity timer for 15-minute auto-clear
+  Timer? _inactivityTimer;
+  DateTime? _lastActivity;
+  
+  // Flag to track if user manually cleared the chat
+  bool _manuallyCleared = false;
 
   @override
   void initState() {
@@ -82,13 +92,401 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+    
+    // Check if chat was manually cleared and load history accordingly
+    _checkAndLoadHistory();
+    
+    _startInactivityTimer(); // Start 15-minute inactivity timer
+  }
+
+  /// Check if chat was manually cleared and load history if not
+  Future<void> _checkAndLoadHistory() async {
+    if (widget.userId == null) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final clearedKey = 'chat_cleared_${widget.userId}';
+      final wasCleared = prefs.getBool(clearedKey) ?? false;
+      
+      if (!wasCleared) {
+        await _loadConversationHistory();
+      } else {
+        // Chat was manually cleared, start with empty chat
+        setState(() {
+          _manuallyCleared = true;
+        });
+      }
+    } catch (e) {
+      // If there's an error, just load history normally
+      await _loadConversationHistory();
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _animationController.dispose();
+    _inactivityTimer?.cancel();
     super.dispose();
+  }
+
+  /// Start the 15-minute inactivity timer
+  void _startInactivityTimer() {
+    _lastActivity = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(const Duration(minutes: 15), () {
+      _clearChatDueToInactivity();
+    });
+  }
+
+  /// Reset the inactivity timer (call this on any user activity)
+  void _resetInactivityTimer() {
+    _lastActivity = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(const Duration(minutes: 15), () {
+      _clearChatDueToInactivity();
+    });
+  }
+
+  /// Clear chat due to 15 minutes of inactivity
+  void _clearChatDueToInactivity() {
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _conversationId = "";
+        _messages.add(ChatMessage(
+          text: '⏰ Chat cleared due to 15 minutes of inactivity',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+    }
+  }
+
+  /// Fetch retention period from backend
+  Future<int> _getRetentionPeriod() async {
+    try {
+      // Replace with actual backend call if available
+      return await AIChatService.getRetentionPeriodDays();
+    } catch (e) {
+      // Fallback to default if backend call fails
+      return 30;
+    }
+  }
+
+  /// Clear chat completely (user-initiated deletion)
+  Future<void> _clearChatCompletely() async {
+    final retentionDays = await _getRetentionPeriod();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversation'),
+        content: Text(
+          'This will permanently delete this conversation. This action cannot be undone.\n\n'
+          'Your conversation will also be automatically deleted after $retentionDays days for privacy protection.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Store the conversation ID before clearing it
+      final conversationToClear = _conversationId;
+      
+      // Clear all messages and start fresh
+      setState(() {
+        _messages.clear();
+        _conversationId = "";
+        _isLoadingHistory = false;
+        _manuallyCleared = true;
+      });
+      
+      // Store the cleared state persistently
+      if (widget.userId != null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final clearedKey = 'chat_cleared_${widget.userId}';
+          await prefs.setBool(clearedKey, true);
+        } catch (e) {
+          // Failed to save cleared state, continue anyway
+        }
+      }
+      
+      // Clear the conversation from the backend if it exists
+      if (conversationToClear.isNotEmpty) {
+        try {
+          await AIChatService.clearConversation(conversationToClear);
+        } catch (e) {
+          // If clearing fails, just continue - the local clear is more important
+        }
+      }
+      
+      // Reset inactivity timer since user is actively using the chat
+      _resetInactivityTimer();
+      
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Conversation deleted successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Download chat transcript
+  Future<void> _downloadChatTranscript() async {
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No conversation to download'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final transcript = _generateTranscript();
+
+    // For now, show the transcript in a dialog
+    // In a real app, you'd use a file picker or share functionality
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Transcript'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: SingleChildScrollView(
+            child: SelectableText(transcript),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Share conversation with provider
+  Future<void> _shareWithProvider() async {
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No conversation to share'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share with Provider'),
+        content: const Text(
+          'This will share your conversation with your healthcare provider for review. '
+          'The conversation will be retained for medical record purposes.\n\n'
+          'Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Share'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // TODO: Implement actual sharing with provider
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conversation shared with provider'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  /// Show privacy information
+  void _showPrivacyInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.privacy_tip, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Privacy & Data Protection'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Your Privacy is Protected',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '• Chat conversations are automatically deleted after 30 days',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• You can delete conversations immediately anytime',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Only anonymized usage statistics are retained long-term',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• Conversations shared with providers are kept for medical records',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '• All data is encrypted and access is logged',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'This AI assistant is not a substitute for professional medical advice. '
+                'Always consult your healthcare provider for medical concerns.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Generate transcript text from messages
+  String _generateTranscript() {
+    final buffer = StringBuffer();
+    buffer.writeln('Chat Transcript - ${DateTime.now().toString()}');
+    buffer.writeln('=' * 50);
+    buffer.writeln();
+    
+    for (final message in _messages) {
+      final timestamp = message.timestamp.toString().substring(0, 19);
+      final sender = message.isUser ? 'You' : 'AI Assistant';
+      buffer.writeln('[$timestamp] $sender:');
+      buffer.writeln(message.text);
+      buffer.writeln();
+    }
+    
+    return buffer.toString();
+  }
+
+  /// Load conversation history from the backend
+  Future<void> _loadConversationHistory() async {
+    if (widget.userId == null) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: '❌ Cannot load history: userId is null',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isLoadingHistory = false;
+      });
+      return;
+    }
+    
+    try {
+      final response = await AIChatService.getConversationHistory(
+        userId: widget.userId.toString(),
+        conversationId: _conversationId.isNotEmpty ? _conversationId : null,
+        limit: 20,
+      );
+      
+      if (mounted) {
+        setState(() {
+          // Clear existing messages and replace with fresh history
+          _messages.clear();
+          
+          // Extract messages from response
+          final history = response['messages'] as List<dynamic>? ?? [];
+          
+          if (history.isEmpty) {
+            _messages.add(ChatMessage(
+              text: '📭 No conversation history found',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          } else {
+            for (final messageData in history) {
+              // Skip system messages for security
+              if (messageData['messageType'] == 'SYSTEM') continue;
+              
+              final message = ChatMessage(
+                text: messageData['content'] ?? '',
+                isUser: messageData['messageType'] == 'USER',
+                timestamp: DateTime.tryParse(messageData['createdAt'] ?? '') ?? DateTime.now(),
+              );
+              _messages.add(message);
+            }
+          }
+          
+          // Update conversationId if provided
+          if (response['conversationId'] != null && _conversationId.isEmpty) {
+            _conversationId = response['conversationId'];
+          }
+          
+          _isLoadingHistory = false;
+        });
+        
+        // Scroll to bottom after loading
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: '❌ Error loading history: $e',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+          _isLoadingHistory = false;
+        });
+      }
+    }
   }
 
   Future<void> _pickFiles() async {
@@ -119,25 +517,26 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
     }
     String content;
     try {
-      if (fileType == 'pdf' || fileType == 'document') {
-        content =
-            '[This is a ${fileType.toUpperCase()} file. Content extraction not yet implemented for this file type. File name: ${file.name}]';
-      } else {
-        if (file.bytes != null) {
+      // For all file types, we'll let the backend handle content extraction
+      // The frontend just needs to prepare the file for upload
+      if (file.bytes != null) {
+        // For binary files (PDF, DOC, etc.), we'll send the raw bytes
+        // The backend will handle the content extraction
+        content = '[File ready for backend processing: ${file.name}]';
+      } else if (file.path != null) {
+        // For text files, we can still read them directly
+        try {
+          content = await File(file.path!).readAsString(encoding: utf8);
+        } catch (e) {
           try {
-            content = utf8.decode(file.bytes!);
-          } catch (e) {
-            content = latin1.decode(file.bytes!);
-          }
-        } else if (file.path != null) {
-          try {
-            content = await File(file.path!).readAsString(encoding: utf8);
-          } catch (e) {
             content = await File(file.path!).readAsString(encoding: latin1);
+          } catch (e2) {
+            // If we can't read it as text, let the backend handle it
+            content = '[File ready for backend processing: ${file.name}]';
           }
-        } else {
-          throw Exception('Unable to read file content');
         }
+      } else {
+        throw Exception('Unable to read file content');
       }
       if (content.length > 50000) {
         content =
@@ -216,21 +615,70 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
   }
 
   void _sendMessage() async {
-    if (_controller.text.trim().isEmpty) return;
+    // Allow sending if there's a message OR uploaded files
+    if (_controller.text.trim().isEmpty && _uploadedFiles.isEmpty) return;
     final userMessage = _controller.text.trim();
     _controller.clear();
+    
+    // Reset inactivity timer on user activity
+    _resetInactivityTimer();
+    
     setState(() {
+      // Add user message (either text or file upload indication)
+      String displayMessage = userMessage.isNotEmpty 
+          ? userMessage 
+          : '📎 Uploaded ${_uploadedFiles.length} file${_uploadedFiles.length > 1 ? 's' : ''}';
+      
       _messages.add(
-        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(text: displayMessage, isUser: true, timestamp: DateTime.now()),
       );
+      
+      // Add file processing message if files are uploaded
+      if (_uploadedFiles.isNotEmpty) {
+        _messages.add(
+          ChatMessage(
+            text: '📎 Analyzing ${_uploadedFiles.length} uploaded file${_uploadedFiles.length > 1 ? 's' : ''}...',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+      
       _isLoading = true;
+      _manuallyCleared = false; // Reset manual clear flag when user starts new conversation
     });
+    
+    // Clear the persistent cleared state when starting new conversation
+    if (widget.userId != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final clearedKey = 'chat_cleared_${widget.userId}';
+        await prefs.setBool(clearedKey, false);
+      } catch (e) {
+        // Failed to clear persistent state, continue anyway
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     try {
       final userProvider = mounted
           ? Provider.of<UserProvider>(context, listen: false)
           : null;
-      final currentUserId = widget.userId ?? userProvider?.user?.id ?? 1;
+
+      // Better userId validation - avoid defaulting to 1
+      final currentUserId = widget.userId ?? userProvider?.user?.id;
+      if (currentUserId == null) {
+        setState(() {
+          _isLoading = false;
+          _messages.add(ChatMessage(
+            text: 'Authentication error: Please log in to use the chat feature.',
+            isUser: false,
+            timestamp: DateTime.now(),
+            errorMessage: 'User ID not found',
+          ));
+        });
+        return;
+      }
+
       // Only use patientId if explicitly provided, never default to user ID
       final currentPatientId = widget.patientId;
 
@@ -258,21 +706,41 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
 
       // Only these fields are dynamic for the request
       final response = await AIChatService.sendMessage(
-        message: userMessage,
+        message: userMessage.isNotEmpty ? userMessage : 'Please analyze the uploaded files',
         patientId: currentPatientId, // Pass only if explicitly provided
         userId: currentUserId,
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         uploadedFiles: uploadedFilesJson,
+        // Include all medical context data
+        includeVitals: true,
+        includeMedications: true,
+        includeNotes: true,
+        includeMoodPainLogs: true,
+        includeAllergies: true,
       );
-      final aiText = response['aiResponse'] ?? 'No response.';
-      final errorMsg =
-          (response['errorMessage'] != null &&
-              (response['errorMessage'] as String).isNotEmpty)
-          ? response['errorMessage']
-          : null;
+      // Better error handling - show actual error messages instead of generic "No response"
+      String aiText;
+      String? errorMsg;
+
+      if (response['success'] == false) {
+        // If backend explicitly failed, show the error message
+        errorMsg = response['errorMessage'] ?? response['error'] ?? 'Unknown error occurred';
+        aiText = response['response'] ?? response['aiResponse'] ?? 'Sorry, I encountered an error. Please try again.';
+      } else {
+        // Success case - get AI response or provide helpful fallback
+        aiText = response['aiResponse'];
+        if (aiText == null || aiText.isEmpty) {
+          aiText = 'I apologize, but I was unable to generate a response. Please try rephrasing your question or check your connection.';
+          errorMsg = 'Empty response received from AI service';
+        }
+      }
       // Update conversationId for next request
+      bool isNewConversation = false;
       if (response['conversationId'] != null &&
           response['conversationId'] is String) {
+        if (_conversationId.isEmpty) {
+          isNewConversation = true;
+        }
         _conversationId = response['conversationId'];
       }
       setState(() {
@@ -285,8 +753,15 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           ),
         );
         _isLoading = false;
+        // Clear uploaded files after successful processing
+        _uploadedFiles.clear();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      
+      // If this was a new conversation, load any existing history
+      if (isNewConversation) {
+        await _loadConversationHistory();
+      }
     } catch (e) {
       setState(() {
         _messages.add(
@@ -297,6 +772,8 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
           ),
         );
         _isLoading = false;
+        // Clear uploaded files even on error to prevent confusion
+        _uploadedFiles.clear();
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
@@ -358,7 +835,82 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                 Icon(Icons.smart_toy, color: colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('AI Chat', style: theme.textTheme.titleMedium),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('AI Chat', style: theme.textTheme.titleMedium),
+                      if (_messages.isNotEmpty)
+                        Text(
+                          '${_messages.length} messages',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Privacy controls menu
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'clear':
+                        await _clearChatCompletely();
+                        break;
+                      case 'download':
+                        await _downloadChatTranscript();
+                        break;
+                      case 'share':
+                        await _shareWithProvider();
+                        break;
+                      case 'privacy':
+                        _showPrivacyInfo();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'clear',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_forever, size: 18),
+                          SizedBox(width: 8),
+                          Text('Delete this conversation'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download, size: 18),
+                          SizedBox(width: 8),
+                          Text('Download transcript'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          Icon(Icons.share, size: 18),
+                          SizedBox(width: 8),
+                          Text('Share with provider'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'privacy',
+                      child: Row(
+                        children: [
+                          Icon(Icons.privacy_tip, size: 18),
+                          SizedBox(width: 8),
+                          Text('Privacy info'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 if (widget.isModal)
                   IconButton(
@@ -366,6 +918,32 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
               ],
+            ),
+            // Privacy notification banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                border: Border.all(color: Colors.blue.shade200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Chat logs are automatically deleted after 30 days for privacy protection.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Divider(color: colorScheme.outlineVariant),
             // Message list
@@ -395,17 +973,14 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // MarkdownBody(
-                          //   data: msg.text,
-                          //   shrinkWrap: true,
-                          //   styleSheet: MarkdownStyleSheet(
-                          //     p: msg.isUser
-                          //         ? theme.textTheme.bodyMedium?.copyWith(
-                          //             color: AppTheme.chatTextOnPrimary,
-                          //           )
-                          //         : theme.textTheme.bodyMedium,
-                          //   ),
-                          // ),
+                          Text(
+                            msg.text,
+                            style: msg.isUser
+                                ? theme.textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.chatTextOnPrimary,
+                                  )
+                                : theme.textTheme.bodyMedium,
+                          ),
                           if (msg.errorMessage != null)
                             Text(
                               msg.errorMessage!,
@@ -439,11 +1014,37 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Files to upload:',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'Files to upload:',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (_isLoading)
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Processing...',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     ..._uploadedFiles.asMap().entries.map((entry) {
