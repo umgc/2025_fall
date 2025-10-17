@@ -11,6 +11,7 @@ import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
 import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
+import 'package:learninglens_app/beans/assessment.dart';
 import 'package:learninglens_app/beans/question_stat_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/stub/html_stub.dart'
@@ -60,36 +61,7 @@ enum AnalysisDataType { bar, list, line }
 ///
 /// A simple wrapper to hold either an essay assignment or a quiz.
 /// The `type` property distinguishes between the two.
-class Assessment {
-  final dynamic assessment; // Either an Assignment (essay) or a Quiz.
-  final String type; // "essay" or "quiz"
 
-  Assessment({required this.assessment, required this.type});
-
-  String get name {
-    if (type == "essay") {
-      return (assessment as Assignment).name;
-    } else {
-      return (assessment as Quiz).name ?? 'Unknown Quiz';
-    }
-  }
-
-  int get id {
-    if (type == "essay") {
-      return (assessment as Assignment).id;
-    } else {
-      return (assessment as Quiz).id ?? 0;
-    }
-  }
-
-  DateTime? get dueDate {
-    if (type == "essay") {
-      return (assessment as Assignment).dueDate;
-    } else {
-      return (assessment as Quiz).timeClose;
-    }
-  }
-}
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -2030,8 +2002,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       // Build a summary string from the student breakdown data.
       if (selectedAssessment.type == "essay") {
         String studentSummary;
-        assignmentDescription =
-            (selectedAssessment.assessment as Assignment).description;
+        assignmentDescription = selectedAssessment.description;
         List<Submission> submissions =
             await lmsService.getAssignmentSubmissions(selectedAssessment.id);
         List<AiLog> aiLogs = await AILoggingSingleton().getLogs(
@@ -2102,8 +2073,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           return;
         }
         String studentSummary;
-        assignmentDescription =
-            (selectedAssessment.assessment as Quiz).description ?? "";
+        assignmentDescription = selectedAssessment.description;
         if (selectedParticipant != null) {
           List studentData = await lmsService.getQuizStatsForStudent(
               (selectedAssessment.assessment as Quiz).id!.toString(),

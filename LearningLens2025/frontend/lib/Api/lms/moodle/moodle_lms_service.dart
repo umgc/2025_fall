@@ -118,12 +118,16 @@ class MoodleLmsService implements LmsInterface {
 
     // 4) Optionally load user courses right away
     courses = await getUserCourses();
-    overrides = await getAssignmentOverrides();
+    await refreshOverrides();
   }
 
   @override
   bool isLoggedIn() {
     return _userToken != null;
+  }
+
+  Future<void> refreshOverrides() async {
+    overrides = await getAssignmentOverrides();
   }
 
   @override
@@ -295,6 +299,7 @@ class MoodleLmsService implements LmsInterface {
     }
 
     final decodedJson = jsonDecode(response.body);
+    print(decodedJson);
     List<Override> assignmentOverrides;
 
     if (decodedJson is List) {
