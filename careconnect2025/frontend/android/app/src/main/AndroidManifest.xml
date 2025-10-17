@@ -1,8 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" >
+    <uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Camera -->
+    <uses-permission android:name="android.permission.CAMERA"/>  
+<!-- FOR LLM -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- Reading images, handle SDK 33+ and pre-33 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <application
         android:label="care_connect_app"
         android:name="${applicationName}"
+        android:requestLegacyExternalStorage="true">
         android:icon="@mipmap/ic_launcher"
         tools:replace="android:label">
         <activity
