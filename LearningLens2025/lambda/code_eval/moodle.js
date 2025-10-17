@@ -109,17 +109,20 @@ export async function createSubmissionsZip(assignmentId, expectedOutput, input) 
 
     zipStream.on("data", chunk => chunks.push(chunk));
 
-    let inputs = input?.split('\n') ?? []
+    let inputs = input.length > 0 ? input.split('\n') : []
     let outputs = expectedOutput
         .split("\n")
         .map(s => s.trim())
         .filter(s => s.length > 0)
 
     const inputOutputJson  = outputs.map((output, idx) => {
-        return {
-            'input': inputs.length > 0 ? inputs[idx] : null,
-            'expectedOutput': output
+        const obj = { 'expectedOutput': output }
+        
+        if(inputs.length > 0){
+            obj['input'] = inputs[idx]
         }
+
+        return obj
     })
 
     archive.append(JSON.stringify(inputOutputJson), { name: 'expectedOutput' })

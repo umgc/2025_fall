@@ -53,7 +53,7 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted);
 
   // Helper to check if form is valid
-  bool get isFormValid => selectedCourse != null && selectedAssignment != null;
+  bool get isFormValid => selectedCourse != null && selectedAssignment != null && outputFile != null;
 
   @override
   void initState() {

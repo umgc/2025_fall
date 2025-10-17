@@ -78,7 +78,7 @@ def run_student_programs(language: str, base_dir="."):
         # -------------------- Execution --------------------
         for item in expected_outputs:
             # input is optional
-            line: str = item.get('input', '')
+            line: str = item.get('input')
             expected_output: str = item['expectedOutput']
 
             if language in ("c", "c++"):
