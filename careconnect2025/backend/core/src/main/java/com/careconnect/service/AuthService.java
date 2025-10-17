@@ -73,7 +73,7 @@ public class AuthService {
     @Autowired
     private CaregiverRepository caregivers;
 
-    @Autowired 
+    @Autowired
     private FamilyMemberRepository familyMembers;
 
     @Autowired
@@ -84,6 +84,9 @@ public class AuthService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private com.careconnect.websocket.CareConnectWebSocketHandler webSocketHandler;
 
     // Google OAuth configuration
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -254,6 +257,17 @@ public class AuthService {
             user.setIsVerified(true);
             user.setVerificationToken(null); // Clear token so it can't be reused
             userRepository.save(user);
+
+            // Send WebSocket notification if handler is available
+            if (webSocketHandler != null) {
+                try {
+                    webSocketHandler.sendEmailVerificationNotification(user.getEmail());
+                } catch (Exception e) {
+                    // Log error but don't fail the verification
+                    System.err.println("Failed to send WebSocket notification for email verification: " + e.getMessage());
+                }
+            }
+
             return ResponseEntity.ok("Your email has been verified! You can now log in.");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired verification link.");

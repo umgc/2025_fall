@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# TODO - update all applies to use this: terraform apply -var="cc_iac_bucket_name=my-cc-iac-bucket"
-#         Update all bucket variable uses to use cc_iac_bucket_name
-
-
 set -e  # Exit on any error
 
 # Parse command-line arguments
@@ -114,6 +110,93 @@ build_frontend() {
     fi
 
     cd "$SCRIPT_DIR"
+}
+
+# Function to print terraform outputs after deployment
+print_outputs() {
+    local folder_name="$1"
+
+    echo ""
+    print_info "--------------------------------------------------"
+    print_info "Key Outputs from $folder_name:"
+    print_info "--------------------------------------------------"
+
+    case "$folder_name" in
+        "2_general")
+            # Output key information from 2_general
+            local main_api_endpoint=$(terraform output -raw main_api_endpoint 2>/dev/null)
+            local amplify_url=$(terraform output -raw amplify_url 2>/dev/null)
+            local websocket_api_endpoint=$(terraform output -raw websocket_api_endpoint 2>/dev/null)
+            local websocket_management_endpoint=$(terraform output -raw websocket_management_endpoint 2>/dev/null)
+
+            if [ -n "$main_api_endpoint" ]; then
+                print_success "Main API Endpoint: $main_api_endpoint"
+            fi
+
+            if [ -n "$amplify_url" ]; then
+                print_success "Amplify URL: https://$amplify_url"
+            fi
+
+            if [ -n "$websocket_api_endpoint" ]; then
+                print_success "WebSocket Client Endpoint: $websocket_api_endpoint"
+                print_info "  (Use this in Flutter frontend for WebSocket connections)"
+            fi
+
+            if [ -n "$websocket_management_endpoint" ]; then
+                print_success "WebSocket Management Endpoint: $websocket_management_endpoint"
+                print_info "  (Lambda uses this to send messages to WebSocket connections)"
+            fi
+            ;;
+
+        "3_database")
+            # Output database information
+            local db_endpoint=$(terraform output -raw db_endpoint 2>/dev/null)
+            local db_port=$(terraform output -raw db_port 2>/dev/null)
+
+            if [ -n "$db_endpoint" ]; then
+                print_success "Database Endpoint: $db_endpoint"
+            fi
+
+            if [ -n "$db_port" ]; then
+                print_success "Database Port: $db_port"
+            fi
+            ;;
+
+        "4_compute")
+            # Output Lambda information
+            local lambda_arn=$(terraform output -raw cc_main_backend_lambda_arn 2>/dev/null)
+            local lambda_invoke_arn=$(terraform output -raw cc_main_backend_lambda_invoke_arn 2>/dev/null)
+            local lambda_function_name=$(terraform output -raw cc_main_backend_lambda_function_name 2>/dev/null)
+
+            if [ -n "$lambda_function_name" ]; then
+                print_success "Lambda Function Name: $lambda_function_name"
+            fi
+
+            if [ -n "$lambda_arn" ]; then
+                print_success "Lambda ARN: $lambda_arn"
+            fi
+
+            if [ -n "$lambda_invoke_arn" ]; then
+                print_success "Lambda Invoke ARN: $lambda_invoke_arn"
+                print_info "  (Used by API Gateway to invoke Lambda)"
+            fi
+
+            # Retrieve and display WebSocket endpoint from Lambda environment
+            if [ -n "$lambda_function_name" ]; then
+                local ws_endpoint=$(aws lambda get-function-configuration \
+                    --function-name "$lambda_function_name" \
+                    --query 'Environment.Variables.AWS_WEBSOCKET_API_GATEWAY_ENDPOINT' \
+                    --output text 2>/dev/null)
+
+                if [ -n "$ws_endpoint" ] && [ "$ws_endpoint" != "None" ]; then
+                    print_success "Lambda WebSocket Endpoint (from env): $ws_endpoint"
+                fi
+            fi
+            ;;
+    esac
+
+    print_info "--------------------------------------------------"
+    echo ""
 }
 
 # Function to collect SSM parameters
@@ -257,6 +340,9 @@ run_terraform() {
 
         if [ $? -eq 0 ]; then
             print_success "Terraform apply completed for $folder_name"
+
+            # Output key information after successful deployment
+            print_outputs "$folder_name"
         else
             print_error "Terraform apply failed for $folder_name"
             exit 1
@@ -495,6 +581,131 @@ main() {
 
     print_success "=================================================="
     print_success "All Terraform deployments completed successfully!"
+    print_success "=================================================="
+    echo ""
+
+    # Print final summary with all important endpoints
+    print_final_summary
+}
+
+# Function to print final deployment summary
+print_final_summary() {
+    print_info "=================================================="
+    print_info "DEPLOYMENT SUMMARY - IMPORTANT ENDPOINTS"
+    print_info "=================================================="
+    echo ""
+
+    # Get outputs from each module
+    print_info "Retrieving deployment information..."
+    echo ""
+
+    # 2_general outputs
+    if [ -d "$SCRIPT_DIR/2_general" ]; then
+        cd "$SCRIPT_DIR/2_general"
+
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        print_success "API & WebSocket Endpoints (from 2_general)"
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        local main_api=$(terraform output -raw main_api_endpoint 2>/dev/null)
+        local amplify=$(terraform output -raw amplify_url 2>/dev/null)
+        local ws_client=$(terraform output -raw websocket_api_endpoint 2>/dev/null)
+        local ws_mgmt=$(terraform output -raw websocket_management_endpoint 2>/dev/null)
+
+        echo ""
+        print_info "REST API:"
+        [ -n "$main_api" ] && echo "  $main_api" || echo "  (not available)"
+
+        echo ""
+        print_info "Frontend (Amplify):"
+        [ -n "$amplify" ] && echo "  https://$amplify" || echo "  (not available)"
+
+        echo ""
+        print_info "WebSocket Client Endpoint:"
+        [ -n "$ws_client" ] && echo "  $ws_client" || echo "  (not available)"
+        [ -n "$ws_client" ] && print_info "  → Use this in Flutter for real-time connections"
+
+        echo ""
+        print_info "WebSocket Management API:"
+        [ -n "$ws_mgmt" ] && echo "  $ws_mgmt" || echo "  (not available)"
+        [ -n "$ws_mgmt" ] && print_info "  → Lambda uses this to send messages"
+
+        cd "$SCRIPT_DIR"
+    fi
+
+    echo ""
+
+    # 4_compute outputs
+    if [ -d "$SCRIPT_DIR/4_compute" ]; then
+        cd "$SCRIPT_DIR/4_compute"
+
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        print_success "Lambda Backend (from 4_compute)"
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        local lambda_name=$(terraform output -raw cc_main_backend_lambda_function_name 2>/dev/null)
+        local lambda_arn=$(terraform output -raw cc_main_backend_lambda_arn 2>/dev/null)
+        local lambda_invoke=$(terraform output -raw cc_main_backend_lambda_invoke_arn 2>/dev/null)
+
+        echo ""
+        print_info "Function Name:"
+        [ -n "$lambda_name" ] && echo "  $lambda_name" || echo "  (not available)"
+
+        echo ""
+        print_info "Lambda ARN:"
+        [ -n "$lambda_arn" ] && echo "  $lambda_arn" || echo "  (not available)"
+
+        echo ""
+        print_info "Invoke ARN (for API Gateway):"
+        if [ -n "$lambda_invoke" ]; then
+            echo "  $lambda_invoke"
+            print_info "  → All 3 WebSocket routes (\$connect, \$disconnect, \$default) use this ARN"
+        else
+            echo "  (not available)"
+        fi
+
+        # Get WebSocket endpoint from Lambda environment
+        if [ -n "$lambda_name" ]; then
+            local ws_env=$(aws lambda get-function-configuration \
+                --function-name "$lambda_name" \
+                --query 'Environment.Variables.AWS_WEBSOCKET_API_GATEWAY_ENDPOINT' \
+                --output text 2>/dev/null)
+
+            echo ""
+            print_info "Lambda Environment - WebSocket Endpoint:"
+            if [ -n "$ws_env" ] && [ "$ws_env" != "None" ]; then
+                echo "  $ws_env"
+                print_success "  ✓ Lambda is configured with WebSocket endpoint"
+            else
+                echo "  (not configured)"
+                print_warning "  ⚠ Lambda may need re-deployment to get WebSocket endpoint"
+            fi
+        fi
+
+        cd "$SCRIPT_DIR"
+    fi
+
+    echo ""
+    print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    print_success "Next Steps"
+    print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    print_info "1. Update Flutter frontend with WebSocket endpoint:"
+    print_info "   - Open: frontend/lib/config/api_config.dart"
+    print_info "   - Update WebSocket URL to the client endpoint above"
+    echo ""
+    print_info "2. Test email verification with WebSocket:"
+    print_info "   - Register a new user"
+    print_info "   - Observe real-time notification when email is verified"
+    echo ""
+    print_info "3. Monitor Lambda logs:"
+    print_info "   aws logs tail /aws/lambda/cc_main_backend --follow"
+    echo ""
+    print_info "4. View WebSocket connections in database:"
+    print_info "   SELECT * FROM websocket_connections WHERE is_active = true;"
+    echo ""
+    print_success "=================================================="
+    print_success "Deployment Complete!"
     print_success "=================================================="
 }
 

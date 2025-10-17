@@ -105,12 +105,13 @@ resource "aws_lambda_function" "cc_main_backend_lambda" {
       data.terraform_remote_state.cc_common_state.outputs.cc_sensitive_env_variables_name,
       data.terraform_remote_state.cc_db_state.outputs.sensitive_params,
       {
-        AWS_S3_BUCKET         = data.terraform_remote_state.cc_common_state.outputs.internal_s3_bucket
-        AWS_S3_BASE_URL       = "https://${data.terraform_remote_state.cc_common_state.outputs.internal_s3_bucket}.s3.us-east-1.amazonaws.com"
-        CC_APP_ROLE           = "${data.terraform_remote_state.cc_common_state.outputs.cc_app_role_info.arn}"
-        APP_FRONTEND_BASE_URL = "https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
-        BASE_URL              = "${data.terraform_remote_state.cc_common_state.outputs.main_api_endpoint}"
-        CORS_ALLOWED_LIST     = "${var.cors_allowed_list},https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
+        AWS_S3_BUCKET                       = data.terraform_remote_state.cc_common_state.outputs.internal_s3_bucket
+        AWS_S3_BASE_URL                     = "https://${data.terraform_remote_state.cc_common_state.outputs.internal_s3_bucket}.s3.us-east-1.amazonaws.com"
+        CC_APP_ROLE                         = "${data.terraform_remote_state.cc_common_state.outputs.cc_app_role_info.arn}"
+        APP_FRONTEND_BASE_URL               = "https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
+        BASE_URL                            = "${data.terraform_remote_state.cc_common_state.outputs.main_api_endpoint}"
+        CORS_ALLOWED_LIST                   = "${var.cors_allowed_list},https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
+        AWS_WEBSOCKET_API_GATEWAY_ENDPOINT  = data.terraform_remote_state.cc_common_state.outputs.websocket_management_endpoint
       }
     )
   }
@@ -147,6 +148,33 @@ resource "aws_iam_policy" "cc_app_role_policy" {
       }
     ]
   })
+}
+
+# IAM Policy for WebSocket API Gateway Management API
+resource "aws_iam_policy" "websocket_management_policy" {
+  name        = "CcWebSocketManagementPolicy"
+  description = "Allows Lambda to manage WebSocket connections via API Gateway Management API"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowWebSocketManagement",
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections",
+          "execute-api:Invoke"
+        ]
+        Resource = "arn:aws:execute-api:*:*:*/@connections/*"
+      }
+    ]
+  })
+}
+
+# Attach WebSocket Management policy to Lambda execution role
+resource "aws_iam_role_policy_attachment" "websocket_management_attach" {
+  role       = data.terraform_remote_state.cc_common_state.outputs.cc_app_role_info.name
+  policy_arn = aws_iam_policy.websocket_management_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "cc_app_role_policy_attach" {
