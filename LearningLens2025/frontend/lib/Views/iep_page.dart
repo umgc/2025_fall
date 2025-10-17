@@ -45,7 +45,7 @@ class _IepPageState extends State<IepPage> {
   Assessment? selectedAssignment;
   double? epochTime;
   double? epochTime2;
-  int attempts = 1;
+  int? attempts;
   List<Override>? overrides = [];
   TextEditingController _attemptsController = TextEditingController();
   TextEditingController iepSummaryController = TextEditingController();
@@ -74,7 +74,7 @@ class _IepPageState extends State<IepPage> {
     if (picked != null && picked != DateTime.now()) {
       setState(() {
         _dueController.value =
-            TextEditingValue(text: "${picked.toLocal()}".split(' ')[0]);
+            TextEditingValue(text: DateFormat.yMd().format(picked));
         epochTime = picked.millisecondsSinceEpoch / 1000.round();
       });
     }
@@ -92,7 +92,7 @@ class _IepPageState extends State<IepPage> {
     if (picked != null && picked != DateTime.now()) {
       setState(() {
         _deadlineController.value =
-            TextEditingValue(text: "${picked.toLocal()}".split(' ')[0]);
+            TextEditingValue(text: DateFormat.yMd().format(picked));
         epochTime2 = picked.millisecondsSinceEpoch / 1000.round();
       });
     }
@@ -194,6 +194,7 @@ class _IepPageState extends State<IepPage> {
                         } else {
                           print('Selected Value is Null');
                         }
+                        resetForm(true);
                       },
                     ),
                     SizedBox(height: 10),
@@ -230,6 +231,7 @@ class _IepPageState extends State<IepPage> {
                                     print('No Participants were selected');
                                   }
                                 });
+                                resetForm(true);
                               },
                             );
                           }
@@ -268,9 +270,13 @@ class _IepPageState extends State<IepPage> {
                                     selectedAssignment = selectedAssessment;
                                     if (selectedAssessment.type == "essay") {
                                       _attemptsController.value =
-                                          TextEditingValue(
-                                              text: attempts.toString());
+                                          TextEditingValue.empty;
+                                    } else {
+                                      _deadlineController.value =
+                                          TextEditingValue.empty;
+                                      epochTime2 = null;
                                     }
+                                    resetForm(false);
                                   } else {
                                     print('Assessment was Null');
                                   }
@@ -378,7 +384,7 @@ class _IepPageState extends State<IepPage> {
                                   text: val.clamp(0, 10).toString());
                               return;
                             }
-                            attempts = int.tryParse(value)?.clamp(0, 10) ?? 1;
+                            attempts = int.tryParse(value)?.clamp(0, 10);
                           }),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
@@ -431,7 +437,9 @@ class _IepPageState extends State<IepPage> {
                         Row(
                           children: [
                             Opacity(
-                                opacity: selectedAssignment != null ? 1 : .5,
+                                opacity: selectedAssignment?.type == "essay"
+                                    ? 1
+                                    : .5,
                                 child: Container(
                                   width: 250,
                                   margin: EdgeInsets.only(right: 20),
@@ -449,7 +457,7 @@ class _IepPageState extends State<IepPage> {
                             SizedBox(
                                 width: 180,
                                 child: ElevatedButton(
-                                  onPressed: selectedAssignment != null
+                                  onPressed: selectedAssignment?.type == "essay"
                                       ? () => _selectCutOffDate(context)
                                       : null, // Correct usage of named parameter `onTap`
                                   child: Text(
@@ -471,7 +479,10 @@ class _IepPageState extends State<IepPage> {
                       child: ElevatedButton(
                         onPressed: selectedAssignment != null &&
                                 epochTime != null &&
-                                epochTime2 != null
+                                (selectedAssignment?.type != "quiz" ||
+                                    attempts != null) &&
+                                (selectedAssignment?.type != "essay" ||
+                                    epochTime2 != null)
                             ? () {
                                 if (selectedAssignment?.type == 'quiz') {
                                   quizOver(epochTime, selectedAssignment?.id,
@@ -481,6 +492,7 @@ class _IepPageState extends State<IepPage> {
                                   essayOver(epochTime, selectedAssignment?.id,
                                       userId, epochTime2);
                                 }
+                                resetForm(false);
                               }
                             : null,
                         child: Text('Submit'),
@@ -656,6 +668,20 @@ class _IepPageState extends State<IepPage> {
     }
   }
 
+  void resetForm(bool clearIEPSummary) {
+    setState(() {
+      _deadlineController.value = TextEditingValue.empty;
+      _dueController.value = TextEditingValue.empty;
+      epochTime = null;
+      epochTime2 = null;
+      if (clearIEPSummary) {
+        iepSummaryController.value = TextEditingValue.empty;
+      }
+      recommendationsController.value = TextEditingValue.empty;
+      _attemptsController.value = TextEditingValue.empty;
+    });
+  }
+
   void quizOver(epochTime, quizId, userId, attempts) async {
     await MoodleLmsService().refreshOverrides();
     setState(() {
@@ -749,14 +775,14 @@ class _IepPageState extends State<IepPage> {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     }
     String prompt =
-        'Perform an analysis on a student individualized education plan to customize the provided assignment for a student with accomodations.\n'
-        'Student Accomadations: "$text"\n'
+        'Perform an analysis on a student individualized education plan to customize the provided assignment for a student with accommodations.\n'
+        'Student Accommodations: "$text"\n'
         'Assignment Name: "${selectedAssignment.name}"\n'
         'Assignment Summary: "${selectedAssignment.description}"\n'
         'Assignment Type: "${selectedAssignment.type}"\n'
         'Assignment Due Date: "${selectedAssignment.dueDate}"\n'
-        'Provide a textual summary. Additionally, suggest a number of attempts to provide the student, from 0 to 10, with 0 representing there is no limit on the number of attempts. '
-        'Finally, suggest both a new Due Date and Final Deadline based on the original due date and the necessary accomodations. '
+        'Provide a textual summary. Additionally, suggest a number of attempts to provide the student as an integer from 0 to 10, with 0 representing no limit on the number of attempts. '
+        'Finally, suggest both a new Due Date and Final Deadline based on the original due date and the necessary accommodations. '
         'Format dates in the format "MM/DD/YYYY". '
         'Return your analysis as a JSON array where the textual summary is an object with key "Summary". '
         'The suggested number of attempts should be returned as an object with key "Attempts". '
@@ -779,9 +805,9 @@ class _IepPageState extends State<IepPage> {
         ']\n';
 
     String summary = "";
-    DateTime due = DateTime.now();
-    DateTime deadline = DateTime.now();
-    int attempts = 1;
+    DateTime? due;
+    DateTime? deadline;
+    int? attempts;
 
     try {
       var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
@@ -812,7 +838,9 @@ class _IepPageState extends State<IepPage> {
           due = DateFormat.yMd().tryParse(jsonList[2]["Due Date"]) ??
               DateTime.now();
         }
-        if (jsonList.length > 3 && jsonList[3].containsKey("Deadline")) {
+        if (jsonList.length > 3 &&
+            selectedAssignment.type == "essay" &&
+            jsonList[3].containsKey("Deadline")) {
           deadline = DateFormat.yMd().tryParse(jsonList[3]["Deadline"]) ??
               DateTime.now();
         }
@@ -831,13 +859,19 @@ class _IepPageState extends State<IepPage> {
       _isAIRecommending = false;
       setState(() {
         recommendationsController.value = TextEditingValue(text: summary);
-        _attemptsController.value = TextEditingValue(text: attempts.toString());
-        _dueController.value =
-            TextEditingValue(text: DateFormat.yMd().format(due));
-        epochTime = due.millisecondsSinceEpoch / 1000.round();
-        _deadlineController.value =
-            TextEditingValue(text: DateFormat.yMd().format(deadline));
-        epochTime2 = deadline.millisecondsSinceEpoch / 1000.round();
+        _attemptsController.value =
+            TextEditingValue(text: attempts == null ? "" : attempts.toString());
+        _dueController.value = due == null
+            ? TextEditingValue.empty
+            : TextEditingValue(text: DateFormat.yMd().format(due));
+        epochTime =
+            due == null ? null : due.millisecondsSinceEpoch / 1000.round();
+        _deadlineController.value = deadline == null
+            ? TextEditingValue.empty
+            : TextEditingValue(text: DateFormat.yMd().format(deadline));
+        epochTime2 = deadline == null
+            ? null
+            : deadline.millisecondsSinceEpoch / 1000.round();
       });
     });
   }
