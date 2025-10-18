@@ -1,5 +1,6 @@
 package com.careconnect.dto.v2;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.careconnect.dto.ScheduledNotificationDTO;
@@ -197,4 +198,18 @@ public class TaskDtoV2 {
      * </p>
      */
     private Boolean updateSeries;
+
+    /**
+     * Flag indicating whether an update applies to only this task
+     * or to the entire recurring series.
+     *
+     * <p>
+     * Usage:
+     * <ul>
+     * <li>{@code true} → update all tasks in the series</li>
+     * <li>{@code false/null} → update only this task</li>
+     * </ul>
+     * </p>
+     */
+    private LocalDateTime createdAt;
 }

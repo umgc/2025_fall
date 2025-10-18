@@ -135,10 +135,13 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
       appBar: AppBar(
         title: Row(
             children: [
-              const Text('Notetaker Configuration'),
+              const Text('Notetaker Configuration', style: TextStyle(fontSize: 18),),
             ]),
         actions: [
           TextButton(
+            style: ButtonStyle(
+              padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
+            ),
             onPressed: (_isLoading || _isSaving)
                 ? null
                 : () {
@@ -148,6 +151,9 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
             child: const Text('Cancel', style: TextStyle(color: Colors.white)),
           ),
           TextButton(
+            style: ButtonStyle(
+              padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
+            ),
             onPressed: (_isLoading || _isSaving)
                 ? null
                 : () async {

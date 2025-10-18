@@ -156,6 +156,7 @@ public class TaskServiceV2 {
                 .name(taskDto.getName())
                 .description(taskDto.getDescription())
                 .date(taskDto.getDate())
+                .createdAt(LocalDateTime.now())
                 .timeOfDay(taskDto.getTimeOfDay())
                 .isCompleted(taskDto.isCompleted())
                 .frequency(taskDto.getFrequency())

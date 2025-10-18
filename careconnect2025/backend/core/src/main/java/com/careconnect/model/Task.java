@@ -1,5 +1,6 @@
 package com.careconnect.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -161,6 +162,8 @@ public class Task {
      */
     @Nullable
     private String daysOfWeek;
+
+    private LocalDateTime createdAt;
 
     // ----------------------------
     // Relationships

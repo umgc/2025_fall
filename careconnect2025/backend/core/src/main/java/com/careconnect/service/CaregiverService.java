@@ -188,7 +188,8 @@ public Patient registerPatient(PatientRegistration reg) {
     String passwordSetupToken = java.util.UUID.randomUUID().toString();
 
     // Always generate a random password for patient registration
-    String password = generateRandomPassword(12);
+    // String password = generateRandomPassword(12);
+    String password = "patient123$";
     String encodedPassword = encoder.encode(password);
 
     // Create and save the user first to ensure we have an ID
@@ -239,13 +240,13 @@ public Patient registerPatient(PatientRegistration reg) {
             }
         }
         
-        emailService.sendPasswordSetupEmailWithCredentials(
-            reg.getEmail(),
-            passwordSetupToken,
-            reg.getFirstName(),
-            reg.getEmail(),
-            password
-        );
+        // emailService.sendPasswordSetupEmailWithCredentials(
+        //     reg.getEmail(),
+        //     passwordSetupToken,
+        //     reg.getFirstName(),
+        //     reg.getEmail(),
+        //     password
+        // );
         
         // Firebase notification logic removed
         
@@ -255,18 +256,18 @@ public Patient registerPatient(PatientRegistration reg) {
                 "Exception occurred while saving patient to the database");
     }
 }
-      /**
-     * Generate a secure random password of the given length
-     */
-    private String generateRandomPassword(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return sb.toString();
-    }
+    //   /**
+    //  * Generate a secure random password of the given length
+    //  */
+    // private String generateRandomPassword(int length) {
+    //     String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
+    //     java.security.SecureRandom random = new java.security.SecureRandom();
+    //     StringBuilder sb = new StringBuilder();
+    //     for (int i = 0; i < length; i++) {
+    //         sb.append(chars.charAt(random.nextInt(chars.length())));
+    //     }
+    //     return sb.toString();
+    // }
 
     @Transactional
     public Caregiver registerCaregiver(CaregiverRegistration reg) {

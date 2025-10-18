@@ -14,21 +14,6 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<FeatureItem> features = [
       FeatureItem(
-        icon: Icons.note,
-        iconColor: Colors.blue,
-        title: 'Notetaker Configuration',
-        subtitle: 'Manage your Medical Notetaker Assistant Settings',
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const NotetakerConfigurationPage(),
-            ),
-          );
-        },
-      ),
-      FeatureItem(
         icon: Icons.calendar_month_outlined,
         iconColor: Colors.blue,
         title: 'Calendar Assistant',

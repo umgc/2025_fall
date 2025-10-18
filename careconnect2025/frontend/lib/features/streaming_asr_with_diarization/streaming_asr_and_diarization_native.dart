@@ -6,12 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as Path;
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:simple_audio_trimmer/simple_audio_trimmer.dart';
-import '../../config/theme/app_theme.dart';
-import '../../providers/user_provider.dart';
 import '../../services/notetaker_config_service.dart';
 import '../notetaker/models/patient_note_model.dart';
 import './utils.dart';
@@ -92,7 +89,7 @@ class StreamingAsrAndDiarizationScreen extends StatefulWidget {
     super.key,
     this.onUploadSuccess,
     this.onUploadError,
-    this.patientId
+    this.patientId,
   });
 
   @override
@@ -110,6 +107,9 @@ class _StreamingAsrAndDiarizationScreenState
   int _index = 0;
   bool _isInitialized = false;
   bool _isLoading = false;
+  List<String> _speakerList = [];
+  String? _selectedSpeaker;
+  late final TextEditingController _newSpeakerName;
 
   sherpa_onnx.OnlineRecognizer? _recognizer;
   sherpa_onnx.OfflineRecognizer? _offlineRecognizer;
@@ -123,6 +123,7 @@ class _StreamingAsrAndDiarizationScreenState
   void initState() {
     _audioRecorder = AudioRecorder();
     _controller = TextEditingController();
+    _newSpeakerName = TextEditingController();
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
@@ -134,6 +135,9 @@ class _StreamingAsrAndDiarizationScreenState
       _controller.clear();
       recordedData = [];
       _textToDisplay = '';
+      _speakerList = [];
+      _selectedSpeaker = null;
+      _newSpeakerName.clear();
     });
     if (!_isInitialized) {
       sherpa_onnx.initBindings();
@@ -480,6 +484,11 @@ class _StreamingAsrAndDiarizationScreenState
     }
     setState(() {
       _isLoading = false;
+      if(_textToDisplay.contains('speaker_')) {
+        RegExp regex = RegExp(r'speaker_\d+');
+        Iterable<Match> matches = regex.allMatches(_textToDisplay);
+        _speakerList = matches.map((match) => match.group(0)!).toSet().toList();
+      }
     });
   }
 
@@ -573,7 +582,7 @@ class _StreamingAsrAndDiarizationScreenState
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     );
-    
+
     PatientNote newNote = await NotetakerConfigService.createPatientNote(createdNote);
 
     if(widget.onUploadSuccess != null) {
@@ -585,52 +594,112 @@ class _StreamingAsrAndDiarizationScreenState
     ).showSnackBar(const SnackBar(content: Text('Note saved')));
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Icon(Icons.mic, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Record A Note',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildHeader(),
-        const SizedBox(height: 16),
-        _isLoading
-            ? Column(
-                children: [CircularProgressIndicator(), Text("Processing")],
-              )
-            : TextField(maxLines: 5, controller: _controller, readOnly: true),
-        const SizedBox(height: 16),
-        Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _buildRecordStopControl(),
-            const SizedBox(width: 16),
-            _buildText(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {
-              if(_textToDisplay.isNotEmpty) {
+          children: [
+            _isLoading
+                ? Column(
+              children: [CircularProgressIndicator(), Text("Processing")],
+            )
+                : TextField(maxLines: 5, controller: _controller, readOnly: true),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                _buildRecordStopControl(),
+                const SizedBox(width: 16),
+                _buildText(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _speakerList.isNotEmpty ?
+            ElevatedButton(
+                child: const Text('Swap Speaker Names'),
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Expanded(
+                        child: SimpleDialog(
+                        title: Text("Swap Speaker Names"),
+                        children: <Widget> [
+                          Padding(
+                            padding: EdgeInsets.all(10.0),
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedSpeaker,
+                              decoration: InputDecoration(labelText: 'Select A Speaker'),
+                              items: _speakerList
+                                  .map((option) => DropdownMenuItem(
+                              value: option,
+                              child: Text(option),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSpeaker = value;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return 'Please select an option';
+                                }
+                                  return null;
+                                },
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Icon(Icons.swap_vert),
+                          SizedBox(width: 12),
+                          Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child:
+                            TextFormField(
+                            controller: _newSpeakerName,
+                            decoration: InputDecoration(labelText: 'Enter Name'),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'This field is required';
+                              }
+                                return null;
+                              },
+                            )
+                          ),
+                          SizedBox(width: 12),
+                          SimpleDialogOption(
+                            onPressed: () {
+                              if(_selectedSpeaker != null && _newSpeakerName.text.isNotEmpty) {
+                                setState(() {
+                                  _textToDisplay = _textToDisplay.replaceAll(
+                                      _selectedSpeaker!, _newSpeakerName.text);
+                                  _controller.value = TextEditingValue(
+                                    text: _textToDisplay,
+                                    selection: TextSelection.collapsed(
+                                        offset: _textToDisplay.length),
+                                  );
+                                });
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child:const Text('Swap'),
+                          ),
+                        ]
+                        ),
+                      );
+                          //               Icon(Icons.swap_horiz,),
+
+                }
+            );}) : SizedBox.shrink(),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                if(_textToDisplay.isNotEmpty) {
                   _saveRecognizedText();
-              }
-          },
-          child: const Text('Save Note'),
-        ),
-      ],
+                }
+              },
+              child: const Text('Save Note'),
+            ),
+          ],
     );
   }
 
