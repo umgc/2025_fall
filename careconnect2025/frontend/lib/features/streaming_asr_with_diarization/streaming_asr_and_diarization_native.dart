@@ -132,12 +132,12 @@ class _StreamingAsrAndDiarizationScreenState
 
   Future<void> _start() async {
     setState(() {
-      _controller.clear();
+      _controller = TextEditingController();
+      _newSpeakerName = TextEditingController();
       recordedData = [];
       _textToDisplay = '';
       _speakerList = [];
       _selectedSpeaker = null;
-      _newSpeakerName.clear();
     });
     if (!_isInitialized) {
       sherpa_onnx.initBindings();
