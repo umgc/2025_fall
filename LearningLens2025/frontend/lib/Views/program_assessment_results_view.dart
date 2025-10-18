@@ -204,14 +204,14 @@ class _ProgramAsessmentResultsViewState
       final input = entry['input'].toString();
       bool error = entry['error'];
       bool timedout = entry['timedout'];
-      
+
       final outputIsCorrect = _isOutputCorrect(entry);
 
       children.addAll([
         Row(
           spacing: 6,
           children: [
-            if(timedout)
+            if (timedout)
               Text(
                 "Result: TIMED OUT",
                 style: TextStyle(fontSize: 18),
