@@ -55,16 +55,16 @@ class _LoginPageState extends State<LoginPage> {
         // Login and role validation successful
         final user = authResult.userSession!;
 
-        // // Check if email is verified
-        // if (!user.emailVerified) {
-        //   // Show email verification dialog
-        //   await showDialog<void>(
-        //     context: context,
-        //     barrierDismissible: false,
-        //     builder: (context) => EmailVerificationDialog(email: user.email),
-        //   );
-        //   return; // Don't proceed with navigation
-        // }
+        // Check if email is verified
+        if (!user.emailVerified) {
+          // Show email verification dialog
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => EmailVerificationDialog(email: user.email),
+          );
+          return; // Don't proceed with navigation
+        }
 
         // Save user info to Provider
         Provider.of<UserProvider>(context, listen: false).setUser(user);
