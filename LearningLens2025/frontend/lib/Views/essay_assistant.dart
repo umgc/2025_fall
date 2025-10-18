@@ -120,9 +120,49 @@ class _EssayAssistantState extends State<EssayAssistant> {
   bool get _sessionActive => _currentSession != null;
   String get essayID => _currentSession?.id ?? '';
 
-  // Future<void> _saveSessions() async {
-  //   await LocalStorageService.saveEssaySession(_sessions);
-  // }
+  Future<void> _startSessionFor(Assignment essay, {bool replay = true}) async {
+    //Clear chat UI
+    setState(() {
+      _messages.clear();
+      _inputCtrl.clear(); 
+    });
+    // Get EssayKey
+    final String essayKey =
+      (essay.id != null) ? essay.id.toString() : 'general_${essay.name.hashCode}';
+    if (replay && _currentSession!.chatLog.isNotEmpty) {
+    setState(() {
+      for (final turn in _currentSession!.chatLog) {
+        if (turn.isUser) {
+          _messages.add(
+            types.TextMessage(
+              id: const Uuid().v4(),
+              author: _me,
+              text: turn.content,
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
+        } else {
+          _messages.add(
+            types.SystemMessage(
+              id: const Uuid().v4(),
+              text: turn.content,
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+            ),
+          );
+        }
+      }
+    });
+  } else {
+    // Fresh system line so the chat isn’t empty
+    _appendSystemMessage('Starting session for "${essay.name}".');
+  }
+
+  //Persist right away so this session is saved separately
+  await _saveCurrentSessionToPrefs();
+
+  _scrollToBottom();
+}
+
 
   void _guardNoSession() {
     if (!_sessionActive) {
@@ -185,11 +225,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
   final String _helpersTooltip =
       'Contextual helpers that change with the selected mode.';
 
-
-  // Helper: derive an essayId for the fake list (use real ID later)
-  String _essayIdFrom(Map<String, String> essay) => (essay['title'] ?? '').trim();
-
-
   // ---------------- Quill editor state ----------------
   late final quill.QuillController _quillDraftController;
   final FocusNode _draftFocus = FocusNode();
@@ -204,8 +239,9 @@ class _EssayAssistantState extends State<EssayAssistant> {
    * ────────────────────────────────────────────────────────────────────────── */
 
   @override
-   void initState() async{
+   void initState() {
     super.initState();
+    _loadAllSessionsFromPrefs(); 
 
     // Current chat user identity (with optional profile image from LMS)
     _me = types.User(
@@ -274,10 +310,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
     //Get LLM response
     getLLMResponse(partial.text.trim(), _selectedLLM, _temperature).then((response) {
       if (response != null && response.isNotEmpty) {
-        if (_sessionActive){
-          _currentSession!.chatLog?.add(ChatTurn(role: 'user', content: partial.text.trim()));
-          _currentSession!.chatLog?.add(ChatTurn(role: 'assistant', content: response));
-        }
         _appendAssistantMessage(response);
         _scrollToBottom();
       } else {
@@ -286,7 +318,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
     }).catchError((error) {
       _appendSystemMessage('Error getting AI response: $error');
     });
-    _inputCtrl.clear();
     _scrollToBottom();
   }
 
@@ -1121,6 +1152,7 @@ Future<void> _saveCurrentSessionToPrefs() async {
               // Start/Continue session → posts a system message to the chat
               onStart: () {
                 Navigator.of(ctx).pop();
+                _startSessionFor(essay);
 
                 setState(() {
                   _messages.add(
