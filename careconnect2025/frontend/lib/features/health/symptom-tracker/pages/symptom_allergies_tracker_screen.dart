@@ -6,7 +6,9 @@ import 'package:care_connect_app/features/health/symptom-tracker/widgets/symptom
 import 'package:flutter/material.dart';
 
 class SymptomsAllergiesPage extends StatefulWidget {
-  const SymptomsAllergiesPage({super.key});
+  final int patientId;
+
+  const SymptomsAllergiesPage({super.key, required this.patientId});
 
   @override
   State<SymptomsAllergiesPage> createState() => _SymptomsAllergiesPageState();
@@ -111,7 +113,11 @@ class _SymptomsAllergiesPageState extends State<SymptomsAllergiesPage>
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
-                        children: const [SymptomTab(), AllergiesTab()],
+                        children: [
+                          // pass it down here
+                          SymptomTab(patientId: widget.patientId),
+                          const AllergiesTab(),
+                        ],
                       ),
                     ),
                   ],

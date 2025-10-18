@@ -436,6 +436,18 @@ class ApiService {
     return await AuthTokenManager.getAuthHeaders();
   }
 
+  // allergies tracker
+  static Future<String> getJwtToken() async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final auth = (headers['Authorization'] ?? '').trim();
+
+    const prefix = 'Bearer ';
+    if (auth.toLowerCase().startsWith(prefix.toLowerCase())) {
+      return auth.substring(prefix.length).trim();
+    }
+    return '';
+  }
+
   // Save JWT token from Set-Cookie header or response body
   static Future<void> saveJWTToken(String token) async {
     // This method is now deprecated - use AuthTokenManager.saveAuthData instead
@@ -447,6 +459,134 @@ class ApiService {
   // Clear auth cookie/token
   static Future<void> clearAuthCookie() async {
     await AuthTokenManager.clearAuthData();
+  }
+
+  // ========================
+  //   SYMPTOMS (CRUD)
+ // ========================
+
+// GET /v1/api/symptoms/patient/{patientId}
+  static Future<List<Map<String, dynamic>>> getSymptomsForPatient(int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.baseUrl}symptoms/patient/$patientId');
+
+    final res = await _httpClient.get(uri, headers: headers)
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 200) {
+      throw Exception('getSymptomsForPatient failed: ${res.statusCode} ${res.body}');
+    }
+    final decoded = jsonDecode(res.body);
+    final list = (decoded is Map && decoded['data'] is List)
+        ? decoded['data'] as List
+        : const [];
+    return list.whereType<Map<String, dynamic>>().toList();
+  }
+
+// ✅ NEW - GET /v1/api/symptoms/{id}
+  static Future<Map<String, dynamic>> getSymptomById(int id) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.baseUrl}symptoms/$id');
+
+    final res = await _httpClient.get(uri, headers: headers)
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 200) {
+      throw Exception('getSymptomById failed: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    return (decoded is Map && decoded['data'] is Map)
+        ? decoded['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+  }
+
+// POST /v1/api/symptoms
+  static Future<Map<String, dynamic>> createSymptom({
+    required int patientId,
+    required String symptomKey,
+    String? symptomValue,
+    required int severity,
+    String? clinicalNotes,
+    bool completed = true,
+    DateTime? takenAt,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    final payload = <String, dynamic>{
+      'patientId': patientId,
+      'symptomKey': symptomKey,
+      if (symptomValue != null) 'symptomValue': symptomValue,
+      'severity': severity,
+      'completed': completed,
+      'takenAt': (takenAt ?? DateTime.now()).toUtc().toIso8601String(),
+      if (clinicalNotes != null && clinicalNotes.trim().isNotEmpty)
+        'clinicalNotes': clinicalNotes.trim(),
+    };
+
+    final res = await _httpClient
+        .post(Uri.parse('${ApiConstants.baseUrl}symptoms'),
+        headers: headers, body: jsonEncode(payload))
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 201 && res.statusCode != 200) {
+      throw Exception('createSymptom failed: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    return (decoded is Map && decoded['data'] is Map)
+        ? decoded['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+  }
+
+// PUT /v1/api/symptoms/{id}
+  static Future<Map<String, dynamic>> updateSymptom({
+    required int id,
+    String? symptomKey,
+    String? symptomValue,
+    int? severity,
+    String? clinicalNotes,
+    bool? completed,
+    DateTime? takenAt,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    final payload = <String, dynamic>{
+      if (symptomKey != null) 'symptomKey': symptomKey,
+      if (symptomValue != null) 'symptomValue': symptomValue,
+      if (severity != null) 'severity': severity,
+      if (clinicalNotes != null) 'clinicalNotes': clinicalNotes,
+      if (completed != null) 'completed': completed,
+      if (takenAt != null) 'takenAt': takenAt.toUtc().toIso8601String(),
+    };
+
+    final res = await _httpClient
+        .put(Uri.parse('${ApiConstants.baseUrl}symptoms/$id'),
+        headers: headers, body: jsonEncode(payload))
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 200) {
+      throw Exception('updateSymptom failed: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    return (decoded is Map && decoded['data'] is Map)
+        ? decoded['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+  }
+
+// DELETE /v1/api/symptoms/{id}
+  static Future<void> deleteSymptom(int id) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final res = await _httpClient
+        .delete(Uri.parse('${ApiConstants.baseUrl}symptoms/$id'), headers: headers)
+        .timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception('deleteSymptom failed: ${res.statusCode} ${res.body}');
+    }
   }
 
   // ========================
@@ -576,7 +716,6 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
-  // FAMILY
   // FAMILY
   static Future<List<Map<String, dynamic>>> getAccessiblePatients() async {
     try {

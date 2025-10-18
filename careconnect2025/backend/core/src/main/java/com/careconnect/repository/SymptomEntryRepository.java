@@ -6,11 +6,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 
 @Repository
 public interface SymptomEntryRepository extends JpaRepository<SymptomEntry, Long> {
 
-    /** Completed symptom checks within period – drives adherence rate */
+    // listing symptoms by patient
+    List<SymptomEntry> findByPatientIdOrderByTakenAtDesc(Long patientId);
+
+    // Already existing analytics queries:
     @Query("""
            SELECT COUNT(s)
            FROM   SymptomEntry s
@@ -19,10 +23,9 @@ public interface SymptomEntryRepository extends JpaRepository<SymptomEntry, Long
              AND  s.completed = true
            """)
     long countCompleted(@Param("patientId") Long patientId,
-                        @Param("from")      Instant from,
-                        @Param("to")        Instant to);
+                        @Param("from") Instant from,
+                        @Param("to") Instant to);
 
-    /** Total recorded symptom checks (completed + not-completed) */
     @Query("""
            SELECT COUNT(s)
            FROM   SymptomEntry s
@@ -30,6 +33,6 @@ public interface SymptomEntryRepository extends JpaRepository<SymptomEntry, Long
              AND  s.takenAt BETWEEN :from AND :to
            """)
     long countTotal(@Param("patientId") Long patientId,
-                    @Param("from")      Instant from,
-                    @Param("to")        Instant to);
+                    @Param("from") Instant from,
+                    @Param("to") Instant to);
 }
