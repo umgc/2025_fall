@@ -10,15 +10,15 @@
 
 -- Patient User
 INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
-('patient@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'PATIENT', 'ACTIVE', '2025-10-06', '2024-06-15 10:00:00');
+('patient@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'PATIENT', 'ACTIVE', '2024-06-16', '2024-06-15 10:00:00');
 
 -- Caregiver User
 INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
-('caregiver@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'CAREGIVER', 'ACTIVE', '2025-10-06', '2024-05-01 09:00:00');
+('caregiver@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'CAREGIVER', 'ACTIVE', '2024-05-02', '2024-05-01 09:00:00');
 
 -- Family Member User
 INSERT INTO users (email, email_verified, password, password_hash, role, status, last_login_date, created_at) VALUES
-('family@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'FAMILY_MEMBER', 'ACTIVE', '2025-10-05', '2024-07-10 16:00:00');
+('family@careconnect.com', true, 'password', '$2a$10$a5mrP5BJfagHEYTGsrgPGOYcC0X80L4RUSf2BcHlcccS.IdJgoANq', 'FAMILY_MEMBER', 'ACTIVE', '2024-07-11', '2024-07-10 16:00:00');
 
 -- ============================================
 -- 2. PATIENT TABLE - Use embedded Address fields (line1, line2, not address_line1/2)
