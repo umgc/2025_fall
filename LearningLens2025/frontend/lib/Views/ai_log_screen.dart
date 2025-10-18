@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
@@ -514,7 +515,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   String getDateString(DateTime date) {
-    return date.toLocal().toString().split(' ')[0];
+    return DateFormat.yMd().format(date.toLocal());
   }
 
   // Function to show details in a dialog
