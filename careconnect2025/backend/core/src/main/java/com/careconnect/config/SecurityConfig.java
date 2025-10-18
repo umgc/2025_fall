@@ -63,7 +63,8 @@ public class SecurityConfig {
                         "/v1/api/caregivers/**",
                         "/v1/api/subscriptions/**",
                         "/v1/api/email-test/**",  // Allow email testing endpoints
-                        "/v1/api/test/**"  // Allow test endpoints (health check, swagger info)
+                        "/v1/api/test/**", // Allow test endpoints (health check, swagger info)
+                        "/oauth/**"// Permit OAuth paths
                 ).permitAll()
 
                 /* ---------- public static assets ------------------------ */

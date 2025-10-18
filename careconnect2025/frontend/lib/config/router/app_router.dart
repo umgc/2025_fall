@@ -56,6 +56,7 @@ import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_das
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import '../../features/usps/presentation/usps_test_screen.dart';
 
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
@@ -86,6 +87,12 @@ final GoRouter appRouter = GoRouter(
         return LoginPage(userType: userType);
       },
     ),
+    GoRoute(
+      path: '/usps-test',
+      name: 'uspsTest',
+      builder: (context, state) => const UspsTestScreen(),
+    ),
+
     GoRoute(
       path: '/signup',
       builder: (context, state) {
@@ -810,7 +817,7 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
         GoRoute(
-          path: 'menu',
+          path: '/menu',
           name: 'menupage',
           builder: (context, state) => const MenuPage(),
         ),
