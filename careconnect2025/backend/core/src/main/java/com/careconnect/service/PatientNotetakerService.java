@@ -165,13 +165,13 @@ public class PatientNotetakerService {
                     + "', generate a json object with the following properties: "
                     + "name (string), "
                     + "date (string) , "
-                    + "daysOfWeek (array of booleans for each day of the week, represented as a string), "
+                    + "daysOfWeek (array of booleans for each day of the week), "
                     + "description (string), "
                     + "count (int), "
                     + "frequency (string), "
                     + "taskType (string, one of the following: medication, appointment, exercise, general, lab, pharmacy),"
                     + "timeOfDay (localdatetime as a string)"
-                    + ". The json should be in the following format: {\"date\":\"YYYY-MM-DD\", \"daysOfWeek\":\"[true, false, false, false, false, false, false]\", \"description\":\"description text\", \"count\":1, \"frequency\":\"once\", \"taskType\":\"general\", \"timeOfDay\":\"hr:min:sec\"}. "
+                    + ". The json should be in the following format: {\"date\":\"YYYY-MM-DD\", \"daysOfWeek\":[true, false, false, false, false, false, false], \"description\":\"description text\", \"count\":1, \"frequency\":\"once\", \"taskType\":\"general\", \"timeOfDay\":\"hr:min:sec\"}. "
                     + "Use the following text to derive these properties as they relate to the keyword: '"
                     + truncatedMessage
                     + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object beginning with { and ending with }.";
