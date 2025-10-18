@@ -56,7 +56,7 @@ if errorlevel 1 (
         echo Starting Docker Desktop...
         start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
         echo Waiting for Docker Desktop to start...
-        timeout /t 20 /nobreak >nul
+        C:\Windows\System32\timeout.exe /t 20 /nobreak >nul
         REM Retry docker info
         docker info >nul 2>&1
         if errorlevel 1 (
@@ -101,7 +101,7 @@ if "%running_container%"=="" (
         REM Start PostgreSQL container
         echo Starting PostgreSQL with Docker Compose...
         pushd pg_docker
-        docker-compose up -d postgres
+        docker compose up -d postgres
         if errorlevel 1 (
             echo Error: Failed to start PostgreSQL with Docker Compose
             popd
@@ -112,7 +112,7 @@ if "%running_container%"=="" (
     )
 
     echo Waiting for PostgreSQL to be ready...
-    timeout /t 10 /nobreak >nul
+    C:\Windows\System32\timeout.exe /t 10 /nobreak >nul
 ) else (
     echo PostgreSQL container is already running!
 )
@@ -128,7 +128,7 @@ if not errorlevel 1 (
     goto :postgres_ready
 )
 echo Waiting for PostgreSQL... (attempt !attempt!/!max_attempts!)
-timeout /t 2 /nobreak >nul
+C:\Windows\System32\timeout.exe /t 2 /nobreak >nul
 set /a attempt+=1
 if !attempt! leq !max_attempts! goto :wait_loop
 
@@ -158,7 +158,7 @@ echo Starting Spring Boot application...
 set SPRING_PROFILES_ACTIVE=dev
 
 REM Use Maven wrapper for Windows
-call mvnw.cmd spring-boot:run -Dspring.profiles.active=dev
+call mvnw.cmd spring-boot:run 
 
 echo Application stopped.
 pause

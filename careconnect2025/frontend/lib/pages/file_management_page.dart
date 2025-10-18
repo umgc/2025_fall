@@ -125,7 +125,7 @@ class _FileManagementPageState extends State<FileManagementPage>
           ],
         ),
       ),
-      drawer: const CommonDrawer(currentRoute: '/file-management'),
+     // drawer: const CommonDrawer(currentRoute: '/file-management'),
       body: TabBarView(
         controller: _tabController,
         children: [_buildFilesTab(), _buildUploadTab(), _buildAnalyticsTab()],
