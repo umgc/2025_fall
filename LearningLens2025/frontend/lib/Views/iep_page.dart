@@ -31,8 +31,6 @@ class IepPage extends StatefulWidget {
 }
 
 class _IepPageState extends State<IepPage> {
-  TextEditingController _dueController = TextEditingController();
-  TextEditingController _deadlineController = TextEditingController();
   bool? isChecked1 = false;
   bool? isChecked2 = false;
   String? selectedCourse;
@@ -48,9 +46,10 @@ class _IepPageState extends State<IepPage> {
   int? attempts;
   List<Override>? overrides = [];
   TextEditingController _attemptsController = TextEditingController();
-  TextEditingController iepSummaryController = TextEditingController();
-  TextEditingController recommendationsController = TextEditingController();
   bool _isAIRecommending = false;
+  TextEditingController iepSummaryController = TextEditingController();
+  String iepSummary = "";
+  TextEditingController iepRecommendation = TextEditingController();
 
   LlmType? selectedLLM;
 
@@ -70,12 +69,12 @@ class _IepPageState extends State<IepPage> {
           ? DateTime.fromMillisecondsSinceEpoch(epochTime!.toInt() * 1000)
           : DateTime.now(),
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: epochTime2 != null && selectedAssignment!.type == "essay"
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime2! * 1000)
+          : DateTime(2100),
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _dueController.value =
-            TextEditingValue(text: DateFormat.yMd().format(picked));
         epochTime = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
@@ -87,13 +86,13 @@ class _IepPageState extends State<IepPage> {
       initialDate: epochTime2 != null
           ? DateTime.fromMillisecondsSinceEpoch(epochTime2!.toInt() * 1000)
           : DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: epochTime != null
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime! * 1000)
+          : DateTime(2000),
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _deadlineController.value =
-            TextEditingValue(text: DateFormat.yMd().format(picked));
         epochTime2 = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
@@ -187,6 +186,8 @@ class _IepPageState extends State<IepPage> {
                       onSelected: (String? selectedValue) {
                         setState(() {
                           selectedCourse = selectedValue;
+                          selectedAssignment = null;
+                          userId = null;
                         });
                         participants = handleSelection(selectedValue);
                         if (selectedValue != null) {
@@ -272,9 +273,8 @@ class _IepPageState extends State<IepPage> {
                                     if (selectedAssessment.type == "essay") {
                                       _attemptsController.value =
                                           TextEditingValue.empty;
+                                      attempts = null;
                                     } else {
-                                      _deadlineController.value =
-                                          TextEditingValue.empty;
                                       epochTime2 = null;
                                     }
                                     resetForm(false);
@@ -290,7 +290,7 @@ class _IepPageState extends State<IepPage> {
                     SizedBox(
                         width: 350,
                         child: TextField(
-                          enabled: selectedAssignment != null,
+                          enabled: selectedAssignment != null && userId != null,
                           decoration: InputDecoration(
                               alignLabelWithHint: true,
                               labelText: "IEP Summary",
@@ -298,6 +298,9 @@ class _IepPageState extends State<IepPage> {
                                 borderRadius: BorderRadius.circular(10),
                               )),
                           controller: iepSummaryController,
+                          onChanged: (value) => setState(() {
+                            iepSummary = value;
+                          }),
                           textAlignVertical: TextAlignVertical.top,
                           keyboardType: TextInputType.multiline,
                           minLines: 10,
@@ -343,9 +346,11 @@ class _IepPageState extends State<IepPage> {
                             alignment: AlignmentGeometry.topRight,
                             child: ElevatedButton(
                                 onPressed: selectedAssignment != null &&
+                                        userId != null &&
+                                        iepSummary.isNotEmpty &&
                                         selectedLLM != null
-                                    ? () => recommendIEP(selectedAssignment!,
-                                        iepSummaryController.value.text)
+                                    ? () => recommendIEP(
+                                        selectedAssignment!, iepSummary)
                                     : null,
                                 child: _isAIRecommending
                                     ? const SizedBox(
@@ -360,14 +365,13 @@ class _IepPageState extends State<IepPage> {
                         child: TextField(
                           decoration: InputDecoration(
                               alignLabelWithHint: true,
-                              enabled: recommendationsController
-                                  .value.text.isNotEmpty,
+                              enabled: iepRecommendation.value.text.isNotEmpty,
                               labelText: "IEP Recommendations",
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
+                          controller: iepRecommendation,
                           readOnly: true,
-                          controller: recommendationsController,
                           textAlignVertical: TextAlignVertical.top,
                           keyboardType: TextInputType.multiline,
                           minLines: 10,
@@ -407,7 +411,10 @@ class _IepPageState extends State<IepPage> {
                         Row(
                           children: [
                             Opacity(
-                                opacity: selectedAssignment != null ? 1 : .5,
+                                opacity:
+                                    selectedAssignment != null && userId != null
+                                        ? 1
+                                        : .5,
                                 child: Container(
                                   width: 250,
                                   margin: EdgeInsets.only(right: 20),
@@ -418,14 +425,19 @@ class _IepPageState extends State<IepPage> {
                                     border: Border.all(color: Colors.black),
                                   ),
                                   child: Text(
-                                    _dueController.value.text,
+                                    epochTime == null
+                                        ? ""
+                                        : DateFormat.yMd().format(
+                                            DateTime.fromMillisecondsSinceEpoch(
+                                                epochTime! * 1000)),
                                     style: TextStyle(fontSize: 20),
                                   ),
                                 )),
                             SizedBox(
                                 width: 180,
                                 child: ElevatedButton(
-                                  onPressed: selectedAssignment != null
+                                  onPressed: selectedAssignment != null &&
+                                          userId != null
                                       ? () => _selectDate(context)
                                       : null, // Correct usage of named parameter `onTap`
                                   child: Text(
@@ -438,7 +450,8 @@ class _IepPageState extends State<IepPage> {
                         Row(
                           children: [
                             Opacity(
-                                opacity: selectedAssignment?.type == "essay"
+                                opacity: selectedAssignment?.type == "essay" &&
+                                        userId != null
                                     ? 1
                                     : .5,
                                 child: Container(
@@ -451,14 +464,20 @@ class _IepPageState extends State<IepPage> {
                                     border: Border.all(color: Colors.black),
                                   ),
                                   child: Text(
-                                    _deadlineController.value.text,
+                                    epochTime2 == null
+                                        ? ""
+                                        : DateFormat.yMd().format(
+                                            DateTime.fromMillisecondsSinceEpoch(
+                                                epochTime2! * 1000)),
                                     style: TextStyle(fontSize: 20),
                                   ),
                                 )),
                             SizedBox(
                                 width: 180,
                                 child: ElevatedButton(
-                                  onPressed: selectedAssignment?.type == "essay"
+                                  onPressed: selectedAssignment?.type ==
+                                              "essay" &&
+                                          userId != null
                                       ? () => _selectCutOffDate(context)
                                       : null, // Correct usage of named parameter `onTap`
                                   child: Text(
@@ -479,6 +498,7 @@ class _IepPageState extends State<IepPage> {
                       padding: EdgeInsets.only(top: 10, left: 160, bottom: 20),
                       child: ElevatedButton(
                         onPressed: selectedAssignment != null &&
+                                userId != null &&
                                 epochTime != null &&
                                 (selectedAssignment?.type != "quiz" ||
                                     attempts != null) &&
@@ -671,15 +691,15 @@ class _IepPageState extends State<IepPage> {
 
   void resetForm(bool clearIEPSummary) {
     setState(() {
-      _deadlineController.value = TextEditingValue.empty;
-      _dueController.value = TextEditingValue.empty;
       epochTime = null;
       epochTime2 = null;
       if (clearIEPSummary) {
         iepSummaryController.value = TextEditingValue.empty;
+        iepSummary = "";
       }
-      recommendationsController.value = TextEditingValue.empty;
+      iepRecommendation.value = TextEditingValue.empty;
       _attemptsController.value = TextEditingValue.empty;
+      attempts = null;
     });
   }
 
@@ -815,7 +835,7 @@ class _IepPageState extends State<IepPage> {
     String summary = "";
     DateTime? due;
     DateTime? deadline;
-    int? attempts;
+    int? newAttempts;
 
     try {
       var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
@@ -840,7 +860,7 @@ class _IepPageState extends State<IepPage> {
         if (jsonList.length > 1 &&
             selectedAssignment.type == "quiz" &&
             jsonList[1].containsKey("Attempts")) {
-          attempts = jsonList[1]["Attempts"];
+          newAttempts = jsonList[1]["Attempts"];
         }
         if (jsonList.length > 2 && jsonList[2].containsKey("Due Date")) {
           due = DateFormat.yMd().tryParse(jsonList[2]["Due Date"]) ??
@@ -851,6 +871,9 @@ class _IepPageState extends State<IepPage> {
             jsonList[3].containsKey("Deadline")) {
           deadline = DateFormat.yMd().tryParse(jsonList[3]["Deadline"]) ??
               DateTime.now();
+          if (due != null && deadline.isBefore(due)) {
+            deadline = due;
+          }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -866,17 +889,12 @@ class _IepPageState extends State<IepPage> {
     setState(() {
       _isAIRecommending = false;
       setState(() {
-        recommendationsController.value = TextEditingValue(text: summary);
-        _attemptsController.value =
-            TextEditingValue(text: attempts == null ? "" : attempts.toString());
-        _dueController.value = due == null
-            ? TextEditingValue.empty
-            : TextEditingValue(text: DateFormat.yMd().format(due));
+        iepRecommendation.value = TextEditingValue(text: summary);
+        _attemptsController.value = TextEditingValue(
+            text: newAttempts == null ? "" : newAttempts.toString());
+        attempts = newAttempts;
         epochTime =
             due == null ? null : (due.millisecondsSinceEpoch / 1000).round();
-        _deadlineController.value = deadline == null
-            ? TextEditingValue.empty
-            : TextEditingValue(text: DateFormat.yMd().format(deadline));
         epochTime2 = deadline == null
             ? null
             : (deadline.millisecondsSinceEpoch / 1000).round();
