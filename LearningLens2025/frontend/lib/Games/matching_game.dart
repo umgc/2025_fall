@@ -6,11 +6,11 @@ class MatchingGame extends StatefulWidget {
   final bool previewMode;
 
   const MatchingGame({
-    Key? key,
+    super.key,
     required this.pairs,
     required this.onComplete,
     this.previewMode = false,
-  }) : super(key: key);
+  });
 
   @override
   _MatchingGameState createState() => _MatchingGameState();

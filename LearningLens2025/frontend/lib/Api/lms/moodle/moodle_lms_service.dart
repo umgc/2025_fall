@@ -118,12 +118,21 @@ class MoodleLmsService implements LmsInterface {
 
     // 4) Optionally load user courses right away
     courses = await getUserCourses();
-    overrides = await getAssignmentOverrides();
+    await refreshOverrides();
   }
 
   @override
   bool isLoggedIn() {
     return _userToken != null;
+  }
+
+  Future<void> refreshOverrides() async {
+    List<Future<List<Override>>> futures = [
+      _getQuizOverrides(),
+      _getEssayOverrides()
+    ];
+    List<List<Override>> data = await Future.wait(futures);
+    overrides = [...data[0], ...data[1]];
   }
 
   @override
@@ -273,20 +282,20 @@ class MoodleLmsService implements LmsInterface {
 
     // Optionally fetch quizzes/essays for each course
     for (Course c in userCourses) {
-      c.quizzes = await getQuizzes(c.id);
-      c.essays = await getEssays(c.id);
+      await c.refreshQuizzes();
+      await c.refreshEssays();
     }
     return userCourses;
   }
 
-  Future<List<Override>> getAssignmentOverrides() async {
+  Future<List<Override>> _getQuizOverrides() async {
     // Returns courses the user is enrolled in
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
     final response =
         await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
       'wstoken': _userToken,
-      'wsfunction': 'local_learninglens_get_all_overrides',
+      'wsfunction': 'local_learninglens_get_quiz_overrides',
       'moodlewsrestformat': 'json',
     });
 
@@ -295,20 +304,53 @@ class MoodleLmsService implements LmsInterface {
     }
 
     final decodedJson = jsonDecode(response.body);
-    List<Override> assignmentOverrides;
+    List<Override> quizOverrides;
 
     if (decodedJson is List) {
-      assignmentOverrides =
+      quizOverrides =
           decodedJson.map((i) => Override.empty().fromMoodleJson(i)).toList();
     } else if (decodedJson is Map<String, dynamic>) {
       final courseList = decodedJson['courses'] as List<dynamic>;
-      assignmentOverrides =
+      quizOverrides =
           courseList.map((i) => Override.empty().fromMoodleJson(i)).toList();
     } else {
       throw StateError('Unexpected response format from Moodle');
     }
 
-    return assignmentOverrides;
+    return quizOverrides;
+  }
+
+  Future<List<Override>> _getEssayOverrides() async {
+    // Returns courses the user is enrolled in
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+
+    final response =
+        await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
+      'wstoken': _userToken,
+      'wsfunction': 'local_learninglens_get_essay_overrides',
+      'moodlewsrestformat': 'json',
+    });
+
+    if (response.statusCode != 200) {
+      throw HttpException(response.body);
+    }
+
+    final decodedJson = jsonDecode(response.body);
+    print(decodedJson);
+    List<Override> essayOverrides;
+
+    if (decodedJson is List) {
+      essayOverrides =
+          decodedJson.map((i) => Override.empty().fromMoodleJson(i)).toList();
+    } else if (decodedJson is Map<String, dynamic>) {
+      final courseList = decodedJson['courses'] as List<dynamic>;
+      essayOverrides =
+          courseList.map((i) => Override.empty().fromMoodleJson(i)).toList();
+    } else {
+      throw StateError('Unexpected response format from Moodle');
+    }
+
+    return essayOverrides;
   }
 
   @override
@@ -1253,6 +1295,7 @@ class MoodleLmsService implements LmsInterface {
     return students;
   }
 
+  @override
   Future<dynamic> getQuizStatsForStudent(String quizId, int userId) async {
     final allAttempts = await ApiService().httpPost(
       Uri.parse(apiURL + serverUrl),
@@ -1272,6 +1315,7 @@ class MoodleLmsService implements LmsInterface {
     return jsonDecode(allAttempts.body);
   }
 
+  @override
   Future<List<Participant>> getEssayGradesForParticipants(
       String courseId, int assignmentId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');

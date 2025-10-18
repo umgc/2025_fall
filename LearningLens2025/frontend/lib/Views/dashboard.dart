@@ -284,8 +284,9 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.architecture_outlined
       },
       {
-        'title': 'Analytics',
-        'description': 'View performance analytics.',
+        'title': 'Actionable Analytics',
+        'description':
+            "View AI-powered insights into student performance and potential action items.",
         'onPressed': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AnalyticsPage()),

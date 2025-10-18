@@ -192,31 +192,28 @@ class _GamificationViewState extends State<GamificationView> {
                   builder: (context) {
                     Widget previewContent;
 
-                    final List<Map<String, dynamic>> _gameData =
+                    final List<Map<String, dynamic>> gameData =
                         _generatedGameData ?? [];
 
                     switch (_selectedGameType) {
                       case 'Quiz Hero':
                         previewContent = QuizGame(
-                          questions: _gameData,
+                          questions: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
-                        break;
                       case 'Matching':
                         previewContent = MatchingGame(
-                          pairs: _gameData,
+                          pairs: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
-                        break;
                       case 'Flashcards':
                         previewContent = FlashcardGame(
-                          questions: _gameData,
+                          questions: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
-                        break;
                       default:
                         previewContent = const Text('No game type selected.');
                     }

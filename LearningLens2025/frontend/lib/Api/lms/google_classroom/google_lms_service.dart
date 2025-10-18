@@ -269,9 +269,9 @@ class GoogleLmsService extends LmsInterface {
         }
       }
 
-      course.quizzes = await getQuizzes(course.id, topicId: course.quizTopicId);
+      await course.refreshQuizzes();
       // print('Quizzes for course ${course.id}: ${course.quizzes}');
-      course.essays = await getEssays(course.id, topicId: course.essayTopicId);
+      await course.refreshEssays();
       // print('Essays for course ${course.id}: ${course.essays}');
     }
 
@@ -1093,6 +1093,19 @@ class GoogleLmsService extends LmsInterface {
   Future<List<Participant>> getQuizGradesForParticipants(
       String courseId, int quizId) {
     // TODO: implement getQuizGradesForParticipants
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Participant>> getEssayGradesForParticipants(
+      String courseId, int essayId) {
+    // TODO: implement getEssayGradesForParticipants
+    throw UnimplementedError();
+  }
+
+  @override
+  Future getQuizStatsForStudent(String quizId, int userId) {
+    // TODO: implement getQuizStatsForStudent
     throw UnimplementedError();
   }
 }
