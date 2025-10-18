@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'ai_chat_improved.dart';
+import '../providers/user_provider.dart';
 
 /// A modal dialog wrapper for the AI chat component
 class AIChatModal extends StatelessWidget {
@@ -9,6 +11,9 @@ class AIChatModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+    
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -27,7 +32,12 @@ class AIChatModal extends StatelessWidget {
             ),
           ],
         ),
-        child: AIChat(role: role, isModal: true),
+        child: AIChat(
+          role: role, 
+          isModal: true,
+          patientId: user?.patientId,
+          userId: user?.id,
+        ),
       ),
     );
   }

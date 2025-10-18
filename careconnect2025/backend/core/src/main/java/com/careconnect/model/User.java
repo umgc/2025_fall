@@ -36,9 +36,11 @@ public class User {
     @Column(name = "last_login_date")
     private LocalDate lastLoginDate;
 
+    @Builder.Default
     @Column(name = "login_streak")
     private Integer loginStreak = 0;
 
+    @Builder.Default
     @Column(name = "leaderboard_opt_in", nullable = true)
     private Boolean leaderboardOptIn = true;
 
