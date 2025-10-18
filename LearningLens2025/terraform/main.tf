@@ -180,7 +180,7 @@ resource "aws_ecr_repository" "edulense_program_grader" {
 resource "null_resource" "build_docker_image" {
   triggers = {
     script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Docker"))
+    docker_hash = sha1(file("../docker/Dockerfile"))
     runcode_hash = sha1(file("../docker/runcode.sh"))
     evaluate = sha1(file("../docker/evaluate.py"))
   }

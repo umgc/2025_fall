@@ -90,8 +90,15 @@ def run_student_programs(language: str, base_dir="."):
             else:
                 cmd = []
 
-            proc = subprocess.run(cmd, capture_output=True, text=True)
-            output_text = proc.stdout.strip() or proc.stderr.strip()
+            try:
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                output_text = proc.stdout.strip() or proc.stderr.strip()
+                error_flag = proc.returncode != 0
+                timedout = False
+            except subprocess.TimeoutExpired:
+                output_text = "Execution timed out after 30 seconds."
+                error_flag = True
+                timedout = True
 
             result['outputs'].append({
                 "input": line if line is not None else '',
@@ -99,7 +106,8 @@ def run_student_programs(language: str, base_dir="."):
                 "output": output_text,
                 "studentId": student_id,
                 "assignmentId": assignment_id,
-                "error": proc.returncode != 0
+                "error": error_flag,
+                "timedout": timedout
             })
 
         results.append(result)

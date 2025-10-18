@@ -203,21 +203,30 @@ class _ProgramAsessmentResultsViewState
       final expectedOutput = entry['expectedOutput'].toString();
       final input = entry['input'].toString();
       bool error = entry['error'];
-
+      bool timedout = entry['timedout'];
+      
       final outputIsCorrect = _isOutputCorrect(entry);
 
       children.addAll([
         Row(
           spacing: 6,
           children: [
-            Text(
-              "Result: ${outputIsCorrect ? 'PASS' : 'FAIL'}",
-              style: TextStyle(fontSize: 18),
-            ),
+            if(timedout)
+              Text(
+                "Result: TIMED OUT",
+                style: TextStyle(fontSize: 18),
+              )
+            else
+              Text(
+                "Result: ${outputIsCorrect ? 'PASS' : 'FAIL'}",
+                style: TextStyle(fontSize: 18),
+              ),
             _getIcon(outputIsCorrect)
           ],
         ),
-        if (error)
+        if (timedout)
+          Text('Program ran for too long')
+        else if (error)
           Text('Program encountered error during compilation or runtime')
         else if (outputIsCorrect)
           Text('Actual output matched what was expected')

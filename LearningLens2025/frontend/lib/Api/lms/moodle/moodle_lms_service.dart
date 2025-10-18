@@ -118,7 +118,7 @@ class MoodleLmsService implements LmsInterface {
 
     // 4) Optionally load user courses right away
     courses = await getUserCourses();
-    await refreshOverrides();
+    // await refreshOverrides();
   }
 
   @override
