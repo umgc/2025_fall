@@ -273,8 +273,8 @@ class MoodleLmsService implements LmsInterface {
 
     // Optionally fetch quizzes/essays for each course
     for (Course c in userCourses) {
-      c.quizzes = await getQuizzes(c.id);
-      c.essays = await getEssays(c.id);
+      await c.refreshQuizzes();
+      await c.refreshEssays();
     }
     return userCourses;
   }
@@ -1253,6 +1253,7 @@ class MoodleLmsService implements LmsInterface {
     return students;
   }
 
+  @override
   Future<dynamic> getQuizStatsForStudent(String quizId, int userId) async {
     final allAttempts = await ApiService().httpPost(
       Uri.parse(apiURL + serverUrl),
@@ -1272,6 +1273,7 @@ class MoodleLmsService implements LmsInterface {
     return jsonDecode(allAttempts.body);
   }
 
+  @override
   Future<List<Participant>> getEssayGradesForParticipants(
       String courseId, int assignmentId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
