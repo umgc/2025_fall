@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Primary
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true")
 public class DefaultAIChatService implements AIChatService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DefaultAIChatService.class);
 
