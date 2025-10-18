@@ -1,11 +1,17 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:care_connect_app/features/health/medication-tracker/models/medication-model.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-add-input-form.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-card.dart';
 import 'package:care_connect_app/features/health/medication-tracker/widgets/medication-header.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
-// API client to pull activeMedications from /profile/enhanced
-import 'package:care_connect_app/features/health/medication-tracker/data/medications_api.dart';
+
 
 /// Medication tracker page
 class MedicationsTrackerPage extends StatefulWidget {
@@ -13,28 +19,178 @@ class MedicationsTrackerPage extends StatefulWidget {
 
   @override
   State<MedicationsTrackerPage> createState() => _MedicationsPageState();
+
 }
 
 class _MedicationsPageState extends State<MedicationsTrackerPage> {
-  final String baseUrl = 'http://10.0.2.2:8080'; // Android emulator -> host's localhost:8080
-  final int patientId = 1;                        // Get via GET /v1/api/patients/me
-  final String jwt = '<JWT>';                     // Inject your real token
+  /// Medication list
+  List<Medication> medications = [];
 
-  late Future<List<Medication>> _future;
-  final List<Medication> _localAdds = []; // Add-modal items (local only; no POST yet)
+  /// Loading state
+  bool _isLoading = false;
+
+  /// Error message
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _future = fetchMedicationsFromEnhancedProfile(
-      baseUrl: baseUrl,
-      patientId: patientId,
-      jwtToken: jwt,
+    _fetchMedications();
+  }
+
+  /// Fetch medications from API
+  Future<void> _fetchMedications() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      if (userProvider.user?.patientId == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Patient ID not found';
+        });
+        return;
+      }
+
+      final http.Response resp = await ApiService.getPatientMedicationsForPatient(
+        userProvider.user!.patientId!,
+      );
+
+      print('Medications response: ${resp.body}');
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+        setState(() {
+          medications = data.map((json) => Medication.fromJson(json)).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load medications: ${resp.statusCode}';
+        });
+      }
+    } catch (e) {
+      print('Error fetching medications: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading medications: $e';
+      });
+    }
+  }
+
+  /// Build medication list with loading and error states
+  Widget _buildMedicationList() {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading medications...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchMedications,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (medications.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.medication_outlined,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No medications found',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first medication to get started',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: medications.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        return MedicationCard(
+          medication: medications[index],
+          onStatusChanged: (newStatus) {
+            setState(() {
+              medications[index] = medications[index].copyWith(status: newStatus);
+            });
+          },
+          onMedicationRemoved: () {
+            // Refresh the medication list after removal
+            _fetchMedications();
+          },
+        );
+      },
     );
   }
 
-  // Method for showing the add medication modal
-  void _showAddMedicationModal() {
+  /// Method for showing the add medication modal
+  Future<void> _showAddMedicationModal() async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -42,11 +198,13 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
       builder: (context) => AddMedicationModal(
         onMedicationAdded: (medication) {
           setState(() {
-            _localAdds.add(medication);
+            medications.add(medication);
           });
         },
       ),
     );
+
+
   }
 
   @override
@@ -65,7 +223,7 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).shadowColor.withValues(alpha: 0.05),
+                      color: Theme.of(context).shadowColor.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -73,7 +231,6 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
                 ),
                 child: Column(
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -86,50 +243,28 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
                           const SizedBox(height: 8),
                           Text(
                             'Medications',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Manage your medication schedule and reminders',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
-
-                    //  Replace hardcoded list with  backend meds
                     Expanded(
-                      child: FutureBuilder<List<Medication>>(
-                        future: _future,
-                        builder: (context, snap) {
-                          if (snap.connectionState != ConnectionState.done) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-
-                          if (snap.hasError) {
-                            final meds = [..._localAdds];
-                            return meds.isEmpty
-                                ? Center(child: Text('Error: ${snap.error}'))
-                                : _medList(meds);
-                          }
-
-                          final backendMeds = snap.data ?? <Medication>[];
-                          final meds = [...backendMeds, ..._localAdds];
-
-                          if (meds.isEmpty) {
-                            return const Center(child: Text('No medications found.'));
-                          }
-
-                          return _medList(meds);
-                        },
-                      ),
+                      child: _buildMedicationList(),
                     ),
-
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -140,21 +275,4 @@ class _MedicationsPageState extends State<MedicationsTrackerPage> {
       ),
     );
   }
-
-  // Re-usable list builder
-  Widget _medList(List<Medication> meds) => ListView.separated(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    itemCount: meds.length,
-    separatorBuilder: (context, index) => const SizedBox(height: 16),
-    itemBuilder: (context, index) {
-      return MedicationCard(
-        medication: meds[index],
-        onStatusChanged: (newStatus) {
-          setState(() {
-            meds[index] = meds[index].copyWith(status: newStatus);
-          });
-        },
-      );
-    },
-  );
 }

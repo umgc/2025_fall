@@ -1,9 +1,9 @@
 // Display the tasks screen for a specific patient, consisting of a list of tasks retrieved from the backend.
 import 'dart:convert';
 
+import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
-import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -78,7 +78,7 @@ class _TasksScreenState extends State<TasksScreen> {
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +95,9 @@ class _TasksScreenState extends State<TasksScreen> {
       drawer: const CommonDrawer(currentRoute: '/patient-tasks'),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.go('/assign-task?patientId=${widget.patientId}&patientName=${widget.patientName}');
+          context.go(
+            '/assign-task?patientId=${widget.patientId}&patientName=${widget.patientName}',
+          );
         },
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.add, color: Colors.white),
@@ -103,55 +105,59 @@ class _TasksScreenState extends State<TasksScreen> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : error != null
-              ? Center(child: Text(error!))
-              : ListView.builder(
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    return Card(
-                      margin: const EdgeInsets.all(8.0),
-                      child: ListTile(
-                        title: Text(task.name),
-                        subtitle: Text(task.description),
-                        trailing: Semantics(
-                          label: 'Delete task',
-                          button: true,
-                          child: IconButton(
-                            icon: const Icon(Icons.delete),
-                            tooltip: 'Delete task',
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Task'),
-                                  content: const Text('Are you sure you want to delete this task?'),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
+          ? Center(child: Text(error!))
+          : ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return Card(
+                  margin: const EdgeInsets.all(8.0),
+                  child: ListTile(
+                    title: Text(task.name),
+                    subtitle: Text(task.description),
+                    trailing: Semantics(
+                      label: 'Delete task',
+                      button: true,
+                      child: IconButton(
+                        icon: const Icon(Icons.delete),
+                        tooltip: 'Delete task',
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Task'),
+                              content: const Text(
+                                'Are you sure you want to delete this task?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                  child: const Text('Cancel'),
                                 ),
-                              );
-                              if (confirm == true) {
-                                final prefs = await SharedPreferences.getInstance();
-                                final userId = prefs.getString('userId');
-                                if (userId != null) {
-                                  await ApiService.deleteTask(task.id);
-                                  _fetchTasks();
-                                }
-                              }
-                            },
-                          ),
-                        ),
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            final prefs = await SharedPreferences.getInstance();
+                            final userId = prefs.getString('userId');
+                            if (userId != null) {
+                              await ApiService.deleteTask(task.id!);
+                              _fetchTasks();
+                            }
+                          }
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
