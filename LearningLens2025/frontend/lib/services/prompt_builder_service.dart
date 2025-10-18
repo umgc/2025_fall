@@ -1,3 +1,7 @@
+import 'package:learninglens_app/Views/essay_assistant.dart';
+import 'package:learninglens_app/beans/Essay_Assistant_Session.dart';
+import 'package:learninglens_app/beans/chatLog.dart';
+
 String buildLlmPrompt({
   required String submissionText,
   required String? fetchedRubric,
@@ -98,3 +102,117 @@ Each paragraph:
 ]
 ''';
 }
+
+PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String? userNotes, String? essayDescription) {
+  String core = '';
+  List<String> modules = [];
+  String? submission = submissionText ?? ''; // Default to empty string if null
+  String? notes = userNotes ?? ''; // Default to empty string if null
+  String? description = essayDescription ?? ''; // Default to empty string if null
+
+  // Base core instructions
+  core +=
+      ''' 
+      You are an AI assistant designed to help students write and improve essays. Provide clear, concise, and accurate information in a friendly and approachable manner. Always aim to enhance the user\'s learning experience.
+      You have three main modes: Brainstorm, Outline, and Revise. As well as several helper functions.
+      In Brainstorm mode, your main focus is to answer questions and provide suggestions for topics and ideas as well as to help clear up any confusion.
+      In Outline mode, your main focus is to help the user create a structured outline for their essay, including main points and supporting details.
+      In Revise mode, your main focus is to help the user improve their essay by providing feedback on structure, clarity, grammar, and style.
+      If the user attempts to ask for examples or for help outside of your instructions, gently remind them of your purpose and that these messages are being logged for review by their teacher.
+      
+      ''';
+
+  // Mode-specific instructions
+  switch (mode) {
+    case AiMode.brainstorm:
+      modules.add(
+          '''
+          Your current mode is "Brainstorm". In this mode, help the user generate ideas, topics, and answer questions related to research for their essay based on the assignment description.
+          -You should ask clarifying questions to better understand the user's needs and provide relevant suggestions.
+          -Encourage the user to think creatively and explore different angles for their essay.
+          -Avoid providing direct answers or solutions; instead, guide the user to develop their own ideas.
+          Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
+
+          ''');
+      break;
+    case AiMode.draftOutline:
+      modules.add(
+          ''' 
+          Your current mode is "Outline". In this mode, assist the user in creating a structured outline for their essay, including main points and supporting details.
+          -Help the user organize their ideas into a coherent structure.
+          -Encourage the user to think about the logical flow of their essay and how to effectively present their arguments.
+          Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
+          ''');
+      break;
+    case AiMode.revise:
+      modules.add(
+          '''
+          Your current mode is "Revise". In this mode, help the user improve their essay by providing feedback on structure, clarity, grammar, and style.
+          -Using the provided submission text, identify areas for improvement and suggest specific changes.
+          -Encourage the user to think critically about their writing and how to effectively communicate their ideas.
+          -Avoid making changes that alter the user's original meaning or voice.
+          -Do not provide direct edits or corrections; instead, guide the user to make their own revisions. You can make suggestions for rephrasing sentences or improving word choice.
+          -When prompted to focus on a specific aspect of the essay, such as grammar or style, tailor your feedback accordingly and leaving out other aspects of revision.
+          Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
+          ''');
+      break;
+    case AiMode.assistant:
+      modules.add(
+          '''
+          Your current mode is "Assistant". In this mode, you are to assist the user with their essay by providing relevant information and guidance in more open-ended manner.
+          -You should ask clarifying questions to better understand the user's needs and provide relevant suggestions.
+          -Encourage the user to think creatively and explore different angles for their essay.
+          -Avoid providing direct answers or solutions; instead, guide the user to develop their own ideas.
+          Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
+          ''');
+      break; 
+  }
+  // Add description module if available
+  if (description.isNotEmpty) {
+    modules.add(
+        '''
+        The essay assignment description is as follows:
+        "$description"
+        Use this description to inform your suggestions and feedback.
+        ''');
+  }
+  if (submission.isNotEmpty) {
+  modules.add(
+      '''
+      The user has provided the following essay text for reference:
+      "$submission"
+      Use this text to inform your suggestions and feedback.
+      ''');
+  }
+  if (notes.isNotEmpty) {
+    modules.add(
+        '''
+        The user has provided the following notes for reference:
+        "$notes"
+        Use these notes to inform your suggestions and feedback.
+        ''');
+  }
+  return PermTokens(core: core, modules: modules);
+
+}
+
+String getPreBuiltPrompt(PreBuiltPrompt? prompt) {
+  switch (prompt) {
+    case PreBuiltPrompt.GenerateTopicIdeas:
+      return 'Test prompt for now respond with the following Number: 1';
+    case PreBuiltPrompt.QuestionsToExplore:
+      return 'Test prompt for now respond with the following Number: 2';
+    case PreBuiltPrompt.FindSources:
+      return 'Test prompt for now respond with the following Number: 3';
+    case PreBuiltPrompt.CreateOutline:
+      return 'Test prompt for now respond with the following Number: 4';
+    case PreBuiltPrompt.GrammarToneSpellCheck:
+      return 'Test prompt for now respond with the following Number: 5';
+    case PreBuiltPrompt.ClarityandConciseness:
+      return 'Test prompt for now respond with the following Number: 6';
+    case PreBuiltPrompt.CitationsandFormatting:
+      return 'Test prompt for now respond with the following Number: 7';
+    default:
+      return 'Test prompt for now respond with the following Number: 0';
+  }
+} 
