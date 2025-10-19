@@ -237,6 +237,18 @@
             <artifactId>sendgrid-java</artifactId>
             <version>4.10.1</version>
         </dependency>
+          <!-- JSoup for HTML parsing (USPS email content) -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
+        <!-- WebFlux for reactive HTTP clients (Gmail/Graph APIs) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
         <!--ag end-->
     </dependencies>
 
