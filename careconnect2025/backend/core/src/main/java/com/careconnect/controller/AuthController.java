@@ -4,6 +4,7 @@ import com.careconnect.dto.*;
 import com.careconnect.exception.OAuthException;
 import com.careconnect.model.User;
 import com.careconnect.service.AuthService;
+import com.careconnect.service.AlexaCodeStoreService;
 import com.careconnect.service.PasswordResetService;
 import com.careconnect.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.careconnect.repository.UserRepository;
+import com.careconnect.repository.PatientRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,9 +32,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/api/auth")
@@ -50,25 +56,24 @@ public class AuthController {
     private ObjectMapper objectMapper;
 
     @Value("${frontend.base-url}")
-    private String frontendBaseUrl;    // --- Register new user ---
+    private String frontendBaseUrl; // --- Register new user ---
+
     @PostMapping("/register")
-    @Operation(
-        summary = "📝 Register a new user",
-        description = """
-            Register a new patient or caregiver account. 
-            
+    @Operation(summary = "📝 Register a new user", description = """
+            Register a new patient or caregiver account.
+
             **For Swagger UI Testing:**
             1. Use this endpoint to create a test account
             2. Check your email for verification (if email is configured)
             3. Use the `/login` endpoint to get a JWT token
             4. Click "Authorize" and enter the token for testing protected endpoints
-            
+
             **Registration Flow:**
             1. Submit registration with email, password, and role
             2. Account is created (may require email verification)
             3. Use the email/password to login and get JWT token
             4. Use JWT token to access protected endpoints
-            
+
             **Test Example:**
             ```json
             {
@@ -78,77 +83,49 @@ public class AuthController {
                 "role": "PATIENT"
             }
             ```
-            """,
-        tags = {"🔑 Authentication"},
-        security = {} // No authentication required for registration
+            """, tags = { "🔑 Authentication" }, security = {} // No authentication required for registration
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Registration successful, verification email sent",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+            @ApiResponse(responseCode = "200", description = "Registration successful, verification email sent", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "message": "Registration successful. Please check your email to verify your account.",
                         "userId": 123
                     }
-                    """)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request data",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+                    """))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "error": "Email already exists"
                     }
-                    """)
-            )
-        )
+                    """)))
     })
     public ResponseEntity<?> register(
-        @Parameter(description = "User registration details", required = true)
-        @RequestBody RegisterRequest request
-    ) {
+            @Parameter(description = "User registration details", required = true) @RequestBody RegisterRequest request) {
         // Delegate to AuthService for registration & verification logic
         return authService.register(request);
     }
 
     @PostMapping("/login")
-    @Operation(
-        summary = "Login user",
-        description = """
+    @Operation(summary = "Login user", description = """
             Authenticate user with email and password. Returns JWT token for API access.
-            
+
             **For Swagger UI Testing:**
             1. Use this endpoint to login and get a JWT token
             2. Copy the `token` from the response
             3. Click the "Authorize" button (🔒) at the top of this page
             4. Enter: `Bearer {your-token-here}`
             5. Now you can test all protected endpoints!
-            
+
             **Response includes:**
             - `token`: JWT token for API authentication (valid for 3 hours)
             - `user`: User profile information
             - `patientId`/`caregiverId`: Role-specific ID (if applicable)
-            
+
             **Test Credentials:**
             If you need test credentials, use the registration endpoint first.
-            """,
-        tags = {"Authentication"},
-        security = {} // No authentication required for login
+            """, tags = { "Authentication" }, security = {} // No authentication required for login
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Login successful",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = LoginResponse.class),
-                examples = @ExampleObject(value = """
+            @ApiResponse(responseCode = "200", description = "Login successful", content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginResponse.class), examples = @ExampleObject(value = """
                     {
                         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                         "user": {
@@ -160,90 +137,71 @@ public class AuthController {
                         "patientId": 456,
                         "caregiverId": null
                     }
-                    """)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "401",
-            description = "Invalid credentials",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+                    """))),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "error": "Invalid credentials"
                     }
-                    """)
-            )
-        )
+                    """)))
     })
     public ResponseEntity<LoginResponse> loginV2(
-        @Parameter(description = "Login credentials", required = true)
-        @RequestBody LoginRequest req, 
-        HttpServletResponse response
-    ) {
+            @Parameter(description = "Login credentials", required = true) @RequestBody LoginRequest req,
+            HttpServletResponse response) {
         return ResponseEntity.ok(authService.loginV2(req, response));
     }
 
     // --- Email verification ---
     @GetMapping("/verify/{token}")
-    @Operation(
-        summary = "✉️ Verify email address",
-        description = "Verify user email address using verification token",
-        tags = {"🔑 Authentication"},
-        security = {} // No authentication required for email verification
+    @Operation(summary = "✉️ Verify email address", description = "Verify user email address using verification token", tags = {
+            "🔑 Authentication" }, security = {} // No authentication required for email verification
     )
     public ResponseEntity<?> verify(@PathVariable String token) {
         return authService.verifyToken(token);
     }
 
     @PostMapping("/password/forgot")
-    @Operation(
-        summary = "🔐 Request password reset",
-        description = "Request a password reset link to be sent via email",
-        tags = {"🔑 Authentication"},
-        security = {} // No authentication required for password reset request
+    @Operation(summary = "🔐 Request password reset", description = "Request a password reset link to be sent via email", tags = {
+            "🔑 Authentication" }, security = {} // No authentication required for password reset request
     )
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request,
-                       HttpServletRequest req) {
+            HttpServletRequest req) {
         String email = request.get("email");
         if (email == null || email.isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Email is required"));
         }
-        
+
         // Log password reset request
         // System.out.println("🔄 Password reset requested for email: " + email);
-        
+
         // Use frontend URL for password reset link instead of backend URL
         String appUrl = frontendBaseUrl;
         try {
             reset.startReset(email, appUrl);
             // System.out.println("✅ Password reset process initiated for: " + email);
-            return ResponseEntity.ok(Collections.singletonMap("message", 
-                "If an account with this email exists, you will receive a password reset link."));
+            return ResponseEntity.ok(Collections.singletonMap("message",
+                    "If an account with this email exists, you will receive a password reset link."));
         } catch (Exception e) {
             System.err.println("❌ Password reset failed for " + email + ": " + e.getMessage());
             e.printStackTrace();
             // Don't reveal if email exists or not for security
-            return ResponseEntity.ok(Collections.singletonMap("message", 
-                "If an account with this email exists, you will receive a password reset link."));
+            return ResponseEntity.ok(Collections.singletonMap("message",
+                    "If an account with this email exists, you will receive a password reset link."));
         }
     }
 
-
-
     @PostMapping("/password/change")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request,
-                                          HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest) {
         try {
             String token = extractTokenFromRequest(httpRequest);
             if (token == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Collections.singletonMap("error", "Authentication required"));
+                        .body(Collections.singletonMap("error", "Authentication required"));
             }
-            
+
             String email = jwt.getEmailFromToken(token);
             return authService.changePassword(email, request.currentPassword(), request.newPassword());
-            
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", e.getMessage()));
         }
@@ -268,7 +226,7 @@ public class AuthController {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
-        
+
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
@@ -287,75 +245,74 @@ public class AuthController {
         if (e == null || e.getMessage() == null) {
             return "oauth_failed";
         }
-        
+
         String errorMessage = e.getMessage().toLowerCase();
         String exceptionType = e.getClass().getSimpleName().toLowerCase();
-        
+
         // Check for specific OAuth error patterns
         if (errorMessage.contains("access_denied") || errorMessage.contains("denied")) {
             return "access_denied";
         }
-        
+
         if (errorMessage.contains("invalid_grant") || errorMessage.contains("invalid_code")) {
             return "invalid_grant";
         }
-        
+
         if (errorMessage.contains("invalid_client") || errorMessage.contains("unauthorized")) {
             return "invalid_client";
         }
-        
+
         if (errorMessage.contains("invalid_request") || errorMessage.contains("bad request")) {
             return "invalid_request";
         }
-        
-        if (errorMessage.contains("temporarily_unavailable") || errorMessage.contains("server error") || 
-            errorMessage.contains("503") || errorMessage.contains("502") || errorMessage.contains("500")) {
+
+        if (errorMessage.contains("temporarily_unavailable") || errorMessage.contains("server error") ||
+                errorMessage.contains("503") || errorMessage.contains("502") || errorMessage.contains("500")) {
             return "temporarily_unavailable";
         }
-        
+
         if (errorMessage.contains("invalid_scope") || errorMessage.contains("insufficient_scope") ||
-            errorMessage.contains("insufficient permissions")) {
+                errorMessage.contains("insufficient permissions")) {
             return "invalid_scope";
         }
-        
+
         if (errorMessage.contains("token") && (errorMessage.contains("invalid") || errorMessage.contains("expired"))) {
             return "invalid_token";
         }
-        
-        if (errorMessage.contains("timeout") || errorMessage.contains("connect") || 
-            errorMessage.contains("network") || errorMessage.contains("socket")) {
+
+        if (errorMessage.contains("timeout") || errorMessage.contains("connect") ||
+                errorMessage.contains("network") || errorMessage.contains("socket")) {
             return "network_error";
         }
-        
+
         if (errorMessage.contains("email") && errorMessage.contains("retrieve")) {
             return "invalid_response";
         }
-        
+
         // Check exception types
         if (exceptionType.contains("httpclient") || exceptionType.contains("restclient")) {
             return "api_error";
         }
-        
+
         if (exceptionType.contains("timeout") || exceptionType.contains("socket")) {
             return "network_error";
         }
-        
+
         if (exceptionType.contains("json") || exceptionType.contains("parse")) {
             return "invalid_response";
         }
-        
+
         if (exceptionType.contains("authentication")) {
             return "authentication_failed";
         }
-        
+
         if (exceptionType.contains("oauth")) {
             return "oauth_failed";
         }
-        
+
         // Default fallback
         return "oauth_failed";
     }
-
 
     @GetMapping("/sso/google")
     public void googleLogin(HttpServletResponse response) throws IOException {
@@ -390,16 +347,162 @@ public class AuthController {
             // Handle specific OAuth errors
             System.err.println("Google OAuth error: " + e.getMessage());
             e.printStackTrace();
-            
+
             response.sendRedirect(frontendBaseUrl + "/oauth/callback?error=" + e.getErrorType());
         } catch (Exception e) {
             // Log the error for debugging
             System.err.println("Google OAuth callback error: " + e.getMessage());
             e.printStackTrace();
-            
+
             // Determine specific error type and redirect with appropriate error
             String errorType = determineOAuthErrorType(e);
             response.sendRedirect(frontendBaseUrl + "/oauth/callback?error=" + errorType);
         }
     }
+
+    @Value("${alexa.oauth.client-id}")
+    private String alexaClientId;
+
+    @Value("${alexa.oauth.client-secret}")
+    private String alexaClientSecret;
+
+    @Autowired
+    private UserRepository userRepository; // ✅ inject user repo to find patient by email
+
+    @Autowired
+    private PatientRepository patientRepository; // ✅ inject patient repo to find patient by email
+
+    @Autowired
+    private AlexaCodeStoreService alexaCodeStore;
+
+    @PostMapping("/sso/alexa/code") 
+    public ResponseEntity<?> generateAlexaCode(HttpServletRequest request) { 
+        String token = extractTokenFromRequest(request); // Reuse your existing helper 
+        if (token == null) { 
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "missing_token")); 
+            } 
+            
+            // Optionally: validate token 
+            String email = jwt.getEmailFromToken(token); 
+            if (email == null) { 
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED) 
+                    .body(Map.of("error", "invalid_token")); 
+            } 
+            
+            String code = alexaCodeStore.generateCode(token); 
+            return ResponseEntity.ok(Map.of("code", code)); 
+    }
+
+    @PostMapping(value = "/sso/alexa/token", consumes = "application/x-www-form-urlencoded")
+    public ResponseEntity<?> exchangeAlexaToken(
+            @RequestParam Map<String, String> params,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Basic ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "missing_authorization"));
+        }
+
+        try {
+            String base64Credentials = authHeader.substring("Basic ".length());
+            String decoded = new String(Base64.getDecoder().decode(base64Credentials));
+            String[] parts = decoded.split(":", 2);
+            String clientId = parts[0];
+            String clientSecret = parts.length > 1 ? parts[1] : "";
+
+            if (!clientId.equals(alexaClientId) || !clientSecret.equals(alexaClientSecret)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "invalid_client_credentials"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "invalid_basic_auth"));
+        }
+
+        String grantType = params.get("grant_type");
+        String code = params.get("code");
+        String refreshToken = params.get("refresh_token");
+
+        // 3️⃣ Handle authorization_code grant
+        if ("authorization_code".equalsIgnoreCase(grantType)) {
+            if (code == null || code.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "missing_authorization_code"));
+            }
+
+            String jwtToken = alexaCodeStore.consumeCode(code);
+            if (jwtToken == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "invalid_code"));
+            }
+
+            // 🧠 NEW: Mark associated patient as Alexa-linked
+            try {
+                String email = jwt.getEmailFromToken(jwtToken);
+                if (email != null) {
+                    userRepository.findByEmail(email).ifPresent(user -> {
+                        patientRepository.findByUser(user).ifPresent(patient -> {
+                            patient.setAlexaLinked(true);
+                            patientRepository.save(patient);
+                            System.out.println("✅ Marked patient " + patient.getId() + " as Alexa-linked");
+                        });
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to mark patient as linked: " + e.getMessage());
+            }
+
+            // 🌀 Issue refresh token
+            String newRefreshToken = UUID.randomUUID().toString();
+            alexaCodeStore.saveRefreshToken(newRefreshToken, jwtToken);
+
+            return ResponseEntity.ok(Map.of(
+                    "access_token", jwtToken,
+                    "token_type", "Bearer",
+                    "expires_in", 3600,
+                    "refresh_token", newRefreshToken));
+        }
+
+        // 4️⃣ Handle refresh_token grant
+        else if ("refresh_token".equalsIgnoreCase(grantType)) {
+            if (refreshToken == null || refreshToken.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "missing_refresh_token"));
+            }
+
+            String existingJwt = alexaCodeStore.findJwtByRefreshToken(refreshToken);
+            if (existingJwt == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "invalid_refresh_token"));
+            }
+
+            String newJwt = jwt.refresh(jwt.getClaims(existingJwt));
+
+            // 🧠 Optional: still mark as linked (since Alexa is refreshing)
+            try {
+                String email = jwt.getEmailFromToken(newJwt);
+                if (email != null) {
+                    userRepository.findByEmail(email).ifPresent(user -> {
+                        patientRepository.findByUser(user).ifPresent(patient -> {
+                            patient.setAlexaLinked(true);
+                            patientRepository.save(patient);
+                        });
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to refresh link status: " + e.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "access_token", newJwt,
+                    "token_type", "Bearer",
+                    "expires_in", 3600,
+                    "refresh_token", refreshToken));
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "unsupported_grant_type"));
+    }
+
 }

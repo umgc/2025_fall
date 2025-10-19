@@ -76,39 +76,41 @@ public class PatientController {
 
     // Helper method to check if user has access to patient
     private void validatePatientAccess(Long patientUserId, User currentUser) {
-        log.debug("validatePatientAccess - patientUserId={}, currentUser: id={}, role={}", 
-                  patientUserId, currentUser.getId(), currentUser.getRole());
-        
+        log.debug("validatePatientAccess - patientUserId={}, currentUser: id={}, role={}",
+                patientUserId, currentUser.getId(), currentUser.getRole());
+
         switch (currentUser.getRole()) {
             case PATIENT:
                 // Patients can only access their own data
-                log.debug("PATIENT role validation - checking if currentUser.id {} equals patientUserId {}", 
-                          currentUser.getId(), patientUserId);
+                log.debug("PATIENT role validation - checking if currentUser.id {} equals patientUserId {}",
+                        currentUser.getId(), patientUserId);
                 if (!currentUser.getId().equals(patientUserId)) {
-                    log.warn("Access denied - Patient {} tried to access patient {}", 
-                             currentUser.getId(), patientUserId);
+                    log.warn("Access denied - Patient {} tried to access patient {}",
+                            currentUser.getId(), patientUserId);
                     throw new AppException(HttpStatus.FORBIDDEN, "Access denied");
                 }
                 log.debug("Access granted - Patient accessing their own data");
                 break;
             case CAREGIVER:
                 // Caregivers can access patients they're linked to (ACTIVE and not expired)
-                boolean caregiverHasAccess = caregiverPatientLinkService.hasAccessToPatient(currentUser.getId(), patientUserId);
+                boolean caregiverHasAccess = caregiverPatientLinkService.hasAccessToPatient(currentUser.getId(),
+                        patientUserId);
                 log.debug("CAREGIVER role validation - hasAccess={}", caregiverHasAccess);
                 if (!caregiverHasAccess) {
-                    log.warn("Access denied - Caregiver {} has no active link to patient {}", 
-                             currentUser.getId(), patientUserId);
+                    log.warn("Access denied - Caregiver {} has no active link to patient {}",
+                            currentUser.getId(), patientUserId);
                     throw new AppException(HttpStatus.FORBIDDEN, "Access denied");
                 }
                 log.debug("Access granted - Caregiver has active link to patient");
                 break;
             case FAMILY_MEMBER:
                 // Family members can access patients they're linked to (ACTIVE and not expired)
-                boolean familyMemberHasAccess = familyMemberService.hasAccessToPatient(currentUser.getId(), patientUserId);
+                boolean familyMemberHasAccess = familyMemberService.hasAccessToPatient(currentUser.getId(),
+                        patientUserId);
                 log.debug("FAMILY_MEMBER role validation - hasAccess={}", familyMemberHasAccess);
                 if (!familyMemberHasAccess) {
-                    log.warn("Access denied - Family member {} has no active link to patient {}", 
-                             currentUser.getId(), patientUserId);
+                    log.warn("Access denied - Family member {} has no active link to patient {}",
+                            currentUser.getId(), patientUserId);
                     throw new AppException(HttpStatus.FORBIDDEN, "Access denied");
                 }
                 log.debug("Access granted - Family member has active link to patient");
@@ -127,11 +129,11 @@ public class PatientController {
     @GetMapping("/{patientId}/caregivers")
     public ResponseEntity<List<Caregiver>> getCaregiversByPatient(@PathVariable Long patientId) {
         User currentUser = getCurrentUser();
-        
+
         // Convert patientId to userId for validation
         Patient patient = patientService.getPatientById(patientId);
         validatePatientAccess(patient.getUser().getId(), currentUser);
-        
+
         List<Caregiver> caregivers = patientService.getCaregiversByPatient(patientId);
         return ResponseEntity.ok(caregivers);
     }
@@ -140,27 +142,27 @@ public class PatientController {
     @GetMapping("/{patientId}")
     public ResponseEntity<Patient> getPatient(@PathVariable Long patientId) {
         User currentUser = getCurrentUser();
-        
+
         // Get patient and validate access
         Patient patient = patientService.getPatientById(patientId);
         validatePatientAccess(patient.getUser().getId(), currentUser);
-        
+
         return ResponseEntity.ok(patient);
     }
 
     @PutMapping("/{patientId}")
     public ResponseEntity<Patient> updatePatient(@PathVariable Long patientId, @RequestBody Patient updatedPatient) {
         User currentUser = getCurrentUser();
-        
+
         // Family members have read-only access, cannot update
         if (currentUser.getRole() == Role.FAMILY_MEMBER) {
             throw new AppException(HttpStatus.FORBIDDEN, "Family members have read-only access");
         }
-        
+
         // Validate access
         Patient patient = patientService.getPatientById(patientId);
         validatePatientAccess(patient.getUser().getId(), currentUser);
-        
+
         Patient updatedResult = patientService.updatePatient(patientId, updatedPatient);
         return ResponseEntity.ok(updatedResult);
     }
@@ -169,14 +171,14 @@ public class PatientController {
     @GetMapping("/{patientId}/family-members")
     public ResponseEntity<List<FamilyMemberLinkResponse>> getFamilyMembersByPatient(@PathVariable Long patientId) {
         User currentUser = getCurrentUser();
-        log.debug("GET /patients/{}/family-members - Current user: id={}, email={}, role={}", 
-                  patientId, currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
-        
+        log.debug("GET /patients/{}/family-members - Current user: id={}, email={}, role={}",
+                patientId, currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
+
         // Get patient by patientId to ensure it exists
         Patient patient = patientService.getPatientById(patientId);
-        log.debug("Found patient: id={}, userId={}, email={}", 
-                  patient.getId(), patient.getUser().getId(), patient.getUser().getEmail());
-        
+        log.debug("Found patient: id={}, userId={}, email={}",
+                patient.getId(), patient.getUser().getId(), patient.getUser().getEmail());
+
         // Use optimized query with patient_id (no joins needed)
         List<FamilyMemberLinkResponse> familyMembers = familyMemberService.getFamilyMembersByPatientId(patientId);
         log.debug("Retrieved {} family members for patientId={}", familyMembers.size(), patientId);
@@ -188,21 +190,22 @@ public class PatientController {
     public ResponseEntity<FamilyMemberLinkResponse> registerFamilyMember(
             @PathVariable Long patientId,
             @RequestBody FamilyMemberRegistration registration) {
-        
+
         User currentUser = getCurrentUser();
-        log.debug("POST /patients/{}/family-members - Current user: id={}, email={}, role={}", 
-                  patientId, currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
-        
-        // Only patients and caregivers can register family members, not family members themselves
+        log.debug("POST /patients/{}/family-members - Current user: id={}, email={}, role={}",
+                patientId, currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
+
+        // Only patients and caregivers can register family members, not family members
+        // themselves
         if (currentUser.getRole() == Role.FAMILY_MEMBER) {
             throw new AppException(HttpStatus.FORBIDDEN, "Family members cannot register other family members");
         }
-        
+
         // Get patient by patientId and extract user_id
         Patient patient = patientService.getPatientById(patientId);
-        log.debug("Found patient: id={}, userId={}, email={}", 
-                  patient.getId(), patient.getUser().getId(), patient.getUser().getEmail());
-        
+        log.debug("Found patient: id={}, userId={}, email={}",
+                patient.getId(), patient.getUser().getId(), patient.getUser().getEmail());
+
         // Create new registration with correct patient user ID
         FamilyMemberRegistration updatedRegistration = new FamilyMemberRegistration(
                 registration.firstName(),
@@ -211,10 +214,11 @@ public class PatientController {
                 registration.phone(),
                 registration.address() != null ? registration.address() : null,
                 registration.relationship() != null ? registration.relationship() : null,
-                patient.getUser().getId()  // Use patient's user ID, not patient ID
+                patient.getUser().getId() // Use patient's user ID, not patient ID
         );
-        
-        FamilyMemberLinkResponse response = familyMemberService.registerFamilyMember(updatedRegistration, currentUser.getId());
+
+        FamilyMemberLinkResponse response = familyMemberService.registerFamilyMember(updatedRegistration,
+                currentUser.getId());
         return ResponseEntity.ok(response);
     }
 
@@ -222,66 +226,61 @@ public class PatientController {
     @DeleteMapping("/family-members/{linkId}")
     public ResponseEntity<Void> revokeFamilyMemberAccess(@PathVariable Long linkId) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients and caregivers can revoke family member access
         if (currentUser.getRole() == Role.FAMILY_MEMBER) {
             throw new AppException(HttpStatus.FORBIDDEN, "Family members cannot revoke access");
         }
-        
+
         familyMemberService.revokeFamilyMemberAccess(linkId, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
 
     // 6. Get family members for the current patient (convenience endpoint)
     @GetMapping("/family-members")
-    @Operation(
-        summary = "👨‍👩‍👧‍👦 Get my family members",
-        description = "Retrieve all family members linked to the current patient",
-        tags = {"Patient Management", "👨‍👩‍👧‍👦 Family Members"}
-    )
+    @Operation(summary = "👨‍👩‍👧‍👦 Get my family members", description = "Retrieve all family members linked to the current patient", tags = {
+            "Patient Management", "👨‍👩‍👧‍👦 Family Members" })
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Family members retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Only patients can view their family members")
+            @ApiResponse(responseCode = "200", description = "Family members retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Only patients can view their family members")
     })
     public ResponseEntity<List<FamilyMemberLinkResponse>> getMyFamilyMembers() {
         User currentUser = getCurrentUser();
-        log.debug("GET /patients/family-members - Current user: id={}, email={}, role={}", 
-                  currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
-        
+        log.debug("GET /patients/family-members - Current user: id={}, email={}, role={}",
+                currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
+
         // Only patients can use this endpoint
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can access this endpoint");
         }
-        
-        List<FamilyMemberLinkResponse> familyMembers = familyMemberService.getFamilyMembersByPatient(currentUser.getId());
+
+        List<FamilyMemberLinkResponse> familyMembers = familyMemberService
+                .getFamilyMembersByPatient(currentUser.getId());
         log.debug("Retrieved {} family members for patient userId={}", familyMembers.size(), currentUser.getId());
         return ResponseEntity.ok(familyMembers);
     }
 
     // 7. Get current patient's profile
     @GetMapping("/me")
-    @Operation(
-        summary = "👤 Get my patient profile",
-        description = "Retrieve the current patient's profile information",
-        tags = {"Patient Management"}
-    )
+    @Operation(summary = "👤 Get my patient profile", description = "Retrieve the current patient's profile information", tags = {
+            "Patient Management" })
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Patient profile retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Only patients can view their profile"),
-        @ApiResponse(responseCode = "404", description = "Patient profile not found")
+            @ApiResponse(responseCode = "200", description = "Patient profile retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Only patients can view their profile"),
+            @ApiResponse(responseCode = "404", description = "Patient profile not found")
     })
     public ResponseEntity<Patient> getMyProfile() {
         User currentUser = getCurrentUser();
-        log.debug("GET /patients/me - Current user: id={}, email={}, role={}", 
-                  currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
-        
+        log.debug("GET /patients/me - Current user: id={}, email={}, role={}",
+                currentUser.getId(), currentUser.getEmail(), currentUser.getRole());
+
         // Only patients can use this endpoint
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can access this endpoint");
         }
-        
+
         Patient patient = patientService.getPatientById(currentUser.getId());
         log.debug("Retrieved patient profile: id={}, userId={}", patient.getId(), patient.getUser().getId());
         return ResponseEntity.ok(patient);
@@ -291,11 +290,9 @@ public class PatientController {
 
     // 6. Create a new mood pain log entry
     @PostMapping("/mood-pain-log")
-    @Operation(
-        summary = "📊 Create mood & pain log entry",
-        description = """
+    @Operation(summary = "📊 Create mood & pain log entry", description = """
             Create a new mood and pain log entry for the current patient.
-            
+
             **Requirements:**
             - Must be authenticated as a PATIENT
             - Mood value: 1-10 scale (1 = worst, 10 = best)
@@ -312,54 +309,48 @@ public class PatientController {
               • 9 = Pain that is very hard to tolerate. You can't carry on a conversation
               • 10 = Worst pain possible
             - Timestamp cannot be in the future
-            
+
             **Usage:**
             This endpoint allows patients to track their daily mood and pain levels,
             providing valuable data for caregivers and healthcare providers.
-            """,
-        tags = {"Patient Management", "📊 Mood & Pain Tracking"}
-    )
+            """, tags = {
+            "Patient Management", "📊 Mood & Pain Tracking" })
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Mood pain log created successfully",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = MoodPainLogResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Only patients can create mood pain logs")
+            @ApiResponse(responseCode = "200", description = "Mood pain log created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = MoodPainLogResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Only patients can create mood pain logs")
     })
     public ResponseEntity<MoodPainLogResponse> createMoodPainLog(
-            @Parameter(description = "Mood and pain log data", required = true)
-            @Valid @RequestBody MoodPainLogRequest request) {
+            @Parameter(description = "Mood and pain log data", required = true) @Valid @RequestBody MoodPainLogRequest request) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can create mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can create mood pain logs");
         }
-        
+
         MoodPainLogResponse response = moodPainLogService.createMoodPainLog(currentUser, request);
         return ResponseEntity.ok(response);
     }
 
     // 7. Get all mood pain logs for the current patient
     @GetMapping("/mood-pain-log")
-    @Operation(
-        summary = "📋 Get all mood & pain logs",
-        description = "Retrieve all mood and pain log entries for the current patient, ordered by timestamp (newest first)",
-        tags = {"Patient Management", "📊 Mood & Pain Tracking"}
-    )
+    @Operation(summary = "📋 Get all mood & pain logs", description = "Retrieve all mood and pain log entries for the current patient, ordered by timestamp (newest first)", tags = {
+            "Patient Management", "📊 Mood & Pain Tracking" })
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Mood pain logs retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Only patients can view their mood pain logs")
+            @ApiResponse(responseCode = "200", description = "Mood pain logs retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Only patients can view their mood pain logs")
     })
     public ResponseEntity<List<MoodPainLogResponse>> getMoodPainLogs() {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can view their own mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can view their mood pain logs");
         }
-        
+
         List<MoodPainLogResponse> logs = moodPainLogService.getMoodPainLogs(currentUser);
         return ResponseEntity.ok(logs);
     }
@@ -370,12 +361,12 @@ public class PatientController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can view their own mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can view their mood pain logs");
         }
-        
+
         Page<MoodPainLogResponse> logs = moodPainLogService.getMoodPainLogsWithPagination(currentUser, page, size);
         return ResponseEntity.ok(logs);
     }
@@ -386,12 +377,12 @@ public class PatientController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can view their own mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can view their mood pain logs");
         }
-        
+
         List<MoodPainLogResponse> logs = moodPainLogService.getMoodPainLogsByDateRange(currentUser, startDate, endDate);
         return ResponseEntity.ok(logs);
     }
@@ -400,12 +391,12 @@ public class PatientController {
     @GetMapping("/mood-pain-log/latest")
     public ResponseEntity<MoodPainLogResponse> getLatestMoodPainLog() {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can view their own mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can view their mood pain logs");
         }
-        
+
         MoodPainLogResponse latestLog = moodPainLogService.getLatestMoodPainLog(currentUser);
         return ResponseEntity.ok(latestLog);
     }
@@ -416,12 +407,12 @@ public class PatientController {
             @PathVariable Long logId,
             @Valid @RequestBody MoodPainLogRequest request) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can update their mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can update their mood pain logs");
         }
-        
+
         MoodPainLogResponse response = moodPainLogService.updateMoodPainLog(currentUser, logId, request);
         return ResponseEntity.ok(response);
     }
@@ -430,12 +421,12 @@ public class PatientController {
     @DeleteMapping("/mood-pain-log/{logId}")
     public ResponseEntity<Void> deleteMoodPainLog(@PathVariable Long logId) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can delete their mood pain logs
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can delete their mood pain logs");
         }
-        
+
         moodPainLogService.deleteMoodPainLog(currentUser, logId);
         return ResponseEntity.noContent().build();
     }
@@ -444,41 +435,37 @@ public class PatientController {
     @GetMapping("/{patientId}/mood-pain-log")
     public ResponseEntity<List<MoodPainLogResponse>> getMoodPainLogsForPatient(@PathVariable Long patientId) {
         User currentUser = getCurrentUser();
-        
+
         // Convert patientId to userId for validation
         Patient patient = patientService.getPatientById(patientId);
         validatePatientAccess(patient.getUser().getId(), currentUser);
-        
+
         List<MoodPainLogResponse> logs = moodPainLogService.getMoodPainLogsForPatient(patientId);
         return ResponseEntity.ok(logs);
     }
 
     // 14. Get advanced mood and pain analytics
     @GetMapping("/mood-pain-log/analytics")
-    @Operation(
-        summary = "📈 Get mood & pain analytics",
-        description = """
+    @Operation(summary = "📈 Get mood & pain analytics", description = """
             Get detailed analytics for mood and pain data including trends, averages, and time series data.
-            
+
             **Features:**
             - Average mood and pain levels over the period
             - Trend analysis (improving/declining)
             - Min/max values
             - Entry counts
             - Time series data for charts
-            """,
-        tags = {"Patient Management", "📊 Mood & Pain Tracking"}
-    )
+            """, tags = { "Patient Management", "📊 Mood & Pain Tracking" })
     public ResponseEntity<MoodPainAnalyticsDTO> getMoodPainAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
         User currentUser = getCurrentUser();
-        
+
         // Only patients can view their own analytics
         if (currentUser.getRole() != Role.PATIENT) {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can view their mood pain analytics");
         }
-        
+
         MoodPainAnalyticsDTO analytics = moodPainLogService.getMoodPainAnalytics(currentUser, startDate, endDate);
         return ResponseEntity.ok(analytics);
     }
@@ -489,33 +476,32 @@ public class PatientController {
     @GetMapping("/{patientId}/profile")
     @Operation(summary = "Get patient profile", description = "Get complete patient profile including allergies")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Patient not found")
+            @ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
     })
     public ResponseEntity<?> getPatientProfile(@PathVariable Long patientId) {
         try {
             // Check authorization
             if (!hasAccessToPatient(patientId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Not authorized to view this patient's profile"));
+                        .body(Map.of("error", "Not authorized to view this patient's profile"));
             }
 
             Optional<PatientProfileDTO> profile = patientService.getPatientProfile(patientId);
             if (profile.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Patient not found"));
+                        .body(Map.of("error", "Patient not found"));
             }
 
             return ResponseEntity.ok(Map.of(
-                "data", profile.get(),
-                "message", "Profile retrieved successfully"
-            ));
+                    "data", profile.get(),
+                    "message", "Profile retrieved successfully"));
 
         } catch (Exception e) {
             log.error("Error getting patient profile for patientId: {}", patientId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to retrieve patient profile"));
+                    .body(Map.of("error", "Failed to retrieve patient profile"));
         }
     }
 
@@ -525,35 +511,34 @@ public class PatientController {
     @PutMapping("/{patientId}/profile")
     @Operation(summary = "Update patient profile", description = "Update patient profile information (allergies managed separately)")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid input data"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Patient not found")
+            @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
     })
     public ResponseEntity<?> updatePatientProfile(
-            @PathVariable Long patientId, 
+            @PathVariable Long patientId,
             @RequestBody PatientProfileUpdateDTO updateDTO) {
         try {
             // Check authorization
             if (!hasAccessToPatient(patientId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Not authorized to update this patient's profile"));
+                        .body(Map.of("error", "Not authorized to update this patient's profile"));
             }
 
             PatientProfileDTO updatedProfile = patientService.updatePatientProfile(patientId, updateDTO);
 
             return ResponseEntity.ok(Map.of(
-                "data", updatedProfile,
-                "message", "Profile updated successfully"
-            ));
+                    "data", updatedProfile,
+                    "message", "Profile updated successfully"));
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Error updating patient profile for patientId: {}", patientId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to update patient profile"));
+                    .body(Map.of("error", "Failed to update patient profile"));
         }
     }
 
@@ -564,40 +549,37 @@ public class PatientController {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String userEmail = auth.getName();
-            
+
             User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
-            
+                    .orElseThrow(() -> new IllegalStateException("User not found"));
+
             Optional<Patient> patientOpt = Optional.ofNullable(patientService.getPatientById(patientId));
             if (patientOpt.isEmpty()) {
                 return false;
             }
-            
+
             Patient patient = patientOpt.get();
             User patientUser = patient.getUser();
-            
+
             // Check access based on role
             if (currentUser.getRole() == Role.PATIENT) {
                 // Patient can only access their own data
                 return currentUser.getId().equals(patientUser.getId());
-            } 
-            else if (currentUser.getRole() == Role.CAREGIVER) {
+            } else if (currentUser.getRole() == Role.CAREGIVER) {
                 // Check if user is a caregiver for this patient
                 List<Caregiver> caregivers = patientService.getCaregiversByPatient(patientId);
                 return caregivers.stream()
-                    .anyMatch(caregiver -> caregiver.getUser().getId().equals(currentUser.getId()));
-            }
-            else if (currentUser.getRole() == Role.FAMILY_MEMBER) {
+                        .anyMatch(caregiver -> caregiver.getUser().getId().equals(currentUser.getId()));
+            } else if (currentUser.getRole() == Role.FAMILY_MEMBER) {
                 // Check if user is a family member for this patient
                 List<FamilyMemberLinkResponse> familyMembers = familyMemberService.getFamilyMembersByPatient(patientId);
                 return familyMembers.stream()
-                    .anyMatch(fm -> fm.familyUserId().equals(currentUser.getId()));
-            }
-            else if (currentUser.getRole() == Role.ADMIN) {
+                        .anyMatch(fm -> fm.familyUserId().equals(currentUser.getId()));
+            } else if (currentUser.getRole() == Role.ADMIN) {
                 // Admins can access any patient's data
                 return true;
             }
-            
+
             return false;
         } catch (Exception e) {
             log.error("Error checking patient access", e);
@@ -610,36 +592,49 @@ public class PatientController {
      * This includes medications, latest vitals, mood/pain data, and medical summary
      */
     @GetMapping("/{patientId}/profile/enhanced")
-    @Operation(summary = "Get enhanced patient profile", 
-               description = "Get comprehensive patient profile including medications, latest vitals, mood/pain data, and medical summary")
+    @Operation(summary = "Get enhanced patient profile", description = "Get comprehensive patient profile including medications, latest vitals, mood/pain data, and medical summary")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Enhanced profile retrieved successfully"),
-        @ApiResponse(responseCode = "403", description = "Access denied"),
-        @ApiResponse(responseCode = "404", description = "Patient not found")
+            @ApiResponse(responseCode = "200", description = "Enhanced profile retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
     })
     public ResponseEntity<?> getEnhancedPatientProfile(@PathVariable Long patientId) {
         try {
             // Check authorization
             if (!hasAccessToPatient(patientId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Not authorized to view this patient's enhanced profile"));
+                        .body(Map.of("error", "Not authorized to view this patient's enhanced profile"));
             }
 
             Optional<EnhancedPatientProfileDTO> profile = patientService.getEnhancedPatientProfile(patientId);
             if (profile.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Patient not found"));
+                        .body(Map.of("error", "Patient not found"));
             }
 
             return ResponseEntity.ok(Map.of(
-                "data", profile.get(),
-                "message", "Enhanced profile retrieved successfully"
-            ));
+                    "data", profile.get(),
+                    "message", "Enhanced profile retrieved successfully"));
 
         } catch (Exception e) {
             log.error("Error getting enhanced patient profile for patientId: {}", patientId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to retrieve enhanced patient profile"));
+                    .body(Map.of("error", "Failed to retrieve enhanced patient profile"));
         }
     }
+
+    @GetMapping("/{id}/alexa/status")
+    public ResponseEntity<Map<String, Object>> getAlexaStatus(@PathVariable Long id) {
+        Optional<Patient> opt = Optional.ofNullable(patientService.getPatientById(id));
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Patient not found"));
+        }
+
+        Patient patient = opt.get();
+        boolean linked = Boolean.TRUE.equals(patient.getIsAlexaLinked());
+
+        return ResponseEntity.ok(Map.of("isAlexaLinked", linked));
+    }
+
 }

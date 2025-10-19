@@ -629,13 +629,27 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     );
     if (result == null) return;
     final draftTask = result['task'] as Task;
-    final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
+    // final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
 
-    try {
-      final response = await ApiService.createTaskV2(
-        newTask.assignedPatientId!,
-        jsonEncode(newTask.toJson()),
-      );
+    // try {
+    //   final response = await ApiService.createTaskV2(
+    //     newTask.assignedPatientId!,
+    //     jsonEncode(newTask.toJson()),
+    //   );
+
+//----------------------------------FOR TESTING PURPOSES ONLY. DELETE THESE LINES AND UNCOMMENT ABOVE
+final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
+// HARDCODE: Force daysOfWeek to empty list to bypass DB constraint
+final taskJson = newTask.toJson();
+taskJson['daysOfWeek'] = [];
+taskJson['taskType'] = 'TASK';
+
+try {
+  final response = await ApiService.createTaskV2(
+    newTask.assignedPatientId!,
+    jsonEncode(taskJson), // Use modified JSON instead
+  );
+//----------------------------------FOR TESTING PURPOSES ONLY. DELETE THESE LINES AND UNCOMMENT ABOVE
       if (!mounted) return;
       if (response.statusCode == 200) {
         await _loadTasksFromDb();

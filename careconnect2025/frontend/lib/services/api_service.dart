@@ -1246,3 +1246,16 @@ Future<http.Response> getUserFilesByCategory(int userId) async {
     return http.Response(jsonEncode({'error': e.toString()}), 500);
   }
 }
+
+Future<dynamic> getAlexaStatus(int patientId) async {
+  final uri = Uri.parse("$baseUrl/v2/api/patients/$patientId/alexa/status");
+  final token = await AuthTokenManager.getToken();
+
+  return await http.get(
+    uri,
+    headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json"
+    },
+  );
+}

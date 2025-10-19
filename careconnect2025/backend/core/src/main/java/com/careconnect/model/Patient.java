@@ -15,7 +15,8 @@ import lombok.*;
 @Builder
 @Entity
 public class Patient {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String firstName;
@@ -38,12 +39,25 @@ public class Patient {
     private User user;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore  // Prevent lazy loading issues during JSON serialization
+    @JsonIgnore // Prevent lazy loading issues during JSON serialization
     @Builder.Default
     private List<Allergy> allergies = new ArrayList<>();
 
     private String relationship; // e.g. "daughter", "client", etc.
 
+    @Column(name = "is_alexa_linked", nullable = true)
+    private Boolean isAlexaLinked;
+
     // Explicit getter for compatibility if Lombok is not processed
-    public User getUser() { return user; }
+    public User getUser() {
+        return user;
+    }
+
+    public boolean isAlexaLinked() {
+        return Boolean.TRUE.equals(isAlexaLinked);
+    }
+
+    public void setAlexaLinked(boolean alexaLinked) {
+        this.isAlexaLinked = alexaLinked;
+    }
 }
