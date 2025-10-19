@@ -110,8 +110,7 @@ class PromptEngine {
   }
 
   static String generatePrompt(AssignmentForm form) {
-    String prompt = prompt_quizgen_other +
-        _FormatQuestionNumbers(form);
+    String prompt = prompt_quizgen_other + _FormatQuestionNumbers(form);
     prompt = prompt
         .replaceAll('[subject]', form.subject)
         .replaceAll('[topic]', form.topic)
