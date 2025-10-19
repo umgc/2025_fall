@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../services/enhanced_file_service.dart';
+import '../notetaker/models/patient_note_model.dart';
 
 class StreamingAsrAndDiarizationScreen extends StatelessWidget {
-  final int? patientId;
-  final Function(FileUploadResponse)? onUploadSuccess;
+  final String? patientId;
+  final Function(PatientNote)? onUploadSuccess;
   final Function(String)? onUploadError;
 
   const StreamingAsrAndDiarizationScreen({

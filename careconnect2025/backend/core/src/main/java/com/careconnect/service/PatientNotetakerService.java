@@ -137,17 +137,17 @@ public class PatientNotetakerService {
     private List<String> detectKeyWords(Long patientId, String fileData) {
         List<PatientNotetakerKeyword> keywords = patientNotetakerConfigRepository.findByPatientId(patientId).getTriggerKeywords();
         List<String> foundKeywords = new ArrayList<>();
-
+        //make lowercase for case insensitive comparisions
+        fileData = fileData.toLowerCase();
         //TODO add defaults and parse those out as well.
-
         for(PatientNotetakerKeyword keyword : keywords) {
-            if(fileData.contains(keyword.getKeyword())) {
+            String lowercaseKeyword = keyword.getKeyword().toLowerCase();
+            if(fileData.contains(lowercaseKeyword)) {
                 String truncatedMessage = fileData.substring(
-                    Math.max(fileData.indexOf(keyword.getKeyword()) - 200, 0),
-                    Math.min(fileData.indexOf(keyword.getKeyword()) + 200, fileData.length()-1)
+                    Math.max(fileData.indexOf(lowercaseKeyword) - 200, 0),
+                    Math.min(fileData.indexOf(lowercaseKeyword) + 200, fileData.length()-1)
                 );
                 foundKeywords.add(keyword.getKeyword());
-                System.out.println("Keyword detected: " + keyword.getKeyword());
                 triggerEventForKeywords(patientId, keyword, truncatedMessage);
             }
         }
@@ -161,7 +161,7 @@ public class PatientNotetakerService {
             return;
         } else if (keyword.getEventType() == EventType.TASK) {
 
-            String prompt = "Given the following keyword '" + keyword.getKeyword()
+            String prompt = "Given the following keyword '" + keyword.getKeyword().toLowerCase()
                     + "', generate a json object with the following properties: "
                     + "name (string), "
                     + "date (string) , "
