@@ -442,6 +442,11 @@ JWT_SECRET=your_jwt_secret_key_here
 DEEPSEEK_API_KEY=your_deepseek_api_key
 OPENAI_API_KEY=your_openai_api_key
 
+#Enables the mock usps digest data
+ENABLE_MOCK_USPS_DIGEST=true
+# Enables the api call to fetch usps digest
+ENABLE_USPS_DIGEST=false
+
 # Backend Token
 CC_BACKEND_TOKEN=your_backend_token
 ```

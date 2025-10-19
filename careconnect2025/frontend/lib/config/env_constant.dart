@@ -195,6 +195,14 @@ String getAppDomain() {
   return dotenv.env['APP_DOMAIN'] ?? 'localhost';
 }
 
+String getEnableUSPSDigest() {
+  return dotenv.env['ENABLE_USPS_DIGEST'] ?? 'false';
+}
+
+String getEnableMockUSPSDigest() {
+  return dotenv.env['ENABLE_MOCK_USPS_DIGEST'] ?? 'false';
+}
+
 String getAppPort() {
   return dotenv.env['APP_PORT'] ?? '50030';
 }
