@@ -45,8 +45,8 @@ public class Patient {
 
     private String relationship; // e.g. "daughter", "client", etc.
 
-    @Column(name = "is_alexa_linked", nullable = true)
-    private Boolean isAlexaLinked;
+    @Column(name = "is_alexa_linked", nullable = true) // ← Database column
+    private Boolean alexaLinked; // ← Java field name
 
     // Explicit getter for compatibility if Lombok is not processed
     public User getUser() {
@@ -54,10 +54,10 @@ public class Patient {
     }
 
     public boolean isAlexaLinked() {
-        return Boolean.TRUE.equals(isAlexaLinked);
+        return Boolean.TRUE.equals(alexaLinked);
     }
 
-    public void setAlexaLinked(boolean alexaLinked) {
-        this.isAlexaLinked = alexaLinked;
+    public void setAlexaLinked(Boolean alexaLinked) { 
+        this.alexaLinked = alexaLinked;
     }
 }

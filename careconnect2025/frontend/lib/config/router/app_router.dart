@@ -1,5 +1,3 @@
-import 'package:care_connect_app/features/integrations/presentation/pages/add_alexa_device.dart';
-
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
@@ -461,7 +459,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/smart-devices',
-      builder: (_, __) => const SmartDevicesScreen(),
+      builder: (_, __) => const SmartDevicesPage(),
     ),
     GoRoute(
       path: '/medication',

@@ -623,18 +623,4 @@ public class PatientController {
         }
     }
 
-    @GetMapping("/{id}/alexa/status")
-    public ResponseEntity<Map<String, Object>> getAlexaStatus(@PathVariable Long id) {
-        Optional<Patient> opt = Optional.ofNullable(patientService.getPatientById(id));
-        if (opt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Patient not found"));
-        }
-
-        Patient patient = opt.get();
-        boolean linked = Boolean.TRUE.equals(patient.getIsAlexaLinked());
-
-        return ResponseEntity.ok(Map.of("isAlexaLinked", linked));
-    }
-
 }

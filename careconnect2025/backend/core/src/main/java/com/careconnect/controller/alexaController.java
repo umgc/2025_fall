@@ -23,16 +23,33 @@ public class AlexaController {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    private UserRepository userRepository; // ✅ inject user repo to find patient by email
+    private UserRepository userRepository;
 
     @Autowired
-    private PatientRepository patientRepository; // ✅ inject patient repo to find patient by email
+    private PatientRepository patientRepository;
 
     // @Value("${careconnect.api.base-url:http://localhost:8080/v2/api/tasks}")
     private String baseUrl = "http://localhost:8080/v2/api/tasks";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
+
+    // ==============================================================
+    // 🔧 Helper: Unlink Alexa account for a patient
+    // ==============================================================
+    private void unlinkAlexaAccount(Long patientId, String reason) {
+        try {
+            Optional<Patient> patientOpt = patientRepository.findById(patientId);
+            if (patientOpt.isPresent()) {
+                Patient patient = patientOpt.get();
+                patient.setAlexaLinked(false);
+                patientRepository.save(patient);
+                System.out.println("🔓 Unlinked Alexa for patient ID " + patientId + ". Reason: " + reason);
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to unlink Alexa account: " + e.getMessage());
+        }
+    }
 
     // ==============================================================
     // 🔧 Helper: Extract token from Alexa request payload
@@ -107,9 +124,6 @@ public class AlexaController {
             else if (user.getRole() == com.careconnect.security.Role.CAREGIVER) {
                 System.out.println("🧑‍⚕️ User is a caregiver — attempting to find linked patient(s)");
 
-                // In a real scenario, you might allow caregivers to specify patient context,
-                // but for Alexa you likely want to use the FIRST linked patient automatically.
-                // Let’s find one if it exists.
                 List<Patient> allPatients = patientRepository.findAll();
                 for (Patient p : allPatients) {
                     boolean hasAccess = patientRepository.hasAccessByCaregiverId(p.getId(), user.getId());
@@ -143,6 +157,7 @@ public class AlexaController {
     public ResponseEntity<?> getCalendarTasks(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody(required = false) Map<String, Object> alexaBody) {
+        Long patientId = null;
         try {
             // 🧩 1. Extract token (from header or Alexa payload)
             String token = null;
@@ -152,19 +167,23 @@ public class AlexaController {
             } else if (alexaBody != null && alexaBody.containsKey("accessToken")) {
                 token = (String) alexaBody.get("accessToken");
             } else if (alexaBody != null) {
-                // For raw JSON Alexa skill payloads (stringified)
                 String raw = new ObjectMapper().writeValueAsString(alexaBody);
                 token = extractAlexaToken(raw);
             }
 
+            // 🚨 UNLINK CASE 1: Invalid or expired token
             if (token == null || !jwtTokenProvider.validateToken(token)) {
+                System.err.println("🔓 Token validation failed - potential expired/revoked token");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Invalid or missing access token"));
             }
 
             // 🧩 2. Resolve patient ID from JWT → DB lookup
-            Long patientId = resolvePatientIdFromToken(token);
+            patientId = resolvePatientIdFromToken(token);
+            
+            // 🚨 UNLINK CASE 2: Unable to resolve patient (user deleted, role changed, etc.)
             if (patientId == null) {
+                System.err.println("🔓 Unable to resolve patient ID - user may have been deleted or role changed");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Unable to determine patient ID"));
             }
@@ -176,15 +195,44 @@ public class AlexaController {
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
             System.out.println("🧾 [CareConnect API] Status: " + response.getStatusCode());
             System.out.println("🧾 [CareConnect API] Body: " + response.getBody());
+            
+            // 🚨 UNLINK CASE 3: Forbidden - user no longer has access to this patient
+            if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
+                unlinkAlexaAccount(patientId, "Access forbidden - user no longer authorized for this patient");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied to patient data"));
+            }
+            
+            // 🚨 UNLINK CASE 4: Unauthorized from backend - token rejected by backend
+            if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                unlinkAlexaAccount(patientId, "Backend rejected token - authentication failed");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed"));
+            }
+
             // 🧩 4. Return tasks from CareConnect API
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
 
+        } catch (org.springframework.web.client.HttpClientErrorException ex) {
+            // 🚨 UNLINK CASE 5: Handle HTTP 401/403 exceptions from backend
+            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+                if (patientId != null) {
+                    unlinkAlexaAccount(patientId, "Backend authentication/authorization error: " + ex.getStatusCode());
+                }
+                return ResponseEntity.status(ex.getStatusCode())
+                        .body(Map.of("error", "Authentication or authorization failed"));
+            }
+            
+            // Network/connectivity issues - don't unlink
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error fetching tasks", "details", ex.getMessage()));
+                    
         } catch (Exception e) {
+            // Network/connectivity issues - don't unlink
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "Error fetching tasks",
-                            "details", e.getMessage()));
+                    .body(Map.of("error", "Error fetching tasks", "details", e.getMessage()));
         }
     }
 
@@ -195,6 +243,7 @@ public class AlexaController {
     public ResponseEntity<?> addCalendarTask(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> alexaBody) {
+        Long patientId = null;
         try {
             String token = null;
 
@@ -207,13 +256,18 @@ public class AlexaController {
                 token = (String) alexaBody.get("accessToken");
             }
 
+            // 🚨 UNLINK CASE 1: Invalid or expired token
             if (token == null || !jwtTokenProvider.validateToken(token)) {
+                System.err.println("🔓 Token validation failed for task creation");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Missing or invalid access token"));
             }
 
-            Long patientId = resolvePatientIdFromToken(token);
+            patientId = resolvePatientIdFromToken(token);
+            
+            // 🚨 UNLINK CASE 2: Unable to resolve patient
             if (patientId == null) {
+                System.err.println("🔓 Unable to resolve patient ID for task creation");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "Unable to resolve patient ID"));
             }
@@ -226,11 +280,41 @@ public class AlexaController {
             alexaBody.putIfAbsent("daysOfWeek", new ArrayList<>());
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(alexaBody, createAuthHeaders(token));
-
             ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
+            // 🚨 UNLINK CASE 3: Forbidden - user no longer has access
+            if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
+                unlinkAlexaAccount(patientId, "Access forbidden during task creation");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Access denied to patient data"));
+            }
+            
+            // 🚨 UNLINK CASE 4: Unauthorized from backend
+            if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                unlinkAlexaAccount(patientId, "Backend rejected token during task creation");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication failed"));
+            }
+
             return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+            
+        } catch (org.springframework.web.client.HttpClientErrorException ex) {
+            // 🚨 UNLINK CASE 5: Handle HTTP 401/403 exceptions from backend
+            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
+                if (patientId != null) {
+                    unlinkAlexaAccount(patientId, "Backend auth error during task creation: " + ex.getStatusCode());
+                }
+                return ResponseEntity.status(ex.getStatusCode())
+                        .body(Map.of("error", "Authentication or authorization failed"));
+            }
+            
+            // Network/connectivity issues - don't unlink
+            ex.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error adding task", "details", ex.getMessage()));
+                    
         } catch (Exception e) {
+            // Network/connectivity issues - don't unlink
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error adding task", "details", e.getMessage()));

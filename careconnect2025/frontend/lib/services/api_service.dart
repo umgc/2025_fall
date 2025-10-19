@@ -1186,6 +1186,20 @@ class ApiService {
       return null;
     }
   }
+
+  // Get Alexa status for a specific patient
+  static Future<http.Response> getAlexaStatus(int patientId) async {
+    // Retrieve authorization headers (with token)
+    final headers = await AuthTokenManager.getAuthHeaders();
+
+    // Build the URI using your existing ApiConstants structure
+    final uri = Uri.parse('${ApiConstants.patients}/$patientId/alexa/status');
+
+    // Perform the GET request with consistent timeout
+    return await _httpClient
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 15));
+  }
 }
 
 // Save speech-to-text to a file and upload it to S3
@@ -1245,17 +1259,4 @@ Future<http.Response> getUserFilesByCategory(int userId) async {
   } catch (e) {
     return http.Response(jsonEncode({'error': e.toString()}), 500);
   }
-}
-
-Future<dynamic> getAlexaStatus(int patientId) async {
-  final uri = Uri.parse("$baseUrl/v2/api/patients/$patientId/alexa/status");
-  final token = await AuthTokenManager.getToken();
-
-  return await http.get(
-    uri,
-    headers: {
-      "Authorization": "Bearer $token",
-      "Content-Type": "application/json"
-    },
-  );
 }

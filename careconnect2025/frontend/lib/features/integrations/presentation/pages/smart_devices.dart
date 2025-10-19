@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/user_provider.dart';
-import '../../services/api_service.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:care_connect_app/services/profile_service.dart';
+import 'package:care_connect_app/widgets/common_drawer.dart';
+import 'package:care_connect_app/widgets/app_bar_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SmartDevicesPage extends StatefulWidget {
   const SmartDevicesPage({super.key});
@@ -15,6 +17,11 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
   bool? isAlexaLinked;
   bool isLoading = true;
   String? error;
+  String? role;
+
+  // Sample URLs for skill stores
+  final String alexaSkillUrl = 'https://www.amazon.com/FSTV-Free-Speech-TV-Live/dp/B01MSX5UUJ';
+  final String googleActionUrl = 'https://assistant.google.com/services/invoke/uid/000000d139bbc4d4';
 
   @override
   void initState() {
@@ -22,45 +29,44 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
     _checkAlexaStatus();
   }
 
-  /// ✅ Calls backend to check if Alexa is linked for this patient
   Future<void> _checkAlexaStatus() async {
     try {
-      final user = Provider.of<UserProvider>(context, listen: false).user;
-      if (user == null || user.patientId == null) {
+      setState(() => isLoading = true);
+
+      final profile = await ProfileService.getCurrentUserProfile();
+
+      if (profile == null) {
         setState(() {
-          error = "User not logged in or missing patient ID.";
+          error = "Unable to load user profile.";
           isLoading = false;
         });
         return;
       }
 
-      final response = await ApiService.getAlexaStatus(user.patientId!);
+      // Extract role from nested user object
+      final userObj = profile['user'];
+      role = (userObj != null ? userObj['role'] : null)?.toString().trim().toUpperCase() ?? '';
+      
+      print("DEBUG: Extracted role: '$role'");
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          isAlexaLinked = data['isAlexaLinked'] ?? false;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          error = "Failed to fetch Alexa status (${response.statusCode}).";
-          isLoading = false;
-        });
-      }
+      // Extract Alexa status directly from profile (using alexaLinked field)
+      isAlexaLinked = profile['alexaLinked'] ?? false;
+      print("DEBUG: Alexa linked status from profile: $isAlexaLinked");
+
+      setState(() {
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
-        error = "Error checking Alexa status: $e";
+        error = "An error occurred: $e";
         isLoading = false;
       });
     }
   }
 
-  /// ✅ Mock linking function (could open your login.html page)
   Future<void> _linkAlexaAccount() async {
-    // For now, you could just open your linking flow
-    // e.g., launch your Alexa linking web page
     print("Opening Alexa linking flow...");
+    _showEnablementDialog('Alexa', alexaSkillUrl);
   }
 
   @override
@@ -73,45 +79,436 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
 
     if (error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text("Smart Devices")),
-        body: Center(child: Text(error!, style: const TextStyle(color: Colors.red))),
+        drawer: const CommonDrawer(currentRoute: '/smart-devices'),
+        appBar: AppBarHelper.createAppBar(
+          context,
+          title: 'Smart Devices',
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Text(error!, style: const TextStyle(color: Colors.red)),
+        ),
       );
     }
 
+    final isPatient = role == 'PATIENT';
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Smart Devices")),
-      body: Center(
+      drawer: const CommonDrawer(currentRoute: '/smart-devices'),
+      appBar: AppBarHelper.createAppBar(
+        context,
+        title: 'Smart Devices',
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isAlexaLinked == true ? Icons.link : Icons.link_off,
-              color: isAlexaLinked == true ? Colors.green : Colors.grey,
-              size: 100,
-            ),
-            const SizedBox(height: 20),
-            Text(
-              isAlexaLinked == true
-                  ? "Your Alexa account is linked!"
-                  : "Alexa is not linked yet.",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 30),
-            if (isAlexaLinked != true)
-              ElevatedButton.icon(
-                icon: const Icon(Icons.cloud_outlined),
-                label: const Text("Link Alexa Account"),
-                onPressed: _linkAlexaAccount,
-              )
-            else
-              ElevatedButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text("Check Status Again"),
-                onPressed: _checkAlexaStatus,
+            // Header Section with Icon and Description
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
+              child: Icon(
+                Icons.devices,
+                size: 60,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              'Smart Device Integration',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            const Text(
+              'Connect Alexa or Google Nest compatible smart devices to help monitor and assist with daily activities.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.4),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Two-Column Layout for Alexa and Google
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Use column layout for phone screens (< 600px width)
+                if (constraints.maxWidth < 600) {
+                  return Column(
+                    children: [
+                      _buildAlexaPlatformCard(context, isPatient),
+                      const SizedBox(height: 16),
+                      _buildGooglePlatformCard(context, isPatient),
+                    ],
+                  );
+                } else {
+                  // Use row layout for tablets/desktop
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildAlexaPlatformCard(context, isPatient)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildGooglePlatformCard(context, isPatient)),
+                    ],
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildAlexaPlatformCard(BuildContext context, bool isPatient) {
+    final devices = [
+      _DeviceInfo(icon: Icons.speaker, name: 'Echo Devices', available: true),
+      _DeviceInfo(icon: Icons.lightbulb, name: 'Smart Lights', available: false),
+      _DeviceInfo(icon: Icons.thermostat, name: 'Thermostats', available: false),
+      _DeviceInfo(icon: Icons.lock, name: 'Smart Locks', available: false),
+      _DeviceInfo(icon: Icons.outlet, name: 'Smart Plugs', available: false),
+      _DeviceInfo(icon: Icons.sensor_door, name: 'Sensors', available: false),
+    ];
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Platform Header
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mic, color: Colors.blue, size: 32),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Amazon Alexa',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Status indicator for patients
+            if (isPatient) ...[
+              Icon(
+                isAlexaLinked == true ? Icons.link : Icons.link_off,
+                color: isAlexaLinked == true ? Colors.green : Colors.grey,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isAlexaLinked == true
+                    ? "Your Alexa account is linked!"
+                    : "Alexa is not linked yet.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Device List
+            ...devices.map((device) => _buildDeviceItem(
+                  icon: device.icon,
+                  name: device.name,
+                  available: device.available,
+                  color: Colors.blue,
+                )),
+
+            const SizedBox(height: 20),
+
+            // Message for non-patients
+            if (!isPatient) ...[
+              const Text(
+                'Alexa integration is currently available for patients only. Development is underway to support caregivers soon!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Action Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isPatient
+                    ? (isAlexaLinked == true ? _checkAlexaStatus : _linkAlexaAccount)
+                    : null,
+                icon: Icon(isPatient && isAlexaLinked == true
+                    ? Icons.refresh
+                    : Icons.add),
+                label: Text(
+                  isPatient
+                      ? (isAlexaLinked == true
+                          ? 'Check Status'
+                          : 'Enable Alexa Skill')
+                      : 'Coming Soon for Caregivers',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isPatient ? Colors.blue : Colors.grey,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGooglePlatformCard(BuildContext context, bool isPatient) {
+    final devices = [
+      _DeviceInfo(icon: Icons.home, name: 'Nest Hubs', available: true),
+      _DeviceInfo(icon: Icons.speaker, name: 'Google Home', available: true),
+      _DeviceInfo(icon: Icons.lightbulb, name: 'Smart Lights', available: false),
+      _DeviceInfo(icon: Icons.thermostat, name: 'Nest Thermostat', available: false),
+      _DeviceInfo(icon: Icons.doorbell, name: 'Nest Doorbell', available: false),
+      _DeviceInfo(icon: Icons.camera_alt, name: 'Nest Cameras', available: false),
+    ];
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Platform Header
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.g_mobiledata_rounded, color: Colors.red, size: 32),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Google Nest',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Device List
+            ...devices.map((device) => _buildDeviceItem(
+                  icon: device.icon,
+                  name: device.name,
+                  available: device.available,
+                  color: Colors.red,
+                )),
+
+            const SizedBox(height: 20),
+
+            // Message for all users (Google not available yet)
+            Text(
+              isPatient
+                  ? 'Google Home integration is under development. Stay tuned for updates!'
+                  : 'Google Home integration is currently available for patients only. Development is underway to support caregivers soon!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Action Button (disabled for now)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.add),
+                label: const Text('Enable Google Action (Coming Soon)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeviceItem({
+    required IconData icon,
+    required String name,
+    required bool available,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: available
+                  ? color.withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: available ? color : Colors.grey,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: available ? Colors.black87 : Colors.grey,
+              ),
+            ),
+          ),
+          if (!available)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showEnablementDialog(String platform, String url) {
+    final skillType = platform == 'Alexa' ? 'Skill' : 'Action';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Enable $platform $skillType'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Click the button below to open the $platform $skillType store and enable CareConnect.',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Note: Currently using a sample URL for demonstration.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse(url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Opening $platform $skillType store...'),
+                    ),
+                  );
+                } else {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open the store URL'),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: platform == 'Alexa' ? Colors.blue : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.open_in_new),
+              label: Text('Open $platform Store'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Helper class for device info
+class _DeviceInfo {
+  final IconData icon;
+  final String name;
+  final bool available;
+
+  _DeviceInfo({
+    required this.icon,
+    required this.name,
+    required this.available,
+  });
 }
