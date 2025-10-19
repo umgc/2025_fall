@@ -85,10 +85,10 @@ class UserSettingsState extends State<UserSettings> {
               const Divider(),
 
               // API Key Block
-              _buildApiKeyBlock(loginNotifier),
+              // _buildApiKeyBlock(loginNotifier),
 
-              const SizedBox(height: 20),
-              const Divider(),
+              // const SizedBox(height: 20),
+              // const Divider(),
 
               // Theme Color Picker
               Text(
