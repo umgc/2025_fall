@@ -239,11 +239,11 @@ class _ProgramAsessmentResultsViewState
 
     return ExpansionTile(
       title: Text(
-                student.fullname,
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-      leading: _getIcon(
-                  allOutputCorrectness.every((correct) => correct == true)),
+        student.fullname,
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      leading:
+          _getIcon(allOutputCorrectness.every((correct) => correct == true)),
       children: [
         Padding(
           padding: EdgeInsets.all(12.0),

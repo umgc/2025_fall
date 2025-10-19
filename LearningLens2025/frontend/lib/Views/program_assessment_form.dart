@@ -20,11 +20,14 @@ class ProgramAssessmentForm extends StatefulWidget {
           Course course, Assignment assignment, String expectedOutput)?
       onEvaluationStarted;
   const ProgramAssessmentForm(
-      {super.key, required this.courses, required this.onEvaluationStarted, required this.evaluationResults});
+      {super.key,
+      required this.courses,
+      required this.onEvaluationStarted,
+      required this.evaluationResults});
 
   @override
-  _ProgramAssessmentFormState createState() =>
-      _ProgramAssessmentFormState(courses, onEvaluationStarted, evaluationResults);
+  _ProgramAssessmentFormState createState() => _ProgramAssessmentFormState(
+      courses, onEvaluationStarted, evaluationResults);
 }
 
 class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
@@ -56,7 +59,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
 
   bool _isLoading = false;
 
-  _ProgramAssessmentFormState(this.courses, this.onEvaluationStarted, this.evaluationResults);
+  _ProgramAssessmentFormState(
+      this.courses, this.onEvaluationStarted, this.evaluationResults);
 
   // Helper to check if form is valid
   bool get isFormValid =>
@@ -152,48 +156,54 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
   }
 
   Future<bool> _confirmStart(Course course, Assignment assignment) async {
-    final existingEvaluation = evaluationResults.firstWhereOrNull(
-      (result) => result.assignmentId == assignment.id.toString() && result.courseId == course.id.toString()
-    );
+    final existingEvaluation = evaluationResults.firstWhereOrNull((result) =>
+        result.assignmentId == assignment.id.toString() &&
+        result.courseId == course.id.toString());
 
-    if(existingEvaluation == null){
+    if (existingEvaluation == null) {
       return true;
     }
 
     final confirmStart = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Confirm Start'),
-            content: Text(
-                'Starting a new assessment will overwrite an existing assessment for assignment "${assignment.name}"'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Start'),
+          content: Text(
+              'Starting a new assessment will overwrite an existing assessment for assignment "${assignment.name}"'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Start Assessment',
+                style: TextStyle(color: Colors.deepPurpleAccent),
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Start Assessment',
-                  style: TextStyle(color: Colors.deepPurpleAccent),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        );
+      },
     );
 
-    if(confirmStart == null){
+    if (confirmStart == null) {
       return false;
     }
 
     return confirmStart;
   }
 
-  Future<void> _startEvaluation(Course course, Assignment assignment,
-      String input, String expectedOutput, String language, int timeoutSeconds) async {
-    if (!(await isFilesValid()) || !(await _confirmStart(course, assignment))) return;
+  Future<void> _startEvaluation(
+      Course course,
+      Assignment assignment,
+      String input,
+      String expectedOutput,
+      String language,
+      int timeoutSeconds) async {
+    if (!(await isFilesValid()) || !(await _confirmStart(course, assignment)))
+      return;
 
     final response = await _assessmentService.startEvaluation(
         course: course,
@@ -316,18 +326,17 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                   });
                 }),
             TextField(
-              controller: timeoutController,
-              keyboardType: TextInputType.number,
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.digitsOnly, // Only allows digits
-                FilteringTextInputFormatter.allow(RegExp(
-                    r'^[1-9][0-9]*$|^0$')) // Allows only positive nubmers and zero
-              ],
-              decoration: InputDecoration(
-                labelText: 'Program Execution Timeout (in seconds)',
-                border: OutlineInputBorder(),
-              )
-            ),
+                controller: timeoutController,
+                keyboardType: TextInputType.number,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly, // Only allows digits
+                  FilteringTextInputFormatter.allow(RegExp(
+                      r'^[1-9][0-9]*$|^0$')) // Allows only positive nubmers and zero
+                ],
+                decoration: InputDecoration(
+                  labelText: 'Program Execution Timeout (in seconds)',
+                  border: OutlineInputBorder(),
+                )),
             Text(
               'Note that students MUST submit a .zip file with the entry point '
               'of the program being in a file named entry.(c, cpp, java, py).',
