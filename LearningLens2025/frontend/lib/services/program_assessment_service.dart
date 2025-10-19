@@ -62,7 +62,8 @@ class ProgramAssessmentService {
       required Assignment assignment,
       required String input,
       required String expectedOutput,
-      required String language}) async {
+      required String language,
+      required int timeoutSeconds}) async {
     return await ApiService().httpPost(Uri.parse(codeEvalUrl),
         body: jsonEncode({
           'courseId': course.id,
@@ -71,6 +72,7 @@ class ProgramAssessmentService {
           'expectedOutput': expectedOutput,
           'username': lmsService.userName,
           'language': language,
+          'timeoutSeconds': timeoutSeconds.toString()
         }));
   }
 

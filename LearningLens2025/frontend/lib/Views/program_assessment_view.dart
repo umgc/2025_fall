@@ -302,6 +302,7 @@ class ProgramAssessmentState extends State<ProgramAssessmentView> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => ProgramAssessmentForm(
+                        evaluationResults: _evaluationResults,
                           courses: _courses,
                           onEvaluationStarted:
                               (course, assignment, expectedOutput) async {

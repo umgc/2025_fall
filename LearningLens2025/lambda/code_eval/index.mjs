@@ -2,17 +2,18 @@ import { DescribeTaskDefinitionCommand, ECSClient, RunTaskCommand } from "@aws-s
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
-import { createSubmissionsZip, updateGrade } from './moodle.js';
+import { createSubmissionsZip } from './moodle.js';
 
 /**
  * Starts the ECS task to evaluate student submissions
  * @param {string} s3Uri s3Uri S3 URI for zip file containing student submissions
  * @param {string|number} assignmentId 
  * @param {string|number} courseId 
- * @param {language} language 
+ * @param {string} language 
+ * @param {number} timeoutSeconds 
  * @returns 
  */
-async function startECSTask(s3Uri, assignmentId, courseId, language){
+async function startECSTask(s3Uri, assignmentId, courseId, language, timeoutSeconds){
     const ecsClient = new ECSClient({ region: process.env.AWS_REGION });
     const subnets = process.env.SUBNET_IDS.split(",");
     const securityGroups = process.env.SECURITY_GROUP_IDS.split(",");
@@ -55,6 +56,7 @@ async function startECSTask(s3Uri, assignmentId, courseId, language){
                             { name: "ASSIGNMENT_ID", value: assignmentId.toString() },
                             { name: "COURSE_ID", value: courseId.toString() },
                             { name: "LANGUAGE", value: language },
+                            { name: "TIMEOUT_SECONDS", value: timeoutSeconds },
                         ],
                     },
                 ],
@@ -72,7 +74,7 @@ async function startECSTask(s3Uri, assignmentId, courseId, language){
 }
 
 async function startEvaluation(bodyJson){
-    const { assignmentId, courseId, input, expectedOutput, language } = bodyJson
+    const { assignmentId, courseId, input, expectedOutput, language, timeoutSeconds } = bodyJson
     const zipFile = await createSubmissionsZip(assignmentId, expectedOutput, input)
     const s3Client = new S3Client({ region: "us-east-1" })
     console.log('uploading to S3')
@@ -88,7 +90,7 @@ async function startEvaluation(bodyJson){
         })
     )
 
-    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId, language)
+    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId, language, timeoutSeconds)
 }
 
 
@@ -107,24 +109,6 @@ async function storeEvaluationResults(client, courseId, assignmentId, evaluation
         WHERE course_id = ${courseId}
         AND assignment_id = ${assignmentId};
     `
-
-    const rows = await client`
-        SELECT expected_output FROM code_evaluation
-        WHERE course_id = ${courseId}
-        AND assignment_id = ${assignmentId}
-    `
-
-    console.log(rows)
-    const expectedOutput = rows[0].expected_output
-
-    for(const result of evaluation){
-        if(result['output'] == expectedOutput){
-            await updateGrade(result['studentId'], assignmentId, 100, 'Output matched what was expected')
-        }
-        else{
-            await updateGrade(result['studentId'], assignmentId, 0, 'Output did not match what was expected')
-        }
-    }
 }
 
 /**
@@ -163,6 +147,7 @@ async function handleGET(client, event, context){
                     username varchar NOT NULL,
                     status varchar NOT NULL,
                     input varchar,
+                    timeout_seconds int NOT NULL,
                     results_json text,
                     start_time timestamptz NOT NULL DEFAULT now(),
                     finish_time timestamptz,
@@ -216,13 +201,15 @@ async function handlePOST(client, event, context){
             ${bodyJson.language},
             ${bodyJson.username},
             'JOB STARTED',
-            ${bodyJson.input ?? null}
+            ${bodyJson.input ?? null},
+            ${parseInt(bodyJson.timeoutSeconds)}
         )
         ON CONFLICT (assignment_id, course_id, username) DO UPDATE
         SET status = EXCLUDED.status,
             input = EXCLUDED.input,
             expected_output = EXCLUDED.expected_output,
             language = EXCLUDED.language,
+            timeout_seconds = EXCLUDED.timeout_seconds,
             results_json = NULL,
             start_time = now(),
             finish_time = NULL;

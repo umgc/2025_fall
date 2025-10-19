@@ -38,9 +38,6 @@ class _ProgramAsessmentResultsViewState
 
   final lmsService = LmsFactory.getLmsService();
 
-  // For expansion tiles
-  List<bool> expandedTiles = [];
-
   _ProgramAsessmentResultsViewState(
       {required this.evaluation,
       required this.course,
@@ -92,13 +89,9 @@ class _ProgramAsessmentResultsViewState
     List<dynamic> resultsJson = evaluation.resultsJson;
     final children = resultsJson.mapIndexed(_buildPanel).toList();
 
-    return ExpansionPanelList(
-        expansionCallback: (int index, bool isExpanded) {
-          setState(() {
-            expandedTiles[index] = isExpanded;
-          });
-        },
-        children: children);
+    return Column(
+      children: children,
+    );
   }
 
   bool _isOutputCorrect(dynamic entry) {
@@ -139,7 +132,7 @@ class _ProgramAsessmentResultsViewState
     );
   }
 
-  ExpansionPanel _buildPanel(int idx, dynamic result) {
+  Widget _buildPanel(int idx, dynamic result) {
     List<dynamic> outputs = result['outputs'];
 
     final student = participants
@@ -177,7 +170,7 @@ class _ProgramAsessmentResultsViewState
               keyboardType: TextInputType.multiline,
               controller: feedbackController,
               decoration: InputDecoration(
-                labelText: 'Feeback',
+                labelText: 'Feedback',
                 border: OutlineInputBorder(),
               )),
           ElevatedButton(
@@ -244,26 +237,22 @@ class _ProgramAsessmentResultsViewState
       ]);
     }
 
-    // set state for expansion tile
-    expandedTiles.add(false);
-
-    return ExpansionPanel(
-        headerBuilder: (context, isExpanded) {
-          return ListTile(
-              leading: _getIcon(
-                  allOutputCorrectness.every((correct) => correct == true)),
-              title: Text(
+    return ExpansionTile(
+      title: Text(
                 student.fullname,
                 style: TextStyle(fontWeight: FontWeight.bold),
-              ));
-        },
-        body: Padding(
+              ),
+      leading: _getIcon(
+                  allOutputCorrectness.every((correct) => correct == true)),
+      children: [
+        Padding(
           padding: EdgeInsets.all(12.0),
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 12,
               children: children),
-        ),
-        isExpanded: expandedTiles[idx]);
+        )
+      ],
+    );
   }
 }

@@ -9,7 +9,7 @@ from pathlib import Path
 def run_student_programs(language: str, base_dir="."):
     language = language.strip().lower()
     results = []
-    
+    timeout_seconds = int(os.getenv('TIMEOUT_SECONDS'))
     # Expected output file should always exist
     expected_outputs: list[dict] = json.loads(Path("expectedOutput").read_text())
 
@@ -63,7 +63,7 @@ def run_student_programs(language: str, base_dir="."):
         
         if compile_error:
             results.append({
-                "outputs": [{ 'output': compile_error, "error": True }],
+                "outputs": [{ 'output': compile_error, "error": True, "timedout": False }],
                 "studentId": student_id,
                 "assignmentId": assignment_id,
             })
@@ -91,12 +91,12 @@ def run_student_programs(language: str, base_dir="."):
                 cmd = []
 
             try:
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
                 output_text = proc.stdout.strip() or proc.stderr.strip()
                 error_flag = proc.returncode != 0
                 timedout = False
             except subprocess.TimeoutExpired:
-                output_text = "Execution timed out after 30 seconds."
+                output_text = f"Execution timed out after {timeout_seconds} seconds."
                 error_flag = True
                 timedout = True
 
