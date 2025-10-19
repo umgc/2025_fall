@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
@@ -93,11 +95,16 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
     }
   }
 
-  String _getFileContents(PlatformFile file) =>
-      utf8.decode(file.bytes!.toList());
+  String _getFileContents(PlatformFile file) {
+    if (kIsWeb) {
+      return utf8.decode(file.bytes!.toList());
+    }
+
+    return File(file.path!).readAsStringSync();
+  }
 
   Future<bool> isFilesValid() async {
-    if (outputFile == null || outputFile?.bytes == null) return false;
+    if (outputFile == null) return false;
     // Assumes file is utf-8 encoded
     if (inputFile != null) {
       final outputFileContent = _getFileContents(outputFile!);
@@ -202,8 +209,9 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       String expectedOutput,
       String language,
       int timeoutSeconds) async {
-    if (!(await isFilesValid()) || !(await _confirmStart(course, assignment)))
+    if (!(await isFilesValid()) || !(await _confirmStart(course, assignment))) {
       return;
+    }
 
     final response = await _assessmentService.startEvaluation(
         course: course,
@@ -348,7 +356,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Input File'),
                   onPressed: () async {
-                    final result = await FilePicker.platform.pickFiles();
+                    final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom, allowedExtensions: ['txt']);
                     final file = result?.files.single;
                     if (file == null) return;
 
@@ -357,6 +366,15 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                     });
                   }),
               if (inputFile != null) Text(inputFile!.name),
+              if (inputFile != null)
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      inputFile = null;
+                    });
+                  },
+                )
             ]),
             Row(spacing: 8, children: [
               // Expected output file upload
@@ -364,7 +382,8 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Expected Output File'),
                   onPressed: () async {
-                    final result = await FilePicker.platform.pickFiles();
+                    final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom, allowedExtensions: ['txt']);
                     final file = result?.files.single;
                     if (file == null) return;
 
@@ -372,7 +391,16 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
                       outputFile = file;
                     });
                   }),
-              if (outputFile != null) Text(outputFile!.name)
+              if (outputFile != null) Text(outputFile!.name),
+              if (outputFile != null)
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      outputFile = null;
+                    });
+                  },
+                )
             ]),
             SizedBox(height: 20),
             if (_isLoading)
