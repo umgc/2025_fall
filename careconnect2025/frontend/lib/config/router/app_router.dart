@@ -565,9 +565,5 @@ final GoRouter appRouter = GoRouter(
         return PreDefinedTaskScreen(patientId: patientId, templateId: templateId, patientName: patientName);
       },
     ),
-    GoRoute(
-      path: '/addAlexa',
-      builder: (_, __) => const AddAlexaDeviceScreen(),
-    ),
   ],
 );
