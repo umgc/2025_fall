@@ -24,6 +24,7 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => const NotetakerConfigurationPage(),
             ),
+            MaterialPageRoute(builder: (context) => const NotetakerConfigurationPage()),
           );
         },
       ),
