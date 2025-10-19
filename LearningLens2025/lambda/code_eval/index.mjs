@@ -1,5 +1,5 @@
 import { DescribeTaskDefinitionCommand, ECSClient, RunTaskCommand } from "@aws-sdk/client-ecs";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
 import { createSubmissionsZip } from './moodle.js';
@@ -109,6 +109,16 @@ async function storeEvaluationResults(client, courseId, assignmentId, evaluation
         WHERE course_id = ${courseId}
         AND assignment_id = ${assignmentId};
     `
+    const s3Client = new S3Client({ region: "us-east-1" })
+    const bucket = process.env.S3_BUCKET
+    const key = `${courseId}/${assignmentId}/submissions.zip`
+    
+    await s3Client.send(
+        new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: key,
+        })
+    )
 }
 
 /**
