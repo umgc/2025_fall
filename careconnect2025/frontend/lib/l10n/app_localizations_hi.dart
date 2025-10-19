@@ -9,6 +9,9 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get systemDefault => 'सिस्टम डिफ़ॉल्ट';
+
+  @override
   String get menuTitle => 'मेनू';
 
   @override
@@ -83,9 +86,6 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get save => 'सहेजें';
-
-  @override
-  String get systemDefault => 'सिस्टम डिफ़ॉल्ट';
 
   @override
   String get fallbackUser => 'उपयोगकर्ता';

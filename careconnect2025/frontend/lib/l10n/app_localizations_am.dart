@@ -9,6 +9,9 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
+  String get systemDefault => 'የስርዓት መደበኛ';
+
+  @override
   String get menuTitle => 'ሜኑ';
 
   @override
@@ -82,9 +85,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get save => 'አስቀምጥ';
-
-  @override
-  String get systemDefault => 'የስርዓት መደበኛ';
 
   @override
   String get fallbackUser => 'ተጠቃሚ';

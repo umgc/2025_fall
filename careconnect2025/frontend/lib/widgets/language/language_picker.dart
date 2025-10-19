@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class LanguagePicker {
- static const systemDefaultText = 'System default';
-
    static Future<void> show(BuildContext context) async {
      final locales = AppLocalizations.supportedLocales;
      final current = context.read<LocaleProvider>().locale;
+    final t = AppLocalizations.of(context)!;
 
      await showModalBottomSheet(
        context: context,
@@ -24,8 +23,7 @@ class LanguagePicker {
                final selected = current == null;
                return ListTile(
                  leading: const Icon(Icons.phone_iphone),
-
-               title: const Text(systemDefaultText),
+               title: Text(t.systemDefault),
                  trailing: selected ? const Icon(Icons.check) : null,
                  onTap: () {
                    context.read<LocaleProvider>().setLocale(null);

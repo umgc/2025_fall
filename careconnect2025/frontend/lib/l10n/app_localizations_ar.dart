@@ -9,6 +9,9 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
+  String get systemDefault => 'إعداد النظام';
+
+  @override
   String get menuTitle => 'القائمة';
 
   @override
@@ -82,9 +85,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get save => 'حفظ';
-
-  @override
-  String get systemDefault => 'إعداد النظام';
 
   @override
   String get fallbackUser => 'المستخدم';

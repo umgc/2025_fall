@@ -1,9 +1,13 @@
 import 'package:care_connect_app/l10n/app_localizations.dart';
+import 'package:care_connect_app/providers/locale_provider.dart';
+import 'package:care_connect_app/widgets/language/language_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; 
 import '../../../../config/env_constant.dart';
+import 'package:provider/provider.dart';
+
 
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
@@ -59,7 +63,10 @@ class _WelcomePageState extends State<WelcomePage> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final t = AppLocalizations.of(context)!;
-
+    final currentLocale = context.watch<LocaleProvider>().locale;
+    final currentLangLabel = currentLocale == null
+    ? t.systemDefault 
+    : LanguagePicker.labelFor(currentLocale);
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -83,6 +90,34 @@ class _WelcomePageState extends State<WelcomePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                            Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => LanguagePicker.show(context),
+                      icon: const Icon(Icons.language, color: Colors.white),
+                      label: Text(
+                        currentLangLabel,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: isMobile ? 12 : 14,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 10 : 12,
+                          vertical: isMobile ? 6 : 8,
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const Spacer(),
 
                 // Logo container

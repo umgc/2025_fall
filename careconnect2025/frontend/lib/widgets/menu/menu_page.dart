@@ -72,7 +72,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.receipt_long,
         label: t.invoiceAssistant,
         route: '/invoice-assistant/dashboard',
-        visibleFor: const {'CAREGIVER', 'ADMIN'},
+        visibleFor: const {'CAREGIVER', 'ADMIN','PATIENT'},
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -85,7 +85,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.verified_user,
         label: t.evv,
         route: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
+        visibleFor: const {'CAREGIVER', 'ADMIN',},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
@@ -117,7 +117,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.person_add,
         label: t.addPatient,
         route: '/add-patient',
-        visibleFor: const {'CAREGIVER', 'ADMIN'},
+        visibleFor: const {'CAREGIVER', 'PATIENT'},
       ),
       _MenuItem(
         icon: Icons.settings,

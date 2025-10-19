@@ -11,7 +11,7 @@ class InvoiceTabbedPage extends StatefulWidget {
   });
 
   final int initialTabIndex;
-  final String? quickFilter; 
+  final String? quickFilter;
 
   @override
   State<InvoiceTabbedPage> createState() => _InvoiceTabbedPageState();
@@ -40,18 +40,22 @@ class _InvoiceTabbedPageState extends State<InvoiceTabbedPage>
   @override
   Widget build(BuildContext context) {
     final showBack = widget.quickFilter != null; // filtered route
+    final appBarTheme = Theme.of(context).appBarTheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoice Assistant'), 
+        title: const Text('Invoice Assistant'),
         leading: showBack ? BackButton(onPressed: () => Navigator.of(context).maybePop()) : null,
         bottom: TabBar(
-          unselectedLabelColor: Theme.of(context).secondaryHeaderColor,
-          labelColor: Colors.white,
+          // Let the theme determine the selected color for full compatibility
+          // Set unselected color to be a slightly transparent version of the foreground color
+          unselectedLabelColor: appBarTheme.foregroundColor?.withOpacity(0.7),
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined, color: Colors.white), text: 'Dashboard'),
-            Tab(icon: Icon(Icons.upload_file_outlined, color: Colors.white), text: 'Upload Invoice'),
-            Tab(icon: Icon(Icons.list_alt_outlined, color: Colors.white), text: 'Invoice List'),
+            // Removed hardcoded colors from icons to allow the theme to control them
+            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
+            Tab(icon: Icon(Icons.upload_file_outlined), text: 'Upload Invoice'),
+            Tab(icon: Icon(Icons.list_alt_outlined), text: 'Invoice List'),
           ],
         ),
       ),

@@ -9,6 +9,9 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get systemDefault => 'Predeterminado del sistema';
+
+  @override
   String get menuTitle => 'Menú';
 
   @override
@@ -83,9 +86,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get save => 'Guardar';
-
-  @override
-  String get systemDefault => 'Predeterminado del sistema';
 
   @override
   String get fallbackUser => 'Usuario';

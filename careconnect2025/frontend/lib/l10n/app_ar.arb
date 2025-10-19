@@ -1,5 +1,6 @@
 {
   "@@locale": "ar",
+  "systemDefault":"الافتراضي للنظام",
   "menuTitle": "القائمة",
   "yourShortcuts": "اختصاراتك",
   "preferences": "التفضيلات",

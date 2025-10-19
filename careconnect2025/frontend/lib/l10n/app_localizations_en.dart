@@ -9,6 +9,9 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get systemDefault => 'System default';
+
+  @override
   String get menuTitle => 'Menu';
 
   @override
@@ -83,9 +86,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get save => 'Save';
-
-  @override
-  String get systemDefault => 'System default';
 
   @override
   String get fallbackUser => 'User';

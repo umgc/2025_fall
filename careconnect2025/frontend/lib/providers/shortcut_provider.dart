@@ -42,23 +42,23 @@ class ShortcutDef {
     if (labelKey == null) return label;
     switch (labelKey) {
       case 'dashboard':
-        return t.dashboard;
+        return t.shortcut_dashboard;
       case 'invoiceAssistant':
-        return t.invoiceAssistant;
+        return t.shortcut_invoices;
       case 'calendarAssistant':
-        return t.calendarAssistant;
+        return t.shortcut_calendar;
       case 'socialFeed':
-        return t.socialFeed;
+        return t.shortcut_feed;
       case 'medicationManagement':
-        return t.medicationManagement;
+        return t.shortcut_meds;
       case 'evv':
-        return t.evv;
+        return t.shortcut_evv;
       case 'wearables':
-        return t.wearables;
+        return t.shortcut_wearables;
       case 'fileManagement':
-        return t.fileManagement;
+        return t.shortcut_files;
       case 'gamification':
-        return t.gamification;
+        return t.shortcut_gamification;
       default:
         return label; // unknown key, use fallback
     }

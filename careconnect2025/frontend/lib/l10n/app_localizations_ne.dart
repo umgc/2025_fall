@@ -9,6 +9,9 @@ class AppLocalizationsNe extends AppLocalizations {
   AppLocalizationsNe([String locale = 'ne']) : super(locale);
 
   @override
+  String get systemDefault => 'सिस्टम डिफल्ट';
+
+  @override
   String get menuTitle => 'मेनु';
 
   @override
@@ -82,9 +85,6 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get save => 'सङ्ग्रह गर्नुहोस्';
-
-  @override
-  String get systemDefault => 'सिस्टम डिफल्ट';
 
   @override
   String get fallbackUser => 'प्रयोगकर्ता';

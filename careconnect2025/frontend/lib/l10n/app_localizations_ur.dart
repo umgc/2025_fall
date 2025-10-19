@@ -9,6 +9,9 @@ class AppLocalizationsUr extends AppLocalizations {
   AppLocalizationsUr([String locale = 'ur']) : super(locale);
 
   @override
+  String get systemDefault => 'سسٹم ڈیفالٹ';
+
+  @override
   String get menuTitle => 'مینو';
 
   @override
@@ -82,9 +85,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get save => 'محفوظ کریں';
-
-  @override
-  String get systemDefault => 'سسٹم ڈیفالٹ';
 
   @override
   String get fallbackUser => 'صارف';

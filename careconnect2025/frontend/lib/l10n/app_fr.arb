@@ -1,5 +1,6 @@
 {
   "@@locale": "fr",
+    "systemDefault":"Défaut système",
   "menuTitle": "Menu",
   "yourShortcuts": "Vos raccourcis",
   "preferences": "Préférences",
