@@ -190,11 +190,23 @@
             <version>2.7.0</version>
         </dependency>
 
-        <!-- Tomcat provided for packaging -->
+        <!-- Tomcat - compile scope for Lambda (needed for WebSocket support) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
-            <scope>provided</scope>
+            <!-- Changed from 'provided' to 'compile' to support WebSockets in Lambda -->
+        </dependency>
+
+        <!-- WebSocket API implementation -->
+        <dependency>
+            <groupId>jakarta.websocket</groupId>
+            <artifactId>jakarta.websocket-api</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.websocket</groupId>
+            <artifactId>jakarta.websocket-client-api</artifactId>
+            <version>2.1.1</version>
         </dependency>
 
         <!-- Stripe SDK -->

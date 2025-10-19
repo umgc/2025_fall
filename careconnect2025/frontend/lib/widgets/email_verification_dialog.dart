@@ -25,35 +25,20 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
   bool _isResending = false;
   String? _resendMessage;
   String? _resendError;
-  Timer? _pollingTimer;
   WebSocketChannel? _wsChannel;
-  int _pollingAttempts = 0;
-  static const int _maxPollingAttempts = 20; // 20 attempts * 3 seconds = 60 seconds
-  bool _isPolling = true;
-  bool _useWebSocket = true;
   bool _wsConnected = false;
   String _connectionMethod = 'Connecting...';
 
   @override
   void initState() {
     super.initState();
-    _startVerificationWaiting();
+    _connectWebSocket();
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
     _wsChannel?.sink.close(status.normalClosure);
     super.dispose();
-  }
-
-  /// Start waiting for email verification using WebSocket with polling fallback
-  void _startVerificationWaiting() {
-    if (_useWebSocket) {
-      _connectWebSocket();
-    } else {
-      _startPolling();
-    }
   }
 
   /// Connect to WebSocket for real-time email verification notifications
@@ -71,12 +56,20 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
         },
         onError: (error) {
           debugPrint('WebSocket error: $error');
-          _fallbackToPolling();
+          if (mounted) {
+            setState(() {
+              _wsConnected = false;
+              _connectionMethod = 'WebSocket Error - Please refresh';
+            });
+          }
         },
         onDone: () {
           debugPrint('WebSocket connection closed');
-          if (_isPolling) {
-            _fallbackToPolling();
+          if (mounted) {
+            setState(() {
+              _wsConnected = false;
+              _connectionMethod = 'WebSocket Disconnected';
+            });
           }
         },
       );
@@ -100,7 +93,12 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
       }
     } catch (e) {
       debugPrint('WebSocket connection failed: $e');
-      _fallbackToPolling();
+      if (mounted) {
+        setState(() {
+          _wsConnected = false;
+          _connectionMethod = 'WebSocket Failed - Please refresh';
+        });
+      }
     }
   }
 
@@ -120,7 +118,6 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
               _connectionMethod = 'WebSocket (Real-time) ✓';
             });
           }
-          debugPrint('Subscription confirmed for: ${message['email']}');
           break;
         case 'email-verified':
           _handleEmailVerified();
@@ -136,7 +133,6 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
 
   /// Handle email verified notification
   void _handleEmailVerified() async {
-    _pollingTimer?.cancel();
     _wsChannel?.sink.close(status.normalClosure);
 
     if (mounted) {
@@ -151,66 +147,6 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
       // Wait a moment for user to see the message
       await Future.delayed(const Duration(milliseconds: 500));
       Navigator.of(context).pop(true); // Return true to indicate verified
-    }
-  }
-
-  /// Fallback to polling if WebSocket fails
-  void _fallbackToPolling() {
-    if (mounted) {
-      setState(() {
-        _useWebSocket = false;
-        _wsConnected = false;
-        _connectionMethod = 'HTTP Polling';
-      });
-    }
-    _startPolling();
-  }
-
-  void _startPolling() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-      if (_pollingAttempts >= _maxPollingAttempts) {
-        timer.cancel();
-        if (mounted) {
-          setState(() {
-            _isPolling = false;
-          });
-        }
-        return;
-      }
-
-      _pollingAttempts++;
-      await _checkVerificationStatus();
-    });
-  }
-
-  void _retryPolling() {
-    setState(() {
-      _pollingAttempts = 0;
-      _isPolling = true;
-    });
-    _startPolling();
-  }
-
-  Future<void> _checkVerificationStatus() async {
-    try {
-      // Check verification status using dedicated endpoint that doesn't send emails
-      final response = await http.get(
-        Uri.parse(
-            '${ApiConstants.auth}/check-verification?email=${Uri.encodeComponent(widget.email)}'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        if (body['verified'] == true) {
-          _handleEmailVerified();
-        }
-      }
-      // Continue polling if not verified or other responses
-    } catch (e) {
-      // Continue polling on errors
     }
   }
 
@@ -316,57 +252,59 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
               ],
             ),
           ),
-          if (_isPolling) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: Colors.purple.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.purple.shade700),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Waiting for verification...',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.purple.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _useWebSocket
-                              ? _connectionMethod
-                              : 'Polling (${_pollingAttempts}/$_maxPollingAttempts)',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.purple.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border:
+                  Border.all(color: Colors.purple.withValues(alpha: 0.3)),
             ),
-          ],
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: _wsConnected
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Colors.green.shade700,
+                          size: 16,
+                        )
+                      : CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.purple.shade700),
+                        ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Waiting for verification...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _connectionMethod,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.purple.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (_resendMessage != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -426,16 +364,6 @@ class _EmailVerificationDialogState extends State<EmailVerificationDialog> {
           },
           child: const Text('Close'),
         ),
-        if (!_isPolling && !_useWebSocket)
-          ElevatedButton.icon(
-            onPressed: _retryPolling,
-            icon: const Icon(Icons.replay),
-            label: const Text('Retry'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-          ),
         ElevatedButton.icon(
           onPressed: _isResending ? null : _resendVerificationEmail,
           icon: _isResending

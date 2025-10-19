@@ -8,6 +8,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.textract.TextractClient;
 
 @Configuration
 @ConditionalOnProperty(name = "careconnect.aws.enabled", havingValue = "true", matchIfMissing = true)
@@ -38,6 +39,14 @@ public class AwsAccessConfig {
         return SsmClient.builder()
                 .credentialsProvider(credentialsProvider)
                 .region(defaultAwsRegion())
+                .build();
+    }
+
+    @Bean
+    public TextractClient textractClient() {
+        return TextractClient.builder()
+                .region(defaultAwsRegion())
+                .credentialsProvider(awsCredentialsProvider())
                 .build();
     }
 }

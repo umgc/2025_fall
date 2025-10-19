@@ -25,7 +25,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  */
 @Slf4j
 @Configuration
-@ConditionalOnProperty(name = "careconnect.websocket.enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "careconnect.websocket.enabled", havingValue = "true", matchIfMissing = true)
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 

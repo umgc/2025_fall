@@ -35,11 +35,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(
-    name = "careconnect.websocket.mode",
-    havingValue = "aws",
-    matchIfMissing = false
-)
+@ConditionalOnProperty(name = "AWS_WEBSOCKET_API_ENDPOINT")
 public class AwsWebSocketService {
 
     private final WebSocketConnectionRepository connectionRepository;
