@@ -2,6 +2,7 @@ package com.careconnect.service.v2;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -156,6 +157,7 @@ public class TaskServiceV2 {
                 .name(taskDto.getName())
                 .description(taskDto.getDescription())
                 .date(taskDto.getDate())
+                .createdAt(Instant.now().toEpochMilli())
                 .timeOfDay(taskDto.getTimeOfDay())
                 .isCompleted(taskDto.isCompleted())
                 .frequency(taskDto.getFrequency())
@@ -545,6 +547,7 @@ public class TaskServiceV2 {
                 .name(task.getName())
                 .description(task.getDescription())
                 .date(task.getDate())
+                .createdAt(task.getCreatedAt())
                 .timeOfDay(task.getTimeOfDay())
                 .isCompleted(task.isCompleted())
                 .frequency(task.getFrequency())

@@ -25,6 +25,7 @@ import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
