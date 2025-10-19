@@ -163,7 +163,10 @@ public class Task {
     @Nullable
     private String daysOfWeek;
 
-    private LocalDateTime createdAt;
+    /**
+     * Time of creation in miliseconds.
+     */
+    private Long createdAt;
 
     // ----------------------------
     // Relationships

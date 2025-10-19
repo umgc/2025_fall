@@ -236,7 +236,6 @@ class NotetakerConfigService {
         body: jsonEncode(note.toJson()),
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print("RESPONSE BODY ${response.body}");
         final data = jsonDecode(response.body);
         return PatientNote.fromJson(data);
       } else {

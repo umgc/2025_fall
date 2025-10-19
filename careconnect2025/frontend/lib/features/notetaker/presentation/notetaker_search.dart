@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:care_connect_app/config/router/app_router.dart';
+import 'package:collection/collection.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../streaming_asr_with_diarization/streaming_asr_and_diarization.dart';
+import '../../tasks/models/task_model.dart';
+import '../../tasks/utils/task_utils.dart';
 
 class NotetakerSearchPage extends StatefulWidget {
   const NotetakerSearchPage({super.key});
@@ -476,12 +478,48 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     );
   }
 
+  Future<void> checkForAITasks () async {
+    final response = await ApiService.getPatientTasksV2(int.parse(_selectedPatientId!));
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      final List<Task> tasks = [];
+      for (final raw in data) {
+        final map = TaskUtils.normalizeTaskMap(
+          Map<String, dynamic>.from(raw),
+        );
+
+        try {
+          final baseTask = Task.fromJson(map);
+          baseTask.date = TaskUtils.normalizeDate(baseTask.date.toLocal());
+          tasks.add(baseTask);
+        } catch (e) {
+          debugPrint("Error parsing task for patient $_selectedPatientId: $e");
+        }
+      }
+      tasks.map((task)=>task.createdAt).forEach(print);
+      DateTime currentTime = DateTime.now();
+      //check for tasks created in last 30 seconds
+      Task? recentTask = tasks.firstWhereOrNull((task)=>task.createdAt! > (currentTime.millisecondsSinceEpoch - 30000));
+      if(recentTask != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Row(children: [Icon(Icons.smart_toy), SizedBox(width: 10), Text('AI Generated A Task From Your Notes')]), backgroundColor: Colors.green));
+      }
+    } else {
+      debugPrint(
+        "Failed to fetch tasks for patient $_selectedPatientId: ${response.statusCode}",
+      );
+    }
+  }
+
   Widget _buildDiarizationCard(ThemeData theme) {
     return _buildSection(theme, 'Record A Note', Icons.mic, [StreamingAsrAndDiarizationScreen(patientId: _selectedPatientId,
       onUploadSuccess: (note) {
         setState(() {
           _currentPatientNotes?.add(note);
+          _filterNotes();
         });
+        checkForAITasks();
       },
       onUploadError: (error) {
         ScaffoldMessenger.of(context).showSnackBar(

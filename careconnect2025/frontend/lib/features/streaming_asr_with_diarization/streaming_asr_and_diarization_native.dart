@@ -132,8 +132,8 @@ class _StreamingAsrAndDiarizationScreenState
 
   Future<void> _start() async {
     setState(() {
-      _controller = TextEditingController();
-      _newSpeakerName = TextEditingController();
+      _controller.clear();
+      _newSpeakerName.clear();
       recordedData = [];
       _textToDisplay = '';
       _speakerList = [];
@@ -591,7 +591,7 @@ class _StreamingAsrAndDiarizationScreenState
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Note saved')));
+    ).showSnackBar(const SnackBar(content: Text('Note saved'), backgroundColor: Colors.green,));
   }
 
   @override

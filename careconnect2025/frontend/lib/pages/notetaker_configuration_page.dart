@@ -560,7 +560,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Notetaker configuration saved successfully!'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.green,
             ),
           );
         }

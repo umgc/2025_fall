@@ -200,16 +200,11 @@ public class TaskDtoV2 {
     private Boolean updateSeries;
 
     /**
-     * Flag indicating whether an update applies to only this task
-     * or to the entire recurring series.
-     *
+     * Date of the task creation in miliseconds.
      * <p>
-     * Usage:
-     * <ul>
-     * <li>{@code true} → update all tasks in the series</li>
-     * <li>{@code false/null} → update only this task</li>
-     * </ul>
+     * </p>
+     * <p>
      * </p>
      */
-    private LocalDateTime createdAt;
+    private Long createdAt;
 }
