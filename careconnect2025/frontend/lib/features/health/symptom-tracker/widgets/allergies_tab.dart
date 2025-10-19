@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'allergy_card.dart';
 
 class AllergiesTab extends StatefulWidget {
-  const AllergiesTab({super.key});
+  final String patientId;
+
+  const AllergiesTab({super.key, required this.patientId});
 
   @override
   State<AllergiesTab> createState() => _AllergiesTabState();
@@ -26,8 +28,14 @@ class _AllergiesTabState extends State<AllergiesTab> {
   ];
 
   void _addAllergy(Map<String, dynamic> allergyData) {
+    final mapped = {
+      'drug': allergyData['allergen'] ?? allergyData['drug'] ?? '',
+      'reaction': allergyData['reaction'] ?? '',
+      'severity': (allergyData['severity'] ?? '').toString().toLowerCase(),
+      'note': allergyData['note'] ?? '',
+    };
     setState(() {
-      _allergies.insert(0, allergyData);
+      _allergies.insert(0, mapped);
     });
   }
 
@@ -38,7 +46,10 @@ class _AllergiesTabState extends State<AllergiesTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AllergyInputForm(onAllergyAdded: _addAllergy),
+          AllergyInputForm(
+              patientId: widget.patientId,
+              onAllergyAdded: _addAllergy
+          ),
           const SizedBox(height: 24),
           Text(
             'Known Drug Allergies',

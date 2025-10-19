@@ -3,7 +3,7 @@ import 'symptom_input_form.dart';
 import 'symptom_card.dart';
 
 class SymptomTab extends StatefulWidget {
-  final int patientId;
+  final String patientId;
 
   const SymptomTab({super.key, required this.patientId});
 

@@ -5,7 +5,7 @@ import 'package:care_connect_app/services/deepseek_service.dart';
 
 
 class SymptomInputForm extends StatefulWidget {
-  final int patientId;
+  final String patientId;
   final Function(Map<String, dynamic>)? onSymptomAdded;
 
   const SymptomInputForm({
@@ -90,8 +90,16 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
                     });
 
                     try {
+                      final int? intPidForAI = int.tryParse(widget.patientId);
+                      if (intPidForAI == null) {
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Invalid patient ID')),
+                        );
+                        return;
+                      }
+
                       final ai = await DeepseekService.extractSymptom(
-                        patientId: widget.patientId,
+                        patientId: intPidForAI,
                         transcript: t,
                       );
 
@@ -242,8 +250,16 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
 
                   setState(() => _saving = true);
                   try {
+                    final int? intPidForApi = int.tryParse(widget.patientId);
+                    if (intPidForApi == null) {
+                    messenger.showSnackBar(
+                    const SnackBar(content: Text('Invalid patient ID')),
+                    );
+                    setState(() => _saving = false);
+                    return;
+                    }
                     final saved = await ApiService.createSymptom(
-                      patientId: widget.patientId,
+                      patientId: intPidForApi,
                       symptomKey: keyToSend,
                       symptomValue: valToSend,
                       severity: _severityToInt(_selectedSeverity),

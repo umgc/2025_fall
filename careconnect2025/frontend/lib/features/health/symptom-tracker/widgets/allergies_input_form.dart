@@ -6,9 +6,14 @@ import 'package:care_connect_app/services/deepseek_service.dart';
 
 
 class AllergyInputForm extends StatefulWidget {
+  final String patientId;
   final Function(Map<String, dynamic>)? onAllergyAdded;
 
-  const AllergyInputForm({super.key, this.onAllergyAdded});
+  const AllergyInputForm({
+    super.key,
+    required this.patientId,
+    this.onAllergyAdded,
+  });
 
   @override
   State<AllergyInputForm> createState() => _AllergyInputFormState();
@@ -23,15 +28,12 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
   late HealthApi _api;
   bool _apiReady = false;
 
-  int? _patientId;
-  bool _loadingId = true;
-
   bool _usingAi = false;
 
   @override
   void initState() {
     super.initState();
-    _initApi(); // fetch JWT, build HealthApi, then load patient id
+    _initApi();
   }
 
   Future<void> _initApi() async {
@@ -42,33 +44,13 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
       }
       _api = HealthApi(jwt);
       setState(() => _apiReady = true);
-      await _loadMyPatientId();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _apiReady = false;
-        _loadingId = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Auth not ready: $e')),
-      );
-    }
-  }
-
-  // Get patientId for the logged-in user
-  Future<void> _loadMyPatientId() async {
-    try {
-      final id = await _api.getMyPatientId();
-      if (!mounted) return;
-      setState(() {
-        _patientId = id;
-        _loadingId = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _loadingId = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to prepare form: $e')),
       );
     }
   }
@@ -103,7 +85,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
     final reaction = _reactionController.text.trim();
     final sevUi = _selectedSeverity.split(' ').first.toLowerCase(); // mild|moderate|severe
 
-    if (!_apiReady || _loadingId || _patientId == null || allergen.isEmpty || reaction.isEmpty) {
+    if (!_apiReady || allergen.isEmpty || reaction.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all required fields.')),
       );
@@ -123,12 +105,22 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
         severityEnum = 'MILD';
     }
 
+    final int? intPid = int.tryParse(widget.patientId);
+    if (intPid == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid patient ID')),
+        );
+      }
+      return;
+    }
+
     try {
       await _api.createAllergy(
-        patientId: _patientId!,
+        patientId: intPid,
         allergen: allergen,
-        allergyType: 'DRUG',     // only drugs for now
-        severity: severityEnum,  // enum string
+        allergyType: 'DRUG',
+        severity: severityEnum,
         reaction: reaction,
         isActive: true,
       );
@@ -159,7 +151,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
 
   @override
   Widget build(BuildContext context) {
-    final disabled = _loadingId || _patientId == null;
+    final disabled = !_apiReady;
 
     // static list for dropdown
     final severities = const <String>[
@@ -197,7 +189,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
                     final messenger = ScaffoldMessenger.of(context);
 
                     // Patient ID is loaded before using AI
-                    if (_patientId == null) {
+                    if (!_apiReady) {
                       messenger.showSnackBar(
                         const SnackBar(content: Text('Please wait, loading your profile...')),
                       );
@@ -224,8 +216,16 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
                     try {
                       setState(() => _usingAi = true);
 
+                      final int? intPid = int.tryParse(widget.patientId);
+                      if (intPid == null) { // ADD
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Invalid patient ID')),
+                        );
+                        return;
+                      }
+
                       final ai = await DeepseekService.extractAllergy(
-                        patientId: _patientId!,
+                        patientId: intPid,
                         transcript: transcript.trim(),
                         allergen: _drugController.text.trim().isEmpty
                             ? null
@@ -259,22 +259,6 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
                 ),
               ),
             ],
-          ),
-
-          if (disabled)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: const [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                SizedBox(width: 8),
-                Text('Preparing…'),
-              ],
-            ),
           ),
 
            const SizedBox(height: 16),

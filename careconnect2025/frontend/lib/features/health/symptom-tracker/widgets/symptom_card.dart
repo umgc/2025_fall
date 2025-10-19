@@ -32,7 +32,7 @@ class SymptomCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: severity == 'severe'
-              ? Theme.of(context).colorScheme.error.withOpacity(0.3)
+              ? Theme.of(context).colorScheme.error.withValues(alpha: 0.3)
               : Theme.of(context).dividerColor,
         ),
       ),
@@ -109,7 +109,7 @@ class SymptomCard extends StatelessWidget {
             style: TextStyle(
               color: severity == 'severe'
                   ? Theme.of(context).colorScheme.error
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               fontSize: 14,
               fontWeight: severity == 'severe'
                   ? FontWeight.w500
