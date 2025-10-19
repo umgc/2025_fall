@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
@@ -225,33 +226,34 @@ class _AiLogScreenState extends State<AiLogScreen> {
 
   Future<List<int>> _exportReportAsExcel() async {
     var excel = Excel.createExcel();
+    excel.rename('Sheet1', 'AI Logs');
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['AI Logs'];
     if (logSource.sortedData.isNotEmpty) {
       // Get headers dynamically from the first map.
       var studentHeaders = [
-        AiLog.getHeaderForColumn(0),
-        AiLog.getHeaderForColumn(1),
-        AiLog.getHeaderForColumn(2),
-        AiLog.getHeaderForColumn(3),
-        AiLog.getHeaderForColumn(4),
-        AiLog.getHeaderForColumn(5),
-        AiLog.getHeaderForColumn(6),
-        AiLog.getHeaderForColumn(7),
+        TextCellValue(AiLog.getHeaderForColumn(0)),
+        TextCellValue(AiLog.getHeaderForColumn(1)),
+        TextCellValue(AiLog.getHeaderForColumn(2)),
+        TextCellValue(AiLog.getHeaderForColumn(3)),
+        TextCellValue(AiLog.getHeaderForColumn(4)),
+        TextCellValue(AiLog.getHeaderForColumn(5)),
+        TextCellValue(AiLog.getHeaderForColumn(6)),
+        TextCellValue(AiLog.getHeaderForColumn(7)),
       ];
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
       for (var log in logSource.sortedData) {
         studentSheet.appendRow(
           [
-            log.getStringForColumn(0),
-            log.getStringForColumn(1),
-            log.getStringForColumn(2),
-            log.getStringForColumn(3),
-            log.getStringForColumn(4),
-            log.getStringForColumn(5),
-            log.getStringForColumn(6),
-            log.getStringForColumn(7),
+            TextCellValue(log.getStringForColumn(0)),
+            TextCellValue(log.getStringForColumn(1)),
+            TextCellValue(log.getStringForColumn(2)),
+            TextCellValue(log.getStringForColumn(3)),
+            TextCellValue(log.getStringForColumn(4)),
+            TextCellValue(log.getStringForColumn(5)),
+            TextCellValue(log.getStringForColumn(6)),
+            TextCellValue(log.getStringForColumn(7)),
           ],
         );
       }
@@ -513,7 +515,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
   }
 
   String getDateString(DateTime date) {
-    return date.toLocal().toString().split(' ')[0];
+    return DateFormat.yMd().format(date.toLocal());
   }
 
   // Function to show details in a dialog

@@ -510,7 +510,8 @@ class EssayEditPageState extends State<EssayEditPage> {
   Future<void> exportExcel(dynamic rubricData, String fileName) async {
     try {
       final excel = Excel.createExcel();
-      final sheet = excel[excel.getDefaultSheet()!];
+      excel.rename('Sheet1', 'Rubric');
+      final sheet = excel['Rubric'];
       final criteria = rubricData['criteria'] as List<dynamic>;
 
       if (criteria.isEmpty) {
@@ -525,16 +526,20 @@ class EssayEditPageState extends State<EssayEditPage> {
       final scoreHeaders = levels.map((l) => '${l['score']}%').toList();
 
       // Write header row
-      final headerRow = ['Criteria', 'Weight', ...scoreHeaders];
+      final headerRow = [
+        TextCellValue('Criteria'),
+        TextCellValue('Weight'),
+        ...scoreHeaders.map((e) => TextCellValue(e))
+      ];
       sheet.appendRow(headerRow);
 
       // Write data rows
       for (var c in criteria) {
         final row = [
-          c['description'] ?? '',
-          c['weight'].toString(),
+          TextCellValue(c['description'] ?? ''),
+          TextCellValue(c['weight'].toString()),
           for (var level in List<dynamic>.from(c['levels'] ?? []))
-            level['definition'] ?? ''
+            TextCellValue(level['definition'] ?? '')
         ];
         sheet.appendRow(row);
       }
