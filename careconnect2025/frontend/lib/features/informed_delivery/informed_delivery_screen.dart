@@ -151,16 +151,13 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
 
   Future<UspsDigest> _fetchRealDigest() async {
     try {
-      // Example: Call your real API
       final response = await InformedDeliveryService.fetchInformedDelivery();
       final digest = parseUspsDigestResponse(response);
       return digest;
     } catch (e, st) {
-      // Log or show a message
       debugPrint('❌ Error fetching USPS digest: $e');
       debugPrintStack(stackTrace: st);
 
-      // Return a fallback empty digest so the UI still works
       return UspsDigest(
         digestDate: DateTime.now(),
         mailpieces: const [],
@@ -172,7 +169,6 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   Future<void> _loadDigestData() async {
     setState(() => isLoadingData = true);
     try {
-      // Base digest: real if enabled, otherwise empty
       final UspsDigest base = enableUSPSDigest
           ? await _fetchRealDigest()
           : UspsDigest(
@@ -181,7 +177,6 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
               packages: const [],
             );
 
-      // Optionally apply mock data
       UspsDigest combined = base;
       if (enableMockUSPSDigest) {
         debugPrint('⚠️ Using mock mailpieces for demo purposes.');
@@ -197,23 +192,21 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   }
 
   void _hydrateDigestData(UspsDigest digest) {
-    // Map each mailpiece into your existing EmailMessage shape
     final List<EmailMessage> inboxLike = digest.mailpieces.map((m) {
       return EmailMessage(
         id: m.id,
-        expectedAt: m.dateIso, // bucket by calendar day using dateIso
+        expectedAt: m.dateIso, 
         imageUrls: [if (m.imageDataUrl.isNotEmpty) m.imageDataUrl],
       );
     }).toList();
 
-    // Reuse your existing grouping/sorting logic
     _hydrateData(inboxLike);
   }
 
   void _hydrateData(List<EmailMessage> inbox) {
     final grouped = groupImagesByDate(inbox);
     final days = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a)); // newest first
+      ..sort((a, b) => b.compareTo(a)); 
     setState(() {
       _imagesByDate = grouped;
       _sortedDays = days;
@@ -222,9 +215,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
     });
   }
 
-  /// Accepts either:
-  /// - Map<String, dynamic> (already decoded), or
-  /// - String (JSON text)
+  
   UspsDigest parseUspsDigestResponse(Object response) {
     final Map<String, dynamic> map = switch (response) {
       final String s => _looseJsonDecode(s),
@@ -303,7 +294,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
         additionalActions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: null, // Implement refresh logic
+            onPressed: null, 
           ),
         ],
       ),
@@ -480,22 +471,18 @@ Uint8List? _decodeDataUrl(String? dataUrl) {
   }
 }
 
-/// Some APIs (or logs) hand us "relaxed" JSON-like text (unquoted keys, single quotes).
-/// This normalizer tries to coerce it to valid JSON before jsonDecode().
+
 Map<String, dynamic> _looseJsonDecode(String s) {
-  // 1) Replace single quotes around strings to double quotes (safe heuristic)
   var t = s.replaceAllMapped(
     RegExp(r"'([^']*)'"),
     (m) => '"${m.group(1)!.replaceAll(r'"', r'\"')}"',
   );
 
-  // 2) Quote unquoted keys: {key: value} -> {"key": value}
   t = t.replaceAllMapped(
     RegExp(r'([{\s,])([A-Za-z_][A-Za-z0-9_]*)\s*:', multiLine: true),
     (m) => '${m.group(1)}"${m.group(2)}":',
   );
 
-  // Now standard JSON
   final decoded = jsonDecode(t);
   if (decoded is Map<String, dynamic>) return decoded;
   if (decoded is Map) {
@@ -521,10 +508,8 @@ class _ImageTile extends StatelessWidget {
           child: Icon(Icons.broken_image_outlined, size: 48),
         );
       } else if (url.startsWith('data:image/svg+xml')) {
-        // SVG handling
         imageWidget = SvgPicture.memory(bytes, fit: BoxFit.cover);
       } else {
-        // PNG, JPG, etc.
         imageWidget = Image.memory(bytes, fit: BoxFit.cover);
       }
     } else {
