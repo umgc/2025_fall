@@ -147,11 +147,6 @@ class _AssessmentState extends State<CreateAssessment> {
       aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
     } else if (selectedLLM == LlmType.LOCAL) {
       aiModel = LocalLLMService();
-      // aiModel.configureToken(
-      //     maxTokens: 1100 +
-      //         (af.multipleChoiceCount * 180) +
-      //         (af.trueFalseCount * 120) +
-      //         (af.shortAnswerCount * 180));
     } else {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     }
@@ -159,10 +154,9 @@ class _AssessmentState extends State<CreateAssessment> {
     if (!mounted) return;
 
     if (result.isNotEmpty) {
-      print(result);
       if (!mounted) return;
 
-      if(canceled){
+      if (canceled) {
         setState(() => _isLoading = false);
         return;
       }
@@ -170,20 +164,9 @@ class _AssessmentState extends State<CreateAssessment> {
       if (!canceled &&
           selectedLLM == LlmType.LOCAL &&
           !LocalLLMService().checkXMLValid(result)) {
-        final repairedXml = await LocalLLMService().handleInvalidXml(result);
-
-        if (repairedXml == null) {
-          // User cancelled or repair failed
-          setState(() => _isLoading = false);
-          return;
-        } else {
-          if (!mounted) return;
-          setState(() => _isLoading = false);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => EditQuestions(repairedXml)),
-          );
-        }
+        // Ask the user if they want to switch models and retry
+        await LocalLLMService().handleInvalidXml();
+        setState(() => _isLoading = false);
       } else {
         setState(() => _isLoading = false);
         Navigator.push(
@@ -263,24 +246,25 @@ class _AssessmentState extends State<CreateAssessment> {
                                         fontSize: 18, color: Colors.black54),
                                   ),
                                   SizedBox(height: paddingHeight),
-                                  TextButton(
-                                    onPressed: () async {
-                                      final decision =
-                                          await showCancelConfirmationDialog();
-                                      if (decision) {
-                                        LocalLLMService().cancel();
-                                      }
-                                    },
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.redAccent,
+                                  if (selectedLLM == LlmType.LOCAL)
+                                    TextButton(
+                                      onPressed: () async {
+                                        final decision =
+                                            await showCancelConfirmationDialog();
+                                        if (decision) {
+                                          LocalLLMService().cancel();
+                                        }
+                                      },
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.redAccent,
+                                      ),
+                                      child: const Text(
+                                        'Cancel Generation',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500),
+                                      ),
                                     ),
-                                    child: const Text(
-                                      'Cancel Generation',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
                                 ],
                               ),
                             )
@@ -409,45 +393,57 @@ class _AssessmentState extends State<CreateAssessment> {
                       "Choose a total number of questions equal to four or five times the number of students in the course to guarantee unique quizzes per student",
                     ),
                     SizedBox(height: paddingHeight),
-                    DropdownButtonFormField<LlmType>(
-                      value: selectedLLM,
-                      decoration:
-                          const InputDecoration(labelText: "Select Model"),
-                      onChanged: (LlmType? newValue) {
-                        setState(() {
-                          selectedLLM = newValue;
-                          CreateAssessment.llmController.text =
-                              newValue!.displayName;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select an LLM model to generate the quiz.';
-                        }
-                        return null;
-                      },
-                      items: LlmType.values.map((LlmType llm) {
-                        return DropdownMenuItem<LlmType>(
-                          value: llm,
-                          enabled: (llm == LlmType.LOCAL &&
-                                  LocalStorageService.getLocalLLMPath() != "" &&
-                                  _localLlmAvail) ||
-                              LocalStorageService.userHasLlmKey(llm),
-                          child: Text(
-                            llm.displayName,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DropdownButtonFormField<LlmType>(
+                          value: selectedLLM,
+                          decoration:
+                              const InputDecoration(labelText: "Select Model"),
+                          onChanged: (LlmType? newValue) {
+                            setState(() {
+                              selectedLLM = newValue;
+                              CreateAssessment.llmController.text =
+                                  newValue!.displayName;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select an LLM model to generate the quiz.';
+                            }
+                            return null;
+                          },
+                          items: LlmType.values.map((LlmType llm) {
+                            final isEnabled = (llm == LlmType.LOCAL &&
+                                    LocalStorageService.getLocalLLMPath() !=
+                                        "" &&
+                                    _localLlmAvail) ||
+                                LocalStorageService.userHasLlmKey(llm);
+
+                            return DropdownMenuItem<LlmType>(
+                              value: llm,
+                              enabled: isEnabled,
+                              child: Text(
+                                llm.displayName,
+                                style: TextStyle(
+                                  color:
+                                      isEnabled ? Colors.black87 : Colors.grey,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (selectedLLM == LlmType.LOCAL) ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
                             style: TextStyle(
-                              color: (llm == LlmType.LOCAL &&
-                                          LocalStorageService
-                                                  .getLocalLLMPath() !=
-                                              "" &&
-                                          _localLlmAvail) ||
-                                      LocalStorageService.userHasLlmKey(llm)
-                                  ? Colors.black87
-                                  : Colors.grey,
+                              fontSize: 13,
+                              color: Colors.black54,
                             ),
                           ),
-                        );
-                      }).toList(),
+                        ],
+                      ],
                     ),
                     SizedBox(height: paddingHeight),
                     ElevatedButton(

@@ -327,6 +327,17 @@ class _LessonPlanState extends State<LessonPlans> {
                                         Text("Enable AI to select a model"),
                                   ),
 
+                                if (selectedLLM == LlmType.LOCAL) ...[
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    "Running a Large Language Model (LLM) requires substantial hardware resources. The recommended model for this task is 7B or higher reasoning models (Qwen), however smaller models may be used without generating errors. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+
                                 // New UI elements for additional AI prompt
                                 if (showAiPromptSection)
                                   Column(

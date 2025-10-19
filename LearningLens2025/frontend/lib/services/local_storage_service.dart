@@ -245,6 +245,31 @@ class LocalStorageService {
     return getLocalLLMPath().isNotEmpty;
   }
 
+  // Retrieves the GPU Name from the storage
+  static String getGPUInfo() {
+    return _prefs.getString('GPU_NAME') ?? "";
+  }
+
+  static hasGPUInfo() {
+    return getGPUInfo().isNotEmpty;
+  }
+
+  static void saveGPUInfo(String name) {
+    _prefs.setString('GPU_NAME', name);
+  }
+
+  static String getGPUVRam() {
+    return _prefs.getString('GPU_VRAM') ?? "";
+  }
+
+  static hasGPUVRam() {
+    return getGPUVRam().isNotEmpty;
+  }
+
+  static void saveGPUVRam(String size) {
+    _prefs.setString('GPU_VRAM', size);
+  }
+
   static String getGoogleClientId() {
     return _prefs.getString('GOOGLE_CLIENT_ID') ??
         dotenv.env['GOOGLE_CLIENT_ID'] ??

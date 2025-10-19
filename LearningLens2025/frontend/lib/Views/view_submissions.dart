@@ -14,6 +14,8 @@ import '../Api/llm/perplexity_api.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/services/prompt_builder_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class SubmissionList extends StatefulWidget {
   final int assignmentId;
@@ -48,9 +50,69 @@ class SubmissionListState extends State<SubmissionList> {
   final deepseekApiKey = LocalStorageService.getDeepseekKey();
 
   LlmType? selectedLLM;
+  bool canceled = false;
+  bool _localLlmAvail = !kIsWeb;
 
   String filterOption = 'All Students';
   String fullNameFilter = '';
+
+  Future<bool> checkIfLoadedLocalLLMRecommended() async {
+    final String path = LocalStorageService.getLocalLLMPath().toLowerCase();
+    if (!path.contains("qwen")) {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('⚠️Warning:'),
+          content: Text(
+            'The currently selected local LLM does not consistently produce valid JSON required for essay grading.\n'
+            'Proceeding could result in invalid XML output error or the generation of irrelevant questions.\n\n'
+            'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
+            'Do you want to continue anyway?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false), // Cancel
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true), // Continue
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+
+      return result ?? false;
+    } else {
+      return true;
+    }
+  }
+
+  Future<bool> showCancelConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Confirmation'),
+        content: Text('Are you sure you want to cancel the generation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // no
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+              canceled = true;
+            }, // yes
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false; // false if dismissed
+  }
 
   String getApiKey(LlmType selectedLLM) {
     switch (selectedLLM) {
@@ -388,16 +450,26 @@ class SubmissionListState extends State<SubmissionList> {
                                                         return DropdownMenuItem<
                                                             LlmType>(
                                                           value: llm,
-                                                          enabled:
+                                                          enabled: (llm ==
+                                                                      LlmType
+                                                                          .LOCAL &&
+                                                                  LocalStorageService
+                                                                          .getLocalLLMPath() !=
+                                                                      "" &&
+                                                                  _localLlmAvail) ||
                                                               LocalStorageService
                                                                   .userHasLlmKey(
                                                                       llm),
                                                           child: Text(
                                                             llm.displayName,
                                                             style: TextStyle(
-                                                              color: LocalStorageService
-                                                                      .userHasLlmKey(
-                                                                          llm)
+                                                              color: (llm == LlmType.LOCAL &&
+                                                                          LocalStorageService.getLocalLLMPath() !=
+                                                                              "" &&
+                                                                          _localLlmAvail) ||
+                                                                      LocalStorageService
+                                                                          .userHasLlmKey(
+                                                                              llm)
                                                                   ? Colors
                                                                       .black87
                                                                   : Colors.grey,
@@ -406,6 +478,18 @@ class SubmissionListState extends State<SubmissionList> {
                                                         );
                                                       }).toList(),
                                                     ),
+
+                                                    if (selectedLLM ==
+                                                        LlmType.LOCAL) ...[
+                                                      const SizedBox(height: 6),
+                                                      const Text(
+                                                        "Running a Large Language Model (LLM) requires substantial hardware resources. The recommended model for is 7B or higher reasoning (Qwen) models. Usuing smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: Colors.black54,
+                                                        ),
+                                                      ),
+                                                    ],
                                                     SizedBox(height: 4),
                                                     // Tone Dropdown
                                                     DropdownButtonFormField<
@@ -523,143 +607,183 @@ class SubmissionListState extends State<SubmissionList> {
                                                   if (submissionWithGrade !=
                                                       null)
                                                     isLoading
-                                                        ? CircularProgressIndicator()
+                                                        ? Stack(
+                                                            alignment: Alignment
+                                                                .center,
+                                                            children: [
+                                                              const CircularProgressIndicator(),
+                                                              if (selectedLLM ==
+                                                                  LlmType.LOCAL)
+                                                                TextButton(
+                                                                  onPressed:
+                                                                      () async {
+                                                                    final decision =
+                                                                        await showCancelConfirmationDialog();
+                                                                    if (decision) {
+                                                                      LocalLLMService()
+                                                                          .cancel();
+                                                                    }
+                                                                  },
+                                                                  style: TextButton
+                                                                      .styleFrom(
+                                                                    foregroundColor:
+                                                                        Colors
+                                                                            .redAccent,
+                                                                  ),
+                                                                  child:
+                                                                      const Text(
+                                                                    'Cancel Generation',
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        fontWeight:
+                                                                            FontWeight.w500),
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          )
                                                         : ElevatedButton(
                                                             onPressed:
                                                                 () async {
-                                                              try {
-                                                                setState(() {
-                                                                  isLoadingMap[
-                                                                      participant
-                                                                          .id] = true;
-                                                                });
+                                                              if (await checkIfLoadedLocalLLMRecommended()) {
+                                                                try {
+                                                                  setState(() {
+                                                                    isLoadingMap[
+                                                                        participant
+                                                                            .id] = true;
+                                                                  });
 
-                                                                var submissionText =
-                                                                    submissionWithGrade
-                                                                        .submission
-                                                                        .onlineText;
-                                                                int? contextId = await LmsFactory
-                                                                        .getLmsService()
-                                                                    .getContextId(
-                                                                        widget
-                                                                            .assignmentId,
-                                                                        widget
-                                                                            .courseId);
+                                                                  var submissionText =
+                                                                      submissionWithGrade
+                                                                          .submission
+                                                                          .onlineText;
+                                                                  int? contextId = await LmsFactory
+                                                                          .getLmsService()
+                                                                      .getContextId(
+                                                                          widget
+                                                                              .assignmentId,
+                                                                          widget
+                                                                              .courseId);
 
-                                                                String?
-                                                                    fetchedRubric;
-                                                                if (contextId !=
-                                                                    null) {
-                                                                  MoodleRubric?
-                                                                      moodleRubric =
-                                                                      await LmsFactory.getLmsService().getRubric(widget
-                                                                          .assignmentId
-                                                                          .toString());
-                                                                  if (moodleRubric ==
+                                                                  String?
+                                                                      fetchedRubric;
+                                                                  if (contextId !=
                                                                       null) {
-                                                                    print(
-                                                                        'Failed to fetch rubric.');
-                                                                    return;
+                                                                    MoodleRubric?
+                                                                        moodleRubric =
+                                                                        await LmsFactory.getLmsService().getRubric(widget
+                                                                            .assignmentId
+                                                                            .toString());
+                                                                    if (moodleRubric ==
+                                                                        null) {
+                                                                      print(
+                                                                          'Failed to fetch rubric.');
+                                                                      return;
+                                                                    }
+                                                                    fetchedRubric =
+                                                                        jsonEncode(
+                                                                            moodleRubric.toJson());
                                                                   }
-                                                                  fetchedRubric =
-                                                                      jsonEncode(
-                                                                          moodleRubric
-                                                                              .toJson());
-                                                                }
 
-                                                                String queryPrompt = buildLlmPrompt(
-                                                                    submissionText:
-                                                                        submissionText,
-                                                                    fetchedRubric:
-                                                                        fetchedRubric,
-                                                                    tone: toneSelectionMap[participant
-                                                                            .id] ??
-                                                                        'Formal',
-                                                                    voice: voiceSelectionMap[participant
-                                                                            .id] ??
-                                                                        'Supportive',
-                                                                    detailLevel:
-                                                                        detailLevelSelectionMap[participant.id] ??
-                                                                            'Neutral');
+                                                                  String queryPrompt = buildLlmPrompt(
+                                                                      submissionText:
+                                                                          submissionText,
+                                                                      fetchedRubric:
+                                                                          fetchedRubric,
+                                                                      tone: toneSelectionMap[participant
+                                                                              .id] ??
+                                                                          'Formal',
+                                                                      voice: voiceSelectionMap[participant
+                                                                              .id] ??
+                                                                          'Supportive',
+                                                                      detailLevel:
+                                                                          detailLevelSelectionMap[participant.id] ??
+                                                                              'Neutral');
 
-                                                                String apiKey =
-                                                                    getApiKey(
-                                                                        selectedLLM);
-                                                                dynamic
-                                                                    llmInstance;
-                                                                if (selectedLLM ==
-                                                                    LlmType
-                                                                        .CHATGPT) {
-                                                                  llmInstance =
-                                                                      OpenAiLLM(
-                                                                          apiKey);
-                                                                } else if (selectedLLM ==
-                                                                    LlmType
-                                                                        .GROK) {
-                                                                  llmInstance =
-                                                                      GrokLLM(
-                                                                          apiKey);
-                                                                } else if (selectedLLM ==
-                                                                    LlmType
-                                                                        .DEEPSEEK) {
-                                                                  llmInstance =
-                                                                      DeepseekLLM(
-                                                                          apiKey);
-                                                                } else {
-                                                                  llmInstance =
-                                                                      PerplexityLLM(
-                                                                          apiKey);
-                                                                }
-                                                                dynamic
-                                                                    gradedResponse =
-                                                                    await llmInstance
-                                                                        .postToLlm(
-                                                                            queryPrompt);
-                                                                gradedResponse = gradedResponse
-                                                                    .replaceAll(
-                                                                        '```json',
-                                                                        '')
-                                                                    .replaceAll(
-                                                                        '```',
-                                                                        '')
-                                                                    .trim();
-                                                                var results = await LmsFactory
-                                                                        .getLmsService()
-                                                                    .setRubricGrades(
+                                                                  String
+                                                                      apiKey =
+                                                                      getApiKey(
+                                                                          selectedLLM);
+                                                                  dynamic
+                                                                      llmInstance;
+                                                                  if (selectedLLM ==
+                                                                      LlmType
+                                                                          .CHATGPT) {
+                                                                    llmInstance =
+                                                                        OpenAiLLM(
+                                                                            apiKey);
+                                                                  } else if (selectedLLM ==
+                                                                      LlmType
+                                                                          .GROK) {
+                                                                    llmInstance =
+                                                                        GrokLLM(
+                                                                            apiKey);
+                                                                  } else if (selectedLLM ==
+                                                                      LlmType
+                                                                          .DEEPSEEK) {
+                                                                    llmInstance =
+                                                                        DeepseekLLM(
+                                                                            apiKey);
+                                                                  } else if (selectedLLM ==
+                                                                      LlmType
+                                                                          .LOCAL) {
+                                                                    llmInstance =
+                                                                        LocalLLMService();
+                                                                  } else {
+                                                                    llmInstance =
+                                                                        PerplexityLLM(
+                                                                            apiKey);
+                                                                  }
+                                                                  dynamic
+                                                                      gradedResponse =
+                                                                      await llmInstance
+                                                                          .postToLlm(
+                                                                              queryPrompt);
+                                                                  if (!canceled) {
+                                                                    gradedResponse = gradedResponse
+                                                                        .replaceAll(
+                                                                            '```json',
+                                                                            '')
+                                                                        .replaceAll(
+                                                                            '```',
+                                                                            '')
+                                                                        .trim();
+                                                                    var results = await LmsFactory.getLmsService().setRubricGrades(
                                                                         widget
                                                                             .assignmentId,
                                                                         participant
                                                                             .id,
                                                                         gradedResponse);
-                                                                _fetchData();
-                                                                Navigator.push(
-                                                                  context,
-                                                                  MaterialPageRoute(
-                                                                    builder:
-                                                                        (context) =>
-                                                                            SubmissionDetail(
-                                                                      participant:
-                                                                          participant,
-                                                                      submission:
-                                                                          submissionWithGrade
-                                                                              .submission,
-                                                                      courseId:
-                                                                          widget
-                                                                              .courseId,
-                                                                    ),
-                                                                  ),
-                                                                );
-                                                                print(
-                                                                    'Results: $results');
-                                                              } catch (e) {
-                                                                print(
-                                                                    'An error occurred: $e');
-                                                              } finally {
-                                                                setState(() {
-                                                                  isLoadingMap[
-                                                                      participant
-                                                                          .id] = false;
-                                                                });
+                                                                    _fetchData();
+                                                                    Navigator
+                                                                        .push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder:
+                                                                            (context) =>
+                                                                                SubmissionDetail(
+                                                                          participant:
+                                                                              participant,
+                                                                          submission:
+                                                                              submissionWithGrade.submission,
+                                                                          courseId:
+                                                                              widget.courseId,
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                    print(
+                                                                        'Results: $results');
+                                                                  }
+                                                                } catch (e) {
+                                                                  print(
+                                                                      'An error occurred: $e');
+                                                                } finally {
+                                                                  setState(() {
+                                                                    isLoadingMap[
+                                                                        participant
+                                                                            .id] = false;
+                                                                  });
+                                                                }
                                                               }
                                                             },
                                                             child:

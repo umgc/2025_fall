@@ -10,6 +10,7 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/question.dart';
 import 'package:flutter/material.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
 import 'quiz_generator.dart';
 
 class EditQuestions extends StatefulWidget {
@@ -28,6 +29,8 @@ class EditQuestionsState extends State<EditQuestions> {
   // late OpenAiLLM openai;
   var aiModel;
   bool _isLoading = false;
+  LlmType? selectedLLM;
+  bool canceled = false;
 
   String subject = CreateAssessment.descriptionController.text;
   String topic = CreateAssessment.topicController.text;
@@ -60,7 +63,7 @@ class EditQuestionsState extends State<EditQuestions> {
   }
 
   void getAiModel() {
-    LlmType selectedLLM = LlmType.values.firstWhere(
+    selectedLLM = LlmType.values.firstWhere(
       (type) => type.displayName == CreateAssessment.llmController.text,
       orElse: () => throw Exception('No LlmType found'),
     );
@@ -73,10 +76,38 @@ class EditQuestionsState extends State<EditQuestions> {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     } else if (selectedLLM == LlmType.DEEPSEEK) {
       aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
     } else {
       // default
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     }
+  }
+
+  Future<bool> showCancelConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Confirmation'),
+        content: Text('Are you sure you want to cancel the generation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // no
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+              canceled = true;
+            }, // yes
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false; // false if dismissed
   }
 
   @override
@@ -125,6 +156,24 @@ class EditQuestionsState extends State<EditQuestions> {
                               Theme.of(context).colorScheme.surface,
                             ),
                           ), // Spinner behind the item
+                        ),
+                      if (selectedLLM == LlmType.LOCAL)
+                        TextButton(
+                          onPressed: () async {
+                            final decision =
+                                await showCancelConfirmationDialog();
+                            if (decision) {
+                              LocalLLMService().cancel();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.redAccent,
+                          ),
+                          child: const Text(
+                            'Cancel Generation',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w500),
+                          ),
                         ),
                     ],
                   ),

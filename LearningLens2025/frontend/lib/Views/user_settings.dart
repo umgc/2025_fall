@@ -8,10 +8,10 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/download_manager.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:fllama/fllama.dart';
 
 class UserSettings extends StatefulWidget {
   @override
@@ -20,6 +20,8 @@ class UserSettings extends StatefulWidget {
 
 class UserSettingsState extends State<UserSettings> {
   String? _ggufModelPath;
+  String? _gpuModel;
+  String? _gpuVRAM;
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -42,9 +44,6 @@ class UserSettingsState extends State<UserSettings> {
 
   double downloadProgress = 0.0;
 
-  // need for web
-  String _mlcModelId = MlcModelId.qwen05b;
-
   @override
   void initState() {
     super.initState();
@@ -59,6 +58,10 @@ class UserSettingsState extends State<UserSettings> {
     await _loadStoredValues();
     await _fetchModelsCsv();
     await _loadStoredModel();
+    if (!(LocalStorageService.hasGPUInfo() &&
+        LocalStorageService.hasGPUVRam())) {
+      await getWindowsGPUInfo();
+    }
   }
 
   Future<void> _loadStoredValues() async {
@@ -71,6 +74,8 @@ class UserSettingsState extends State<UserSettings> {
     final googleClientId = LocalStorageService.getGoogleClientId();
     final deepSeekKey = LocalStorageService.getDeepseekKey();
     final localLLMPath = LocalStorageService.getLocalLLMPath();
+    final gpuModel = LocalStorageService.getGPUInfo();
+    final gpuVRam = LocalStorageService.getGPUVRam();
 
     setState(() {
       _usernameController.text = username;
@@ -82,6 +87,8 @@ class UserSettingsState extends State<UserSettings> {
       _deepSeekKeyController.text = deepSeekKey;
       _googleClientIdController.text = googleClientId;
       _ggufModelPath = localLLMPath;
+      _gpuModel = gpuModel;
+      _gpuVRAM = gpuVRam;
     });
   }
 
@@ -383,13 +390,141 @@ class UserSettingsState extends State<UserSettings> {
       setState(() => _modelsLoading = false);
     }
   }
-  
 
-  // Dummy download method (for web logic placeholder)
-  Future<void> _dummyDownloadModel(String modelId) async {
-    debugPrint('Starting dummy download for $modelId...');
-    await Future.delayed(const Duration(seconds: 2));
-    debugPrint('Finished dummy download for $modelId.');
+  // detects GPU for Local LLM and displays message accordingly
+  Future<void> getWindowsGPUInfo() async {
+    // only available in Windows
+    if (Platform.isWindows) {
+      // Run dxdiag and export results to a text file
+      final result = await Process.run('dxdiag', ['/t', 'gpu_info.txt']);
+
+      if (result.exitCode == 0) {
+        final file = File('gpu_info.txt');
+
+        // Read safely as Latin1 (Windows ANSI)
+        final bytes = await file.readAsBytes();
+        final content = const Latin1Decoder().convert(bytes);
+
+        // Extract GPU name and VRAM
+        final gpuMatch = RegExp(r'Card name:\s*(.*)').firstMatch(content);
+        final vramMatch =
+            RegExp(r'Dedicated Memory:\s*(.*)').firstMatch(content);
+
+        final gpu = gpuMatch?.group(1)?.trim() ?? 'Unknown GPU';
+        final vram = vramMatch?.group(1)?.trim() ?? 'Unknown VRAM';
+
+        LocalStorageService.saveGPUInfo(gpu);
+        LocalStorageService.saveGPUVRam(vram);
+
+        _gpuModel = gpu;
+        _gpuVRAM = vram;
+
+        print("GPU : $gpu VRAM: $vram");
+
+        await file.delete();
+      } else {
+        print('dxdiag failed: ${result.stderr}');
+      }
+    }
+  }
+
+  Widget buildGpuStatusMessage() {
+    final ValueNotifier<bool> expanded = ValueNotifier(false);
+
+    final String gpuName = _gpuModel ?? 'Unknown GPU';
+    final String vramInfo = _gpuVRAM ?? 'Unknown VRAM';
+
+    String message;
+    Color messageColor;
+    IconData icon;
+
+    if (LocalStorageService.hasGPUInfo() &&
+        LocalStorageService.hasGPUVRam() &&
+        (LocalStorageService.getGPUInfo() != "Unknown GPU" &&
+            LocalStorageService.getGPUVRam() != "Unknown VRAM")) {
+      final double? vramGB =
+          double.tryParse(vramInfo.replaceAll(RegExp(r'[^0-9.]'), ''));
+      print(vramGB);
+      if (vramGB != null && vramGB / 1000 >= 8.0) {
+        messageColor = Colors.green;
+        icon = Icons.check_circle;
+        message =
+            'Your system meets the recommended hardware requirements for running a local large language model (LLM). '
+            'A discrete GPU with at least 8 GB of VRAM has been detected, providing acceptable performance for 7B models, which are recommended for both efficiency and accuracy. '
+            'As a general guideline, each 1 billion (1B) model parameters typically requires approximately 1 GB of VRAM. Your GPU may not be optimal for models larger than 7B. Please ensure your system has sufficient VRAM before attempting to run larger models. '
+            'Ensure your graphics drivers are up to date and that sufficient resources are available for optimal operation. '
+            'For the best performance and accuracy, using an API-hosted LLM is still recommended.';
+      } else {
+        messageColor = Colors.orange;
+        icon = Icons.warning;
+        message =
+            'A discrete GPU has been detected; however, the available VRAM appears to be below 8 GB. '
+            'Running larger models locally may result in slow performance, instability, or loading failures. '
+            'As a general guideline, each 1 billion (1B) model parameter typically requires about 1 GB of VRAM. '
+            'Smaller models may still operate, but responsiveness and quality may be limited. '
+            'For the best performance and accuracy, using an API-hosted LLM is recommended.';
+      }
+    } else {
+      messageColor = Colors.redAccent;
+      icon = Icons.dangerous;
+      message =
+          'Warning: No discrete GPU was detected, or GPU information is unavailable. '
+          'Running a local large language model (LLM) on integrated graphics or low-memory systems is not recommended. '
+          'This configuration may lead to severe lag, instability, or complete failure to load models. '
+          'Small models (1B) may still operate, but responsiveness and quality may be limited. '
+          'For the best performance and accuracy, using an API-hosted LLM is strongly recommended.';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: expanded,
+        builder: (context, isExpanded, _) {
+          return GestureDetector(
+            onTap: () => expanded.value = !expanded.value,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: messageColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'GPU: $gpuName, VRAM: $vramInfo',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      isExpanded ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.black54,
+                    ),
+                  ],
+                ),
+                if (isExpanded)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(top: 8.0, left: 28.0, right: 8.0),
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        color: messageColor,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.justify,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
 // Updated GGUF Model Picker
@@ -399,154 +534,10 @@ class UserSettingsState extends State<UserSettings> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Local LLM Model (MLC & WebGPU):',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(
+            'Local LLM Model is not available in web',
+            style: TextStyle(fontSize: 20),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              // Dropdown with checkmark
-              Expanded(
-                child: DropdownButton(
-                  value: _mlcModelId,
-                  isExpanded: true,
-                  hint: const Text('Select a model'),
-                  onChanged: (value) {
-                    setState(() {
-                      _mlcModelId = value!;
-                    });
-                  },
-                  items: [
-                    MlcModelId.llama321bInstruct,
-                    MlcModelId.llama323bInstruct,
-                    MlcModelId.llama318bInstruct,
-                    MlcModelId.deepSeekR1Llama38b,
-                    MlcModelId.openHermesLlama38b,
-                    MlcModelId.openHermesMistral,
-                    MlcModelId.phi35mini,
-                    MlcModelId.qwen05b,
-                    MlcModelId.tinyLlama,
-                  ].map((modelId) {
-                    return DropdownMenuItem(
-                      value: modelId,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(modelId.toString()),
-                          FutureBuilder<bool?>(
-                            future: fllamaMlcIsWebModelDownloaded(modelId),
-                            builder: (context, snapshot) {
-                              final isDownloaded = snapshot.data ?? false;
-                              final waiting = snapshot.connectionState ==
-                                  ConnectionState.waiting;
-
-                              if (waiting) {
-                                return const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                );
-                              }
-
-                              if (isDownloaded) {
-                                return Row(
-                                  children: [
-                                    const Icon(Icons.check,
-                                        color: Colors.green, size: 18),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      'Downloaded',
-                                      style: TextStyle(
-                                          color: Colors.green, fontSize: 12),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete,
-                                          color: Colors.red, size: 18),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      tooltip: 'Delete model',
-                                      onPressed: () async {
-                                        final confirm = await showDialog<bool>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Delete Model'),
-                                            content: Text(
-                                                'Are you sure you want to delete "${modelId.toString()}"?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(
-                                                    context, false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(
-                                                    context, true),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-
-                                        if (confirm == true) {
-                                          await fllamaMlcWebModelDelete(
-                                              modelId);
-                                          setState(() {}); // refresh UI
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                );
-                              }
-
-                              // Not downloaded
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              const SizedBox(width: 10),
-
-              // Right-hand button panel
-              FutureBuilder<bool?>(
-                future: fllamaMlcIsWebModelDownloaded(_mlcModelId),
-                builder: (context, snapshot) {
-                  final isDownloaded = snapshot.data ?? false;
-                  final waiting =
-                      snapshot.connectionState == ConnectionState.waiting;
-
-                  if (waiting) {
-                    return const CircularProgressIndicator(strokeWidth: 2);
-                  }
-
-                  if (isDownloaded) {
-                    return ElevatedButton(
-                      onPressed: () {
-                        debugPrint('Model ${_mlcModelId.toString()} loaded.');
-                      },
-                      child: const Text('Load this model'),
-                    );
-                  } else {
-                    return ElevatedButton(
-                      onPressed: () async {
-                        await _dummyDownloadModel(_mlcModelId);
-                        setState(() {});
-                      },
-                      child: const Text('Download'),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-          const Divider(),
         ],
       );
     } else {
@@ -825,6 +816,34 @@ class UserSettingsState extends State<UserSettings> {
                 style: const TextStyle(fontStyle: FontStyle.italic),
               ),
             ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text(
+              '''
+⚠️ Hardware & Model Requirements
+
+This app requires a Qwen model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
+
+Running such models locally demands high-end hardware:
+• A discrete GPU with at least 8GB or more VRAM is required (RTX 3060 or better).
+• Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
+• For the best accuracy, a Qwen model with more than 14B parameters is recommended (12GB or more VRAM is recommended)
+
+Attempting to run this app without the required model and hardware may result in unreliable output or total failure.
+''',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+                fontStyle: FontStyle.italic,
+                fontSize: 14,
+                height: 1.4, // for readability across lines
+              ),
+              textAlign: TextAlign.justify,
+            ),
+          ),
+
+          buildGpuStatusMessage(),
+
           const Divider(),
         ],
       );
