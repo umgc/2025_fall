@@ -96,8 +96,9 @@ resource "aws_lambda_function" "cc_main_backend_lambda" {
   s3_key        = aws_s3_object.backend_object.key
   publish       = true
   vpc_config {
-    security_group_ids = [data.terraform_remote_state.cc_common_state.outputs.cc_compute_sg_id]
-    subnet_ids         = data.terraform_remote_state.cc_common_state.outputs.cc_sbn_ids
+    # Use the same VPC and security group as the RDS database for connectivity
+    security_group_ids = [data.terraform_remote_state.cc_db_state.outputs.db_security_group_id]
+    subnet_ids         = data.terraform_remote_state.cc_db_state.outputs.db_subnet_ids
   }
   environment {
     variables = merge(
@@ -111,7 +112,8 @@ resource "aws_lambda_function" "cc_main_backend_lambda" {
         APP_FRONTEND_BASE_URL               = "https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
         BASE_URL                            = "${data.terraform_remote_state.cc_common_state.outputs.main_api_endpoint}"
         CORS_ALLOWED_LIST                   = "${var.cors_allowed_list},https://${data.terraform_remote_state.cc_common_state.outputs.amplify_url}"
-        AWS_WEBSOCKET_API_GATEWAY_ENDPOINT  = data.terraform_remote_state.cc_common_state.outputs.websocket_management_endpoint
+        # WebSocket endpoint will be updated by null_resource after creation
+        AWS_WEBSOCKET_API_GATEWAY_ENDPOINT  = ""
       }
     )
   }
@@ -197,6 +199,53 @@ resource "aws_apigatewayv2_route" "cc_api_main_proxy" {
   api_id    = data.terraform_remote_state.cc_common_state.outputs.main_api_id
   route_key = "ANY /{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.main.id}"
+}
+
+##### WebSocket API Gateway for real-time communication ######
+# NOTE: WebSocket module moved here from 2_general to resolve circular dependency
+# The Spring Boot backend has all WebSocket logic in AwsWebSocketService
+# All three routes ($connect, $disconnect, $default) use the SAME main backend Lambda
+module "websocket" {
+  source = "../2_general/modules/websocket"
+
+  default_tags = var.default_tags
+  stage_name   = "prod"
+
+  # All routes use the SAME main backend Lambda
+  # Spring Boot routes internally based on the WebSocket event type
+  connect_lambda_function_name    = aws_lambda_function.cc_main_backend_lambda.function_name
+  connect_lambda_invoke_arn       = aws_lambda_function.cc_main_backend_lambda.invoke_arn
+
+  disconnect_lambda_function_name = aws_lambda_function.cc_main_backend_lambda.function_name
+  disconnect_lambda_invoke_arn    = aws_lambda_function.cc_main_backend_lambda.invoke_arn
+
+  default_lambda_function_name    = aws_lambda_function.cc_main_backend_lambda.function_name
+  default_lambda_invoke_arn       = aws_lambda_function.cc_main_backend_lambda.invoke_arn
+}
+
+# Update Lambda environment with WebSocket endpoint using AWS CLI
+# This breaks the circular dependency by updating the Lambda after both Lambda and WebSocket are created
+resource "null_resource" "update_lambda_websocket_env" {
+  depends_on = [
+    aws_lambda_function.cc_main_backend_lambda,
+    module.websocket
+  ]
+
+  triggers = {
+    websocket_endpoint = module.websocket.websocket_management_endpoint
+    lambda_version     = aws_lambda_function.cc_main_backend_lambda.version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Updating Lambda environment with WebSocket endpoint..."
+      aws lambda update-function-configuration \
+        --function-name ${aws_lambda_function.cc_main_backend_lambda.function_name} \
+        --environment "Variables={$(aws lambda get-function-configuration --function-name ${aws_lambda_function.cc_main_backend_lambda.function_name} --query 'Environment.Variables' --output json | jq -r 'to_entries | map("\\(.key)=\\(.value)") | join(",")'),AWS_WEBSOCKET_API_GATEWAY_ENDPOINT=${module.websocket.websocket_management_endpoint}}" \
+        --region us-east-1
+      echo "Lambda environment updated with WebSocket endpoint"
+    EOT
+  }
 }
 
 # Create Amplify app

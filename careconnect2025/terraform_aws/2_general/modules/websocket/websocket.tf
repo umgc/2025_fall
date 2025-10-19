@@ -16,29 +16,32 @@ resource "aws_apigatewayv2_stage" "cc_websocket_stage" {
   auto_deploy = true
 
   default_route_settings {
-    data_trace_enabled       = true
     detailed_metrics_enabled = true
-    logging_level            = "INFO"
     throttling_burst_limit   = 500
     throttling_rate_limit    = 100
+    # Note: data_trace_enabled and logging_level are disabled by default
+    # To enable logging, you must first configure an API Gateway CloudWatch Logs role
+    # in your AWS account settings. See: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html
   }
 
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.websocket_api_gw.arn
-    format = jsonencode({
-      requestId              = "$context.requestId"
-      sourceIp               = "$context.identity.sourceIp"
-      requestTime            = "$context.requestTime"
-      protocol               = "$context.protocol"
-      routeKey               = "$context.routeKey"
-      status                 = "$context.status"
-      responseLength         = "$context.responseLength"
-      integrationErrorMessage = "$context.integrationErrorMessage"
-      errorMessage           = "$context.error.message"
-      connectionId           = "$context.connectionId"
-      eventType              = "$context.eventType"
-    })
-  }
+  # Note: Access logging is disabled by default to avoid account-level IAM role requirement
+  # Uncomment the block below after configuring API Gateway CloudWatch Logs role
+  # access_log_settings {
+  #   destination_arn = aws_cloudwatch_log_group.websocket_api_gw.arn
+  #   format = jsonencode({
+  #     requestId              = "$context.requestId"
+  #     sourceIp               = "$context.identity.sourceIp"
+  #     requestTime            = "$context.requestTime"
+  #     protocol               = "$context.protocol"
+  #     routeKey               = "$context.routeKey"
+  #     status                 = "$context.status"
+  #     responseLength         = "$context.responseLength"
+  #     integrationErrorMessage = "$context.integrationErrorMessage"
+  #     errorMessage           = "$context.error.message"
+  #     connectionId           = "$context.connectionId"
+  #     eventType              = "$context.eventType"
+  #   })
+  # }
 
   tags = var.default_tags
 }

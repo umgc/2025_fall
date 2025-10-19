@@ -1,7 +1,9 @@
 # 1. Networking Setup
 # A dedicated VPC for the database
 resource "aws_vpc" "aurora_vpc" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
   tags = {
     Name = "aurora-vpc"
   }
@@ -48,6 +50,14 @@ resource "aws_security_group" "aurora_sg" {
     to_port     = 5432
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.aurora_vpc.cidr_block]
+  }
+
+  # Allow inbound traffic from resources within the same security group (Lambda)
+  ingress {
+    from_port = 5432
+    to_port   = 5432
+    protocol  = "tcp"
+    self      = true
   }
 
   # Allow all outbound traffic
@@ -107,4 +117,72 @@ resource "aws_rds_cluster_instance" "careconnect_db_instance" {
   instance_class     = "db.serverless"
   engine             = aws_rds_cluster.careconnect_db.engine
   engine_version     = aws_rds_cluster.careconnect_db.engine_version
+}
+
+# VPC Endpoints for Lambda to access AWS services from private VPC
+# This allows Lambda in the database VPC to access AWS services without internet gateway
+
+# Security group for VPC endpoints
+resource "aws_security_group" "vpc_endpoints_sg" {
+  name        = "vpc-endpoints-sg"
+  description = "Allow HTTPS inbound for VPC endpoints"
+  vpc_id      = aws_vpc.aurora_vpc.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.aurora_vpc.cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "vpc-endpoints-sg"
+  }
+}
+
+# SSM Parameter Store endpoint
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.aurora_vpc.id
+  service_name        = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.aurora_subnet_a.id, aws_subnet.aurora_subnet_b.id]
+  security_group_ids  = [aws_security_group.vpc_endpoints_sg.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "ssm-endpoint"
+  }
+}
+
+# Secrets Manager endpoint
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = aws_vpc.aurora_vpc.id
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.aurora_subnet_a.id, aws_subnet.aurora_subnet_b.id]
+  security_group_ids  = [aws_security_group.vpc_endpoints_sg.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "secretsmanager-endpoint"
+  }
+}
+
+# S3 endpoint (Gateway type - no additional charges)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.aurora_vpc.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_vpc.aurora_vpc.main_route_table_id]
+
+  tags = {
+    Name = "s3-endpoint"
+  }
 }

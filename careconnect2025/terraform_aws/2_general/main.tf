@@ -30,15 +30,8 @@ data "aws_s3_bucket" "backend_bucket" {
   bucket = var.cc_iac_bucket_name
 }
 
-# Remote state for compute infrastructure (4_compute)
-data "terraform_remote_state" "cc_compute_state" {
-  backend = "s3"
-  config = {
-    bucket = "cc-iac-us-east-1-650566638526"
-    key    = "tf-state/careconnect-compute.tfstate"
-    region = "us-east-1"
-  }
-}
+# Remote state for compute infrastructure removed - no longer needed in 2_general
+# WebSocket module has been moved to 4_compute to resolve circular dependency
 
 module "vpc" {
   source         = "./modules/vpc"
@@ -136,28 +129,6 @@ module "sfn_sm" {
   default_tags    = var.default_tags
 }
 
-##### WebSocket API Gateway for real-time communication ######
-# NOTE: WebSocket module is now ACTIVATED
-# The Spring Boot backend has all WebSocket logic in AwsWebSocketService
-# All three routes ($connect, $disconnect, $default) use the SAME main backend Lambda
-#
-# After deployment, the AWS_WEBSOCKET_API_GATEWAY_ENDPOINT will be automatically
-# available via data source in 4_compute and set as Lambda environment variable
-
-module "websocket" {
-  source = "./modules/websocket"
-
-  default_tags = var.default_tags
-  stage_name   = "prod"
-
-  # All routes use the SAME main backend Lambda
-  # Spring Boot routes internally based on the WebSocket event type
-  connect_lambda_function_name    = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_function_name
-  connect_lambda_invoke_arn       = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_invoke_arn
-
-  disconnect_lambda_function_name = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_function_name
-  disconnect_lambda_invoke_arn    = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_invoke_arn
-
-  default_lambda_function_name    = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_function_name
-  default_lambda_invoke_arn       = data.terraform_remote_state.cc_compute_state.outputs.cc_main_backend_lambda_invoke_arn
-}
+##### WebSocket API Gateway moved to 4_compute ######
+# The WebSocket module has been moved to 4_compute/main.tf to resolve circular dependency.
+# It will be deployed after the Lambda function is created in the same apply.

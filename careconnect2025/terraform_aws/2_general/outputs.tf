@@ -46,12 +46,4 @@ output "ses_dkim_cname_records" {
   }
 }
 
-output "websocket_management_endpoint" {
-  description = "WebSocket API Gateway Management API endpoint for Lambda to send messages"
-  value       = module.websocket.websocket_management_endpoint
-}
-
-output "websocket_api_endpoint" {
-  description = "WebSocket API endpoint URL for client connections"
-  value       = module.websocket.websocket_stage_invoke_url
-}
+# WebSocket outputs have been moved to 4_compute/outputs.tf
