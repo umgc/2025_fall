@@ -56,64 +56,6 @@ class SubmissionListState extends State<SubmissionList> {
   String filterOption = 'All Students';
   String fullNameFilter = '';
 
-  Future<bool> checkIfLoadedLocalLLMRecommended() async {
-    final String path = LocalStorageService.getLocalLLMPath().toLowerCase();
-    if (!path.contains("qwen")) {
-      final result = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('⚠️Warning:'),
-          content: Text(
-            'The currently selected local LLM does not consistently produce valid JSON required for essay grading.\n'
-            'Proceeding could result in invalid XML output error or the generation of irrelevant questions.\n\n'
-            'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
-            'Do you want to continue anyway?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false), // Cancel
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true), // Continue
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-
-      return result ?? false;
-    } else {
-      return true;
-    }
-  }
-
-  Future<bool> showCancelConfirmationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Confirmation'),
-        content: Text('Are you sure you want to cancel the generation?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), // no
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, true);
-              canceled = true;
-            }, // yes
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false; // false if dismissed
-  }
-
   String getApiKey(LlmType selectedLLM) {
     switch (selectedLLM) {
       case LlmType.CHATGPT:
@@ -617,11 +559,13 @@ class SubmissionListState extends State<SubmissionList> {
                                                                 TextButton(
                                                                   onPressed:
                                                                       () async {
-                                                                    final decision =
-                                                                        await showCancelConfirmationDialog();
+                                                                    bool
+                                                                        decision =
+                                                                        await LocalLLMService()
+                                                                            .showCancelConfirmationDialog();
                                                                     if (decision) {
-                                                                      LocalLLMService()
-                                                                          .cancel();
+                                                                      canceled =
+                                                                          true;
                                                                     }
                                                                   },
                                                                   style: TextButton
@@ -645,7 +589,8 @@ class SubmissionListState extends State<SubmissionList> {
                                                         : ElevatedButton(
                                                             onPressed:
                                                                 () async {
-                                                              if (await checkIfLoadedLocalLLMRecommended()) {
+                                                              if (await LocalLLMService()
+                                                                  .checkIfLoadedLocalLLMRecommended()) {
                                                                 try {
                                                                   setState(() {
                                                                     isLoadingMap[

@@ -84,32 +84,6 @@ class EditQuestionsState extends State<EditQuestions> {
     }
   }
 
-  Future<bool> showCancelConfirmationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Confirmation'),
-        content: Text('Are you sure you want to cancel the generation?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), // no
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, true);
-              canceled = true;
-            }, // yes
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false; // false if dismissed
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -160,10 +134,10 @@ class EditQuestionsState extends State<EditQuestions> {
                       if (selectedLLM == LlmType.LOCAL)
                         TextButton(
                           onPressed: () async {
-                            final decision =
-                                await showCancelConfirmationDialog();
+                            final decision = await LocalLLMService()
+                                .showCancelConfirmationDialog();
                             if (decision) {
-                              LocalLLMService().cancel();
+                              canceled = true;
                             }
                           },
                           style: TextButton.styleFrom(

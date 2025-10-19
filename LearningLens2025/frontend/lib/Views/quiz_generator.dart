@@ -58,41 +58,9 @@ class _AssessmentState extends State<CreateAssessment> {
 
   _AssessmentState();
 
-  Future<bool> checkIfLoadedLocalLLMRecommended() async {
-    final String path = LocalStorageService.getLocalLLMPath().toLowerCase();
-    if (!path.contains("qwen")) {
-      final result = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('⚠️Warning:'),
-          content: Text(
-            'The current Local LLM does not consistently honor question type or count constraints in quiz generation.\n'
-            'Proceeding could result in invalid XML output error or the generation of irrelevant questions.\n\n'
-            'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
-            'Do you want to continue anyway?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false), // Cancel
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true), // Continue
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-
-      return result ?? false;
-    } else {
-      return true;
-    }
-  }
-
   void generateQuiz(Map<String, TextEditingController> fields) async {
     canceled = false;
-    if (await checkIfLoadedLocalLLMRecommended()) {
+    if (await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
       if (!mounted) return;
       if (_formKey.currentState!.validate()) {
         // Parse question counts, defaulting to 0 if empty
@@ -183,32 +151,6 @@ class _AssessmentState extends State<CreateAssessment> {
     // }
   }
 
-  Future<bool> showCancelConfirmationDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Confirmation'),
-        content: Text('Are you sure you want to cancel the generation?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false), // no
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, true);
-              canceled = true;
-            }, // yes
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false; // false if dismissed
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,10 +191,10 @@ class _AssessmentState extends State<CreateAssessment> {
                                   if (selectedLLM == LlmType.LOCAL)
                                     TextButton(
                                       onPressed: () async {
-                                        final decision =
-                                            await showCancelConfirmationDialog();
-                                        if (decision) {
-                                          LocalLLMService().cancel();
+                                        bool result = await LocalLLMService()
+                                            .showCancelConfirmationDialog();
+                                        if (result) {
+                                          canceled = true;
                                         }
                                       },
                                       style: TextButton.styleFrom(

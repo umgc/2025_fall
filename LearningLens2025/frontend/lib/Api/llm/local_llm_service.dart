@@ -329,6 +329,66 @@ class LocalLLMService implements LLM {
     }
   }
 
+  Future<bool> checkIfLoadedLocalLLMRecommended() async {
+    final String path = LocalStorageService.getLocalLLMPath().toLowerCase();
+    if (!path.contains("qwen")) {
+      final result = await showDialog<bool>(
+        context: navigatorKey.currentContext!,
+        builder: (context) => AlertDialog(
+          title: const Text('⚠️Warning:'),
+          content: Text(
+            'The currently loaded Local LLM does not consistently generate a valid XML needed for rubric geneartion.\n'
+            'Proceeding could result in invalid XML output error.\n\n'
+            'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
+            'Do you want to continue anyway?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false), // Cancel
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true), // Continue
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+
+      return result ?? false;
+    } else {
+      return true;
+    }
+  }
+
+  Future<bool> showCancelConfirmationDialog() async {
+    final result = await showDialog<bool>(
+      context: navigatorKey.currentContext!,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Confirmation'),
+        content: Text('Are you sure you want to cancel the generation?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // no
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            }, // yes
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (result!) {
+      cancel();
+    }
+    return result;
+  }
+
   @override
   Future<String> chat(
       {List<Map<String, dynamic>>? context,
