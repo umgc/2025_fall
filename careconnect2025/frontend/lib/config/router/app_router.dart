@@ -4,6 +4,8 @@ import 'package:care_connect_app/features/integrations/presentation/pages/home_m
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -590,7 +592,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/smart-devices',
-      builder: (_, __) => const SmartDevicesScreen(),
+      builder: (_, __) => const SmartDevicesPage(),
     ),
     GoRoute(
       path: '/medication',
@@ -676,6 +678,11 @@ final GoRouter appRouter = GoRouter(
         }
         return '/login';
       },
+    ),
+    //Adding Calendar Assistant route 496
+    GoRoute(
+      path: '/calendar',
+      builder: (_, __) => const CalendarAssistantScreen(),
     ),
     GoRoute(
       path: '/chatandcalls',

@@ -113,6 +113,17 @@ echo "- Email: Console logging"
 echo "- File Storage: Local"
 echo "----------------------------------------"
 
+@REM The following lines are used to build a temporary forward-facing url
+@REM for Alexa skill to call. Should be replaced when we have a constant domain avaliable
+echo Setting Port
+set "APP_PORT=8080"
+echo Calling ngrok script
+call scripts\start_ngrok.bat %APP_PORT%
+if exist ".public_url" (
+  set /p NGURL=<".public_url"
+  echo ✅ Public URL: %NGURL%
+)
+
 echo "Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
 export CARECONNECT_DATABASE_USE_AWS_CONFIG=false
