@@ -110,15 +110,15 @@ class AIService {
         includeAllergies: role == 'analytics' || role == 'caregiver',
       );
 
-      if (response['success'] != false && response['response'] != null) {
-        final aiResponse = response['response'] as String;
+      if (response['success'] != false && response['aiResponse'] != null) {
+        final aiResponse = response['aiResponse'] as String;
 
         // Cache the response
         _cacheResponse(cacheKey, aiResponse);
 
         return aiResponse;
       } else {
-        return response['response'] ??
+        return response['aiResponse'] ??
             'Sorry, I encountered an error. Please try again later.';
       }
     } catch (e) {
