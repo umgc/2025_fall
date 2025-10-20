@@ -136,6 +136,18 @@ echo "- File Storage: Local"
 echo "- Docker: Docker Desktop"
 echo "----------------------------------------"
 
+----------------------------------------
+ALEXA TESTING: Start ngrok tunnel (non-blocking)
+----------------------------------------
+echo "🚀 Starting NGROK for Alexa testing..."
+
+if command -v ngrok &> /dev/null; then
+    ngrok http 8080 > /dev/null 2>&1 &
+    echo "✅ ngrok started successfully (background process)."
+else
+    echo "⚠️ ngrok not found — continuing without tunnel."
+fi
+
 echo "🌟 Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
 
