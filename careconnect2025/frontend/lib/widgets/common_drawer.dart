@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/user_provider.dart';
+
 import '../config/router/app_router.dart';
-import 'theme_toggle_switch.dart';
+import '../providers/user_provider.dart';
 import '../services/api_service.dart';
+import 'theme_toggle_switch.dart';
 
 class CommonDrawer extends StatefulWidget {
   final String currentRoute;
@@ -189,6 +190,15 @@ class _CommonDrawerState extends State<CommonDrawer> {
               Navigator.pop(context);
               navigateToDashboard(context);
             },
+          ),
+
+          // Calendar Assistant - always visible
+          _buildDrawerItem(
+            context,
+            icon: Icons.calendar_month,
+            title: 'Calendar Assistant',
+            route: '/calendar',
+            isActive: widget.currentRoute == '/calendar',
           ),
 
           // Core Features (reordered logically)
