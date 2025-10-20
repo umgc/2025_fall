@@ -42,7 +42,9 @@ Future<void> main() async {
       usePathUrlStrategy();
 
       // Load environment quickly
-      await dotenv.load();
+      const String environment = String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev');
+      await dotenv.load(fileName: '.env.$environment');
+ 
 
       // Create providers (don't initialize them yet)
       final userProvider = UserProvider();

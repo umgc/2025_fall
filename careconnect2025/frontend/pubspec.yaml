@@ -178,6 +178,7 @@ flutter:
     - assets/images/CareConnectLogo.png
     - assets/images/CareConnectLogo.svg
     - .env
+    - .env.production
     - assets/images/default_avatar.svg
 
   # The following line ensures that the Material Icons font is
