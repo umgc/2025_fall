@@ -7,6 +7,7 @@ import 'package:care_connect_app/features/invoices/services/invoice_service.dart
 import 'package:care_connect_app/features/invoices/widgets/invoice_overview_card.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/shared/widgets/dashboard_appheader_widget.dart';
+import 'package:care_connect_app/widgets/ai_chat_improved.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -56,6 +57,36 @@ class CaregiverDashboard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).primaryColor,
+        child: Icon(
+          Icons.chat_bubble_outline,
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
+        onPressed: () {
+          final double sheetHeight = MediaQuery.of(context).size.height * 0.75;
+          showModalBottomSheet(
+            isScrollControlled: true,
+            context: context,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width > 768 ? 600 : double.infinity,
+            ),
+            builder: (context) => SizedBox(
+              height: sheetHeight,
+              child: AIChat(
+                role: 'caregiver',
+                isModal: true,
+                patientId: user?.patientId,
+                userId: user?.id,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

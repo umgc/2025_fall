@@ -14,7 +14,6 @@ import com.careconnect.dto.UploadedFileDTO;
 @Builder
 public class ChatRequest {
     
-    @NotBlank(message = "Message content is required")
     @Size(max = 5000, message = "Message content cannot exceed 5000 characters")
     private String message;
     // Explicit getters and setters for compatibility

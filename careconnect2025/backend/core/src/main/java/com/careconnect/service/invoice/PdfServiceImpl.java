@@ -1,6 +1,7 @@
 package com.careconnect.service.invoice;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -34,7 +35,7 @@ public class PdfServiceImpl implements PdfService {
 
                 if ("application/pdf".equalsIgnoreCase(contentType)) {
                     // Merge original PDF pages to preserve text and vectors
-                    try (PDDocument src = PDDocument.load(file.getBytes())) {
+                    try (PDDocument src = Loader.loadPDF(file.getBytes())) {
                         PDFMergerUtility util = new PDFMergerUtility();
                         util.appendDocument(combined, src);
                     }
