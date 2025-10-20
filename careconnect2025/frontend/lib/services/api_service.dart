@@ -35,6 +35,11 @@ class ApiConstants {
   // AI Services endpoints
   static final String aiChat = '$_host/v1/api/ai-chat';
   static final String aiConfig = '$_host/v1/api/ai-chat/config';
+  // Invoices endpoints
+  static final String invoices = '$_host/v1/api/invoices';
+
+    // EVV endpoints
+  static final String evv = '$_host/v1/api/evv';
 }
 
 class ApiService {
@@ -821,6 +826,28 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
+  /// Add an existing patient to a caregiver's care list by email
+  static Future<http.Response> addExistingPatientToCaregiver({
+    required int caregiverId,
+    required String patientEmail,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+
+    print('🔍 addExistingPatientToCaregiver caregiverId: $caregiverId');
+    print('🔍 patientEmail: $patientEmail');
+
+    return await _httpClient
+        .post(
+          Uri.parse('${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add'),
+          headers: headers,
+          body: jsonEncode({'email': patientEmail}),
+        )
+        .timeout(
+          const Duration(seconds: 20),
+          onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+        );
+  }
+
   // ========================
   // PROFILE MANAGEMENT METHODS
   // ========================
@@ -1095,26 +1122,38 @@ class ApiService {
   }
 
   // Delete a task by task ID (v2)
-  static Future<http.Response> deleteTaskV2(int taskId) async {
+  // Delete a task by task ID (v2), with optional deleteSeries flag
+  static Future<http.Response> deleteTaskV2(
+    int taskId, {
+    bool deleteSeries = false,
+  }) async {
     final headers = await AuthTokenManager.getAuthHeaders();
+
+    final url = Uri.parse(
+      '${ApiConstants.tasksV2}/$taskId',
+    ).replace(queryParameters: {'deleteSeries': deleteSeries.toString()});
+
     return await _httpClient
-        .delete(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
+        .delete(url, headers: headers)
         .timeout(const Duration(seconds: 30));
   }
 
   // Edit a task by task ID (v2)
   static Future<http.Response> editTaskV2(
     int taskId,
-    Map<String, dynamic> taskData,
-  ) async {
+    Map<String, dynamic> body, {
+    bool updateSeries = false,
+  }) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     headers['Content-Type'] = 'application/json';
 
+    final payload = Map<String, dynamic>.from(body);
+    payload['updateSeries'] = updateSeries;
     return await _httpClient
         .put(
           Uri.parse('${ApiConstants.tasksV2}/$taskId'),
           headers: headers,
-          body: jsonEncode(taskData),
+          body: jsonEncode(payload),
         )
         .timeout(const Duration(seconds: 30));
   }
@@ -1169,6 +1208,70 @@ class ApiService {
     } catch (e) {
       print('Error fetching enhanced patient profile: ${e.toString()}');
       return null;
+    }
+  }
+  
+  static Future<http.Response> getPatientMedicationsForPatient(int patientId) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+          '${ApiConstants.patients}/$patientId/medications');
+      return await httpClient
+          .get(uri, headers: headers)
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+      );
+    }  catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Add a new medication for a patient
+  static Future<http.Response> addPatientMedication(
+    int patientId,
+    Map<String, dynamic> medicationData,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications',
+      );
+
+      return await httpClient
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode(medicationData),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Remove (deactivate) a medication for a patient
+  static Future<http.Response> removePatientMedication(
+    int patientId,
+    int medicationId,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications/$medicationId',
+      );
+
+      return await httpClient
+          .delete(uri, headers: headers)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
     }
   }
 }

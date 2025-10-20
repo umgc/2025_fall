@@ -13,6 +13,7 @@ class ApiConstants {
   static final String feed = '$_host/v1/api/feed';
   static final String users = '$_host/v1/api/users';
   static final String friends = '$_host/v1/api/friends';
+  static final String patients = '$_host/v1/api/patients';
 
   static var files;
 
@@ -69,6 +70,49 @@ class ApiService {
       headers: headers,
     );
   }
+ 
+static Future<String> getUserProfilePictureUrl(int userId, String? role) async {
+  // Fallback local asset
+  const fallbackAsset = 'assets/images/default_avatar.svg';
+
+  try {
+    final headers = await AuthTokenManager.getAuthHeaders();
+
+    // For now, use the authenticated user's profile endpoint
+    final resp = await http.get(
+      Uri.parse('${ApiConstants.auth}/profile'),
+      headers: headers,
+    );
+
+    if (resp.statusCode != 200) {
+      return fallbackAsset;
+    }
+
+    final data = jsonDecode(resp.body);
+ 
+    String? raw =
+        (data['profileImageUrl'] ??
+            data['imageUrl'] ??
+            data['avatarUrl'] ??
+            data['profilePic']) as String?;
+
+    if (raw == null || raw.trim().isEmpty) {
+      return fallbackAsset;
+    }
+
+    raw = raw.trim();
+ 
+    if (!raw.startsWith('http')) {
+      final base = getBackendBaseUrl().replaceAll(RegExp(r'\/$'), '');
+      final rel = raw.startsWith('/') ? raw : '/$raw';
+      return '$base$rel';
+    }
+
+    return raw;
+  } catch (_) {
+    return fallbackAsset;
+  }
+}
 
   static Future<http.Response> getAllPosts() async {
     final headers = await AuthTokenManager.getAuthHeaders();
@@ -195,5 +239,11 @@ class ApiService {
         'newPassword': newPassword,
       }),
     );
+  }
+  
+  static Future<http.Response> getPatientInfo(final int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final url = Uri.parse('${ApiConstants.patients}/$patientId');
+    return await http.get(url, headers: headers);
   }
 }

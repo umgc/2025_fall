@@ -261,7 +261,9 @@ class UserProvider extends ChangeNotifier {
   /// Returns:
   /// * Future<void> - Completes when user details are fetched and models created
   Future<void> fetchUserDetails() async {
-    if (_user == null) return;
+    if (_user == null) {
+      return;
+    }
 
     _isLoading = true;
     notifyListeners();
@@ -291,12 +293,15 @@ class UserProvider extends ChangeNotifier {
 
   /// Fetch patient-specific details
   Future<void> _fetchPatientDetails() async {
-    if (_user == null || _user!.patientId == null) return;
+    if (_user == null || _user!.patientId == null) {
+      return;
+    }
 
     try {
-      const baseUrl = 'http://localhost:8080/v1/api';
       final response = await http.get(
-        Uri.parse('$baseUrl/patients/${_user!.patientId}'),
+        Uri.parse(
+          '${ApiConstants.baseUrl}/v1/api/patients/${_user!.patientId}',
+        ),
         headers: {
           'Authorization': 'Bearer ${_user!.token}',
           'Content-Type': 'application/json',
@@ -305,10 +310,10 @@ class UserProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final patientData = json.decode(response.body);
-
         // Create PatientModel with combined data
         _patientModel = PatientUserModel(
-          name: _userModel!.name,
+          name:
+              '${patientData['firstName']} ${patientData['lastName']}',
           email: _userModel!.email,
           userId: _userModel!.userId,
           role: _userModel!.role,
@@ -319,9 +324,16 @@ class UserProvider extends ChangeNotifier {
           gender: patientData['gender'] ?? '',
           address: Address.fromJson(patientData['address'] ?? {}),
         );
+
+        // Store patient model to disk
+        await UserRoleStorageService.instance.storePatientModel(
+          jsonEncode(_patientModel!.toJson()),
+        );
+      } else {
+        // TODO - what to do when user data can't be loaded?
       }
     } catch (e) {
-      print('Error fetching patient details: $e');
+      // TODO - what to do when user data can't be loaded?
     }
   }
 
@@ -330,9 +342,8 @@ class UserProvider extends ChangeNotifier {
     if (_user == null || _user!.caregiverId == null) return;
 
     try {
-      const baseUrl = 'http://localhost:8080/v1/api';
       final response = await http.get(
-        Uri.parse('$baseUrl/caregivers/${_user!.caregiverId}'),
+        Uri.parse('${ApiConstants.baseUrl}/v1/api/caregivers/${_user!.caregiverId}'),
         headers: {
           'Authorization': 'Bearer ${_user!.token}',
           'Content-Type': 'application/json',
@@ -344,12 +355,12 @@ class UserProvider extends ChangeNotifier {
 
         // Create CaregiverModel with combined data
         _caregiverModel = CaregiverModel(
-          name: _userModel!.name,
+          name: '${caregiverData['firstName']} ${caregiverData['lastname']}',
           email: _userModel!.email,
           userId: _userModel!.userId,
           role: _userModel!.role,
-          firstName: caregiverData['firstName'] ?? '',
-          lastName: caregiverData['lastName'] ?? '',
+          firstName: caregiverData['first_name'] ?? '',
+          lastName: caregiverData['last_name'] ?? '',
           phone: caregiverData['phone'] ?? '',
           dob: caregiverData['dob'] ?? '',
           gender: caregiverData['gender'] ?? '',
@@ -358,6 +369,11 @@ class UserProvider extends ChangeNotifier {
           professionalInfo: caregiverData['professional'] != null
               ? ProfessionalInfo.fromJson(caregiverData['professional'])
               : null,
+        );
+
+        // Store caregiver model to disk
+        await UserRoleStorageService.instance.storeCaregiverModel(
+          jsonEncode(_caregiverModel!.toJson()),
         );
       }
     } catch (e) {
@@ -433,7 +449,6 @@ class UserProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      print('❌ Token refresh failed in UserProvider: $e');
       _user = null;
       _userModel = null;
       _patientModel = null;
@@ -455,7 +470,6 @@ class UserProvider extends ChangeNotifier {
           caregiverId: _user!.caregiverId,
         );
       } catch (e) {
-        print('❌ Error syncing user data to storage: $e');
       }
     }
   }
@@ -502,6 +516,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   bool get isLoggedIn => _user != null;
+
   bool get isCaregiver => _user?.role.toUpperCase() == 'CAREGIVER';
 
   // Update user name

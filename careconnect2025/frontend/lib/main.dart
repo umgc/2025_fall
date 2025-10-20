@@ -1,3 +1,4 @@
+import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -53,6 +54,7 @@ Future<void> main() async {
           providers: [
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()..init()),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),
