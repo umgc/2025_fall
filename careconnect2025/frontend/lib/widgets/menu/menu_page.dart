@@ -117,7 +117,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.person_add,
         label: t.addPatient,
         route: '/add-patient',
-        visibleFor: const {'CAREGIVER', 'PATIENT'},
+        visibleFor: const {'CAREGIVER'},
       ),
       _MenuItem(
         icon: Icons.settings,

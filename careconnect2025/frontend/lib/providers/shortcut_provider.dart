@@ -177,7 +177,7 @@ class ShortcutProvider extends ChangeNotifier {
         label: 'Invoice Assistant',
         labelKey: 'invoiceAssistant',
         routeTemplate: '/invoice-assistant/dashboard',
-        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
+        visibleFor: const {'CAREGIVER', 'ADMIN', 'PATIENT'},
         defaultSelected: true,
       ),
       'cal': ShortcutDef(
@@ -210,7 +210,7 @@ class ShortcutProvider extends ChangeNotifier {
         label: 'EVV',
         labelKey: 'evv',
         routeTemplate: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
         defaultSelected: true,
       ),
       'wear': ShortcutDef(

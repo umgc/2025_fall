@@ -7,6 +7,9 @@ import '../providers/user_provider.dart';
 import '../widgets/theme_toggle_switch.dart';
 import '../models/notification_settings.dart';
 import '../services/notification_settings_service.dart';
+import '../providers/locale_provider.dart';
+import '../widgets/language/language_picker.dart';
+
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -24,6 +27,40 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadNotificationSettings();
   }
+Widget _buildLanguageCard(BuildContext context) {
+  final t = AppLocalizations.of(context)!;
+  final localeProvider = context.watch<LocaleProvider>();
+
+  final currentLabel = localeProvider.locale == null
+      ? t.systemDefault
+      : LanguagePicker.labelFor(localeProvider.locale!);
+
+  return Card(
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      leading: Icon(
+        Icons.language,
+        color: Theme.of(context).colorScheme.primary,
+        size: 24,
+      ),
+      title: Text(
+        t.language,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+      ),
+      subtitle: Text(
+        currentLabel,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+      ),
+      onTap: () => LanguagePicker.show(context),
+    ),
+  );
+}
 
   Future<void> _loadNotificationSettings() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -311,9 +348,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.settings), // use existing "Settings" key
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: Text(t.settings), // use existing "Settings" key   
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -370,6 +405,7 @@ class _SettingsPageState extends State<SettingsPage> {
               // Appearance
               _buildSectionHeader(context, t.settingsAppearance),
               _buildThemeCard(context),
+              _buildLanguageCard(context),
               const SizedBox(height: 24),
 
               // Notifications
