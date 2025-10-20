@@ -109,6 +109,11 @@ class _MenuPageState extends State<MenuPage> {
         route: '/file-management',
       ),
       _MenuItem(
+        icon: Icons.mail,
+        label: 'Informed Delivery',
+        route: '/informed-delivery',
+      ),
+      _MenuItem(
         icon: Icons.person_add,
         label: 'Add Patient',
         route: '/add-patient',
