@@ -292,29 +292,31 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
               },
             ),
             // Assignments Dropdown
-            DropdownButtonFormField<Assignment>(
-              decoration: InputDecoration(
-                labelText: "Assignments",
-                border: OutlineInputBorder(),
-              ),
-              value: selectedAssignment,
-              items: selectedCourse == null
-                  ? []
-                  : courses
-                      .firstWhere((c) => c == selectedCourse)
-                      .essays!
-                      .map((assignment) {
-                      return DropdownMenuItem(
-                        value: assignment,
-                        child: Text(assignment.name),
-                      );
-                    }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedAssignment = value;
-                });
-              },
-            ),
+            Opacity(
+                opacity: selectedCourse == null ? 0.5 : 1,
+                child: DropdownButtonFormField<Assignment>(
+                  decoration: InputDecoration(
+                    labelText: "Assignments",
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedAssignment,
+                  items: selectedCourse == null
+                      ? []
+                      : courses
+                          .firstWhere((c) => c == selectedCourse)
+                          .essays!
+                          .map((assignment) {
+                          return DropdownMenuItem(
+                            value: assignment,
+                            child: Text(assignment.name),
+                          );
+                        }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedAssignment = value;
+                    });
+                  },
+                )),
             // Language selection dropdown
             DropdownButtonFormField<String>(
                 decoration: InputDecoration(
