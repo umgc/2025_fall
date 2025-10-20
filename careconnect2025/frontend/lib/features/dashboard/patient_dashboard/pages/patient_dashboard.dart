@@ -406,7 +406,12 @@ class _PatientDashboardState extends State<PatientDashboard> {
             ),
             builder: (context) => SizedBox(
               height: sheetHeight,
-              child: const AIChat(role: 'patient', isModal: true),
+              child: AIChat(
+                role: 'patient', 
+                isModal: true,
+                patientId: user?.patientId, // Pass the actual patient ID
+                userId: user?.id,
+              ),
             ),
           );
         },

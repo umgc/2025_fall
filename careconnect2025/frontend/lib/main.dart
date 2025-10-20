@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -59,6 +60,7 @@ Future<void> main() async {
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
             ChangeNotifierProvider(create: (_) => TaskTypeManager()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()..init()),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),

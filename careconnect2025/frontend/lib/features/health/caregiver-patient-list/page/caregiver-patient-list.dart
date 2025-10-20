@@ -1,8 +1,14 @@
+import 'dart:convert';
+
 import 'package:care_connect_app/features/health/caregiver-patient-list/models/patient-info.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient-info-card.dart';
 import 'package:care_connect_app/widgets/default_app_header.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/services/api_service.dart';
+import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// Main screen for caregivers to view and manage their patient list.
 ///
@@ -59,9 +65,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
 
   /// Loads patient data from the server.
   ///
-  /// Currently uses mock data with simulated network delay.
-  /// In production, this would make an actual API call to fetch
-  /// the caregiver's assigned patients.
+  /// Fetches the caregiver's assigned patients from the API.
   ///
   /// Returns:
   /// * Future<void> - Completes when patient data is loaded
@@ -70,99 +74,70 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
       _isLoading = true;
     });
 
-    // Simulate API call with delay
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    final patients = _generateMockPatients();
-    setState(() {
-      _allPatients = patients;
-      _filteredPatients = patients;
-      _isLoading = false;
-    });
+      if (userProvider.user?.caregiverId == null) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _allPatients = [];
+          _filteredPatients = [];
+        });
+        return;
+      }
+
+      final response = await ApiService.getCaregiverPatients(
+        userProvider.user!.caregiverId!,
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        print(response.body);
+        final List<dynamic> data = jsonDecode(response.body);
+        final patients = data.map((json) => _patientFromJson(json)).toList();
+
+        setState(() {
+          _allPatients = patients;
+          _filteredPatients = patients;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _allPatients = [];
+          _filteredPatients = [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading patients: $e');
+      if (!mounted) return;
+      setState(() {
+        _allPatients = [];
+        _filteredPatients = [];
+        _isLoading = false;
+      });
+    }
   }
 
-  /// Generates mock patient data for testing and development.
-  ///
-  /// Creates a list of sample patients with varying health statuses,
-  /// mood indicators, and urgency levels to demonstrate the UI.
-  ///
-  /// Returns:
-  /// * List<Patient> - A list of mock patient objects
-  List<Patient> _generateMockPatients() {
-    return [
-      Patient(
-        id: '1',
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        lastUpdated: DateTime(2024, 12, 25),
-        statusMessage: 'Severe symptoms reported',
-        nextCheckIn: DateTime(2024, 12, 28),
-        mood: 'Poor',
-        moodEmoji: '😟',
-        isUrgent: true,
-        messageCount: 2,
-      ),
-      Patient(
-        id: '2',
-        firstName: 'Robert',
-        lastName: 'Chen',
-        lastUpdated: DateTime(2024, 12, 24),
-        statusMessage: 'Missed medication dose',
-        nextCheckIn: DateTime(2024, 12, 28),
-        mood: 'Concerned',
-        moodEmoji: '😐',
-        isUrgent: true,
-        messageCount: 1,
-      ),
-      Patient(
-        id: '3',
-        firstName: 'James',
-        lastName: 'Wilson',
-        lastUpdated: DateTime(2024, 12, 23),
-        statusMessage: 'Routine checkup scheduled',
-        nextCheckIn: DateTime(2024, 12, 30),
-        mood: 'Good',
-        moodEmoji: '😊',
-        isUrgent: false,
-        messageCount: 1,
-      ),
-      Patient(
-        id: '4',
-        firstName: 'Emily',
-        lastName: 'Davis',
-        lastUpdated: DateTime(2024, 12, 22),
-        statusMessage: 'Recovery progressing well',
-        nextCheckIn: DateTime(2024, 12, 29),
-        mood: 'Great',
-        moodEmoji: '😄',
-        isUrgent: false,
-        messageCount: 0,
-      ),
-      Patient(
-        id: '5',
-        firstName: 'Michael',
-        lastName: 'Brown',
-        lastUpdated: DateTime(2024, 12, 21),
-        statusMessage: 'Blood pressure elevated',
-        nextCheckIn: DateTime(2024, 12, 27),
-        mood: 'Worried',
-        moodEmoji: '😰',
-        isUrgent: true,
-        messageCount: 1,
-      ),
-      Patient(
-        id: '6',
-        firstName: 'Lisa',
-        lastName: 'Anderson',
-        lastUpdated: DateTime(2024, 12, 20),
-        statusMessage: 'Feeling much better',
-        nextCheckIn: DateTime(2024, 12, 31),
-        mood: 'Excellent',
-        moodEmoji: '🥰',
-        isUrgent: false,
-        messageCount: 0,
-      ),
-    ];
+  /// Converts API JSON response to Patient model
+  Patient _patientFromJson(Map<String, dynamic> json) {
+    final patient = json['patient'] ?? {};
+    final link = json['link'] ?? {};
+
+    return Patient(
+      id: patient['id']?.toString() ?? '',
+      firstName: patient['firstName'] ?? '',
+      lastName: patient['lastName'] ?? '',
+      lastUpdated: DateTime.now(), // TODO: Use actual lastUpdated from API
+      statusMessage: link['notes'] ?? 'No status available',
+      nextCheckIn: DateTime.now().add(const Duration(days: 1)), // TODO: Use actual check-in date
+      mood: 'Good', // TODO: Fetch actual mood from patient data
+      moodEmoji: '😊', // TODO: Map mood to emoji
+      isUrgent: false, // TODO: Determine urgency based on patient status
+      messageCount: 0, // TODO: Fetch actual unread message count
+    );
   }
 
   /// Handles search text changes and filters the patient list.
@@ -245,6 +220,168 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// * int - Number of normal status cases
   int get normalCasesCount => _allPatients.where((p) => !p.isUrgent).length;
 
+  /// Handles the add patient button press.
+  ///
+  /// Opens a dialog or navigates to a screen where caregivers can add existing
+  /// patients to their care list. This is for linking already registered patients.
+  Future<void> _onAddPatient() async {
+    final emailController = TextEditingController();
+    final theme = Theme.of(context);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Existing Patient'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the email address of the patient you want to add to your care list.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(
+                labelText: 'Patient Email',
+                hintText: 'patient@example.com',
+                prefixIcon: const Icon(Icons.email),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Add Patient'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true || emailController.text.trim().isEmpty) {
+      emailController.dispose();
+      return;
+    }
+
+    final patientEmail = emailController.text.trim();
+    emailController.dispose();
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      if (userProvider.user?.caregiverId == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Caregiver ID not found'),
+            backgroundColor: theme.colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final response = await ApiService.addExistingPatientToCaregiver(
+        caregiverId: userProvider.user!.caregiverId!,
+        patientEmail: patientEmail,
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Patient successfully added'),
+            backgroundColor: theme.colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Reload the patient list
+        await _loadPatients();
+      } else if (response.statusCode == 202) {
+        final data = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Invitation sent to patient'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else if (response.statusCode == 400) {
+        final data = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Patient already linked'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add patient: ${response.statusCode}'),
+            backgroundColor: theme.colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding patient: $e'),
+          backgroundColor: theme.colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// Handles the register patient button press.
+  ///
+  /// Opens a dialog or navigates to a screen where caregivers can register
+  /// new patients who don't have accounts yet. This creates a new patient account.
+  Future<void> _onRegisterPatient() async {
+    // Open the registration page as a modal, preconfigured for a Patient
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.95,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: const RegistrationPage(
+            initialRole: 'Patient',
+            lockRole: true,
+          ),
+        );
+      },
+    );
+
+    // Optionally refresh the list after closing the modal (no-op if unchanged)
+    if (mounted) {
+      await _loadPatients();
+    }
+  }
+
   /// Builds the main UI for the caregiver patient list screen.
   ///
   /// Creates a scaffold with:
@@ -296,39 +433,79 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
               ),
             ),
 
-            // Search Bar
+            // Search Bar with Add Patient Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Enter patient name...',
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                          },
-                          icon: Icon(
-                            Icons.clear,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        )
-                      : Icon(
-                          Icons.tune,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter patient name...',
+                        prefixIcon: Icon(
+                          Icons.search,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              )
+                            : Icon(
+                                Icons.tune,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                      ),
+                    ),
                   ),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.3),
-                ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _onAddPatient,
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Add'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _onRegisterPatient,
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Register'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondary,
+                      foregroundColor: theme.colorScheme.onSecondary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
