@@ -140,6 +140,6 @@ echo "🌟 Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
 
 # Use Maven wrapper with macOS-specific JVM options if needed
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw spring-boot:run -Dspring.profiles.active=dev
 
 echo "🛑 Application stopped."

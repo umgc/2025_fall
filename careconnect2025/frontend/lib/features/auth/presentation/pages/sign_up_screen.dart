@@ -8,13 +8,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class RegistrationPage extends StatefulWidget {
-  /// Optional: preselect an initial role (e.g., 'Patient' or 'Caregiver')
-  final String? initialRole;
-
-  /// When true, the role selector is disabled and remains fixed to [initialRole]
-  final bool lockRole;
-
-  const RegistrationPage({super.key, this.initialRole, this.lockRole = false});
+  const RegistrationPage({super.key});
 
   @override
   State<RegistrationPage> createState() => _RegistrationPageState();
@@ -53,12 +47,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   void initState() {
     super.initState();
-
-    // If an initial role is provided, preselect it
-    if (widget.initialRole != null) {
-      _selectedRole = widget.initialRole;
-    }
-
     // Add listeners to form fields to update button state dynamically
     _firstNameController.addListener(_updateButtonState);
     _lastNameController.addListener(_updateButtonState);
@@ -493,15 +481,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   ),
                 );
               }).toList(),
-              onChanged: widget.lockRole
-                  ? null
-                  : (String? newValue) {
-                      setState(() {
-                        _selectedRole = newValue;
-                        // Reset to step 0 when role changes to recalculate total steps
-                        _currentStep = 0;
-                      });
-                    },
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedRole = newValue;
+                  // Reset to step 0 when role changes to recalculate total steps
+                  _currentStep = 0;
+                });
+              },
             ),
           ),
         ),

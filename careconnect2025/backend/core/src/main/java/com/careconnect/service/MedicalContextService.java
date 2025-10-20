@@ -1,14 +1,12 @@
 package com.careconnect.service;
 
 import com.careconnect.dto.ChatRequest;
-import com.careconnect.dto.UploadedFileDTO;
 import com.careconnect.model.*;
 import com.careconnect.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,7 +21,6 @@ public class MedicalContextService {
     private final MedicationRepository medicationRepository;
     private final VitalsRepository vitalsRepository;
     private final AllergyRepository allergyRepository;
-    private final DocumentProcessingService documentProcessingService;
     
     public String buildPatientContext(Long patientId, ChatRequest request, UserAIConfig aiConfig) {
         StringBuilder context = new StringBuilder();
@@ -34,7 +31,9 @@ public class MedicalContextService {
             return "";
         }
         
-        // Removed old system prompt - now handled by the main system prompt
+        context.append("You are providing healthcare support for ")
+                .append(patient.getFirstName()).append(" ").append(patient.getLastName())
+                .append(". Please provide helpful, informative responses while always reminding the patient to consult with healthcare professionals for medical decisions.\n\n");
         
         // Add system prompt if configured
         if (aiConfig.getSystemPrompt() != null && !aiConfig.getSystemPrompt().trim().isEmpty()) {
@@ -80,21 +79,6 @@ public class MedicalContextService {
                 context.append("- ").append(additionalInfo).append("\n");
             }
             context.append("\n");
-        }
-        
-        // Process uploaded files if any
-        if (request.getUploadedFiles() != null && !request.getUploadedFiles().isEmpty()) {
-            context.append("UPLOADED FILES:\n");
-            for (com.careconnect.dto.UploadedFileDTO file : request.getUploadedFiles()) {
-                context.append("File: ").append(file.getFilename()).append("\n");
-                context.append("Type: ").append(file.getContentType()).append("\n");
-                context.append("Content:\n");
-                
-                // Use the new DocumentProcessingService for content extraction
-                String fileContent = documentProcessingService.extractTextContent(file);
-                context.append(fileContent).append("\n");
-                context.append("---\n\n");
-            }
         }
         
         context.append("IMPORTANT: Always remind the patient to consult with their healthcare provider for medical advice, diagnosis, or treatment decisions. Your role is to provide supportive information, not medical diagnosis or treatment recommendations.\n");

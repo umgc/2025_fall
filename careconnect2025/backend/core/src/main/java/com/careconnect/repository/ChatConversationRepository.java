@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +26,4 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
     
     @Query("SELECT COUNT(c) FROM ChatConversation c WHERE c.patientId = :patientId AND c.isActive = true")
     long countActiveConversationsByPatientId(@Param("patientId") Long patientId);
-    
-    // For cleanup service - find conversations older than specified time
-    List<ChatConversation> findByCreatedAtBeforeAndIsActiveTrue(LocalDateTime cutoffTime);
 }

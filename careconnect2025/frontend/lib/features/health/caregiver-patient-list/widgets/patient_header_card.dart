@@ -117,9 +117,9 @@ class PatientHeaderCard extends StatelessWidget {
           if (diagnoses.isNotEmpty) ...[
             Text(
               'Primary Diagnoses',
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.primary,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
@@ -131,18 +131,14 @@ class PatientHeaderCard extends StatelessWidget {
                   padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: theme.brightness == Brightness.dark
-                        ? cs.surfaceContainerHighest.withValues(alpha: .18)
-                        : Colors.white,
+                    color: cs.surfaceContainerHighest.withValues(alpha: .35),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: cs.outlineVariant),
+                    border: Border.all(color: border),
                   ),
                   child: Text(
                     d,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurface,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: .2,
                     ),
                   ),
                 );

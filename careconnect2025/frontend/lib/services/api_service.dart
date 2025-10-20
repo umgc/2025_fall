@@ -35,11 +35,6 @@ class ApiConstants {
   // AI Services endpoints
   static final String aiChat = '$_host/v1/api/ai-chat';
   static final String aiConfig = '$_host/v1/api/ai-chat/config';
-  // Invoices endpoints
-  static final String invoices = '$_host/v1/api/invoices';
-
-    // EVV endpoints
-  static final String evv = '$_host/v1/api/evv';
 }
 
 class ApiService {
@@ -819,28 +814,6 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
-  /// Add an existing patient to a caregiver's care list by email
-  static Future<http.Response> addExistingPatientToCaregiver({
-    required int caregiverId,
-    required String patientEmail,
-  }) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-
-    print('🔍 addExistingPatientToCaregiver caregiverId: $caregiverId');
-    print('🔍 patientEmail: $patientEmail');
-
-    return await _httpClient
-        .post(
-          Uri.parse('${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add'),
-          headers: headers,
-          body: jsonEncode({'email': patientEmail}),
-        )
-        .timeout(
-          const Duration(seconds: 20),
-          onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-        );
-  }
-
   // ========================
   // PROFILE MANAGEMENT METHODS
   // ========================
@@ -1228,70 +1201,6 @@ class ApiService {
     } catch (e) {
       print('Error fetching enhanced patient profile: ${e.toString()}');
       return null;
-    }
-  }
-  
-  static Future<http.Response> getPatientMedicationsForPatient(int patientId) async {
-    try {
-      final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(
-          '${ApiConstants.patients}/$patientId/medications');
-      return await httpClient
-          .get(uri, headers: headers)
-          .timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-      );
-    }  catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
-    }
-  }
-
-  /// Add a new medication for a patient
-  static Future<http.Response> addPatientMedication(
-    int patientId,
-    Map<String, dynamic> medicationData,
-  ) async {
-    try {
-      final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(
-        '${ApiConstants.patients}/$patientId/medications',
-      );
-
-      return await httpClient
-          .post(
-            uri,
-            headers: headers,
-            body: jsonEncode(medicationData),
-          )
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-          );
-    } catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
-    }
-  }
-
-  /// Remove (deactivate) a medication for a patient
-  static Future<http.Response> removePatientMedication(
-    int patientId,
-    int medicationId,
-  ) async {
-    try {
-      final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(
-        '${ApiConstants.patients}/$patientId/medications/$medicationId',
-      );
-
-      return await httpClient
-          .delete(uri, headers: headers)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-          );
-    } catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
     }
   }
 }

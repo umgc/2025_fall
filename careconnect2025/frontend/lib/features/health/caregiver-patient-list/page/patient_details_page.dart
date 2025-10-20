@@ -8,7 +8,7 @@ import '../widgets/contact_info_card.dart';
 import '../widgets/emergency_contact_card.dart';
 
 // Mood tab
-import '../widgets/mood_history_card.dart';
+import '../widgets/mood_history_card.dart'; // exposes MoodHistoryEntry + MoodHistorySection
 
 // Health tab
 import '../models/symptom_entry.dart';
@@ -16,11 +16,10 @@ import '../widgets/recent_symptom_card.dart';
 import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
-// Virtual Check-in history
-import '../models/virtual_check_in.dart';
-import '../widgets/virtual_check_in_config_sheet.dart';
-import '../widgets/virtual_check_in_history_card.dart';
-import '../models/virtual_check_in_question.dart';
+// Notes tab
+import '../models/care_note.dart';
+import '../widgets/add_care_notes_card.dart';
+import '../widgets/care_notes_history_card.dart';
 
 class PatientDetailsPage extends StatelessWidget {
   final String patientId;
@@ -137,62 +136,43 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Virtual Check-In demo data ---
-    final virtualCheckIns = <VirtualCheckIn>[
-      VirtualCheckIn(
-        id: 'vc1',
-        type: CheckInType.routine,
-        clinicianName: 'Dr. Sarah Johnson',
-        startedAt: DateTime(2024, 12, 4, 10, 30),
-        durationMinutes: 15,
-        status: CheckInStatus.completed,
-        moodLabel: 'Good',
-        nextCheckIn: DateTime(2024, 12, 11, 10, 30),
-        summary: 'Reviewed medication plan; patient stable and adherent.',
+    // --- Notes demo data (NotesTab is stateful; this is initial state) ---
+    final initialNotes = <CareNote>[
+      CareNote(
+        id: 'n1',
+        type: 'urgent',
+        author: 'Dr. Smith',
+        role: 'MD',
+        createdAt: DateTime(2024, 12, 27, 14, 30),
+        body:
+        'Patient reporting severe symptoms. Recommended emergency contact. Adjusting medication schedule and monitoring closely.',
       ),
-      VirtualCheckIn(
-        id: 'vc2',
-        type: CheckInType.followUp,
-        clinicianName: 'Nurse Williams',
-        startedAt: DateTime(2024, 12, 1, 14, 0),
-        durationMinutes: 20,
-        status: CheckInStatus.completed,
-        moodLabel: 'Fair',
-        nextCheckIn: DateTime(2024, 12, 8, 14, 0),
-        summary: 'Follow-up on home BP readings; stable overall.',
+      CareNote(
+        id: 'n2',
+        type: 'assessment',
+        author: 'Nurse Williams',
+        role: 'RN',
+        createdAt: DateTime(2024, 12, 26, 10, 15),
+        body:
+        'Patient mood improving after medication adjustment. Blood pressure stable. Continue current treatment plan.',
       ),
-      VirtualCheckIn(
-        id: 'vc3',
-        type: CheckInType.urgent,
-        clinicianName: 'Dr. Smith',
-        startedAt: DateTime(2024, 11, 28, 9, 0),
-        durationMinutes: 10,
-        status: CheckInStatus.completed,
-        moodLabel: 'Poor',
-        nextCheckIn: DateTime(2024, 12, 5, 9, 0),
-        summary: 'Urgent check-in for severe headache; symptoms improved.',
+      CareNote(
+        id: 'n3',
+        type: 'medication',
+        author: 'Dr. Smith',
+        role: 'MD',
+        createdAt: DateTime(2024, 12, 25, 16, 45),
+        body:
+        'Adjusted Metformin dosage due to gastrointestinal side effects. Patient tolerating change well.',
       ),
-    ];
-
-// --- Virtual Check-In configuration (popup) ---
-    final initialQuestions = <VirtualCheckInQuestion>[
-      VirtualCheckInQuestion(
-        id: 'q1',
-        type: CheckInQuestionType.numerical,
-        required: true,
-        text: 'Rate your pain level (1–10)',
-      ),
-      VirtualCheckInQuestion(
-        id: 'q2',
-        type: CheckInQuestionType.yesNo,
-        required: true,
-        text: 'Did you take your morning medications?',
-      ),
-      VirtualCheckInQuestion(
-        id: 'q3',
-        type: CheckInQuestionType.textInput,
-        required: false,
-        text: 'Any additional symptoms or concerns?',
+      CareNote(
+        id: 'n4',
+        type: 'general',
+        author: 'Care Coordinator',
+        role: null,
+        createdAt: DateTime(2024, 12, 24, 11, 30),
+        body:
+        'Family support system is strong. Patient expressing gratitude for care team. Continue encouragement.',
       ),
     ];
 
@@ -265,32 +245,8 @@ class PatientDetailsPage extends StatelessWidget {
                     ],
                   ),
 
-                  // ---- virtual check-in ----
-                  ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    children: [
-                      VirtualCheckInHistoryCard(
-                        entries: virtualCheckIns,
-                        onConfigure: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>>(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                            ),
-                            builder: (_) => VirtualCheckInConfigSheet(initial: initialQuestions),
-                          );
-                          if (updated != null) {
-                            messenger.showSnackBar(
-                              const SnackBar(content: Text('Virtual check-in configuration saved')),
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+                  // ---- Notes ----
+                  _NotesTab(initialNotes: initialNotes),
                 ],
               ),
             ),
@@ -316,23 +272,19 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       elevation: 0,
       backgroundColor: cs.surface,
-      iconTheme: IconThemeData(color: cs.onSurface),
+      foregroundColor: cs.onSurface,
+      leading: const BackButton(),            // ← back arrow
       titleSpacing: 0,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: cs.onSurface,
-              fontWeight: FontWeight.w700,
-            ),
+            title,                             // e.g. "Sarah Johnson"
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            subtitle,                          // e.g. "Patient Details • MRN-2024-0156"
+            style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ),
@@ -341,7 +293,7 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 
-/// The tab buttons row (Info • Mood • Health • Virtual Check-In) styled like your mock.
+/// The tab buttons row (Info • Mood • Health • Notes) styled like your mock.
 class _TabsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -361,7 +313,7 @@ class _TabsStrip extends StatelessWidget {
             Tab(text: 'Info', icon: Icon(Icons.info_outline, size: 18)),
             Tab(text: 'Mood', icon: Icon(Icons.favorite_border, size: 18)),
             Tab(text: 'Health', icon: Icon(Icons.health_and_safety_outlined, size: 18)),
-            Tab(text: 'Virtual Check-In', icon: Icon(Icons.video_call_outlined, size: 18)),
+            Tab(text: 'Notes', icon: Icon(Icons.notes_outlined, size: 18)),
           ],
         ),
       ),
@@ -369,4 +321,45 @@ class _TabsStrip extends StatelessWidget {
   }
 }
 
+/// Notes tab: keeps local state so newly added notes show immediately.
+class _NotesTab extends StatefulWidget {
+  final List<CareNote> initialNotes;
+  const _NotesTab({required this.initialNotes});
+
+  @override
+  State<_NotesTab> createState() => _NotesTabState();
+}
+
+class _NotesTabState extends State<_NotesTab> {
+  late List<CareNote> _notes;
+
+  @override
+  void initState() {
+    super.initState();
+    _notes = List<CareNote>.from(widget.initialNotes);
+  }
+
+  void _handleAdd(String type, String body) {
+    final note = CareNote(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: type,
+      author: 'You',
+      role: 'Caregiver',
+      createdAt: DateTime.now(),
+      body: body,
+    );
+    setState(() => _notes.insert(0, note));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(top: 12, bottom: 16),
+      children: [
+        AddCareNoteCard(onAdd: _handleAdd),
+        CareNotesHistoryCard(notes: _notes),
+      ],
+    );
+  }
+}
 
