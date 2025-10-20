@@ -185,7 +185,7 @@ print_outputs() {
             if [ -n "$lambda_function_name" ]; then
                 local ws_endpoint=$(aws lambda get-function-configuration \
                     --function-name "$lambda_function_name" \
-                    --query 'Environment.Variables.AWS_WEBSOCKET_API_GATEWAY_ENDPOINT' \
+                    --query 'Environment.Variables.AWS_WEBSOCKET_API_ENDPOINT' \
                     --output text 2>/dev/null)
 
                 if [ -n "$ws_endpoint" ] && [ "$ws_endpoint" != "None" ] && [ "$ws_endpoint" != "" ]; then
@@ -667,7 +667,7 @@ print_final_summary() {
         if [ -n "$lambda_name" ]; then
             local ws_env=$(aws lambda get-function-configuration \
                 --function-name "$lambda_name" \
-                --query 'Environment.Variables.AWS_WEBSOCKET_API_GATEWAY_ENDPOINT' \
+                --query 'Environment.Variables.AWS_WEBSOCKET_API_ENDPOINT' \
                 --output text 2>/dev/null)
 
             echo ""
@@ -762,7 +762,7 @@ configure_lambda_environment() {
     "DB_PORT": "${db_port}",
     "DB_USER": "postgres",
     "DB_PASSWORD": "${db_password}",
-    "AWS_WEBSOCKET_API_GATEWAY_ENDPOINT": "${ws_mgmt}",
+    "AWS_WEBSOCKET_API_ENDPOINT": "${ws_mgmt}",
     "JDBC_URI": "jdbc:postgresql://${db_endpoint}:${db_port}/${db_name}",
     "CARECONNECT_DATABASE_USE_AWS_CONFIG": "false",
     "SPRING_DATASOURCE_URL": "jdbc:postgresql://${db_endpoint}:${db_port}/${db_name}",
