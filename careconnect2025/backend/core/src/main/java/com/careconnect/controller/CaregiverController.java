@@ -2,19 +2,9 @@ package com.careconnect.controller;
 
 import com.careconnect.model.Caregiver;
 import com.careconnect.model.Patient;
-import com.careconnect.model.User;
-import com.careconnect.repository.CaregiverRepository;
-import com.careconnect.repository.PatientRepository;
-import com.careconnect.repository.UserRepository;
-import com.careconnect.security.Role;
-import com.careconnect.service.CaregiverPatientLinkService;
 import com.careconnect.service.CaregiverService;
 import com.careconnect.dto.CaregiverRegistration;
 import com.careconnect.dto.PatientRegistration;
-import com.careconnect.exception.AppException;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -26,7 +16,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/api/caregivers")
@@ -37,19 +26,6 @@ public class CaregiverController {
 
     @Autowired
     private CaregiverService auth; // Using caregiverService as auth for now
-
-    @Autowired
-    private CaregiverPatientLinkService caregiverPatientLinkService;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PatientRepository patientRepository;
-
-    @Autowired
-    private CaregiverRepository caregiverRepository;
-
     // private SecurityUtil securityUtil;
 
     // 1. List patients under a caregiver, with optional filtering
@@ -91,83 +67,11 @@ public class CaregiverController {
     public ResponseEntity<Patient> registerPatient(
             @PathVariable Long caregiverId,
             @RequestBody PatientRegistration reg) {
-        reg.setCaregiverId(caregiverId);
+        reg.setCaregiverId(caregiverId); 
         Patient patient = auth.registerPatient(reg);
         return ResponseEntity.ok(patient);
     }
-
-    /**
-     * Add an existing patient to a caregiver's care list by email
-     */
-    @PostMapping("/{caregiverId}/patients/add")
-    @Operation(summary = "Add existing patient to caregiver",
-            description = "Link an existing patient to the caregiver's care list using patient's email")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Patient successfully added to caregiver"),
-            @ApiResponse(responseCode = "404", description = "Patient with given email not found"),
-            @ApiResponse(responseCode = "400", description = "Patient already linked to this caregiver"),
-            @ApiResponse(responseCode = "202", description = "Patient not found, invitation email sent")
-    })
-    public ResponseEntity<?> addPatient(
-            @PathVariable Long caregiverId,
-            @RequestBody Map<String, String> request) {
-
-        String patientEmail = request.get("email");
-
-        if (patientEmail == null || patientEmail.trim().isEmpty()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Patient email is required");
-        }
-
-        // Verify caregiver exists
-        Caregiver caregiver = caregiverRepository.findById(caregiverId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Caregiver not found"));
-
-        // Look up patient by email in the User table
-        User patientUser = userRepository.findByEmailAndRole(patientEmail, Role.PATIENT)
-                .orElse(null);
-
-        // If patient doesn't exist, send an invitation email
-        if (patientUser == null) {
-            // TODO: Send invitation email to the patient email address
-            // The email should invite them to register as a patient and link with this caregiver
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(Map.of(
-                            "message", "Patient not found. An invitation email will be sent to " + patientEmail,
-                            "action", "invitation_sent"
-                    ));
-        }
-
-        // Get the Patient entity
-        Patient patient = patientRepository.findByUser(patientUser)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
-                        "Patient record not found for user"));
-
-        // Check if link already exists
-        boolean linkExists = caregiverPatientLinkService.hasActiveLink(
-                caregiver.getUser().getId(),
-                patientUser.getId()
-        );
-
-        if (linkExists) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                    "Patient is already linked to this caregiver");
-        }
-
-        // Create the caregiver-patient link using the permanent link method
-        caregiverPatientLinkService.createPermanentLink(
-                caregiver.getUser().getId(),
-                patientUser.getId(),
-                "Patient added by caregiver"
-        );
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Patient successfully added to caregiver",
-                "patientId", patient.getId(),
-                "patientEmail", patientEmail,
-                "patientName", patient.getFirstName() + " " + patient.getLastName()
-        ));
-    }
-
+    
     /**
      * Get a specific patient under a caregiver's care
      */

@@ -58,7 +58,7 @@ public class UserAIConfig {
     @Column(name = "conversation_history_limit")
     private Integer conversationHistoryLimit;
 
-    @Column(name = "system_prompt", columnDefinition = "TEXT")
+    @Column(name = "system_prompt")
     private String systemPrompt;
 
     @Column(name = "include_vitals_by_default")

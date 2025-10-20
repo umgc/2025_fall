@@ -3,12 +3,12 @@ package com.careconnect.service;
 import com.careconnect.dto.UserAIConfigDTO;
 import com.careconnect.model.UserAIConfig;
 import com.careconnect.repository.UserAIConfigRepository;
-import com.careconnect.util.UserAIConfigDefaults;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserAIConfigService {
@@ -60,7 +60,22 @@ public class UserAIConfigService {
 
     @Transactional
     private UserAIConfig createDefaultConfig(Long userId, Long patientId) {
-        UserAIConfig config = UserAIConfigDefaults.createMedicalDefaultConfig(userId, patientId);
+        UserAIConfig config = UserAIConfig.builder()
+                .userId(userId)
+                .patientId(patientId)
+                .preferredAiProvider(UserAIConfig.AIProvider.OPENAI)
+                .openaiModel("gpt-3.5-turbo")
+                .maxTokens(1024)
+                .temperature(0.7)
+                .conversationHistoryLimit(20)
+                .systemPrompt("You are a helpful assistant.")
+                .includeVitalsByDefault(true)
+                .includeMedicationsByDefault(true)
+                .includeNotesByDefault(true)
+                .includeMoodPainByDefault(true)
+                .includeAllergiesByDefault(true)
+                .isActive(true)
+                .build();
         UserAIConfig saved = userAIConfigRepository.save(config);
         if (saved == null || saved.getId() == null) {
             throw new IllegalStateException("Failed to create default AI config for user " + userId + (patientId != null ? ", patient " + patientId : ""));
