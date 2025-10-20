@@ -20,7 +20,7 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
   String? role;
 
   // Sample URLs for skill stores
-  final String alexaSkillUrl = 'https://www.amazon.com/FSTV-Free-Speech-TV-Live/dp/B01MSX5UUJ';
+  final String alexaSkillUrl = 'https://skills-store.amazon.com/deeplink/tvt/1cc43d50136bee48a3039cf55775ec0a64a967d5685df997fae9a2fe719a20a7d8e108ed6f4d7bfedb9ce283ddbdf81ed9f6289f17e311266b534cbb311f0bf69ee09a1c8d5d376364359852b0ba8ba7edecc29327df49ac547b52edb016973e1c7b73c96251be9c74dc48e68ba321e6';
   final String googleActionUrl = 'https://assistant.google.com/services/invoke/uid/000000d139bbc4d4';
 
   @override

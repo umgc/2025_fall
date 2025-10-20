@@ -104,6 +104,11 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
       _MenuItem(
+        icon: Icons.devices,
+        label: 'Smart Devices',
+        route: '/smart-devices',
+      ),
+      _MenuItem(
         icon: Icons.folder,
         label: 'File Management',
         route: '/file-management',

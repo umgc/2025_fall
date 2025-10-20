@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../../notifications/models/scheduled_notification_model.dart';
 import '../../notifications/models/scheduled_notification_model.dart';
 
-/// =============================
-/// Task Model
-/// =============================
-/// Represents a scheduled task in CareConnect, which can:
-/// - Belong to a patient (or be unassigned)
-/// - Be one-time or recurring
-/// - Contain reminders/notifications
-/// - Track completion state
-///
-/// Supports recurrence (daily, weekly, monthly, yearly)
-/// and series updates (via `parentTaskId` + `applyToSeries`).
 /// =============================
 /// Task Model
 /// =============================
@@ -28,8 +15,6 @@ import '../../notifications/models/scheduled_notification_model.dart';
 class Task {
   int? id;
   int? assignedPatientId; // Optional, can be null if not assigned to a user
-  int? id;
-  int? assignedPatientId; // Optional, can be null if not assigned to a user
   String name;
   String description;
   DateTime date;
@@ -37,17 +22,7 @@ class Task {
   bool isComplete;
   List<ScheduledNotification>? notifications;
 
-  //Recurrence fields
-  String? frequency; // e.g., daily, weekly, monthly, yearly
-  int? interval; // number of days/weeks/months between recurrences
-  int? count; // number of total occurrences
-  List<bool>? daysOfWeek; // e.g., [false, true, false, true, ...] for Mon/Wed
-  final String? taskType; // "General" | "Lab" | "Appointment" | "custom"
-  bool applyToSeries;
-  int? parentTaskId;
-  List<ScheduledNotification>? notifications;
-
-  //Recurrence fields
+  // Recurrence fields
   String? frequency; // e.g., daily, weekly, monthly, yearly
   int? interval; // number of days/weeks/months between recurrences
   int? count; // number of total occurrences
@@ -58,13 +33,11 @@ class Task {
 
   Task({
     this.id,
-    this.id,
+    this.assignedPatientId,
     required this.name,
     this.description = "",
     required this.date,
     this.timeOfDay,
-    this.assignedPatientId,
-    this.assignedPatientId,
     this.isComplete = false,
     this.notifications,
     this.frequency,
@@ -82,76 +55,32 @@ class Task {
   /// - Parsing `daysOfWeek` into `List<bool>`
   /// - Supporting timeOfDay as `"HH:mm"` string or map `{hour, minute}`
   /// - Mapping backend variations (`interval` vs `taskInterval`, `count` vs `doCount`)
-    this.taskType,
-    this.applyToSeries = false,
-    this.parentTaskId,
-  });
-
-  /// Factory constructor: build a [Task] from JSON data.
-  ///
-  /// Handles:
-  /// - Parsing `daysOfWeek` into `List<bool>`
-  /// - Supporting timeOfDay as `"HH:mm"` string or map `{hour, minute}`
-  /// - Mapping backend variations (`interval` vs `taskInterval`, `count` vs `doCount`)
   factory Task.fromJson(Map<String, dynamic> json) {
-    final parsedDays = json['daysOfWeek'] != null
-        ? List<bool>.from(json['daysOfWeek'])
-        : null;
-
     final parsedDays = json['daysOfWeek'] != null
         ? List<bool>.from(json['daysOfWeek'])
         : null;
 
     return Task(
       id: json['id'],
-      id: json['id'],
-      name: json['name'],
+      name: json['name'] ?? "",
       description: json['description'] ?? "",
-      description: json['description'] ?? "",
-      date: DateTime.parse(json['date']),
+      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
       timeOfDay: json['timeOfDay'] != null
-          ? TimeOfDay(
-              hour: json['timeOfDay'] is String
-                  ? int.parse(json['timeOfDay'].split(':')[0])
-                  : json['timeOfDay']['hour'],
-              minute: json['timeOfDay'] is String
-                  ? int.parse(json['timeOfDay'].split(':')[1])
-                  : json['timeOfDay']['minute'],
-            )
+          ? _parseTimeOfDay(json['timeOfDay'])
           : null,
-      assignedPatientId: json['patientId'],
-      assignedPatientId: json['patientId'],
-      isComplete: json['isComplete'] ?? false,
+      assignedPatientId:
+          json['assignedPatientId'] ?? json['patientId'] ?? json['userId'],
+      isComplete: json['isCompleted'] ?? json['isComplete'] ?? false,
       notifications: json['notifications'] != null
           ? (json['notifications'] as List)
-                .map((n) => ScheduledNotification.fromJson(n))
-                .toList()
-          : null,
-      notifications: json['notifications'] != null
-          ? (json['notifications'] as List)
-                .map((n) => ScheduledNotification.fromJson(n))
-                .toList()
-          : null,
+              .map((n) => ScheduledNotification.fromJson(n))
+              .toList()
+          : [],
       frequency: json['frequency'],
       interval: json['interval'] ?? json['taskInterval'],
       count: json['count'] ?? json['doCount'],
       daysOfWeek: parsedDays,
-      taskType: json['taskType'],
-      applyToSeries: json['applyToSeries'] ?? false,
-      parentTaskId: json['parentTaskId'],
-    );
-  }
-
-  /// Convert a [Task] to JSON for API serialization.
-  ///
-  /// Notes:
-  /// - Converts [date] to ISO8601 string
-  /// - Converts [timeOfDay] into `"HH:mm"` string
-  /// - Uses `"isCompleted"` for completion state (matches backend)
-      interval: json['interval'] ?? json['taskInterval'],
-      count: json['count'] ?? json['doCount'],
-      daysOfWeek: parsedDays,
-      taskType: json['taskType'],
+      taskType: json['taskType'] ?? "general",
       applyToSeries: json['applyToSeries'] ?? false,
       parentTaskId: json['parentTaskId'],
     );
@@ -166,26 +95,16 @@ class Task {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
-      if (id != null) 'id': id,
       'name': name,
       'description': description,
       'date': date.toIso8601String(),
-      'date': date.toIso8601String(),
       'timeOfDay': timeOfDay != null
-          ? "${timeOfDay!.hour.toString().padLeft(2, '0')}:${timeOfDay!.minute.toString().padLeft(2, '0')}"
           ? "${timeOfDay!.hour.toString().padLeft(2, '0')}:${timeOfDay!.minute.toString().padLeft(2, '0')}"
           : null,
       'isCompleted': isComplete,
-      'notifications': notifications?.map((n) => n.toJson()).toList(),
-      'notifications': notifications?.map((n) => n.toJson()).toList(),
+      'notifications':
+          notifications?.map((n) => n.toJson()).toList() ?? [],
       'frequency': frequency,
-      'interval': interval,
-      'count': count,
-      'daysOfWeek': daysOfWeek,
-      'taskType': taskType ?? "general",
-      'patientId': assignedPatientId,
-      'applyToSeries': applyToSeries,
-      'parentTaskId': parentTaskId,
       'interval': interval,
       'count': count,
       'daysOfWeek': daysOfWeek,
@@ -199,11 +118,27 @@ class Task {
   bool isValid() {
     return name.isNotEmpty && description.isNotEmpty;
   }
+
+  static TimeOfDay _parseTimeOfDay(dynamic time) {
+    if (time is String) {
+      final parts = time.split(':');
+      return TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    } else if (time is Map<String, dynamic>) {
+      return TimeOfDay(
+        hour: time['hour'] ?? 0,
+        minute: time['minute'] ?? 0,
+      );
+    }
+    return const TimeOfDay(hour: 0, minute: 0);
+  }
 }
 
-// =============================
-// TaskCopyWith Extension
-// =============================
+/// =============================
+/// TaskCopyWith Extension
+/// =============================
 /// Provides a `copyWith` method for immutability-style updates.
 ///
 /// Example:
@@ -233,13 +168,14 @@ extension TaskCopyWith on Task {
       timeOfDay: timeOfDay ?? this.timeOfDay,
       assignedPatientId: assignedPatientId ?? this.assignedPatientId,
       isComplete: isComplete ?? this.isComplete,
-      notifications: this.notifications, // keep existing notifications
+      notifications: notifications, // keep existing notifications
       frequency: frequency ?? this.frequency,
       interval: interval ?? this.interval,
       count: count ?? this.count,
       daysOfWeek: daysOfWeek ?? this.daysOfWeek,
       taskType: taskType ?? this.taskType,
+      applyToSeries: applyToSeries,
+      parentTaskId: parentTaskId,
     );
   }
 }
-
