@@ -142,4 +142,10 @@ export SPRING_PROFILES_ACTIVE=dev
 # Use Maven wrapper with macOS-specific JVM options if needed
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
+# Wait a few seconds for the backend to start up
+sleep 6
+
+# Automatically open Swagger UI in Chrome
+open -a "Google Chrome" http://localhost:8080/swagger-ui/index.html
+
 echo "🛑 Application stopped."
