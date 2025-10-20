@@ -52,6 +52,6 @@ variable "absolute_path_to_backend_artifact" {
 }
 
 variable "absolute_path_to_frontend_webapp" {
-  description = "Absolute path to frontend web app artifact (folder path)"
+  description = "Absolute path to frontend artifact (web folder)"
   type = string
 }

@@ -11,6 +11,7 @@ import com.careconnect.service.invoice.LlmExtractionService;
 import com.careconnect.service.invoice.TextractService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,10 +30,15 @@ public class InvoiceController {
     private final InvoiceService service;
     private final TextractService textractService;
     private final LlmExtractionService llmExtractionService;
-    public InvoiceController(InvoiceService service ,TextractService textractService,LlmExtractionService llmExtractionService ) {
+
+    public InvoiceController(
+            InvoiceService service,
+            @Autowired(required = false) TextractService textractService,
+            @Autowired(required = false) LlmExtractionService llmExtractionService
+    ) {
         this.service = service;
-        this.llmExtractionService=llmExtractionService;
-        this.textractService=textractService;
+        this.llmExtractionService = llmExtractionService;
+        this.textractService = textractService;
     }
 
     @GetMapping
@@ -120,6 +126,12 @@ public class InvoiceController {
         if (isFileListInvalid(files)) {
             return ResponseEntity.badRequest().body("Please provide at least one valid file.");
         }
+
+        // Check if Textract is available (AWS enabled)
+        if (textractService == null) {
+            return ResponseEntity.status(503).body("Textract service is not available. AWS services are disabled.");
+        }
+
         try {
             log.info("received file for ocr "+files.get(0).getOriginalFilename());
             // Step 1: Get raw text using the updated service

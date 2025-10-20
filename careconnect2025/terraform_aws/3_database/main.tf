@@ -28,6 +28,27 @@ resource "aws_subnet" "aurora_subnet_b" {
   }
 }
 
+# Create explicit route table for private subnets
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.aurora_vpc.id
+
+  tags = {
+    Name = "aurora-private-route-table"
+  }
+}
+
+# Associate route table with subnet A
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.aurora_subnet_a.id
+  route_table_id = aws_route_table.private.id
+}
+
+# Associate route table with subnet B
+resource "aws_route_table_association" "private_b" {
+  subnet_id      = aws_subnet.aurora_subnet_b.id
+  route_table_id = aws_route_table.private.id
+}
+
 # A subnet group for the Aurora cluster
 resource "aws_db_subnet_group" "aurora_subnet_group" {
   name       = "careconnect-subnet-group"
@@ -180,7 +201,7 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.aurora_vpc.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_vpc.aurora_vpc.main_route_table_id]
+  route_table_ids   = [aws_route_table.private.id]
 
   tags = {
     Name = "s3-endpoint"
