@@ -18,11 +18,11 @@ class AIChatService {
     String preferredModel = 'deepseek-chat',
     double temperature = 0.7,
     int maxTokens = 1000,
-    bool includeVitals = false,
-    bool includeMedications = false,
-    bool includeNotes = false,
-    bool includeMoodPainLogs = false,
-    bool includeAllergies = false,
+    bool includeVitals = true,
+    bool includeMedications = true,
+    bool includeNotes = true,
+    bool includeMoodPainLogs = true,
+    bool includeAllergies = true,
     List<Map<String, dynamic>>? uploadedFiles,
   }) async {
     try {
@@ -49,23 +49,74 @@ class AIChatService {
           'uploadedFiles': uploadedFiles,
       };
 
-      print('🤖 Sending AI chat message: ${requestBody['message']}');
-
       final response = await http.post(
         Uri.parse('$_baseUrl/chat'),
         headers: authHeaders,
         body: jsonEncode(requestBody),
       );
 
-      print('🤖 AI chat response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+        // Handle the response structure from our backend ChatResponse
+        if (responseData['success'] == true) {
+          return {
+            'success': true,
+            'aiResponse': responseData['aiResponse'],
+            'conversationId': responseData['conversationId'],
+            'modelUsed': responseData['modelUsed'],
+            'processingTimeMs': responseData['processingTimeMs'],
+          };
+        } else {
+          return {
+            'success': false,
+            'errorMessage': responseData['errorMessage'] ?? responseData['error'] ?? 'Unknown error',
+            'aiResponse': 'Sorry, I encountered an error. Please try again.',
+          };
+        }
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': 'Authentication failed. Please log in again.',
+          'response': 'Your session has expired. Please log in again to continue chatting.',
+        };
+      } else if (response.statusCode == 403) {
+        return {
+          'success': false,
+          'error': 'Access denied.',
+          'response': 'You don\'t have permission to access this chat feature.',
+        };
+      } else if (response.statusCode == 429) {
+        return {
+          'success': false,
+          'error': 'Rate limit exceeded.',
+          'response': 'You\'re sending messages too quickly. Please wait a moment and try again.',
+        };
+      } else if (response.statusCode >= 500) {
+        return {
+          'success': false,
+          'error': 'Server error: ${response.statusCode}',
+          'response': 'The AI service is temporarily unavailable. Please try again in a few minutes.',
+        };
       } else {
-        throw Exception('Failed to send message: ${response.statusCode}');
+        return {
+          'success': false,
+          'error': 'Unexpected error: ${response.statusCode}',
+          'response': 'An unexpected error occurred. Please try again.',
+        };
       }
+    } on http.ClientException catch (e) {
+      return {
+        'success': false,
+        'error': 'Network error: $e',
+        'response': 'Unable to connect to the AI service. Please check your internet connection and try again.',
+      };
+    } on FormatException catch (e) {
+      return {
+        'success': false,
+        'error': 'Invalid response format: $e',
+        'response': 'Received an unexpected response from the server. Please try again.',
+      };
     } catch (e) {
-      print('❌ Error sending AI chat message: $e');
       return {
         'success': false,
         'error': 'Failed to send message: $e',
@@ -74,8 +125,26 @@ class AIChatService {
     }
   }
 
+  /// Clear a conversation from the backend
+  static Future<void> clearConversation(String conversationId) async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/conversation/$conversationId/deactivate'),
+        headers: authHeaders,
+      );
+      
+      if (response.statusCode != 200) {
+        throw Exception('Failed to clear conversation: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Get conversation history
-  static Future<List<Map<String, dynamic>>> getConversationHistory({
+  static Future<Map<String, dynamic>> getConversationHistory({
     required String userId,
     String? conversationId,
     int limit = 50,
@@ -87,6 +156,7 @@ class AIChatService {
         'userId': userId,
         if (conversationId != null) 'conversationId': conversationId,
         'limit': limit.toString(),
+        'timestamp': DateTime.now().millisecondsSinceEpoch.toString(), // Prevent caching
       };
 
       final uri = Uri.parse(
@@ -97,15 +167,14 @@ class AIChatService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return List<Map<String, dynamic>>.from(data['messages'] ?? []);
+        return Map<String, dynamic>.from(data);
       } else {
         throw Exception(
           'Failed to get conversation history: ${response.statusCode}',
         );
       }
     } catch (e) {
-      print('❌ Error getting conversation history: $e');
-      return [];
+      return {'messages': []};
     }
   }
 
@@ -230,6 +299,30 @@ class AIChatService {
     } catch (e) {
       print('❌ Error analyzing file: $e');
       return 'Sorry, I encountered an error analyzing the file. Please try again later.';
+    }
+  }
+
+  /// Get chat retention period in days
+  static Future<int> getRetentionPeriodDays() async {
+    try {
+      final authHeaders = await ApiService.getAuthHeaders();
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/config/retention-period'),
+        headers: authHeaders,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['retentionDays'] ?? 30;
+      } else {
+        // Fallback to default if endpoint doesn't exist yet
+        return 30;
+      }
+    } catch (e) {
+      print('⚠️ Warning: Could not fetch retention period from backend: $e');
+      // Return default retention period
+      return 30;
     }
   }
 }

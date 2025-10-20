@@ -29,7 +29,7 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSCameraUsageDescription</key>
-	<string>The app needs access to your camera for video calls with patients and caregivers.</string>
+	<string>The app needs access to your camera for video calls with patients and caregivers, scan invoices.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Microphone access needed for video calls and voice messaging with patients and caregivers.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
