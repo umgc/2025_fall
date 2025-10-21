@@ -14,11 +14,13 @@ import 'package:flutter/material.dart';
 class ImportIcsButton extends StatefulWidget {
   final Map<int, String> patientNames; // patientId → name
   final VoidCallback? onTasksImported; // callback after import finishes
+  final dynamic filePicker; // instead of FilePicker
 
   const ImportIcsButton({
     super.key,
     required this.patientNames,
     this.onTasksImported,
+    this.filePicker,
   });
 
   @override
@@ -38,7 +40,8 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
       return;
     }
 
-    final result = await FilePicker.platform.pickFiles(
+    final picker = widget.filePicker ?? FilePicker.platform;
+    final result = await picker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['ics'],
     );

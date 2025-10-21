@@ -1,6 +1,7 @@
 package com.careconnect.controller.v2;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.careconnect.dto.v2.TaskDtoV2;
+import com.careconnect.exception.TaskNotFoundException;
 import com.careconnect.service.v2.TaskServiceV2;
 
 /**
@@ -136,6 +138,50 @@ public class TaskControllerV2 {
             @PathVariable Long id,
             @RequestBody TaskDtoV2 task) {
         return ResponseEntity.ok(taskService.updateTask(id, task));
+    }
+
+    /**
+     * Updates the completion status of a task.
+     *
+     * <p>
+     * This endpoint is called when a user marks a task as complete or incomplete
+     * from the front-end interface. It accepts a simple JSON body containing
+     * {@code isComplete: true/false}, updates the corresponding task record, and
+     * returns the updated {@link TaskDtoV2}.
+     * </p>
+     *
+     * <p>
+     * Example request body:
+     * 
+     * <pre>
+     * {
+     *   "isComplete": true
+     * }
+     * </pre>
+     *
+     * <p>
+     * Example cURL:
+     * 
+     * <pre>
+     * curl -X PUT "http://localhost:8080/v2/api/tasks/42/complete" \
+     *      -H "Content-Type: application/json" \
+     *      -H "Authorization: Bearer &lt;token&gt;" \
+     *      -d '{"isComplete": true}'
+     * </pre>
+     *
+     * @param id   the unique ID of the task to update
+     * @param body a JSON map containing the {@code isComplete} boolean field
+     * @return the updated {@link TaskDtoV2} with the new completion state
+     * @throws TaskNotFoundException if no task exists with the specified ID
+     */
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<TaskDtoV2> updateTaskCompletion(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+
+        boolean isComplete = body.getOrDefault("isComplete", false);
+        TaskDtoV2 updated = taskService.updateCompletionStatus(id, isComplete);
+        return ResponseEntity.ok(updated);
     }
 
     /**
