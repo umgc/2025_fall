@@ -1,13 +1,22 @@
 package com.careconnect.service;
 
+import com.careconnect.dto.GmailDigestPayload;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -20,14 +29,15 @@ public class GmailClient {
             .build();
 
     /**
-     * Fetch the latest USPS digest email.
+     * Fetch the latest USPS digest email along with inline CID assets.
      */
-    public Optional<String> fetchLatestDigest(String accessToken) {
+    public Optional<GmailDigestPayload> fetchLatestDigest(String accessToken) {
         try {
             JsonNode search = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/users/me/messages")
                             .queryParam("q", "from:usps.com subject:(Informed Delivery Daily Digest) newer_than:7d")
+                            .queryParam("maxResults", 5)
                             .build())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .retrieve()
@@ -38,38 +48,140 @@ public class GmailClient {
                 return Optional.empty();
             }
 
-            String messageId = search.get("messages").get(0).get("id").asText();
+            GmailDigestPayload newestPayload = null;
+            long newestDate = -1;
 
-            JsonNode message = webClient.get()
-                    .uri("/users/me/messages/{id}?format=full", messageId)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
+            Iterator<JsonNode> iterator = search.get("messages").elements();
+            while (iterator.hasNext()) {
+                JsonNode messageRef = iterator.next();
+                String messageId = messageRef.path("id").asText(null);
+                if (messageId == null) continue;
 
-            if (message == null) return Optional.empty();
-            return Optional.ofNullable(extractHtml(message));
+                JsonNode message = webClient.get()
+                        .uri("/users/me/messages/{id}?format=full", messageId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .retrieve()
+                        .bodyToMono(JsonNode.class)
+                        .block();
 
+                if (message == null) continue;
+                GmailDigestPayload payload = buildPayload(accessToken, messageId, message);
+                if (payload == null) continue;
+
+                long internalDate = message.path("internalDate").asLong(0);
+                if (internalDate > newestDate) {
+                    newestDate = internalDate;
+                    newestPayload = payload;
+                }
+            }
+
+            return Optional.ofNullable(newestPayload);
         } catch (Exception e) {
             e.printStackTrace();
             return Optional.empty();
         }
     }
 
-    private String extractHtml(JsonNode message) {
-        var payload = message.path("payload");
-        if (payload.has("body") && payload.path("body").has("data")) {
-            return decode(payload.path("body").path("data").asText());
+    private GmailDigestPayload buildPayload(String accessToken, String messageId, JsonNode message) {
+        Map<String, String> cidMap = new HashMap<>();
+        String html = extractHtml(accessToken, messageId, message.path("payload"), cidMap);
+        if (html == null || html.isBlank()) {
+            return null;
         }
-        for (JsonNode part : payload.path("parts")) {
-            if (part.path("mimeType").asText().equals("text/html")) {
-                return decode(part.path("body").path("data").asText());
+        OffsetDateTime receivedAt = resolveReceivedAt(message);
+        return new GmailDigestPayload(html, cidMap, receivedAt);
+    }
+
+    private OffsetDateTime resolveReceivedAt(JsonNode message) {
+        long internalMs = message.path("internalDate").asLong(0);
+        if (internalMs > 0) {
+            return OffsetDateTime.ofInstant(Instant.ofEpochMilli(internalMs), ZoneOffset.UTC);
+        }
+        return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private String extractHtml(String accessToken, String messageId, JsonNode part, Map<String, String> cidMap) {
+        if (part == null || part.isMissingNode()) return null;
+
+        collectInlinePart(accessToken, messageId, part, cidMap);
+
+        JsonNode body = part.path("body");
+        String mimeType = part.path("mimeType").asText("");
+        if ("text/html".equalsIgnoreCase(mimeType) && body.has("data")) {
+            return decodeToString(body.path("data").asText());
+        }
+
+        if (body.has("data") && !body.path("data").asText().isBlank() && mimeType.startsWith("multipart/")) {
+            // multipart bodies occasionally inline the HTML directly
+            String candidate = decodeToString(body.path("data").asText());
+            if (candidate.toLowerCase().contains("<html")) {
+                return candidate;
+            }
+        }
+
+        for (JsonNode child : part.path("parts")) {
+            String html = extractHtml(accessToken, messageId, child, cidMap);
+            if (html != null) return html;
+        }
+        return null;
+    }
+
+    private void collectInlinePart(String accessToken, String messageId, JsonNode part, Map<String, String> cidMap) {
+        String contentId = header(part, "Content-ID");
+        if (contentId == null) return;
+
+        contentId = contentId.replace("<", "").replace(">", "").trim();
+        if (cidMap.containsKey(contentId)) return;
+
+        String mimeType = part.path("mimeType").asText("application/octet-stream");
+        JsonNode body = part.path("body");
+        String data = body.path("data").asText(null);
+
+        if ((data == null || data.isBlank()) && body.has("attachmentId")) {
+            String attachmentId = body.path("attachmentId").asText();
+            data = fetchAttachment(accessToken, messageId, attachmentId);
+        }
+
+        if (data != null && !data.isBlank()) {
+            byte[] decoded = decode(data);
+            String dataUrl = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(decoded);
+            cidMap.put(contentId, dataUrl);
+            cidMap.putIfAbsent(contentId.toLowerCase(Locale.ROOT), dataUrl);
+        }
+    }
+
+    private String header(JsonNode node, String name) {
+        for (JsonNode header : node.path("headers")) {
+            if (name.equalsIgnoreCase(header.path("name").asText())) {
+                return header.path("value").asText();
             }
         }
         return null;
     }
 
-    private String decode(String data) {
-        return new String(java.util.Base64.getUrlDecoder().decode(data));
+    private String fetchAttachment(String accessToken, String messageId, String attachmentId) {
+        try {
+            JsonNode attachment = webClient.get()
+                    .uri("/users/me/messages/{messageId}/attachments/{attachmentId}", messageId, attachmentId)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+            if (attachment != null && attachment.has("data")) {
+                return attachment.get("data").asText();
+            }
+        } catch (Exception e) {
+            // best-effort; swallow so callers can still use partial payloads
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private byte[] decode(String data) {
+        return Base64.getUrlDecoder().decode(data);
+    }
+
+    private String decodeToString(String data) {
+        return new String(decode(data), StandardCharsets.UTF_8);
     }
 }

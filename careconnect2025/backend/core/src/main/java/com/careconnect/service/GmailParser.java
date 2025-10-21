@@ -1,91 +1,306 @@
 package com.careconnect.service;
 
+import com.careconnect.dto.GmailDigestPayload;
 import com.careconnect.model.ActionLinks;
 import com.careconnect.model.MailPiece;
 import com.careconnect.model.PackageItem;
 import com.careconnect.model.UspsDigest;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-/**
- * Turns a Gmail USPS digest HTML payload into your domain model.
- * This is a compiling skeleton — fill in real parsing later.
- */
 @Component
 public class GmailParser {
 
-    // ---------- PUBLIC API ----------
-    public UspsDigest toDomain(String rawHtml) {
-        // parse HTML (safe even if rawHtml is null)
-        Document doc = Jsoup.parse(rawHtml == null ? "" : rawHtml);
+    private static final Pattern TRACKING_PATTERN = Pattern.compile("(\\d{10,})");
+    private static final Pattern FROM_PATTERN = Pattern.compile("from\\s+(.+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern EXPECTED_PATTERN = Pattern.compile("Expected Delivery(?: Day)?:\\s*(.+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern DIGEST_HEADING_PATTERN = Pattern.compile("(?i)Daily Digest(?: for)?\\s*(.*)");
+    private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME;
+    private static final DateTimeFormatter[] LOCAL_DATE_FORMATS = new DateTimeFormatter[]{
+            DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.US),
+            DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.US),
+            DateTimeFormatter.ofPattern("M/d/yyyy", Locale.US)
+    };
 
-        // Try to extract dates (as strings), then convert to OffsetDateTime
-        OffsetDateTime digestDate   = parseToOdt(extractDigestDate(doc));
-        OffsetDateTime expectedDate = parseToOdt(extractExpectedDate(doc));
-        if (digestDate == null) digestDate = OffsetDateTime.now(ZoneOffset.UTC);
+    public UspsDigest toDomain(GmailDigestPayload payload) {
+        if (payload == null) return null;
 
-// MailPiece now gets OffsetDateTime, not String
-        MailPiece mp = new MailPiece(
-                "mp-1",
-                "USPS Informed Delivery",
-                "Daily Digest",
-                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNDAnIGhlaWdodD0nMjAnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzQwJyBoZWlnaHQ9JzIwJyBmaWxsPSIjZGRkIi8+PC9zdmc+",
-                digestDate,                            // <-- was digestDate.toString()
-                ActionLinks.defaults(null)
-        );
+        Document doc = Jsoup.parse(payload.htmlBody() == null ? "" : payload.htmlBody());
+        inlineCidImages(doc, payload.inlineCidData());
 
-        List<PackageItem> packages;
-        if (expectedDate != null) {
-            String tracking = "9400100000000000000000";
-            packages = List.of(new PackageItem(
-                    tracking,
-                    expectedDate,                       // <-- was expectedDate.toString()
-                    ActionLinks.defaults("https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=" + tracking)
-            ));
-        } else {
-            packages = List.of();
-        }
+        OffsetDateTime digestDate = resolveDigestDate(doc, payload.receivedAt());
+        List<PackageItem> packages = extractPackages(doc, digestDate);
+        List<MailPiece> mailPieces = extractMailPieces(doc, payload, digestDate);
 
-        return new UspsDigest(digestDate, List.of(mp), packages);
+        return new UspsDigest(digestDate, mailPieces, packages);
     }
 
-    // ---------- HELPERS ----------
-    private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME;
+    private void inlineCidImages(Document doc, Map<String, String> cidMap) {
+        if (cidMap == null || cidMap.isEmpty()) return;
+        Map<String, String> lookup = cidMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> normalizeCid(e.getKey()),
+                        Map.Entry::getValue,
+                        (a, b) -> a));
 
-    /** Try ISO-8601 first, then RFC 1123; return null if unparseable. */
-    private static OffsetDateTime parseToOdt(String s) {
-        if (s == null || s.isBlank()) return null;
+        for (Element img : doc.select("img[src^=cid:]")) {
+            String cid = normalizeCid(img.attr("src").substring(img.attr("src").indexOf(':') + 1));
+            String dataUrl = lookup.get(cid);
+            if (dataUrl != null) {
+                img.attr("src", dataUrl);
+            }
+        }
+    }
+
+    private String normalizeCid(String raw) {
+        return raw == null ? "" : raw.replace("<", "").replace(">", "").trim().toLowerCase(Locale.ROOT);
+    }
+
+    private OffsetDateTime resolveDigestDate(Document doc, OffsetDateTime fallback) {
+        String candidate = null;
+        Element time = doc.selectFirst("time[datetime]");
+        if (time != null) {
+            candidate = firstNonBlank(time.attr("datetime"), time.text());
+        }
+        if (isBlank(candidate)) {
+            Element metaDate = doc.selectFirst("meta[name=date]");
+            if (metaDate != null) {
+                candidate = metaDate.attr("content");
+            }
+        }
+        if (isBlank(candidate)) {
+            Element heading = doc.selectFirst(":matchesOwn((?i)Daily Digest)");
+            if (heading != null) {
+                Matcher matcher = DIGEST_HEADING_PATTERN.matcher(heading.text());
+                if (matcher.find()) {
+                    candidate = matcher.group(1).trim();
+                }
+            }
+        }
+        OffsetDateTime parsed = parseToOffset(candidate);
+        if (parsed != null) return parsed;
+        if (fallback != null) return fallback;
+        return OffsetDateTime.now(ZoneOffset.UTC);
+    }
+
+    private List<PackageItem> extractPackages(Document doc, OffsetDateTime digestDate) {
+        List<PackageItem> items = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        for (Element pkg : doc.select(".package, [data-package], article:has(.tracking-number)")) {
+            String tracking = firstNonBlank(
+                    textOrNull(pkg.selectFirst(".tracking-number")),
+                    extractTrackingNumber(pkg.text()));
+            if (isBlank(tracking) || !seen.add(tracking)) continue;
+
+            OffsetDateTime expected = parseToOffset(extractExpectedText(pkg));
+            if (expected == null) expected = digestDate;
+            String trackUrl = findTrackUrl(pkg);
+
+            items.add(PackageItem.builder()
+                    .trackingNumber(tracking)
+                    .expectedDeliveryDate(expected)
+                    .actionLinks(ActionLinks.defaults(trackUrl))
+                    .build());
+        }
+
+        if (!items.isEmpty()) return items;
+
+        for (Element element : doc.select("*:matchesOwn((?i)Tracking Number)")) {
+            Matcher matcher = TRACKING_PATTERN.matcher(element.text());
+            if (!matcher.find()) continue;
+            String tracking = matcher.group(1);
+            if (!seen.add(tracking)) continue;
+
+            Element context = element.parent() != null ? element.parent() : element;
+            OffsetDateTime expected = parseToOffset(extractExpectedText(context));
+            if (expected == null) expected = digestDate;
+            String trackUrl = findTrackUrl(context);
+
+            items.add(PackageItem.builder()
+                    .trackingNumber(tracking)
+                    .expectedDeliveryDate(expected)
+                    .actionLinks(ActionLinks.defaults(trackUrl))
+                    .build());
+        }
+
+        return items;
+    }
+
+    private String extractExpectedText(Element element) {
+        if (element == null) return null;
+        Element node = element.selectFirst("*:matchesOwn((?i)Expected Delivery)");
+        if (node != null) {
+            return node.text().replaceFirst("(?i).*Expected Delivery(?: Day)?[:\\s]*", "").trim();
+        }
+        Matcher matcher = EXPECTED_PATTERN.matcher(element.text());
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
+    }
+
+    private String findTrackUrl(Element element) {
+        if (element == null) return null;
+        Element link = element.selectFirst("a[href*=\"TrackConfirmAction\"]");
+        return link != null ? link.attr("href") : null;
+    }
+
+    private List<MailPiece> extractMailPieces(Document doc, GmailDigestPayload payload, OffsetDateTime defaultDate) {
+        List<MailPiece> pieces = new ArrayList<>();
+        int counter = 1;
+
+        for (Element block : doc.select("#mailpieces .mailpiece, [data-mailpiece-id], .mailpiece")) {
+            MailPiece piece = toMailPiece(block, payload, defaultDate, counter++);
+            if (piece != null) {
+                pieces.add(piece);
+            }
+        }
+
+        if (pieces.isEmpty()) {
+            int idx = 1;
+            for (Element img : doc.select("#mailpieces img[src^=data:], #mailpieces img[src^=https], img[alt*=mailpiece]")) {
+                MailPiece piece = toMailPieceFromImg(img, payload, defaultDate, idx++);
+                if (piece != null) {
+                    pieces.add(piece);
+                }
+            }
+        }
+        return pieces;
+    }
+
+    private MailPiece toMailPiece(Element block, GmailDigestPayload payload, OffsetDateTime defaultDate, int counter) {
+        if (block == null) return null;
+        Element img = block.selectFirst("img");
+        if (img == null) return null;
+
+        String src = img.attr("src");
+        if (isBlank(src)) return null;
+
+        String id = block.hasAttr("data-mailpiece-id")
+                ? block.attr("data-mailpiece-id")
+                : "mailpiece-" + counter;
+
+        String sender = firstNonBlank(
+                textOrNull(block.selectFirst(".sender")),
+                deriveSenderFromAlt(img.attr("alt")),
+                deriveSenderFromContext(block));
+
+        String summary = firstNonBlank(
+                textOrNull(block.selectFirst(".summary")),
+                deriveSummaryFromAlt(img.attr("alt")));
+
+        OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
+
+        return new MailPiece(
+                id,
+                sender,
+                summary,
+                src,
+                received,
+                ActionLinks.defaults(null)
+        );
+    }
+
+    private MailPiece toMailPieceFromImg(Element img, GmailDigestPayload payload, OffsetDateTime defaultDate, int counter) {
+        if (img == null) return null;
+        String src = img.attr("src");
+        if (isBlank(src)) return null;
+
+        String id = "mailpiece-" + counter;
+        String sender = deriveSenderFromAlt(img.attr("alt"));
+        String summary = deriveSummaryFromAlt(img.attr("alt"));
+        OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
+
+        return new MailPiece(
+                id,
+                sender,
+                summary,
+                src,
+                received,
+                ActionLinks.defaults(null)
+        );
+    }
+
+    private String deriveSenderFromAlt(String alt) {
+        if (isBlank(alt)) return null;
+        Matcher matcher = FROM_PATTERN.matcher(alt);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
+    }
+
+    private String deriveSummaryFromAlt(String alt) {
+        if (isBlank(alt)) return null;
+        return alt.replaceAll("(?i)image of\\s*", "").trim();
+    }
+
+    private String deriveSenderFromContext(Element block) {
+        if (block == null) return null;
+        Element label = block.selectFirst("strong:matchesOwn((?i)from)");
+        if (label != null) {
+            return label.text().replaceFirst("(?i)from\\s*", "").trim();
+        }
+        return null;
+    }
+
+    private OffsetDateTime parseToOffset(String value) {
+        if (isBlank(value)) return null;
+        String candidate = value.trim();
         try {
-            return OffsetDateTime.parse(s); // ISO 8601
+            return OffsetDateTime.parse(candidate);
         } catch (DateTimeParseException ignore) {
             try {
-                return ZonedDateTime.parse(s, RFC1123).toOffsetDateTime(); // email Date: header
+                return ZonedDateTime.parse(candidate, RFC1123).toOffsetDateTime();
             } catch (DateTimeParseException ignore2) {
+                for (DateTimeFormatter formatter : LOCAL_DATE_FORMATS) {
+                    try {
+                        LocalDate localDate = LocalDate.parse(candidate, formatter);
+                        return localDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+                    } catch (DateTimeParseException ignored3) {
+                        // keep trying
+                    }
+                }
                 try {
-                    // last-ditch: naive local datetime -> system zone -> offset
-                    return LocalDateTime.parse(s).atZone(ZoneId.systemDefault()).toOffsetDateTime();
-                } catch (DateTimeParseException ignore3) {
+                    LocalDateTime localDateTime = LocalDateTime.parse(candidate);
+                    return localDateTime.atZone(ZoneId.systemDefault()).toOffsetDateTime();
+                } catch (DateTimeParseException ignore4) {
                     return null;
                 }
             }
         }
     }
 
-    // Placeholder extractors — return Strings that parseToOdt(...) can handle.
-    // Replace with Jsoup selectors once you inspect a real Gmail HTML.
-    private String extractDigestDate(Document doc) {
-        // e.g., look for <time datetime="..."> or a header with a date
+    private String extractTrackingNumber(String text) {
+        if (isBlank(text)) return null;
+        Matcher matcher = TRACKING_PATTERN.matcher(text);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String textOrNull(Element element) {
+        return element == null ? null : element.text();
+    }
+
+    private String firstNonBlank(String... candidates) {
+        if (candidates == null) return null;
+        for (String c : candidates) {
+            if (!isBlank(c)) return c.trim();
+        }
         return null;
     }
 
-    private String extractExpectedDate(Document doc) {
-        // e.g., look for text like "Expected Delivery: 2025-10-17T12:00:00-05:00"
-        return null;
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

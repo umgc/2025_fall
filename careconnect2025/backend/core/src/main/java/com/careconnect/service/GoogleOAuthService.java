@@ -3,6 +3,7 @@ package com.careconnect.service;
 import com.careconnect.model.EmailCredential;
 import com.careconnect.repository.EmailCredentialRepository;
 import com.careconnect.dto.GoogleTokenResponse;
+import com.careconnect.security.TokenCryptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -18,6 +19,7 @@ public class GoogleOAuthService {
 
     private final WebClient http;
     private final EmailCredentialRepository credRepo;
+    private final TokenCryptor tokenCryptor;
 
     @Value("${google.oauth.client-id}")    String clientId;
     @Value("${google.oauth.client-secret}")String clientSecret;
@@ -43,9 +45,9 @@ public class GoogleOAuthService {
         var ec = new EmailCredential();
         ec.setUserId(userId);
         ec.setProvider(EmailCredential.Provider.GMAIL);
-        ec.setAccessTokenEnc(encrypt(token.accessToken()));
+        ec.setAccessTokenEnc(tokenCryptor.encrypt(token.accessToken()));
         if (token.refreshToken() != null) {
-            ec.setRefreshTokenEnc(encrypt(token.refreshToken()));
+            ec.setRefreshTokenEnc(tokenCryptor.encrypt(token.refreshToken()));
         } else {
             // keep last refresh token if this response omitted it
             credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.GMAIL)
@@ -64,7 +66,7 @@ public class GoogleOAuthService {
                 current.getExpiresAt().isAfter(Instant.now().plusSeconds(120))) {
             return current; // still fresh
         }
-        String refresh = decrypt(current.getRefreshTokenEnc());
+        String refresh = tokenCryptor.decrypt(current.getRefreshTokenEnc());
         if (refresh == null || refresh.isBlank()) return current;
 
         GoogleTokenResponse token = http.post()
@@ -79,14 +81,10 @@ public class GoogleOAuthService {
                 .block();
 
         if (token != null && token.accessToken() != null) {
-            current.setAccessTokenEnc(encrypt(token.accessToken()));
+            current.setAccessTokenEnc(tokenCryptor.encrypt(token.accessToken()));
             current.setExpiresAt(token.computeExpiryFromNow());
             credRepo.save(current);
         }
         return current;
     }
-
-    // TODO: replace with KMS/JCE
-    private String encrypt(String s) { return s; }
-    private String decrypt(String s) { return s; }
 }

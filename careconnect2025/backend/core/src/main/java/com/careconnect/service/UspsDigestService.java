@@ -8,6 +8,7 @@ import com.careconnect.model.UspsDigest;
 import com.careconnect.model.UspsDigestCache;
 import com.careconnect.repository.EmailCredentialRepository;
 import com.careconnect.repository.UspsDigestCacheRepo;
+import com.careconnect.security.TokenCryptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class UspsDigestService {
     private final GmailParser gmailParser;
     private final OutlookClient outlookClient;
     private final OutlookParser outlookParser;
+    private final TokenCryptor tokenCryptor;
 
     private final ObjectMapper om = new ObjectMapper();
 
@@ -44,7 +46,7 @@ public class UspsDigestService {
         // 2) Gmail
         var g = emailCredentialRepository.findFirstByUserIdAndProvider(userId, EmailCredential.Provider.GMAIL);
         if (g.isPresent()) {
-            var at = decrypt(g.get().getAccessTokenEnc());
+            var at = tokenCryptor.decrypt(g.get().getAccessTokenEnc());
             var raw = gmailClient.fetchLatestDigest(at);
             if (raw.isPresent()) {
                 var digest = gmailParser.toDomain(raw.get());
@@ -58,7 +60,7 @@ public class UspsDigestService {
         // 3) Outlook
         var o = emailCredentialRepository.findFirstByUserIdAndProvider(userId, EmailCredential.Provider.OUTLOOK);
         if (o.isPresent()) {
-            var at = decrypt(o.get().getAccessTokenEnc());
+            var at = tokenCryptor.decrypt(o.get().getAccessTokenEnc());
             var raw = outlookClient.fetchLatestDigest(at);
             if (raw.isPresent()) {
                 var digest = outlookParser.toDomain(raw.get());
@@ -89,8 +91,6 @@ public class UspsDigestService {
     private String serialize(UspsDigest d) {
         try { return om.writeValueAsString(d); } catch (Exception e) { return "{}"; }
     }
-
-    private String decrypt(String s) { return s; } // TODO: plug KMS/JCE
 
     private UspsDigest mockDigest() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);

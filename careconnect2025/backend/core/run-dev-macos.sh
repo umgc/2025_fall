@@ -118,7 +118,7 @@ fi
 
 # Run Flyway migrations
 echo "🔄 Running database migrations..."
-./mvnw flyway:migrate -q   -Dflyway.url=jdbc:postgresql://localhost:5433/careconnect \
+./mvnw flyway:migrate -q   -Dflyway.url=jdbc:postgresql://localhost:5432/careconnect \
                            -Dflyway.user=postgres \
                            -Dflyway.password=changeme || {
     echo "⚠️  Warning: Flyway migrations failed. Continuing with application startup..."
