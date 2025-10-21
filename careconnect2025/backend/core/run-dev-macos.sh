@@ -116,15 +116,6 @@ else
     echo "✅ PostgreSQL container is already running"
 fi
 
-# echo "🚀 Starting NGROK for Alexa testing..."
-
-# if command -v ngrok &> /dev/null; then
-#     ngrok http 8080 > /dev/null 2>&1 &
-#     echo "✅ ngrok started successfully (background process)."
-# else
-#     echo "⚠️ ngrok not found — continuing without tunnel."
-# fi
-
 # Run Flyway migrations
 echo "🔄 Running database migrations..."
 ./mvnw flyway:migrate -q   -Dflyway.url=jdbc:postgresql://localhost:5432/careconnect \
