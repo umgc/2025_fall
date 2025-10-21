@@ -98,6 +98,7 @@ class _MenuPageState extends State<MenuPage> {
             MaterialPageRoute(builder: (context) => const MedicationsTrackerPage()),
           );
         },
+        visibleFor: {"PATIENT"}
       ),
       _MenuItem(
         icon: Icons.public,

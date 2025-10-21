@@ -23,6 +23,7 @@ public class MedicationService {
     private final MedicationRepository medicationRepository;
     private final PatientRepository patientRepository;
     private final NotificationService notificationService;
+    private final CaregiverPatientLinkService caregiverPatientLinkService;
 
     // -------------------------------------------------------
     // Basic retrieval methods
@@ -190,6 +191,39 @@ public class MedicationService {
                 "Your medication '" + medication.getMedicationName() + "' has been marked for removal.",
                 "MEDICATION_REMOVED",
                 Map.of("medicationId", String.valueOf(medicationId))
+        );
+    }
+
+    /**
+     * Hard delete medication (Caregiver-side) - Actually removes from database
+     */
+    @Transactional
+    public void hardDeleteMedication(Long patientId, Long medicationId, Long caregiverId) {
+        Medication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Medication not found with id: " + medicationId));
+
+        if (!caregiverPatientLinkService.hasActiveLink(caregiverId, patientId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, 
+                "Caregiver does not have active link to patient");   
+        }
+        
+        if (!medication.getPatient().getId().equals(patientId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Medication does not belong to patient");
+        }
+
+        // Optional: Verify caregiver has access to this patient
+        // You can add caregiver-patient relationship validation here if needed
+
+        // Hard delete from database
+        medicationRepository.delete(medication);
+
+        // Send notification to patient
+        notificationService.sendNotificationToUser(
+                patientId,
+                "Medication Deleted",
+                "Your medication '" + medication.getMedicationName() + "' has been removed by your caregiver.",
+                "MEDICATION_DELETED",
+                Map.of("medicationId", String.valueOf(medicationId), "caregiverId", String.valueOf(caregiverId))
         );
     }
 

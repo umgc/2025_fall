@@ -161,9 +161,9 @@ class BottomNavConfig {
         screen: const CaregiverMessagesTab(),
       ),
       BottomNavItem(
-        label: 'More',
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more,
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu_open,
         routeName: 'profile',
         onPress: (context, builder) {
           showModalBottomSheet<void>(

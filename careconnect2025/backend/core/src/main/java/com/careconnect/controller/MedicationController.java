@@ -73,7 +73,7 @@ public class MedicationController {
     }
 
     // ================================================================
-    // 4. Remove (soft delete) medication and trigger notification
+    // 4. Remove (soft delete) medication and trigger notification (Patient-side)
     // ================================================================
     @DeleteMapping("/{patientId}/medications/{medicationId}")
     public ResponseEntity<?> deleteMedication(
@@ -83,6 +83,21 @@ public class MedicationController {
         medicationService.deleteMedication(patientId, medicationId);
         return ResponseEntity.ok(Map.of(
                 "message", "Medication removed and notification sent"
+        ));
+    }
+
+    // ================================================================
+    // 5. Hard delete medication (Caregiver-side)
+    // ================================================================
+    @DeleteMapping("/{patientId}/medications/{medicationId}/caregiver/{caregiverId}")
+    public ResponseEntity<?> deleteMedicationByCaregiver(
+            @PathVariable Long patientId,
+            @PathVariable Long medicationId,
+            @PathVariable Long caregiverId) {
+
+        medicationService.hardDeleteMedication(patientId, medicationId, caregiverId);
+        return ResponseEntity.ok(Map.of(
+                "message", "Medication deleted successfully"
         ));
     }
 }
