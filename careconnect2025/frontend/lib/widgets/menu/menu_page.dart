@@ -104,9 +104,9 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
       _MenuItem(
-        icon: Icons.folder,
-        label: 'File Management',
-        route: '/file-management',
+        icon: Icons.note_alt,
+        label: 'Medical Notetaker',
+        route: '/notetaker-search',
       ),
       _MenuItem(
         icon: Icons.person_add,
