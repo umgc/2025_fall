@@ -157,14 +157,7 @@ echo ----------------------------------------
 REM ALEXA TESTING: The following lines are used to build a temporary forward-facing url
 REM for Alexa skill to call. Should be replaced when we have a constant domain available
 echo Starting NGROK
-
-where ngrok.exe >nul 2>nul
-if %errorlevel%==0 (
-    start "" ngrok.exe http 8080
-    echo ngrok started successfully (background process).
-) else (
-    echo ⚠️ ngrok not found — continuing without tunnel.
-)
+start "" ngrok.exe http 8080
 
 echo Starting Spring Boot application...
 set SPRING_PROFILES_ACTIVE=dev

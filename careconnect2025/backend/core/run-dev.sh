@@ -94,6 +94,17 @@ else
     echo "PostgreSQL container is already running"
 fi
 
+# #ALEXA TESTING: The following lines are used to build a temporary forward-facing url
+# #for Alexa skill to call. Should be replaced when we have a constant domain available
+# echo "Starting NGROK"
+
+# if command -v ngrok &> /dev/null; then
+#     ngrok http 8080 > /dev/null 2>&1 &
+#     echo "ngrok started successfully (background process)."
+# else
+#     echo "⚠️ ngrok not found — continuing without tunnel."
+# fi
+
 # Run Flyway migrations
 #echo "Running database migrations..."
 #./mvnw flyway:migrate -q   -Dflyway.url=jdbc:postgresql://localhost:5432/careconnect \
@@ -112,17 +123,6 @@ echo "- Other API Keys: Mocked"
 echo "- Email: Console logging"
 echo "- File Storage: Local"
 echo "----------------------------------------"
-
-#ALEXA TESTING: The following lines are used to build a temporary forward-facing url
-#for Alexa skill to call. Should be replaced when we have a constant domain available
-echo "Starting NGROK"
-
-if command -v ngrok &> /dev/null; then
-    ngrok http 8080 > /dev/null 2>&1 &
-    echo "ngrok started successfully (background process)."
-else
-    echo "⚠️ ngrok not found — continuing without tunnel."
-fi
 
 echo "Starting Spring Boot application..."
 export SPRING_PROFILES_ACTIVE=dev
