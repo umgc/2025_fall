@@ -12,6 +12,7 @@ import com.careconnect.security.TokenCryptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -35,26 +36,47 @@ public class UspsDigestService {
     private final ObjectMapper om = new ObjectMapper();
 
     public Optional<UspsDigest> latestForUser(String userId) {
+        System.out.println("[UspsDigestService] Starting latestForUser for userId: " + userId);
+
         // 1) cache
         var cached = cacheRepo.findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc(userId, Instant.now());
         if (cached.isPresent()) {
+            System.out.println("[UspsDigestService] Found cached digest, returning from cache");
             try {
                 return Optional.of(om.readValue(cached.get().getPayloadJson(), UspsDigest.class));
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.err.println("[UspsDigestService] Cache deserialization failed: " + e.getMessage());
+            }
         }
 
         // 2) Gmail
+        System.out.println("[UspsDigestService] No cache found, checking Gmail credentials");
         var g = emailCredentialRepository.findFirstByUserIdAndProvider(userId, EmailCredential.Provider.GMAIL);
         if (g.isPresent()) {
-            var at = tokenCryptor.decrypt(g.get().getAccessTokenEnc());
-            var raw = gmailClient.fetchLatestDigest(at);
-            if (raw.isPresent()) {
-                var digest = gmailParser.toDomain(raw.get());
-                if (digest != null) {
-                    cache(userId, digest);
-                    return Optional.of(digest);
+            System.out.println("[UspsDigestService] Gmail credentials found, attempting to fetch from Gmail");
+            try {
+                var at = tokenCryptor.decrypt(g.get().getAccessTokenEnc());
+                System.out.println("[UspsDigestService] Token decrypted successfully, calling Gmail API");
+                var raw = gmailClient.fetchLatestDigest(at);
+                if (raw.isPresent()) {
+                    System.out.println("[UspsDigestService] Raw Gmail data found, parsing...");
+                    var digest = gmailParser.toDomain(raw.get());
+                    if (digest != null) {
+                        System.out.println("[UspsDigestService] Gmail parsing successful, caching and returning");
+                        cache(userId, digest);
+                        return Optional.of(digest);
+                    } else {
+                        System.out.println("[UspsDigestService] Gmail parsing returned null");
+                    }
+                } else {
+                    System.out.println("[UspsDigestService] No raw Gmail data found (no matching emails)");
                 }
+            } catch (Exception e) {
+                System.err.println("[UspsDigestService] Gmail processing failed: " + e.getMessage());
+                e.printStackTrace();
             }
+        } else {
+            System.out.println("[UspsDigestService] No Gmail credentials found");
         }
 
         // 3) Outlook
@@ -109,7 +131,7 @@ public class UspsDigestService {
                 .subject("Monthly statement")
                 .thumbnailUrl("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNDAnIGhlaWdodD0nMjAnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzQwJyBoZWlnaHQ9JzIwJyBmaWxsPSIjZGRkIi8+PC9zdmc+")
                 .receivedAt(now)
-                .actionLinks(ActionLinks.defaults(null))
+                .actionLinks(ActionLinks.defaults("https://informeddelivery.usps.com/box/dashboard"))
                 .build();
 
         return UspsDigest.builder()
@@ -117,5 +139,15 @@ public class UspsDigestService {
                 .mailPieces(List.of(mp))
                 .packages(List.of(pkg))
                 .build();
+    }
+
+    @Transactional
+    public void clearCache(String userId) {
+        try {
+            var deleted = cacheRepo.deleteByUserId(userId);
+            System.out.println("[UspsDigestService] Cleared " + deleted + " cache entries for userId: " + userId);
+        } catch (Exception e) {
+            System.err.println("[UspsDigestService] Failed to clear cache: " + e.getMessage());
+        }
     }
 }

@@ -36,7 +36,7 @@ public class GmailClient {
             JsonNode search = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/users/me/messages")
-                            .queryParam("q", "from:usps.com subject:(Informed Delivery Daily Digest) newer_than:7d")
+                            .queryParam("q", "from:USPSInformeddelivery@email.informeddelivery.usps.com subject:(Your Daily Digest) newer_than:7d")
                             .queryParam("maxResults", 5)
                             .build())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)

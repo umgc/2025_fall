@@ -10,4 +10,6 @@ public interface UspsDigestCacheRepo extends JpaRepository<UspsDigestCache, Long
     Optional<UspsDigestCache> findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc(
             String userId, Instant now
     );
+
+    int deleteByUserId(String userId);
 }

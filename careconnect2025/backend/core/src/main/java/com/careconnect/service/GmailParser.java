@@ -202,6 +202,9 @@ public class GmailParser {
 
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
 
+        // Resolve CID references
+        src = resolveCidReference(src, payload.inlineCidData());
+
         return new MailPiece(
                 id,
                 sender,
@@ -221,6 +224,9 @@ public class GmailParser {
         String sender = deriveSenderFromAlt(img.attr("alt"));
         String summary = deriveSummaryFromAlt(img.attr("alt"));
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
+
+        // Resolve CID references
+        src = resolveCidReference(src, payload.inlineCidData());
 
         return new MailPiece(
                 id,
@@ -302,5 +308,28 @@ public class GmailParser {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String resolveCidReference(String src, Map<String, String> cidMap) {
+        if (isBlank(src) || cidMap == null || cidMap.isEmpty()) {
+            return src;
+        }
+
+        // Check if it's a CID reference
+        if (src.startsWith("cid:")) {
+            String cid = normalizeCid(src.substring(4));
+            String dataUrl = cidMap.get(cid);
+            if (dataUrl != null) {
+                return dataUrl;
+            }
+            // Try case-insensitive lookup
+            for (Map.Entry<String, String> entry : cidMap.entrySet()) {
+                if (normalizeCid(entry.getKey()).equals(cid)) {
+                    return entry.getValue();
+                }
+            }
+        }
+
+        return src;
     }
 }

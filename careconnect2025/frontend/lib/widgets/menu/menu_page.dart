@@ -109,8 +109,8 @@ class _MenuPageState extends State<MenuPage> {
         route: '/file-management',
       ),
       _MenuItem(
-        icon: Icons.folder,
-        label: 'Mail Digest',
+        icon: Icons.mail,
+        label: 'USPS Mail Digest',
         route: '/usps-test'
       ),
       _MenuItem(
