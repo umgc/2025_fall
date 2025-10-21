@@ -156,9 +156,9 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                     ),
                     SizedBox(height: 16),
 
-                    // Online Text
+                    // Submitted Text
                     Text(
-                      'Online Text:',
+                      'Submitted Text:',
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),

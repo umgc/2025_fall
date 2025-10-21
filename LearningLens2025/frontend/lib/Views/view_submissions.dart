@@ -220,6 +220,24 @@ class SubmissionListState extends State<SubmissionList> {
               ],
             ),
           ),
+
+          // Help trigger below the Submission Status filter row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.info_outline),
+                label: const Text(
+                    'Information on AI Grading using Tone / Voice / Detail Level'),
+                onPressed: () => showAiGraderDetails(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                ),
+              ),
+            ),
+          ),
+
           Expanded(
             child: Stack(
               children: [
@@ -709,6 +727,39 @@ class SubmissionListState extends State<SubmissionList> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showAiGraderDetails(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+            'Details on AI Grader Settings - Tone, Voice, Level of Detail'),
+        content: const Text(
+          'You can choose the different LLM models from the dropdown if available.\n\n'
+          'Tone controls the mood or delivery style of the generated feedback. This controls how to LLM sounds:\n'
+          '• Formal – Academic, precise language, no contractions.\n'
+          '• Straightforward – Clear, concise, direct phrasing.\n'
+          '• Casual – Conversational and friendly.\n\n'
+          'Voice sets the personality and can change the feel of who is speaking:\n'
+          '• Supportive – Encouraging and positive; focuses on growth.\n'
+          '• Neutral – Objective and factual; avoids emotional or motivational phrasing.\n'
+          '• Constructive – Balanced and specific; highlights both strengths and areas for improvement.\n\n'
+          'Level of Detail sets how much feedback is generated:\n'
+          '• Basic – 1 paragraph per criterion\n'
+          '• Neutral – 2 paragraphs per criterion\n'
+          '• Detailed – 3 paragraphs per criterion\n\n'
+          'Note: These settings ONLY affect the written feedback.\n'
+          'Grading is determined strictly by the rubric.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
         ],
       ),
