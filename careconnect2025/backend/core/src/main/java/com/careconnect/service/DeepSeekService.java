@@ -22,7 +22,7 @@ import org.springframework.web.client.RestTemplate;
 @ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
 public class DeepSeekService {
 
-    @Value("${deepseek.api.key:}")
+    @Value("${openrouter.api.key:}")
     private String apiKey;
 
     //@Value("${deepseek.api.url:https://api.deepseek.com/v1}")
