@@ -148,4 +148,10 @@ sleep 6
 # Automatically open Swagger UI in Chrome
 open -a "Google Chrome" http://localhost:8080/swagger-ui/index.html
 
+# Wait a few seconds for the backend to start up
+sleep 6
+
+# Automatically open Swagger UI in Chrome
+open -a "Google Chrome" http://localhost:8080/swagger-ui/index.html
+
 echo "🛑 Application stopped."
