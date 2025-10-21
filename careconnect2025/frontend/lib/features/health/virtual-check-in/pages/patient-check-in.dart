@@ -1,8 +1,9 @@
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
+import 'package:camera/camera.dart';
 
-
+//TODO: Connect VideoWidget to this class via a button
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
 
@@ -22,8 +23,17 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     {"value": 5, "emoji": "😊", "label": "Great"},
   ];
 
+  Future<CameraDescription> setUpCamera() async
+  {
+    WidgetsFlutterBinding.ensureInitialized();
+    final cameras = await availableCameras();
+    return cameras.first;
+  }
+
   @override
   Widget build(BuildContext context) {
+    ///I think this is where this goes? Change this to a var
+    setUpCamera();
     return Scaffold(
       appBar: AppBarHelper.createAppBar(
         context,
