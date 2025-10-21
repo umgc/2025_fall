@@ -125,6 +125,8 @@ dependencies:
   sherpa_onnx: ^1.12.14
   #for recording audio samples for speaker recognition
   record: ^6.1.1
+  #for breaking audio into smaller files
+  simple_audio_trimmer: ^0.1.4
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
 # Team D - Dependencies Begin
@@ -152,6 +154,8 @@ dependency_overrides:
   #     url: https://github.com/netdur/llama_cpp_dart.git
   #     ref: main
   calendar_view: ^1.0.0
+  accordion: ^2.6.0
+
   
 dev_dependencies:
   flutter_test:
@@ -175,6 +179,10 @@ flutter:
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
+    - assets/sherpa-onnx-streaming-zipformer-en-2023-06-26/
+    - assets/sherpa-onnx-pyannote-segmentation-3-0/
+    - assets/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+    - assets/sherpa-onnx-zipformer-gigaspeech-2023-12-12/
     - assets/images/CareConnectLogo.png
     - assets/images/CareConnectLogo.svg 
     - assets/images/default_avatar.svg
