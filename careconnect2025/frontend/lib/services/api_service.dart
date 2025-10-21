@@ -1253,7 +1253,7 @@ class ApiService {
     }
   }
 
-  /// Remove (deactivate) a medication for a patient
+  /// Remove (deactivate) a medication for a patient (Patient-side soft delete)
   static Future<http.Response> removePatientMedication(
     int patientId,
     int medicationId,
@@ -1266,6 +1266,51 @@ class ApiService {
 
       return await httpClient
           .delete(uri, headers: headers)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Delete medication by caregiver (Caregiver-side hard delete)
+  static Future<http.Response> deleteMedicationByCaregiver(
+    int patientId,
+    int medicationId,
+    int caregiverId,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications/$medicationId/caregiver/$caregiverId',
+      );
+
+      return await httpClient
+          .delete(uri, headers: headers)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+          );
+    } catch (e) {
+      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    }
+  }
+
+  /// Approve a medication for a patient (sets isActive=true, approval_status='APPROVED')
+  static Future<http.Response> approveMedication(
+    int patientId,
+    int medicationId,
+  ) async {
+    try {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse(
+        '${ApiConstants.patients}/$patientId/medications/$medicationId/approve',
+      );
+
+      return await httpClient
+          .put(uri, headers: headers)
           .timeout(
             const Duration(seconds: 15),
             onTimeout: () => http.Response('{"error": "Request timeout"}', 408),

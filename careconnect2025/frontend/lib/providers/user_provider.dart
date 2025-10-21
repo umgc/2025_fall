@@ -325,6 +325,8 @@ class UserProvider extends ChangeNotifier {
           address: Address.fromJson(patientData['address'] ?? {}),
         );
 
+        print(_patientModel.toString());
+
         // Store patient model to disk
         await UserRoleStorageService.instance.storePatientModel(
           jsonEncode(_patientModel!.toJson()),

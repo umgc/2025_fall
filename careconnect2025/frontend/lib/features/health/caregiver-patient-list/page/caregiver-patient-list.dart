@@ -6,7 +6,6 @@ import 'package:care_connect_app/widgets/default_app_header.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
-import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -353,33 +352,16 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   ///
   /// Opens a dialog or navigates to a screen where caregivers can register
   /// new patients who don't have accounts yet. This creates a new patient account.
-  Future<void> _onRegisterPatient() async {
-    // Open the registration page as a modal, preconfigured for a Patient
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        return Container(
-          height: MediaQuery.of(ctx).size.height * 0.95,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: const RegistrationPage(
-            initialRole: 'Patient',
-            lockRole: true,
-          ),
-        );
-      },
+  void _onRegisterPatient() {
+    // TODO: Implement register patient functionality
+    // Navigate to patient registration screen or show dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Register Patient functionality coming soon!'),
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
-
-    // Optionally refresh the list after closing the modal (no-op if unchanged)
-    if (mounted) {
-      await _loadPatients();
-    }
   }
 
   /// Builds the main UI for the caregiver patient list screen.

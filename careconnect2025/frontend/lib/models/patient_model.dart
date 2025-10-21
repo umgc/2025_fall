@@ -102,4 +102,9 @@ class PatientUserModel extends UserModel {
       address: Address.fromJson(json['address'] ?? {}),
     );
   }
+
+  @override
+  String toString() {
+    return 'PatientUserModel{firstName: $firstName, lastName: $lastName, phone: $phone, dob: $dob, gender: $gender, address: $address}';
+  }
 }

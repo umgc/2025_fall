@@ -7,11 +7,11 @@ variable "primary_region" {
 variable "github_repo" {
   description = "GitHub repo HTTPS URL (e.g., https://github.com/umgc/summer2025)"
   type        = string
-  default     = "https://github.com/umgc/summer2025"
+  default     = "https://github.com/umgc/2025_fall"
 }
 variable "github_branch" {
   description = "The branch name to connect to Amplify"
-  default     = "care-connect-develop"
+  default     = "developer"
 }
 variable "cc_app_role_arn" {
   type        = string
