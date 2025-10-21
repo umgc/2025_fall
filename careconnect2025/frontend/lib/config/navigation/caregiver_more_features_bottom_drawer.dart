@@ -24,7 +24,9 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           Navigator.pop(context);
           Navigator.push(
             context,
+            MaterialPageRoute(
               builder: (context) => const CalendarAssistantScreen(),
+            ),
           );
         },
       ),
@@ -52,7 +54,9 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const InvoiceDashboardPage()),
+            MaterialPageRoute(
+              builder: (context) => const InvoiceDashboardPage(),
+            ),
           );
         },
       ),
@@ -65,7 +69,9 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
           Navigator.pop(context);
           Navigator.push(
             context,
-            builder: (context) => const NotetakerSearchPage(),
+            MaterialPageRoute(
+              builder: (context) => const NotetakerSearchPage(),
+            ),
           );
         },
       ),
@@ -81,7 +87,7 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const SettingsPage()),
           );
         },
-      )
+      ),
     ];
 
     return MoreFeaturesBottomDrawer(features: features);
