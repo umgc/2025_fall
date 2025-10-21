@@ -104,9 +104,9 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
       _MenuItem(
-        icon: Icons.folder,
-        label: 'File Management',
-        route: '/file-management',
+        icon: Icons.note,
+        label: 'Notetaker Assistant',
+        route: '/notetaker-search',
       ),
       _MenuItem(
         icon: Icons.mail,
@@ -125,6 +125,11 @@ class _MenuPageState extends State<MenuPage> {
         route: '/settings',
         section: _Section.settings,
       ),
+      _MenuItem(
+        icon: Icons.folder,
+        label: 'File Management',
+        route: '/file-management',
+      ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(
@@ -132,16 +137,16 @@ class _MenuPageState extends State<MenuPage> {
         title: const Text('Menu'),
         actions: [
           IconButton(
-              onPressed: () => showSearch(
-                context: context,
-                delegate: ShortcutSearchDelegate(
-                  roleUpper: role,                  
-                  userId: user.id.toString(),
-                ),
+            onPressed: () => showSearch(
+              context: context,
+              delegate: ShortcutSearchDelegate(
+                roleUpper: role,
+                userId: user.id.toString(),
               ),
-              icon: const Icon(Icons.search),
-              tooltip: 'Search',
             ),
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+          ),
         ],
       ),
       body: CustomScrollView(
@@ -235,7 +240,6 @@ class _MenuPageState extends State<MenuPage> {
                 mainAxisExtent: 64,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) => _ToolTile(item: items[index]),
@@ -280,7 +284,7 @@ class _MenuPageState extends State<MenuPage> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
-      )
+      ),
     );
   }
 
