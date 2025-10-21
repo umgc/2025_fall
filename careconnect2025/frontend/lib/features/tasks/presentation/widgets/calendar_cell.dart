@@ -1,7 +1,8 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// =============================
 /// CalendarCell Widget
@@ -45,6 +46,7 @@ class CalendarCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final manager = context.watch<TaskTypeManager>();
 
     return Container(
       margin: const EdgeInsets.all(2),
@@ -72,13 +74,11 @@ class CalendarCell extends StatelessWidget {
             spacing: 2,
             runSpacing: 2,
             children: events.take(4).map((e) {
+              final color = manager.getColor(e.event?.taskType);
               return Container(
                 width: 8,
                 height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: TaskTypeUtils.getColor(e.event?.taskType),
-                ),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
               );
             }).toList(),
           ),
