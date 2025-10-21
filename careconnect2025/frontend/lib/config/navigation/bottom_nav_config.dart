@@ -2,6 +2,7 @@ import 'package:care_connect_app/config/navigation/caregiver_more_features_botto
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
@@ -89,11 +90,11 @@ class BottomNavConfig {
         screen: const SymptomsAllergiesPage(),
       ),
       BottomNavItem(
-        label: 'Health',
+        label: 'Check-In',
         icon: Icons.health_and_safety_outlined,
         activeIcon: Icons.health_and_safety,
-        routeName: 'health',
-        screen: const PatientHealthTab(),
+        routeName: 'check-in',
+        screen: const PatientVirtualCheckIn(),
       ),
       BottomNavItem(
         label: 'Messages',

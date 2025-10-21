@@ -722,7 +722,7 @@ public class PatientController {
         validatePatientAccess(patient.getUser().getId(), currentUser);
 
         // Deactivate the medication (soft delete)
-        medicationService.deactivateMedication(medicationId);
+//        medicationService.deactivateMedication(medicationId);
         return ResponseEntity.noContent().build();
     }
 
