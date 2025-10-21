@@ -125,6 +125,11 @@ class _MenuPageState extends State<MenuPage> {
         route: '/settings',
         section: _Section.settings,
       ),
+      _MenuItem(
+        icon: Icons.folder,
+        label: 'File Management',
+        route: '/file-management',
+      ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(
