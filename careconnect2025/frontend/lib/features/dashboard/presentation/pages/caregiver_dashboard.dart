@@ -10,11 +10,9 @@ import 'package:http/http.dart' as http;
 import '../../../../services/subscription_service.dart';
 import '../../../../widgets/responsive_page_wrapper.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
-import '../../../../services/video_call_service.dart';
 import '../../../../services/messaging_service.dart';
 import '../../../../services/call_notification_service.dart';
 import '../../../../widgets/messaging_widget.dart';
-import '../../../../widgets/video_call_widget.dart';
 import '../../../../widgets/call_notification_status_indicator.dart';
 
 import 'patient_medical_notes_page.dart';

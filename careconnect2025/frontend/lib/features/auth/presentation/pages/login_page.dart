@@ -1,13 +1,14 @@
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../../../services/enhanced_auth_service.dart';
-import '../../../../widgets/role_mismatch_dialog.dart';
-import '../../../../providers/user_provider.dart';
+import 'package:provider/provider.dart'; 
+
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
-import '../../../../utils/responsive_utils.dart';
+import '../../../../providers/user_provider.dart';
+import '../../../../services/enhanced_auth_service.dart';
+import '../../../../widgets/email_verification_dialog.dart';
+import '../../../../widgets/role_mismatch_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   final String? userType;
@@ -22,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _pwd = TextEditingController();
   bool _busy = false;
-  bool _googleSignInBusy = false;
+  final bool _googleSignInBusy = false;
   String? _error;
   bool _showPassword = false;
 
@@ -40,43 +41,31 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Get userType from widget or from GoRouter extra data
-      final extra = GoRouter.of(
-        context,
-      ).routerDelegate.currentConfiguration.extra;
-      String role = 'patient'; // Default
+      final extra = GoRouter.of(context).routerDelegate.currentConfiguration.extra;
 
-      if (widget.userType != null) {
-        role = widget.userType!;
-      } else if (extra != null &&
-          extra is Map<String, dynamic> &&
-          extra.containsKey('userType')) {
-        role = extra['userType'];
-      }
-
-      // Use enhanced authentication service with role validation
       final authResult = await EnhancedAuthService.loginWithRoleValidation(
         email: _email.text.trim(),
         password: _pwd.text,
-        expectedRole: role,
       );
 
       if (authResult.isSuccess) {
-        // Login and role validation successful
         final user = authResult.userSession!;
 
-        // Save user info to Provider
+        if (!user.emailVerified) {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => EmailVerificationDialog(email: user.email),
+          );
+          return;
+        }
+
         Provider.of<UserProvider>(context, listen: false).setUser(user);
-
-        // Add a small delay to ensure JWT token is fully saved before navigation
+        await Provider.of<UserProvider>(context, listen: false).fetchUserDetails();
         await Future.delayed(const Duration(milliseconds: 100));
-
-        // Navigate to the appropriate dashboard based on user role
         navigateToDashboard(context);
       } else {
-        // Handle different types of authentication errors
         if (authResult.errorType == AuthErrorType.roleValidation) {
-          // Show role mismatch dialog
           await RoleMismatchDialog.show(
             context: context,
             actualRole: authResult.actualRole!,
@@ -85,7 +74,6 @@ class _LoginPageState extends State<LoginPage> {
             message: authResult.errorMessage!,
           );
         } else {
-          // Show regular authentication error
           setState(() {
             _error = authResult.errorMessage;
           });
@@ -100,308 +88,439 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _loginWithGoogle() async {
-    setState(() {
-      _googleSignInBusy = true;
-      _error = null;
-    });
-
-    try {
-      // Get userType from widget or from GoRouter extra data
-      final extra = GoRouter.of(
-        context,
-      ).routerDelegate.currentConfiguration.extra;
-      String role = 'patient'; // Default
-
-      if (widget.userType != null) {
-        role = widget.userType!;
-      } else if (extra != null &&
-          extra is Map<String, dynamic> &&
-          extra.containsKey('userType')) {
-        role = extra['userType'];
-      }
-
-      // Use enhanced authentication service with role validation for Google login
-      final authResult =
-          await EnhancedAuthService.loginWithGoogleAndRoleValidation(
-            expectedRole: role,
-          );
-
-      if (authResult.isSuccess) {
-        // Login and role validation successful
-        final user = authResult.userSession!;
-
-        // Save user info to Provider
-        Provider.of<UserProvider>(context, listen: false).setUser(user);
-
-        // Add a small delay to ensure JWT token is fully saved before navigation
-        await Future.delayed(const Duration(milliseconds: 100));
-
-        // Navigate to the appropriate dashboard based on user role
-        navigateToDashboard(context);
-      } else {
-        // Handle different types of authentication errors
-        if (authResult.errorType == AuthErrorType.roleValidation) {
-          // Show role mismatch dialog
-          await RoleMismatchDialog.show(
-            context: context,
-            actualRole: authResult.actualRole!,
-            expectedRole: authResult.expectedRole!,
-            correctLoginRoute: authResult.correctLoginRoute!,
-            message: authResult.errorMessage!,
-          );
-        } else {
-          // Show regular authentication error
-          setState(() {
-            _error = authResult.errorMessage;
-          });
-        }
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Google Sign-In failed: $e';
-      });
-    } finally {
-      setState(() => _googleSignInBusy = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final extra = GoRouter.of(
-      context,
-    ).routerDelegate.currentConfiguration.extra;
-    String userType = 'patient'; // Default
+    final t = AppLocalizations.of(context)!;
 
+    final extra = GoRouter.of(context).routerDelegate.currentConfiguration.extra;
+    String userType = 'patient';
     if (widget.userType != null) {
       userType = widget.userType!;
-    } else if (extra != null &&
-        extra is Map<String, dynamic> &&
-        extra.containsKey('userType')) {
+    } else if (extra != null && extra is Map<String, dynamic> && extra.containsKey('userType')) {
       userType = extra['userType'];
     }
 
-    // Set display based on user type using centralized theme
-    final bool isCaregiver = userType == 'caregiver';
-    final String userTypeDisplay = isCaregiver ? 'Caregiver' : 'Patient';
-    final IconData userIcon = isCaregiver
-        ? Icons.health_and_safety
-        : Icons.person;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
-    // Create a custom app bar with consistent styling
-    final appBar = AppBar(
-      backgroundColor: AppTheme.primary,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => context.go('/'),
-        color: Colors.white,
-      ),
-    );
-
-    return ResponsivePageWrapper(
-      backgroundColor: Colors.white,
-      customAppBar: appBar,
-      centerContent: true,
-      applyPadding: false, // We'll handle padding in the content
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundSecondary,
+      body: SafeArea(
         child: SingleChildScrollView(
           child: Center(
             child: Container(
-              width: context.responsiveValue(
-                mobile: double.infinity,
-                tablet: 500.0,
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 500,
+                minHeight: MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 24 : 32,
+                vertical: 32,
+              ),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Logo section
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    width: isMobile ? 160 : 180,
+                    height: isMobile ? 160 : 180,
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Icon(userIcon, size: 60, color: AppTheme.primary),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Care Connect',
-                    style: AppTheme.headingLarge.copyWith(
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Closer Connections. Better Care.',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$userTypeDisplay Login',
-                      textAlign: TextAlign.center,
-                      style: AppTheme.headingSmall.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  TextFormField(
-                    controller: _email,
-                    decoration:
-                        AppTheme.inputDecoration(
-                          'Email',
-                          hint: 'Enter your email',
-                        ).copyWith(
-                          prefixIcon: const Icon(
-                            Icons.email,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _pwd,
-                    obscureText: !_showPassword,
-                    decoration:
-                        AppTheme.inputDecoration(
-                          'Password',
-                          hint: 'Enter your password',
-                        ).copyWith(
-                          prefixIcon: const Icon(
-                            Icons.lock,
-                            color: AppTheme.primary,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _showPassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: AppTheme.primary,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _showPassword = !_showPassword;
-                              });
-                            },
-                          ),
-                        ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (_error != null) ...[
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 10),
-                  ],
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _busy ? null : _login,
-                      style: AppTheme.primaryButtonStyle,
-                      child: _busy
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Log in', style: AppTheme.buttonText),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _googleSignInBusy ? null : _loginWithGoogle,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.grey[700],
-                        elevation: 1,
-                        shadowColor: Colors.grey[300],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: const BorderSide(color: AppTheme.borderColor),
-                        ),
-                      ),
-                      child: _googleSignInBusy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.blue,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Google "G" logo representation
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'G',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue[600],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Sign in with Google',
-                                  style: AppTheme.bodyMedium.copyWith(
-                                    color: Colors.grey[700],
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    onPressed: () => context.go('/reset-password'),
-                    child: const Text('Forgot your password?'),
-                  ),
-                  // Only show sign up option for caregivers (hide for patients)
-                  if (userType.toLowerCase() == 'caregiver')
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        GestureDetector(
-                          onTap: () => context.go('/signup'),
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      color: AppTheme.cardBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/CareConnectLogo.png',
+                          width: isMobile ? 150 : 170,
+                          height: isMobile ? 150 : 170,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: isMobile ? 16 : 24,
+                                  height: isMobile ? 16 : 24,
+                                  decoration: const BoxDecoration(
+                                    color: AppTheme.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: isMobile ? 12 : 16,
+                                  ),
+                                ),
+                                SizedBox(width: isMobile ? 2 : 4),
+                                Icon(
+                                  Icons.monitor_heart,
+                                  color: AppTheme.primary,
+                                  size: isMobile ? 16 : 24,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Tagline
+                  Text(
+                    t.login_tagline,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w400,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Login form card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(32),
+                    decoration: AppTheme.cardDecoration.copyWith(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Form title
+                        Text(
+                          t.login_signInTitle,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Form subtitle
+                        Text(
+                          t.login_signInSubtitle,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Username field
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t.login_usernameLabel,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _email,
+                              decoration: InputDecoration(
+                                hintText: t.login_usernameHint,
+                                hintStyle: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: AppTheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Password field
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t.login_passwordLabel,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _pwd,
+                              obscureText: !_showPassword,
+                              decoration: InputDecoration(
+                                hintText: t.login_passwordHint,
+                                hintStyle: TextStyle(
+                                  color: Colors.grey[400],
+                                  fontSize: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey[300]!,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: AppTheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _showPassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    color: Colors.grey[400],
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _showPassword = !_showPassword;
+                                    });
+                                  },
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Forgot password link
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () => context.go('/reset-password'),
+                            child: Text(
+                              t.login_forgotPassword,
+                              style: const TextStyle(
+                                color: AppTheme.primary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Error message
+                        if (_error != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red[200]!),
+                            ),
+                            child: Text(
+                              _error!,
+                              style: TextStyle(
+                                color: Colors.red[700],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
+                        // Sign in button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _busy ? null : _login,
+                            style: AppTheme.primaryButtonStyle,
+                            child: _busy
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        t.login_signInCta,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Don't have account section
+                        Column(
+                          children: [
+                            Text(
+                              t.login_noAccountPrompt,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: () => context.go('/signup'),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                t.login_createAccountCta,
+                                style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Security badges
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildSecurityBadge(t.login_badgeSecure, Icons.security),
+                      const SizedBox(width: 16),
+                      _buildSecurityBadge(t.login_badgeHipaa, Icons.verified_user),
+                      const SizedBox(width: 16),
+                      _buildSecurityBadge(t.login_badgeAccessible, Icons.accessibility),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Additional security info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        t.login_e2eEncrypted,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'AA',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        t.login_wcagAACompliant,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSecurityBadge(String text, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.green[600]),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

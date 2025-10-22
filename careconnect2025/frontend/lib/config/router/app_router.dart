@@ -1,8 +1,14 @@
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
+import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
+import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
+import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
@@ -19,8 +25,13 @@ import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
-import '../../features/analytics/analytics_page.dart';
+import '../../features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
+import '../../screens/main_screen.dart';
+import '../../config/navigation/main_screen_config.dart';
+import '../../config/navigation/navigation_helper.dart';
+import '../../services/user_role_storage_service.dart';
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
+import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
 import '../../features/auth/presentation/pages/password_reset_page.dart';
@@ -44,32 +55,30 @@ import '../../features/evv/presentation/pages/visit_complete_page.dart';
 import '../../features/evv/presentation/pages/visit_completed_success_page.dart';
 import '../../features/gamification/presentation/pages/gamification_screen.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
-import '../../features/payments/models/package_model.dart';
-import '../../features/payments/presentation/pages/payment_cancel_page.dart';
-import '../../features/payments/presentation/pages/payment_success_page.dart';
+import '../../features/auth/presentation/pages/sign_up_screen.dart';
 import '../../features/payments/presentation/pages/select_package_page.dart';
-import '../../features/payments/presentation/pages/stripe_checkout_page.dart';
 import '../../features/payments/presentation/pages/subscription_management_page.dart';
+import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
+import '../../features/auth/presentation/pages/password_reset_page.dart';
+import '../../features/auth/presentation/pages/reset_password_screen.dart'; // ADD THIS IMPORT
+import '../../features/payments/models/package_model.dart';
 import '../../features/social/presentation/pages/main_feed_screen.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../pages/video_call_test_page.dart';
 import '../../providers/user_provider.dart';
+import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
+import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
+import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 
-/// Helper function to navigate to the appropriate dashboard based on user role
-void navigateToDashboard(BuildContext context, {String? role}) {
-  final userProvider = Provider.of<UserProvider>(context, listen: false);
-  final userRole = role ?? userProvider.user?.role;
 
-  if (userRole == null) {
-    // If no role is found, redirect to login with the last known userType if available
-    final lastUserType = userProvider.user != null
-        ? userProvider.user!.role.toLowerCase()
-        : 'patient';
-    context.go('/login', extra: {'userType': lastUserType});
-    return;
-  }
-
-  context.go('/dashboard?role=$userRole');
+/// Helper function to navigate to the appropriate dashboard based on stored user role
+Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
+  await NavigationHelper.navigateToMainScreen(
+    context,
+    tabIndex: tabIndex,
+    clearHistory: true,
+  );
 }
 
 final GoRouter appRouter = GoRouter(
@@ -95,46 +104,90 @@ final GoRouter appRouter = GoRouter(
       path: '/signup',
       builder: (context, state) {
         // We're now using a single caregiver sign up screen
-        return const SignUpScreen(userType: 'caregiver');
+        return const RegistrationPage();
       },
     ),
     GoRoute(
       path: '/dashboard',
       builder: (context, state) {
-        final urlRole = state.uri.queryParameters['role'];
+        return FutureBuilder<UserData?>(
+          future: UserRoleStorageService.instance.getUserData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final sessionRole = userProvider.user?.role;
+            final userData = snapshot.data;
+            if (userData == null || !userData.isLoggedIn || userData.userId <= 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go('/login');
+              });
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-        final userRole = urlRole ?? sessionRole;
+            // Parse tab index from URL if provided
+            final tabIndex = state.uri.queryParameters['tab'];
+            int? initialTabIndex;
+            if (tabIndex != null) {
+              initialTabIndex = NavigationHelper.getTabIndexFromName(
+                userData.role,
+                tabIndex,
+              );
+            }
 
-        if (userRole == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+            // Create configuration based on stored role
+            MainScreenConfig config;
+            switch (userData.role.toUpperCase()) {
+              case 'PATIENT':
+                config = MainScreenConfig.forPatient(
+                  userId: userData.userId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'CAREGIVER':
+                config = MainScreenConfig.forCaregiver(
+                  userId: userData.userId,
+                  caregiverId: userData.caregiverId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'FAMILY_LINK':
+                config = MainScreenConfig.forFamilyMember(
+                  userId: userData.userId,
+                  patientId: userData.patientId,
+                );
+                break;
+              case 'ADMIN':
+                config = MainScreenConfig(
+                  userRole: 'ADMIN',
+                  userId: userData.userId,
+                  showAppBar: true,
+                  appBarTitle: 'Admin Dashboard',
+                  primaryColor: Colors.red,
+                );
+                break;
+              default:
+                // Unknown role, redirect to login
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  context.go('/login');
+                });
+                return const Scaffold(
+                  body: Center(
+                    child: Text('Unknown user role. Redirecting to login...'),
+                  ),
+                );
+            }
 
-        switch (userRole.toUpperCase()) {
-          case 'PATIENT':
-            return const PatientDashboard();
-          case 'CAREGIVER':
-          case 'FAMILY_LINK':
-          case 'ADMIN':
-            return const CaregiverDashboard();
-          default:
-            // Unknown role, redirect to login
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/login');
-            });
-            return const Scaffold(
-              body: Center(
-                child: Text('Unknown user role. Redirecting to login...'),
-              ),
+            return MainScreen(
+              config: config,
+              initialTabIndex: initialTabIndex,
             );
-        }
+          },
+        );
       },
     ),
     GoRoute(
@@ -142,7 +195,33 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final userIdStr = state.uri.queryParameters['userId'];
         final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
-        return PatientDashboard(userId: userId); // Pass userId if provided
+
+        // Check if userId is valid
+        if (userId == null || userId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid user ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Redirect to new MainScreen with patient configuration
+        final config = MainScreenConfig.forPatient(
+          userId: userId,
+          patientId: userId,
+        );
+
+        return MainScreen(config: config);
       },
     ),
 
@@ -152,43 +231,94 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final caregiverIdStr = state.uri.queryParameters['caregiverId'];
         final patientIdStr = state.uri.queryParameters['patientId'];
-        final userRole = state.uri.queryParameters['userRole'] ?? 'CAREGIVER';
 
         final caregiverId = caregiverIdStr != null
             ? int.tryParse(caregiverIdStr)
-            : 1;
+            : null;
         final patientId = patientIdStr != null
             ? int.tryParse(patientIdStr)
             : null;
 
-        return CaregiverDashboard(
-          userRole: userRole,
+        // Check if caregiverId is valid
+        if (caregiverId == null || caregiverId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid caregiver ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Redirect to new MainScreen with caregiver configuration
+        final config = MainScreenConfig.forCaregiver(
+          userId: caregiverId,
+          caregiverId: caregiverId,
           patientId: patientId,
-          caregiverId: caregiverId ?? 1,
         );
+
+        return MainScreen(config: config);
+      },
+    ),
+    // Direct caregiver dashboard route (for specific caregiver dashboard view)
+    GoRoute(
+      path: '/caregiver-dashboard',
+      builder: (context, state) {
+        final caregiverIdStr = state.uri.queryParameters['caregiverId'];
+        final patientIdStr = state.uri.queryParameters['patientId'];
+
+        final caregiverId = caregiverIdStr != null ? int.tryParse(caregiverIdStr) : null;
+        final patientId = patientIdStr != null ? int.tryParse(patientIdStr) : null;
+
+        if (caregiverId == null || caregiverId <= 0) {
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Invalid caregiver ID'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Go to Login'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return const CaregiverDashboard();
       },
     ),
     // Add a redirect route for authenticated users going to root
     GoRoute(
       path: '/home',
-      redirect: (context, state) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final userRole = userProvider.user?.role;
-
-        if (userRole != null) {
-          return '/dashboard?role=$userRole';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard';
         }
         return '/';
       },
     ),
     GoRoute(
       path: '/register/caregiver',
-      builder: (_, __) => const SignUpScreen(userType: 'caregiver'),
+      builder: (_, __) => const RegistrationPage(),
     ),
-    GoRoute(
-      path: '/register/caregiver/payment',
-      builder: (_, __) => const CaregiverRegistrationFlowPage(),
-    ),
+    // TODO - Update Subscription page
+    // GoRoute(
+    //   path: '/register/caregiver/payment',
+    //   builder: (_, __) => const CaregiverRegistrationFlowPage(),
+    // ),
     GoRoute(
       path: '/register/patient',
       builder: (_, __) => const PatientRegistrationPage(),
@@ -318,7 +448,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -356,7 +486,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -413,7 +543,7 @@ final GoRouter appRouter = GoRouter(
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -445,7 +575,7 @@ final GoRouter appRouter = GoRouter(
 
             if (userRole != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
-                context.go('/dashboard?role=$userRole');
+                context.go('/dashboard');
               });
             }
           });
@@ -690,6 +820,24 @@ final GoRouter appRouter = GoRouter(
       path: '/notetaker-configuration',
       builder: (_, __) => const NotetakerConfigurationPage(),
     ),
+    GoRoute(
+      path: "/notetaker-search",
+      builder: (_, __) => const NotetakerSearchPage(),
+    ),
+    GoRoute(
+      path: "/notetaker/detail/:noteId",
+      builder: (context, state) {
+        final noteId = state.pathParameters['noteId'];
+        final extra = state.extra;
+        if (noteId == null || extra == null || extra is! PatientNote) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid note ID or missing note data')),
+          );
+        }
+        final note = extra as PatientNote;
+        return NotetakerDetailView();
+      },
+    ),
 
     // Video Call Test Route
     GoRoute(
@@ -702,26 +850,45 @@ final GoRouter appRouter = GoRouter(
       path: '/calendar',
       builder: (_, __) => const CalendarAssistantScreen(),
     ),
+    GoRoute(
+      path: '/virtual-checkin',
+      builder: (context, state) => const PatientVirtualCheckIn(),
+    ),
+    
 
     // Handle routes from legacy menus
     GoRoute(
       path: '/taskscheduling',
-      redirect: (context, state) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final userRole = userProvider.user?.role;
-        return '/dashboard?role=$userRole';
+      redirect: (context, state) async {
+        final userData = await UserRoleStorageService.instance.getUserData();
+        if (userData?.isLoggedIn == true) {
+          // Redirect to tasks tab for caregivers, home for patients
+          if (userData!.role.toUpperCase() == 'CAREGIVER') {
+            return '/dashboard?tab=tasks';
+          }
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(
       path: '/chatandcalls',
-      redirect: (context, state) {
-        return '/dashboard?tab=calls';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=messages';
+        }
+        return '/login';
       },
     ),
     GoRoute(
       path: '/aiassistant',
-      redirect: (context, state) {
-        return '/dashboard?tab=ai';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(
@@ -732,8 +899,12 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/sos',
-      redirect: (context, state) {
-        return '/dashboard?tab=emergency';
+      redirect: (context, state) async {
+        final isLoggedIn = await UserRoleStorageService.instance.isLoggedIn();
+        if (isLoggedIn) {
+          return '/dashboard?tab=home';
+        }
+        return '/login';
       },
     ),
     GoRoute(
@@ -767,6 +938,8 @@ final GoRouter appRouter = GoRouter(
         return CustomTaskScreen(patientId: patientId, patientName: patientName);
       },
     ),
+    
+    
     GoRoute(
       path: '/pre-defined-task',
       builder: (context, state) {
@@ -783,5 +956,57 @@ final GoRouter appRouter = GoRouter(
         );
       },
     ),
+
+    GoRoute(
+      path: '/invoice-assistant',
+      redirect: (context, state) {
+        // redirect only if the path is exactly /invoice-assistant
+        if (state.uri.toString() == '/invoice-assistant') {
+          return '/invoice-assistant/upload';
+        }
+        return null;
+      },
+      routes: [ 
+         GoRoute(
+          path: 'dashboard',
+          name: 'invoiceDashboard',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 0),
+        ),
+        GoRoute(
+          path: 'upload',
+          name: 'invoiceUpload',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 1),
+        ),
+        GoRoute(
+          path: 'list',
+          name: 'invoiceList',
+          builder: (context, state) => const InvoiceTabbedPage(initialTabIndex: 2),
+          routes: [
+            GoRoute(
+              path: ':filter',
+              name: 'invoiceListFiltered',
+              builder: (context, state) => InvoiceTabbedPage(
+                initialTabIndex: 2,
+                quickFilter: state.pathParameters['filter'],
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'detail/:id',
+          name: 'invoiceDetail',
+          builder: (context, state) {
+            final invoice = state.extra as Invoice;
+            return InvoiceDetailPage(invoice: invoice);
+          },
+        ),       
+        
+      ],
+    ),
+        GoRoute(
+          path: 'menu',
+          name: 'menupage',
+          builder: (context, state) => const MenuPage(),
+        ),
   ],
 );

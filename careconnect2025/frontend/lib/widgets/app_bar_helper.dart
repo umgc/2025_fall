@@ -19,7 +19,10 @@ class AppBarHelper {
       title: Text(title, style: Theme.of(context).appBarTheme.titleTextStyle),
       centerTitle: centerTitle,
       automaticallyImplyLeading: automaticallyImplyLeading,
-      leading: leading,
+      leading: leading ?? IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
       bottom: bottom,
       actions: [
         AppBarActions(additionalActions: additionalActions),

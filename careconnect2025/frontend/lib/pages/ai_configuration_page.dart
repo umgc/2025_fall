@@ -75,7 +75,6 @@ class _AIConfigurationPageState extends State<AIConfigurationPage> {
           ),
         ],
       ),
-      drawer: const CommonDrawer(currentRoute: '/ai-configuration'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildConfigForm(),

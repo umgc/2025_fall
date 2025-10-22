@@ -1,0 +1,46 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Check Formatting and Analyze Learning Lense
+
+on:
+  push:
+    branches: [ "team_e" ]
+  pull_request:
+    branches: [ "team_e" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Step 1: Set up the Flutter environment
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Specify the Flutter version your project uses for consistent builds
+          flutter-version: '${{ vars.FLUTTER_VERSION }}' 
+          channel: 'stable'
+          cache: true # Caches Flutter dependencies for faster builds
+
+      # Step 2: Get Flutter dependencies
+      - name: Get Flutter dependencies
+        # Set the working directory to where your pubspec.yaml is located
+        working-directory: ./LearningLens2025/frontend
+        run: flutter pub get
+
+      # Uncomment this step to verify the use of 'dart format' on each commit.
+      - name: Verify lib formatting
+        run: dart format --output=none --set-exit-if-changed ./LearningLens2025/frontend/lib
+
+      # Uncomment this step to verify the use of 'dart format' on each commit.
+      - name: Verify test formatting
+        run: dart format --output=none --set-exit-if-changed ./LearningLens2025/frontend/test
+
+      # Consider passing '--fatal-infos' for slightly stricter analysis.
+      - name: Analyze project source
+        run: dart analyze ./LearningLens2025/frontend/lib

@@ -1,5 +1,7 @@
 package com.careconnect.service;
 
+import com.careconnect.dto.*;
+import com.careconnect.model.Address;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -9,13 +11,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
 
-import com.careconnect.dto.LoginRequest;
-import com.careconnect.dto.LoginResponse;
 import com.careconnect.model.Caregiver;
 import com.careconnect.model.Patient;
 import com.careconnect.model.FamilyMember;
@@ -43,7 +44,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.careconnect.dto.RegisterRequest;
 import com.careconnect.security.Role;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -73,7 +73,7 @@ public class AuthService {
     @Autowired
     private CaregiverRepository caregivers;
 
-    @Autowired 
+    @Autowired
     private FamilyMemberRepository familyMembers;
 
     @Autowired
@@ -84,6 +84,9 @@ public class AuthService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private com.careconnect.websocket.CareConnectWebSocketHandler webSocketHandler;
 
     // Google OAuth configuration
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -98,6 +101,16 @@ public class AuthService {
     @Value("${careconnect.baseurl:http://localhost:8080}")
     private String backendUrl;
 
+    @Value("${spring.security.oauth2.client.provider.google.authorization-uri}")
+    private String googleAuthUri;
+
+    @Value("${spring.security.oauth2.client.provider.google.token-uri}")
+    private String googleTokenUri;
+
+    @Value("${spring.security.oauth2.client.provider.google.user-info-uri}")
+    private String googleUserInfoUri;
+
+    @Transactional
     public ResponseEntity<?> register(RegisterRequest request) {
         // 1. Lookup existing user by email & role
         Role roleEnum;
@@ -112,18 +125,15 @@ public class AuthService {
 
         // 2. If user exists
         if (existingUserOpt.isPresent()) {
-            User existingUser = existingUserOpt.get();
+            final User existingUser = existingUserOpt.get();
             if (Boolean.FALSE.equals(existingUser.getIsVerified())) {
                 // User exists but is not verified -> resend with a NEW token
-                String newToken = UUID.randomUUID().toString();
+                final String newToken = UUID.randomUUID().toString();
                 existingUser.setVerificationToken(newToken);
                 userRepository.save(existingUser);
 
                 // Use frontend-supplied base URL if provided, fallback to backend baseUrl
-                String verificationBaseUrl = request.getVerificationBaseUrl();
-                String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
-                        ? verificationBaseUrl : backendUrl)
-                        + "/api/auth/verify/" + newToken;
+                final String link = backendUrl + "/v1/api/auth/verify/" + newToken;
 
                 emailService.sendVerificationEmail(existingUser.getEmail(), link);
 
@@ -138,8 +148,8 @@ public class AuthService {
         }
 
         // 3. Normal registration flow for new users
-        String verificationToken = UUID.randomUUID().toString();
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        final String verificationToken = UUID.randomUUID().toString();
+        final String encodedPassword = passwordEncoder.encode(request.getPassword());
         
         User user = new User();
         user.setEmail(request.getEmail());
@@ -150,17 +160,76 @@ public class AuthService {
         user.setIsVerified(false);
         user.setVerificationToken(verificationToken);
         user.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-        userRepository.save(user);
 
-        String verificationBaseUrl = request.getVerificationBaseUrl();
-        String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
+        registerRole(request, user);
+
+        final String verificationBaseUrl = request.getVerificationBaseUrl();
+        final String link = ((verificationBaseUrl != null && !verificationBaseUrl.isEmpty())
                 ? verificationBaseUrl : backendUrl)
-                + "/api/auth/verify/" + verificationToken;
+                + "/v1/api/auth/verify/" + verificationToken;
 
         emailService.sendVerificationEmail(user.getEmail(), link);
 
         return ResponseEntity.ok(Collections.singletonMap("message",
                 "Registration successful! Please check your email to verify your account."));
+    }
+
+    private void registerRole(RegisterRequest request, User user) {
+        switch (user.getRole()) {
+            case PATIENT -> {
+                if (request instanceof PatientRegistration regReq) {
+                    // Save user first to get the ID
+                    User savedUser = userRepository.save(user);
+
+                    final Patient patient = new Patient();
+                    patient.setPhone(regReq.getPhone());
+                    patient.setDob(regReq.getDob());
+                    patient.setAddress(
+                        new Address(
+                            regReq.getAddress().line1(),
+                            regReq.getAddress().line2(),
+                            regReq.getAddress().city(),
+                            regReq.getAddress().state(),
+                            regReq.getAddress().zip()
+                        )
+                    );
+                    patient.setGender(regReq.getGender());
+                    patient.setEmail(request.getEmail());
+                    patient.setFirstName(regReq.getFirstName());
+                    patient.setLastName(regReq.getLastName());
+                    patient.setUser(savedUser);
+                    patients.save(patient);
+                }
+            }
+            case CAREGIVER -> {
+                if (request instanceof CaregiverRegistration regReq) {
+                    // Save user first to get the ID
+                    User savedUser = userRepository.save(user);
+
+                    final Caregiver caregiver = new Caregiver();
+                    caregiver.setCaregiverType(regReq.getCaregiverType());
+                    caregiver.setDob(regReq.getDob());
+                    caregiver.setPhone(regReq.getPhone());
+                    caregiver.setAddress(
+                        new Address(
+                            regReq.getAddress().line1(),
+                            regReq.getAddress().line2(),
+                            regReq.getAddress().city(),
+                            regReq.getAddress().state(),
+                            regReq.getAddress().zip()
+                        )
+                    );
+                    caregiver.setEmail(request.getEmail());
+                    caregiver.setFirstName(regReq.getFirstName());
+                    caregiver.setLastName(regReq.getLastName());
+                    caregiver.setGender(regReq.getGender());
+                    caregiver.setUser(savedUser);
+                    caregivers.save(caregiver);
+                }
+            }
+            default -> throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Registration for " + user.getRole().toString() + " is unsupported");
+        }
     }
 
     // ✅ Validate user for login
@@ -197,10 +266,77 @@ public class AuthService {
             user.setIsVerified(true);
             user.setVerificationToken(null); // Clear token so it can't be reused
             userRepository.save(user);
+
+            // Send WebSocket notification if handler is available
+            if (webSocketHandler != null) {
+                try {
+                    webSocketHandler.sendEmailVerificationNotification(user.getEmail());
+                } catch (Exception e) {
+                    // Log error but don't fail the verification
+                    System.err.println("Failed to send WebSocket notification for email verification: " + e.getMessage());
+                }
+            }
+
             return ResponseEntity.ok("Your email has been verified! You can now log in.");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired verification link.");
         }
+    }
+
+    /**
+     * Resend verification email for an unverified user
+     */
+    public ResponseEntity<?> resendVerificationEmail(String email) {
+        // Find user by email
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            // Don't reveal if user exists for security reasons
+            return ResponseEntity.ok(Collections.singletonMap("message",
+                    "If an unverified account exists with this email, a verification email has been sent."));
+        }
+
+        User user = userOpt.get();
+
+        // Check if user is already verified
+        if (Boolean.TRUE.equals(user.getIsVerified())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error",
+                            "This email address is already verified."));
+        }
+
+        // Generate new verification token
+        String newToken = UUID.randomUUID().toString();
+        user.setVerificationToken(newToken);
+        userRepository.save(user);
+
+        // Build verification link (use backend URL as default)
+        String link = backendUrl + "/v1/api/auth/verify/" + newToken;
+
+        // Send verification email
+        emailService.sendVerificationEmail(user.getEmail(), link);
+
+        return ResponseEntity.ok(Collections.singletonMap("message",
+                "Verification email sent successfully! Please check your inbox."));
+    }
+
+    /**
+     * Check if an email address is verified (without sending email)
+     */
+    public ResponseEntity<?> checkEmailVerificationStatus(String email) {
+        // Find user by email
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            // Don't reveal if user exists for security reasons
+            return ResponseEntity.ok(Collections.singletonMap("verified", false));
+        }
+
+        User user = userOpt.get();
+
+        // Return verification status
+        return ResponseEntity.ok(Collections.singletonMap("verified",
+                Boolean.TRUE.equals(user.getIsVerified())));
     }
 
     // public LoginResponse loginV2(LoginRequest req) {
@@ -340,8 +476,9 @@ public LoginResponse loginV2(LoginRequest req,
             .caregiverId(caregiverId)
             .name(name)
             .status(user.getStatus())
+            .emailVerified(user.getIsVerified())
             .build();
-    }
+}
 
     /**
      * OAuth login (Google) - no password validation required
@@ -492,7 +629,7 @@ public LoginResponse loginV2(LoginRequest req,
     public String buildGoogleOAuthUrl() {
         try {
             String redirectUri = URLEncoder.encode(backendUrl + "/v1/api/auth/sso/google/callback", StandardCharsets.UTF_8);
-            return "https://accounts.google.com/o/oauth2/v2/auth?" +
+            return googleAuthUri + "?" +
                    "client_id=" + googleClientId +
                    "&redirect_uri=" + redirectUri +
                    "&scope=openid%20email%20profile" +
@@ -535,8 +672,6 @@ public LoginResponse loginV2(LoginRequest req,
 
  private String exchangeCodeForToken(String code) {
         try {
-            String tokenUrl = "https://oauth2.googleapis.com/token";
-
             RestTemplate restTemplate = new RestTemplate();
 
             // Set the Content-Type header
@@ -555,7 +690,7 @@ public LoginResponse loginV2(LoginRequest req,
 
             // Use exchange method to send the request with explicit headers
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                tokenUrl,
+                googleTokenUri,
                 HttpMethod.POST,
                 requestEntity,
                 new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
@@ -610,7 +745,7 @@ public LoginResponse loginV2(LoginRequest req,
      */
     private Map<String, Object> getUserInfoFromGoogle(String accessToken) {
         try {
-            String userInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + accessToken;
+            String userInfoUrl = googleUserInfoUri + "?access_token=" + accessToken;
 
             RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
