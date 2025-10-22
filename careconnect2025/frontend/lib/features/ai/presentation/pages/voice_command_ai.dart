@@ -152,9 +152,15 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   }
 
   void _onMicPressed() {
+  if (_isListening) {
+    setState(() => _wakeDetected = false);
+    _speech.stop();
+    _timeoutTimer?.cancel();
+  } else {
     setState(() => _wakeDetected = true);
     _startListening();
   }
+}
 
   @override
   void dispose() {
