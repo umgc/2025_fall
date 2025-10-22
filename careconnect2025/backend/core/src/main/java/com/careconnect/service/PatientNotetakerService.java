@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.springframework.cglib.core.Local;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +20,9 @@ import com.careconnect.model.PatientNotetakerKeyword;
 import com.careconnect.model.PatientNotetakerKeyword.EventType;
 import com.careconnect.repository.PatientNoteRepository;
 import com.careconnect.repository.PatientNotetakerConfigRepository;
-import com.careconnect.service.DeepSeekService.DeepSeekChatRequest;
-import com.careconnect.service.DeepSeekService.DeepSeekResponse;
-import com.careconnect.service.DeepSeekService.Message;
+import com.careconnect.service.OpenRouterService.Message;
+import com.careconnect.service.OpenRouterService.OpenRouterChatRequest;
+import com.careconnect.service.OpenRouterService.OpenRouterResponse;
 import com.careconnect.service.v2.TaskServiceV2;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class PatientNotetakerService {
     private final TaskServiceV2 taskService;
-    private final DeepSeekService deepSeekService;
+    private final OpenRouterService openRouterService;
     private final PatientNoteRepository patientNoteRepository;
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
@@ -41,13 +40,13 @@ public class PatientNotetakerService {
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
         PatientService patientService,
-        DeepSeekService deepSeekService,
+        OpenRouterService openRouterService,
         TaskServiceV2 taskService
         ) {
         this.patientNoteRepository = patientNoteRepository;
         this.patientNotetakerConfigRepository = patientNotetakerConfigRepository;
         this.patientService = patientService;
-        this.deepSeekService = deepSeekService;
+        this.openRouterService = openRouterService;
         this.taskService = taskService;
     }
 
@@ -175,18 +174,18 @@ public class PatientNotetakerService {
                     + "Use the following text to derive these properties as they relate to the keyword: '"
                     + truncatedMessage
                     + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object beginning with { and ending with }.";
-            System.out.println("Sending DeepSeek request...");
-            DeepSeekChatRequest request = new DeepSeekChatRequest(
+            System.out.println("Sending OpenRouter request...");
+            OpenRouterChatRequest request = new OpenRouterChatRequest(
                     "deepseek/deepseek-chat-v3.1:free",
                     Arrays.asList(new Message("system", "You are an expert language interpreter and software engineer"),new Message("user", prompt)),
                     0.2,
                     256);
 
-            DeepSeekResponse response; 
+            OpenRouterResponse response; 
             try {
-                response = deepSeekService.sendChatRequest(request);
+                response = openRouterService.sendChatRequest(request);
             } catch (Exception e) {
-                log.error("Unable to reach DeepSeek service: {}", e.getMessage());
+                log.error("Unable to reach OpenRouter service: {}", e.getMessage());
                 return;
             }
             String aiContent = null;
@@ -203,7 +202,7 @@ public class PatientNotetakerService {
                 log.error("Invalid AI Task generated for keyword '{}': {}", keyword.getKeyword(), aiTask);
                 return;
             }
-            log.info("OpenAI response for keyword '{}': {}", keyword.getKeyword(), response);
+            log.info("OpenRouter response for keyword '{}': {}", keyword.getKeyword(), response);
             log.info("Created Task from AI: {}", aiTask);
             aiTask.setDescription("AI GENERATED TASK: " + aiTask.getDescription());
             aiTask.setCompleted(false);
