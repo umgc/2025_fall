@@ -1,4 +1,5 @@
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
+import 'package:care_connect_app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
 import 'package:camera/camera.dart';
@@ -14,7 +15,9 @@ class PatientVirtualCheckIn extends StatefulWidget {
 class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   int? selectedMood;
   final TextEditingController _notesController = TextEditingController();
-
+  late Future<VideoWidget> videoWidget;
+  late bool showVideoCall = false;
+  late Future<CameraDescription> targetCamera;
   final List<Map<String, dynamic>> moodOptions = [
     {"value": 1, "emoji": "😢", "label": "Very Sad"},
     {"value": 2, "emoji": "😞", "label": "Sad"},
@@ -23,6 +26,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     {"value": 5, "emoji": "😊", "label": "Great"},
   ];
 
+  late bool videoCallActive = false;
+
   Future<CameraDescription> setUpCamera() async
   {
     WidgetsFlutterBinding.ensureInitialized();
@@ -30,10 +35,21 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     return cameras.first;
   }
 
+  void cameraHandler() async
+  {
+    ///TODO: Find a way to turn videoCallActive false
+    if(!videoCallActive)
+      {
+        targetCamera = setUpCamera();
+        ///videoWidget = VideoWidget(camera: targetCamera);
+        showVideoCall = true;
+        setState(() {
+        });
+      }
+  }
+
   @override
-  Widget build(BuildContext context) {
-    ///I think this is where this goes? Change this to a var
-    setUpCamera();
+  Widget build(BuildContext context)  {
     return Scaffold(
       appBar: AppBarHelper.createAppBar(
         context,
@@ -56,6 +72,19 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
+                  FloatingActionButton(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    onPressed: () => cameraHandler(),
+                    child: Icon(Icons.video_call)
+                  ),
+                  if(showVideoCall)
+                    Container(
+                        alignment: Alignment.center,
+                        height: 50,
+                        width: 50,
+                        child: VideoWidget()
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     "Share how you're feeling today",
@@ -63,6 +92,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                   ),
                   const SizedBox(height: 16),
                 ],
+
               ),
 
               // Mood selection card
@@ -208,7 +238,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                     style: TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
-                )
+                ),
             ],
           ),
         ),

@@ -7,11 +7,9 @@ import 'package:camera/camera.dart';
 
 class VideoWidget extends StatefulWidget{
   ///TODO: Figure out what a key is in this context and add it.
-  const VideoWidget({super.key, required this.camera});
-  final CameraDescription camera;
+  const VideoWidget({super.key});
   @override
   State<VideoWidget> createState() => VideoWidgetState();
-
 }
 
 class VideoWidgetState extends State<VideoWidget>
@@ -22,7 +20,8 @@ class VideoWidgetState extends State<VideoWidget>
   @override
   void initState() {
     super.initState();
-    controller = CameraController(widget.camera, ResolutionPreset.medium);
+
+    //controller = CameraController(widget.camera, ResolutionPreset.medium);
     controllerFuture = controller.initialize();
   }
 
@@ -34,7 +33,12 @@ class VideoWidgetState extends State<VideoWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return  Container(
+      alignment: Alignment.center,
+      height: 50,
+      width: 50,
+      child: Text("This is the Video Widget"),
+    );
   }
 
 }
