@@ -17,31 +17,24 @@ import java.util.Map;
 
 @Service @RequiredArgsConstructor
 public class EvvService {
-    private final EvvParticipantRepository evvParticipantRepository;
     private final EvvRecordRepository recordRepository;
     private final EvvCorrectionRepository correctionRepository;
     private final EvvOfflineQueueRepository offlineQueueRepository;
+    private final PatientRepository patientRepository;
     private final AuditLogger audit;
 
     @Transactional
-    public EvvParticipant createParticipant(CreateParticipationRequestDto request, String createdBy) {
-        var p = evvParticipantRepository.findByMaNumber(request.getMaNumber()).orElse(EvvParticipant.builder()
-                .patientName(request.getPatientName())
-                .maNumber(request.getMaNumber())
-                .createdAt(OffsetDateTime.now())
-                .createdBy(createdBy)
-                .build());
-        return evvParticipantRepository.save(p);
-    }
-
-    @Transactional
     public EvvRecord createRecord(EvvRecordRequestDto req, Long actorId) {
-        var participant = evvParticipantRepository.findByMaNumber(req.getParticipantMaNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Participant not found"));
+        var patient = patientRepository.findById(req.getPatientId())
+                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        
+        // Build individual name from patient data
+        String individualName = patient.getFirstName() + " " + patient.getLastName();
+        
         var rec = EvvRecord.builder()
-                .participant(participant)
+                .patient(patient)
                 .serviceType(req.getServiceType())
-                .individualName(req.getIndividualName())
+                .individualName(individualName)
                 .caregiverId(req.getCaregiverId())
                 .dateOfService(req.getDateOfService())
                 .timeIn(req.getTimeIn())
@@ -65,7 +58,7 @@ public class EvvService {
 
     @Transactional
     public EvvRecord review(Long id, boolean approve, Long actorId, String comment){
-        var rec = recordRepository.findByIdWithParticipant(id).orElseThrow();
+        var rec = recordRepository.findByIdWithPatient(id).orElseThrow();
         if (approve) rec.markConfirmed(); else rec.markPendingReview();
         recordRepository.save(rec);
         audit.log(rec, actorId, approve ? "CONFIRMED" : "REVIEWED", java.util.Map.of("comment", comment)); // REQ 3/4
@@ -74,13 +67,16 @@ public class EvvService {
 
     @Transactional
     public EvvRecord createOfflineRecord(EvvRecordRequestDto req, Long actorId, String deviceId) {
-        var participant = evvParticipantRepository.findByMaNumber(req.getParticipantMaNumber())
-                .orElseThrow(() -> new IllegalArgumentException("Participant not found"));
+        var patient = patientRepository.findById(req.getPatientId())
+                .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        
+        // Build individual name from patient data
+        String individualName = patient.getFirstName() + " " + patient.getLastName();
         
         var rec = EvvRecord.builder()
-                .participant(participant)
+                .patient(patient)
                 .serviceType(req.getServiceType())
-                .individualName(req.getIndividualName())
+                .individualName(individualName)
                 .caregiverId(req.getCaregiverId())
                 .dateOfService(req.getDateOfService())
                 .timeIn(req.getTimeIn())
@@ -106,17 +102,18 @@ public class EvvService {
                 .caregiverId(actorId)
                 .deviceId(deviceId)
                 .priority(1)
-                .recordData(Map.of(
-                    "serviceType", req.getServiceType(),
-                    "individualName", req.getIndividualName(),
-                    "dateOfService", req.getDateOfService(),
-                    "timeIn", req.getTimeIn(),
-                    "timeOut", req.getTimeOut(),
-                    "locationLat", req.getLocationLat(),
-                    "locationLng", req.getLocationLng(),
-                    "locationSource", req.getLocationSource(),
-                    "stateCode", req.getStateCode(),
-                    "deviceInfo", req.getDeviceInfo()
+                .recordData(Map.ofEntries(
+                    Map.entry("serviceType", req.getServiceType()),
+                    Map.entry("individualName", individualName),
+                    Map.entry("patientId", req.getPatientId()),
+                    Map.entry("dateOfService", req.getDateOfService()),
+                    Map.entry("timeIn", req.getTimeIn()),
+                    Map.entry("timeOut", req.getTimeOut()),
+                    Map.entry("locationLat", req.getLocationLat()),
+                    Map.entry("locationLng", req.getLocationLng()),
+                    Map.entry("locationSource", req.getLocationSource()),
+                    Map.entry("stateCode", req.getStateCode()),
+                    Map.entry("deviceInfo", req.getDeviceInfo())
                 ))
                 .build();
         
@@ -128,12 +125,12 @@ public class EvvService {
 
     @Transactional
     public EvvRecord correctRecord(EvvCorrectionRequestDto req, Long actorId) {
-        var originalRecord = recordRepository.findByIdWithParticipant(req.getOriginalRecordId())
+        var originalRecord = recordRepository.findByIdWithPatient(req.getOriginalRecordId())
                 .orElseThrow(() -> new IllegalArgumentException("Original record not found"));
         
         // Create corrected record
         var correctedRecord = EvvRecord.builder()
-                .participant(originalRecord.getParticipant())
+                .patient(originalRecord.getPatient())
                 .serviceType(req.getServiceType() != null ? req.getServiceType() : originalRecord.getServiceType())
                 .individualName(req.getIndividualName() != null ? req.getIndividualName() : originalRecord.getIndividualName())
                 .caregiverId(originalRecord.getCaregiverId())
@@ -206,7 +203,7 @@ public class EvvService {
 
     @Transactional
     public EvvRecord approveEor(EorApprovalRequestDto req, Long approverId) {
-        var record = recordRepository.findByIdWithParticipant(req.getRecordId())
+        var record = recordRepository.findByIdWithPatient(req.getRecordId())
                 .orElseThrow(() -> new IllegalArgumentException("Record not found"));
         
         record.approveEor(approverId, req.getComment());

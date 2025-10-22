@@ -23,12 +23,6 @@ public class EvvController {
     private final EvvOfflineSyncService offlineSyncService;
 
     private static final Long DEFAULT_USER_ID = 1L;
-    private static final String DEFAULT_USER_EMAIL = "test@example.com";
-
-    @PostMapping("/participants")
-    public ResponseEntity<?> createParticipant(@RequestBody CreateParticipationRequestDto req) {
-        return ResponseEntity.ok(evvService.createParticipant(req, DEFAULT_USER_EMAIL));
-    }
 
     @PostMapping("/records")
     public ResponseEntity<EvvRecord> create(@RequestBody EvvRecordRequestDto req) {

@@ -16,7 +16,6 @@ import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
-import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +30,18 @@ import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
 import '../../features/dashboard/presentation/pages/caregiver_dashboard.dart';
 import '../../features/dashboard/presentation/pages/patient_dashboard.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
+import '../../features/evv/presentation/pages/evv_corrections.dart';
+import '../../features/evv/presentation/pages/evv_dashboard.dart';
+import '../../features/evv/presentation/pages/evv_offline_sync.dart';
+import '../../features/evv/presentation/pages/evv_record_review.dart';
+import '../../features/evv/presentation/pages/evv_visit_history.dart';
+import '../../features/evv/presentation/pages/patient_selection_page.dart';
+import '../../features/evv/presentation/pages/start_visit_page.dart';
+import '../../features/evv/presentation/pages/checkin_location_page.dart';
+import '../../features/evv/presentation/pages/visit_in_progress_page.dart';
+import '../../features/evv/presentation/pages/checkout_location_page.dart';
+import '../../features/evv/presentation/pages/visit_complete_page.dart';
+import '../../features/evv/presentation/pages/visit_completed_success_page.dart';
 import '../../features/gamification/presentation/pages/gamification_screen.dart';
 import '../../features/onboarding/presentation/pages/patient_registration.dart';
 import '../../features/payments/models/package_model.dart';
@@ -41,6 +52,7 @@ import '../../features/payments/presentation/pages/stripe_checkout_page.dart';
 import '../../features/payments/presentation/pages/subscription_management_page.dart';
 import '../../features/social/presentation/pages/main_feed_screen.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
+import '../../pages/video_call_test_page.dart';
 import '../../providers/user_provider.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on user role
@@ -475,12 +487,174 @@ final GoRouter appRouter = GoRouter(
       builder: (_, __) => const EvvDashboard(),
     ),
     GoRoute(
-      path: '/evv/participants',
-      builder: (_, __) => const EvvParticipantManagementPage(),
+      path: '/evv/select-patient',
+      builder: (_, __) => const PatientSelectionPage(),
     ),
     GoRoute(
-      path: '/evv/create-record',
-      builder: (_, __) => const EvvRecordCreationPage(),
+      path: '/evv/start-visit',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        if (patientId == null) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid patient ID')),
+          );
+        }
+        return StartVisitPage(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/evv/checkin-location',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        if (patientId == null || serviceType.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid parameters')),
+          );
+        }
+        return CheckinLocationPage(
+          patientId: patientId,
+          serviceType: serviceType,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/evv/visit-progress',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        final locationType = state.uri.queryParameters['locationType'] ?? '';
+        final latitude = double.tryParse(state.uri.queryParameters['latitude'] ?? '');
+        final longitude = double.tryParse(state.uri.queryParameters['longitude'] ?? '');
+        
+        if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid parameters')),
+          );
+        }
+        
+        return VisitInProgressPage(
+          patientId: patientId,
+          serviceType: serviceType,
+          locationType: locationType,
+          latitude: latitude,
+          longitude: longitude,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/evv/checkout-location',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        final locationType = state.uri.queryParameters['locationType'] ?? '';
+        final latitude = double.tryParse(state.uri.queryParameters['latitude'] ?? '');
+        final longitude = double.tryParse(state.uri.queryParameters['longitude'] ?? '');
+        final notes = state.uri.queryParameters['notes'] ?? '';
+        final duration = int.tryParse(state.uri.queryParameters['duration'] ?? '0') ?? 0;
+        
+        if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid parameters')),
+          );
+        }
+        
+        return CheckoutLocationPage(
+          patientId: patientId,
+          serviceType: serviceType,
+          locationType: locationType,
+          latitude: latitude,
+          longitude: longitude,
+          notes: notes,
+          duration: duration,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/evv/visit-complete',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        final checkinLocationType = state.uri.queryParameters['checkinLocationType'] ?? '';
+        final checkoutLocationType = state.uri.queryParameters['checkoutLocationType'] ?? '';
+        final checkinLatitude = double.tryParse(state.uri.queryParameters['checkinLatitude'] ?? '');
+        final checkinLongitude = double.tryParse(state.uri.queryParameters['checkinLongitude'] ?? '');
+        final checkoutLatitude = double.tryParse(state.uri.queryParameters['checkoutLatitude'] ?? '');
+        final checkoutLongitude = double.tryParse(state.uri.queryParameters['checkoutLongitude'] ?? '');
+        final notes = state.uri.queryParameters['notes'] ?? '';
+        final duration = int.tryParse(state.uri.queryParameters['duration'] ?? '0') ?? 0;
+        
+        if (patientId == null || serviceType.isEmpty || checkinLocationType.isEmpty || checkoutLocationType.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid parameters')),
+          );
+        }
+        
+        return VisitCompletePage(
+          patientId: patientId,
+          serviceType: serviceType,
+          checkinLocationType: checkinLocationType,
+          checkoutLocationType: checkoutLocationType,
+          checkinLatitude: checkinLatitude,
+          checkinLongitude: checkinLongitude,
+          checkoutLatitude: checkoutLatitude,
+          checkoutLongitude: checkoutLongitude,
+          notes: notes,
+          duration: duration,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/evv/visit-completed-success',
+      builder: (context, state) {
+        final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        final checkinLocationType = state.uri.queryParameters['checkinLocationType'] ?? '';
+        final checkoutLocationType = state.uri.queryParameters['checkoutLocationType'] ?? '';
+        final checkinLatitude = double.tryParse(state.uri.queryParameters['checkinLatitude'] ?? '');
+        final checkinLongitude = double.tryParse(state.uri.queryParameters['checkinLongitude'] ?? '');
+        final checkoutLatitude = double.tryParse(state.uri.queryParameters['checkoutLatitude'] ?? '');
+        final checkoutLongitude = double.tryParse(state.uri.queryParameters['checkoutLongitude'] ?? '');
+        final notes = state.uri.queryParameters['notes'] ?? '';
+        final duration = int.tryParse(state.uri.queryParameters['duration'] ?? '0') ?? 0;
+        final checkinTimeStr = state.uri.queryParameters['checkinTime'] ?? '';
+        final checkoutTimeStr = state.uri.queryParameters['checkoutTime'] ?? '';
+        
+        if (patientId == null || serviceType.isEmpty || checkinLocationType.isEmpty || checkoutLocationType.isEmpty) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid parameters')),
+          );
+        }
+        
+        // Parse times - fallback to current time if parsing fails
+        DateTime checkinTime;
+        DateTime checkoutTime;
+        try {
+          checkinTime = DateTime.parse(checkinTimeStr);
+        } catch (e) {
+          checkinTime = DateTime.now().subtract(Duration(seconds: duration));
+        }
+        try {
+          checkoutTime = DateTime.parse(checkoutTimeStr);
+        } catch (e) {
+          checkoutTime = DateTime.now();
+        }
+        
+        return VisitCompletedSuccessPage(
+          patientId: patientId,
+          serviceType: serviceType,
+          checkinLocationType: checkinLocationType,
+          checkoutLocationType: checkoutLocationType,
+          checkinLatitude: checkinLatitude,
+          checkinLongitude: checkinLongitude,
+          checkoutLatitude: checkoutLatitude,
+          checkoutLongitude: checkoutLongitude,
+          notes: notes,
+          duration: duration,
+          checkinTime: checkinTime,
+          checkoutTime: checkoutTime,
+        );
+      },
     ),
     GoRoute(
       path: '/evv/review-records',

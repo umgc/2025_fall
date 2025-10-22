@@ -21,8 +21,8 @@ public final class EvvDtoMapper {
     public static EvvRecordResponse toDto(EvvRecord r){
         return EvvRecordResponse.builder()
                 .id(r.getId())
-                .participantId(r.getParticipant().getId())
-                .participantMaNumber(r.getParticipant().getMaNumber())
+                .patientId(r.getPatient().getId())
+                .patientMaNumber(r.getPatient().getMaNumber())
                 .serviceType(r.getServiceType())
                 .individualName(r.getIndividualName())
                 .caregiverId(r.getCaregiverId())

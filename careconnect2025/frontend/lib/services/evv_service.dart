@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:uuid/uuid.dart';
+import '../features/dashboard/models/patient_model.dart';
 
 class EvvService {
   static const String _baseUrl = 'http://localhost:8080/api/evv';
@@ -168,42 +169,6 @@ class EvvService {
     };
   }
 
-  // Create EVV Participant
-  Future<EvvParticipant> createParticipant({
-    required String patientName,
-    required String maNumber,
-  }) async {
-    try {
-      final headers = await _getHeaders();
-      final body = jsonEncode({
-        'patientName': patientName,
-        'maNumber': maNumber,
-      });
-
-      print('🔍 EVV Service: Creating participant with data: $body');
-      print('🔍 EVV Service: Headers: $headers');
-      print('🔍 EVV Service: URL: $_baseUrl/participants');
-
-      final response = await _client.post(
-        Uri.parse('$_baseUrl/participants'),
-        headers: headers,
-        body: body,
-      );
-
-      print('🔍 EVV Service: Response status: ${response.statusCode}');
-      print('🔍 EVV Service: Response body: ${response.body}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return EvvParticipant.fromJson(data);
-      } else {
-        throw Exception('Failed to create participant: Status ${response.statusCode}, Body: ${response.body}');
-      }
-    } catch (e) {
-      print('❌ EVV Service: Error creating participant: $e');
-      rethrow;
-    }
-  }
 
   // Create EVV Record
   Future<EvvRecord> createRecord(EvvRecordRequest request) async {
@@ -222,7 +187,7 @@ class EvvService {
 
     final body = jsonEncode({
       'serviceType': request.serviceType,
-      'individualName': request.individualName,
+      'patientId': request.patientId,
       'caregiverId': request.caregiverId,
       'dateOfService': request.dateOfService.toIso8601String().split('T')[0],
       'timeIn': timeInFormatted,
@@ -230,7 +195,6 @@ class EvvService {
       'locationLat': request.locationLat,
       'locationLng': request.locationLng,
       'locationSource': request.locationSource,
-      'participantMaNumber': request.participantMaNumber,
       'stateCode': request.stateCode,
       'deviceInfo': deviceInfo,
     });
@@ -244,7 +208,7 @@ class EvvService {
       body: body,
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return EvvRecord.fromJson(data);
     } else {
@@ -479,35 +443,9 @@ class EvvService {
 }
 
 // Data Models
-class EvvParticipant {
-  final int id;
-  final String patientName;
-  final String maNumber;
-  final DateTime createdAt;
-  final String createdBy;
-
-  EvvParticipant({
-    required this.id,
-    required this.patientName,
-    required this.maNumber,
-    required this.createdAt,
-    required this.createdBy,
-  });
-
-  factory EvvParticipant.fromJson(Map<String, dynamic> json) {
-    return EvvParticipant(
-      id: json['id'],
-      patientName: json['patientName'],
-      maNumber: json['maNumber'],
-      createdAt: DateTime.parse(json['createdAt']),
-      createdBy: json['createdBy'],
-    );
-  }
-}
-
 class EvvRecord {
   final int id;
-  final EvvParticipant participant;
+  final Patient? patient;
   final String serviceType;
   final String individualName;
   final int caregiverId;
@@ -538,7 +476,7 @@ class EvvRecord {
 
   EvvRecord({
     required this.id,
-    required this.participant,
+    this.patient,
     required this.serviceType,
     required this.individualName,
     required this.caregiverId,
@@ -571,7 +509,7 @@ class EvvRecord {
   factory EvvRecord.fromJson(Map<String, dynamic> json) {
     return EvvRecord(
       id: json['id'],
-      participant: EvvParticipant.fromJson(json['participant']),
+      patient: json['patient'] != null ? Patient.fromJson(json['patient']) : null,
       serviceType: json['serviceType'],
       individualName: json['individualName'],
       caregiverId: json['caregiverId'],
@@ -703,7 +641,7 @@ class EvvOfflineQueue {
 // Request Models
 class EvvRecordRequest {
   final String serviceType;
-  final String individualName;
+  final int patientId; // Direct reference to patient
   final int caregiverId;
   final DateTime dateOfService;
   final DateTime timeIn;
@@ -711,12 +649,11 @@ class EvvRecordRequest {
   final double? locationLat;
   final double? locationLng;
   final String locationSource;
-  final String participantMaNumber;
   final String stateCode;
 
   EvvRecordRequest({
     required this.serviceType,
-    required this.individualName,
+    required this.patientId,
     required this.caregiverId,
     required this.dateOfService,
     required this.timeIn,
@@ -724,7 +661,6 @@ class EvvRecordRequest {
     this.locationLat,
     this.locationLng,
     required this.locationSource,
-    required this.participantMaNumber,
     required this.stateCode,
   });
 }

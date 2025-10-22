@@ -15,16 +15,16 @@ import java.util.List;
 @Repository
 public interface EvvRecordRepository extends JpaRepository<EvvRecord,Long> {
     
-    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.caregiverId = :caregiverId AND e.status = :status")
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.caregiverId = :caregiverId AND e.status = :status")
     List<EvvRecord> findByCaregiverIdAndStatus(@Param("caregiverId") Long caregiverId, @Param("status") String status);
     
-    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.status = :status")
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.status = :status")
     List<EvvRecord> findByStatus(@Param("status") String status);
     
-    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.id = :id")
-    java.util.Optional<EvvRecord> findByIdWithParticipant(@Param("id") Long id);
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.id = :id")
+    java.util.Optional<EvvRecord> findByIdWithPatient(@Param("id") Long id);
     
-    List<EvvRecord> findByParticipantMaNumber(String maNumber);
+    List<EvvRecord> findByPatientMaNumber(String maNumber);
     
     List<EvvRecord> findByServiceType(String serviceType);
     
@@ -40,14 +40,22 @@ public interface EvvRecordRepository extends JpaRepository<EvvRecord,Long> {
     
     List<EvvRecord> findByOriginalRecordId(Long originalRecordId);
     
-    @Query("SELECT e FROM EvvRecord e WHERE " +
-           "(:patientName IS NULL OR LOWER(e.participant.patientName) LIKE LOWER(CONCAT('%', :patientName, '%'))) AND " +
-           "(:serviceType IS NULL OR LOWER(e.serviceType) LIKE LOWER(CONCAT('%', :serviceType, '%'))) AND " +
+    @Query(value = "SELECT DISTINCT e FROM EvvRecord e LEFT JOIN FETCH e.patient p WHERE " +
+           "(:patientName IS NULL OR :patientName = '' OR LOWER(CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, ''))) LIKE LOWER(CONCAT('%', :patientName, '%'))) AND " +
+           "(:serviceType IS NULL OR :serviceType = '' OR LOWER(e.serviceType) LIKE LOWER(CONCAT('%', :serviceType, '%'))) AND " +
            "(:caregiverId IS NULL OR e.caregiverId = :caregiverId) AND " +
            "(:startDate IS NULL OR e.dateOfService >= :startDate) AND " +
            "(:endDate IS NULL OR e.dateOfService <= :endDate) AND " +
-           "(:stateCode IS NULL OR e.stateCode = :stateCode) AND " +
-           "(:status IS NULL OR e.status = :status)")
+           "(:stateCode IS NULL OR :stateCode = '' OR e.stateCode = :stateCode) AND " +
+           "(:status IS NULL OR :status = '' OR e.status = :status)",
+           countQuery = "SELECT COUNT(DISTINCT e) FROM EvvRecord e LEFT JOIN e.patient p WHERE " +
+           "(:patientName IS NULL OR :patientName = '' OR LOWER(CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, ''))) LIKE LOWER(CONCAT('%', :patientName, '%'))) AND " +
+           "(:serviceType IS NULL OR :serviceType = '' OR LOWER(e.serviceType) LIKE LOWER(CONCAT('%', :serviceType, '%'))) AND " +
+           "(:caregiverId IS NULL OR e.caregiverId = :caregiverId) AND " +
+           "(:startDate IS NULL OR e.dateOfService >= :startDate) AND " +
+           "(:endDate IS NULL OR e.dateOfService <= :endDate) AND " +
+           "(:stateCode IS NULL OR :stateCode = '' OR e.stateCode = :stateCode) AND " +
+           "(:status IS NULL OR :status = '' OR e.status = :status)")
     Page<EvvRecord> searchRecords(@Param("patientName") String patientName,
                                   @Param("serviceType") String serviceType,
                                   @Param("caregiverId") Long caregiverId,

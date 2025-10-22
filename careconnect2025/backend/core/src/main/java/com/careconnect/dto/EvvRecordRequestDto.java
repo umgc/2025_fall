@@ -35,8 +35,8 @@ public class EvvRecordRequestDto {
     @NotBlank @Pattern(regexp = "gps|manual")
     private String locationSource;
 
-    @NotBlank @Size(max = 64)
-    private String participantMaNumber;
+    @NotNull @Positive
+    private Long patientId; // Direct reference to patient receiving care
 
     @NotBlank @Pattern(regexp = "MD|DC|VA")
     private String stateCode;

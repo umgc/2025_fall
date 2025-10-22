@@ -9,9 +9,9 @@ import java.util.Map;
 public class EvvRecordResponse {
     private Long id;
 
-    // Participant linkage
-    private Long participantId;
-    private String participantMaNumber;
+    // Patient linkage
+    private Long patientId;
+    private String patientMaNumber;
 
     // Core fields
     private String serviceType;

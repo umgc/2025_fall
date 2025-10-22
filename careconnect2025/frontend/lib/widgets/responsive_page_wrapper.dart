@@ -95,15 +95,18 @@ class ResponsiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create the app bar with title and actions
-    final appBar =
-        customAppBar ??
-        AppBar(title: Text(title), actions: appBarActions ?? actions);
-
     // Create the drawer with the current route
     final drawer = currentRoute != null
         ? CommonDrawer(currentRoute: currentRoute!)
         : null;
+
+    // Create the app bar with title and actions, ensuring drawer button shows
+    final appBar = customAppBar ??
+        AppBar(
+          title: Text(title), 
+          actions: appBarActions ?? actions,
+          automaticallyImplyLeading: drawer != null, // Show drawer button when drawer exists
+        );
 
     return ResponsivePageWrapper(
       title: title,
