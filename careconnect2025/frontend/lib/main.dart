@@ -4,8 +4,8 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart'; 
+import 'package:provider/provider.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
 
@@ -46,8 +46,7 @@ Future<void> main() async {
       // Configure URL strategy for web to remove hash from URLs
       usePathUrlStrategy();
 
-      // Load environment quickly
-      await dotenv.load();
+        
 
       // Create providers (don't initialize them yet)
       final userProvider = UserProvider();
