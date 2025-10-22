@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +39,8 @@ public class PatientNotetakerService {
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
 
-    public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
-        PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
+    public PatientNotetakerService(PatientNoteRepository patientNoteRepository,
+        PatientNotetakerConfigRepository patientNotetakerConfigRepository,
         PatientService patientService,
         OpenRouterService openRouterService,
         TaskServiceV2 taskService
@@ -181,7 +183,7 @@ public class PatientNotetakerService {
                     0.2,
                     256);
 
-            OpenRouterResponse response; 
+            OpenRouterResponse response;
             try {
                 response = openRouterService.sendChatRequest(request);
             } catch (Exception e) {

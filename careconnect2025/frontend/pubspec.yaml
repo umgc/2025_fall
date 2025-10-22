@@ -87,7 +87,7 @@ dependencies:
   # Platform detection
   platform: ^3.1.6
 # my key storage
-#  flutter_dotenv: ^6.0.0
+  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
   sqflite: ^2.4.2
 # -- Astha - start

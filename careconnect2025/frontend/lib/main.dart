@@ -1,8 +1,12 @@
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/shortcut_provider.dart';
+import 'dart:async';
+import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:app_links/app_links.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';

@@ -13,7 +13,7 @@ const String _agoraAppCertificate =
 // Set your local dev URL in defaultValue
 const String _backendBaseUrl = String.fromEnvironment(
   'BACKEND_URL',
-  defaultValue: 'http://192.168.1.155:8080',
+  defaultValue: 'http://localhost:8080',
 );
 
 const String _wsOverrideUrl =
