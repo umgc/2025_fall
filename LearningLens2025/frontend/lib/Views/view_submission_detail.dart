@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/participant.dart';
-import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/beans/moodle_rubric.dart';
 import 'package:learninglens_app/Views/essays_view.dart';
 import 'dart:math';
 
+import 'package:learninglens_app/beans/submission_with_grade.dart';
+
 class SubmissionDetail extends StatefulWidget {
   final Participant participant;
-  final Submission submission;
+  final SubmissionWithGrade submission;
   final String courseId;
 
   SubmissionDetail(
@@ -40,15 +41,15 @@ class SubmissionDetailState extends State<SubmissionDetail> {
 
   Future<void> fetchRubric() async {
     print(
-        'Fetching Rubric for assignment ID: ${widget.submission.assignmentId}');
-    int? contextId = await LmsFactory.getLmsService()
-        .getContextId(widget.submission.assignmentId, widget.courseId);
+        'Fetching Rubric for assignment ID: ${widget.submission.submission.assignmentId}');
+    int? contextId = await LmsFactory.getLmsService().getContextId(
+        widget.submission.submission.assignmentId, widget.courseId);
     if (contextId != null) {
       var fetchedRubric = await LmsFactory.getLmsService()
-          .getRubric(widget.submission.assignmentId.toString());
+          .getRubric(widget.submission.submission.assignmentId.toString());
       print('Fetched Rubric: $fetchedRubric');
       var submissionScores = await LmsFactory.getLmsService().getRubricGrades(
-          widget.submission.assignmentId, widget.participant.id);
+          widget.submission.submission.assignmentId, widget.participant.id);
       print('Submission Scores: $submissionScores');
 
       setState(() {
@@ -93,7 +94,9 @@ class SubmissionDetailState extends State<SubmissionDetail> {
     // Handle further actions like saving to a database or API here.
     // SubmissionListState? submissionListState = context.findAncestorStateOfType<SubmissionListState>();
     bool results = await LmsFactory.getLmsService().setRubricGrades(
-        widget.submission.assignmentId, widget.participant.id, jsonScores);
+        widget.submission.submission.assignmentId,
+        widget.participant.id,
+        jsonScores);
     print('Results: $results');
     if (mounted) {
       if (results) {
@@ -144,14 +147,14 @@ class SubmissionDetailState extends State<SubmissionDetail> {
 
                     // Status
                     Text(
-                      'Status: ${widget.submission.status}',
+                      'Status: ${widget.submission.submission.status}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 8),
 
                     // Submission Time
                     Text(
-                      'Submitted on: ${widget.submission.submissionTime.toLocal()}',
+                      'Submitted on: ${widget.submission.submission.submissionTime.toLocal()}',
                       style: TextStyle(fontSize: 16),
                     ),
                     SizedBox(height: 16),
@@ -163,10 +166,29 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 8),
-                    widget.submission.onlineText.isNotEmpty
+                    widget.submission.submission.onlineText.isNotEmpty
                         ? Text(
-                            widget.submission.onlineText
+                            widget.submission.submission.onlineText
                                 .replaceAll(RegExp(r"<[^>]*>"), ""),
+                            style: TextStyle(fontSize: 16),
+                          )
+                        : Text(
+                            'No content provided.',
+                            style: TextStyle(
+                                fontSize: 16, fontStyle: FontStyle.italic),
+                          ),
+                    SizedBox(height: 16),
+
+                    // Submitted Grade
+                    Text(
+                      'Submission Grade:',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    widget.submission.submission.onlineText.isNotEmpty
+                        ? Text(
+                            'Grade: ${widget.submission.grade != null ? widget.submission.grade!.grade.toString() : "Not graded yet"}',
                             style: TextStyle(fontSize: 16),
                           )
                         : Text(

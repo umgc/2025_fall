@@ -659,8 +659,7 @@ class SubmissionListState extends State<SubmissionList> {
                                                                       participant:
                                                                           participant,
                                                                       submission:
-                                                                          submissionWithGrade
-                                                                              .submission,
+                                                                          submissionWithGrade,
                                                                       courseId:
                                                                           widget
                                                                               .courseId,
@@ -696,8 +695,7 @@ class SubmissionListState extends State<SubmissionList> {
                                                               participant:
                                                                   participant,
                                                               submission:
-                                                                  submissionWithGrade
-                                                                      .submission,
+                                                                  submissionWithGrade,
                                                               courseId: widget
                                                                   .courseId,
                                                             ),
