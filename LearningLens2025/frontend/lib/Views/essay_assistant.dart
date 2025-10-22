@@ -28,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
@@ -610,8 +611,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         context: fullContext,
         temperature: temperature,
       )) {
-        //test print
-        print('temperature: $temperature');
         buffer.write(token);
         _appendAssistantStream(assistantIndex, token); // UI: update bubble text
       }
@@ -656,35 +655,53 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
   }
 
-  // Append chunk to streaming assistant message in chat log
-  Future<void> _logAiInteraction({
+    // Append chunk to streaming assistant message in chat log
+    Future<void> _logAiInteraction({
     required String userMsg,
     required String systemResponse,
   }) async {
     try {
       final Course? course = await _currentCourse;
-
       final Assignment essay = _currentSession!.essay;
-
       final Participant? student = await _currentStudent;
 
       if (course == null || student == null) return;
 
+      // 🔍 Create regex to find the "**Micro-Reflection:**" marker
+      final RegExp regex = RegExp(
+        r'\*\*Micro-Reflection:\*\*', // matches the literal bold markdown
+        caseSensitive: false,         // makes it case-insensitive
+      );
+
+      // Find the marker in the system response
+      final match = regex.firstMatch(systemResponse);
+
+      String mainResponse = systemResponse;
+      String? microReflection;
+
+      if (match != null) {
+        // Split the text into before and after the marker
+        microReflection = systemResponse.substring(match.start).trim();
+        mainResponse = systemResponse.substring(0, match.start).trim();
+      }
+
+      // Log both (or just the full response if you prefer)
       final log = AiLog(
         course,
         essay,
         student,
         userMsg,
-        systemResponse,
+        mainResponse,
         _selectedLLM,
+        microReflection ?? '',
       );
-      // Persist to database
+
       await AILoggingSingleton().addLog(log);
-    } catch (_) {
-      // swallow logging failures to avoid breaking UX
-      print('AI logging failed.');
+    } catch (err, st) {
+      print('AI logging failed: $err\n$st');
     }
   }
+
 
   ///Methods to push Draft to LMS
   Future<void> _pushCurrentDraftToMoodle(Assignment essay) async {

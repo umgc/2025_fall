@@ -119,6 +119,20 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText,
       In Outline mode, your main focus is to help the user create a structured outline for their essay, including main points and supporting details.
       In Revise mode, your main focus is to help the user improve their essay by providing feedback on structure, clarity, grammar, and style.
       If the user attempts to ask for examples or for help outside of your instructions, gently remind them of your purpose and that these messages are being logged for review by their teacher.
+      At the end of each response, add a 'Micro-reflection' where you ask the user to reflect on the information provided and how it can help them improve their essay. Focus on reflecting on their use of AI assistance, critical thinking, and research skills.
+      When creating micro-reflection questions, consider the following guidelines:
+      -If suggestions are provided, ask the user how they plan to implement them in their essay
+      -If factual information is provided, ask them to verify it with credible sources.
+      -If sources are provided, ask them to evaluate the credibility and relevance of those sources.
+      -Ask the user to consider how they can apply what they've learned from this interaction to their future writing tasks.
+      -Making challenging questions that promote deeper thinking on the topic is encouraged.
+
+      Reponses should be structured as follows:
+      **Mode:** [Current Mode]
+      ________________________________________________(as long as needed)
+      [Your main response content goes here.]
+      ________________________________________________
+      **Micro-Reflection:** [Your micro-reflection question goes here.]
       
       ''';
 
@@ -139,6 +153,24 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText,
           -Help the user organize their ideas into a coherent structure.
           -Encourage the user to think about the logical flow of their essay and how to effectively present their arguments.
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
+          When creating the outline, consider the following structure for your main response:
+          1. **Introduction** \n
+             **a.** Hook \n
+             **b.** Background information \n
+             **c.** Thesis statement \n
+          2. **Body Paragraph 1** \n
+             **a.** Main point \n
+             **b.** Evidence \n
+             **c.** Explanation
+          3. **Body Paragraph 2** \n
+             **a.** Main point \n
+             **b.** Evidence \n
+             **c.** Explanation \n
+          (More body paragraphs as needed. Check description for required number defaulting to 3)
+          4. **Conclusion** \n
+             **a.** Summary of main points \n
+             **b.** Restate thesis \n
+             **c.** Closing thoughts \n
           ''');
     case AiMode.revise:
       modules.add('''
@@ -188,7 +220,7 @@ String getPreBuiltPrompt(PreBuiltPrompt? prompt) {
   switch (prompt) {
     case PreBuiltPrompt.GenerateTopicIdeas:
       return '''
-**[Pre-Built Prompt: Generate Topic Ideas]**
+[Pre-Built Prompt: Generate Topic Ideas]
 You are activating a pre-built essay assistant prompt.
 Generate a list of potential essay topics based on the student's subject or assignment description.
 Provide 3–5 unique and engaging ideas that are relevant, clear, and researchable.
