@@ -6,6 +6,7 @@ import 'package:learninglens_app/Games/quiz_game.dart';
 import 'package:learninglens_app/Games/matching_game.dart';
 import 'package:learninglens_app/Games/flashcard_game.dart';
 import 'package:learninglens_app/services/ai_file_service.dart';
+import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 
 class GamificationView extends StatefulWidget {
   const GamificationView({super.key});
@@ -21,6 +22,7 @@ class _GamificationViewState extends State<GamificationView> {
   bool isTeacher = true;
   bool _isGameCreated = false;
   List<Map<String, dynamic>>? _generatedGameData;
+  LlmType? _selectedLLM;
 
   void showLoadingDialog(BuildContext context) {
     showDialog(
@@ -53,9 +55,10 @@ class _GamificationViewState extends State<GamificationView> {
   }
 
   Widget _buildTeacherUI(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         const Text(
           'Generate a Game from a Lesson: ',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -65,7 +68,10 @@ class _GamificationViewState extends State<GamificationView> {
           icon: const Icon(Icons.upload_file),
           label: const Text('Upload File or Slide Deck'),
           onPressed: () async {
-            final result = await FilePicker.platform.pickFiles();
+            final result = await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: ['pdf'],
+            );
 
             if (result != null) {
               final file = result.files.single;
@@ -107,7 +113,7 @@ class _GamificationViewState extends State<GamificationView> {
         Wrap(
           spacing: 10,
           children: [
-            _gameType('Quiz Hero', Icons.quiz),
+            _gameType('Quiz Game', Icons.quiz),
             _gameType('Matching', Icons.compare_arrows),
             _gameType('Flashcards', Icons.memory),
           ],
@@ -129,6 +135,24 @@ class _GamificationViewState extends State<GamificationView> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 30),
+        const Text('Select LLM Model:', style: TextStyle(fontSize: 18)),
+        const SizedBox(height: 10),
+        DropdownButton<LlmType>(
+          value: _selectedLLM,
+          hint: const Text('Choose a Model'),
+          items: LlmType.values.map((llm) {
+            return DropdownMenuItem<LlmType>(
+              value: llm,
+              child: Text(llm.name),
+            );
+          }).toList(),
+          onChanged: (val) {
+            setState(() {
+              _selectedLLM = val;
+            });
+          },
+        ),
         const SizedBox(height: 40),
         Center(
           child: ElevatedButton(
@@ -136,9 +160,13 @@ class _GamificationViewState extends State<GamificationView> {
             onPressed: () async {
               if (_selectedFile == null || _selectedGameType == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content:
-                          Text('Please upload a file and select a game type.')),
+                  const SnackBar(content: Text('Please upload a file and select a game type.')),
+                );
+                return;
+              }
+              if (_selectedLLM == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please select an LLM model.')),
                 );
                 return;
               }
@@ -152,16 +180,22 @@ class _GamificationViewState extends State<GamificationView> {
                 final text = await AIFileService.extractTextFromPDF(bytes);
                 late final List<Map<String, dynamic>> response;
 
-                if (_selectedGameType == 'Quiz Hero') {
-                  response = await AIFileService.generateGameFromText(text);
-                } else if (_selectedGameType == 'Matching') {
-                  response =
-                      await AIFileService.generateMatchingPairsFromText(text);
-                } else if (_selectedGameType == 'Flashcards') {
-                  response =
-                      await AIFileService.generateFlashcardsFromText(text);
+                if (_selectedLLM == LlmType.CHATGPT || _selectedLLM == LlmType.DEEPSEEK || _selectedLLM == LlmType.PERPLEXITY || _selectedLLM == LlmType.GROK) {
+                  if (_selectedGameType == 'Quiz Game') {
+                    response = await AIFileService.generateGameFromText(text);
+                  } else if (_selectedGameType == 'Matching') {
+                    response = await AIFileService.generateMatchingPairsFromText(text);
+                  } else if (_selectedGameType == 'Flashcards') {
+                    response = await AIFileService.generateFlashcardsFromText(text);
+                  } else {
+                    throw Exception("Unknown game type: $_selectedGameType");
+                  }
                 } else {
-                  throw Exception("Unknown game type: $_selectedGameType");
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${_selectedLLM!.name} is not yet supported. Defaulting to OpenAI.')),
+                  );
+                  return;
                 }
 
                 setState(() {
@@ -182,7 +216,8 @@ class _GamificationViewState extends State<GamificationView> {
             },
           ),
         ),
-        if (_isGameCreated)
+        if (_isGameCreated) ...[
+          const SizedBox(height: 20),
           Center(
             child: ElevatedButton(
               child: const Text('Preview Game'),
@@ -196,31 +231,34 @@ class _GamificationViewState extends State<GamificationView> {
                         _generatedGameData ?? [];
 
                     switch (_selectedGameType) {
-                      case 'Quiz Hero':
+                      case 'Quiz Game':
                         previewContent = QuizGame(
                           questions: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
+                        break;
                       case 'Matching':
                         previewContent = MatchingGame(
                           pairs: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
+                        break;
                       case 'Flashcards':
                         previewContent = FlashcardGame(
                           questions: gameData,
                           onComplete: () {},
                           previewMode: true,
                         );
+                        break;
                       default:
                         previewContent = const Text('No game type selected.');
                     }
 
                     return AlertDialog(
                       title: const Text('Game Preview'),
-                      content: previewContent,
+                      content: SizedBox(width: 600, child: previewContent),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -233,7 +271,11 @@ class _GamificationViewState extends State<GamificationView> {
               },
             ),
           ),
-      ],
+          const SizedBox(height: 20),
+          const Divider(),
+        ],
+        ],
+      ),
     );
   }
 
