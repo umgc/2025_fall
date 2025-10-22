@@ -1497,7 +1497,7 @@ class MoodleLmsService implements LmsInterface {
     required int draftItemId,
   }) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
-    final res = await ApiService().httpPostForm(
+    final res = await ApiService().httpPost(
       Uri.parse(apiURL + serverUrl),
       body: {
         'wstoken': _userToken!,
@@ -1528,7 +1528,7 @@ class MoodleLmsService implements LmsInterface {
   }) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
-    final res = await ApiService().httpPostForm(
+    final res = await ApiService().httpPost(
       Uri.parse(apiURL + serverUrl),
       body: {
         'wstoken': _userToken!,
@@ -1557,7 +1557,7 @@ class MoodleLmsService implements LmsInterface {
     int? forUserId,
   }) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
-    final res = await ApiService().httpPostForm(
+    final res = await ApiService().httpPost(
       Uri.parse(apiURL + serverUrl),
       body: {
         'wstoken': _userToken!,

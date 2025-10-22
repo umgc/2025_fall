@@ -119,20 +119,4 @@ class ApiService {
     return await http.MultipartFile.fromPath(fieldName, file.path);
   }
 
-  //Post method for moodle file upload
-  Future<http.Response> httpPostForm(
-    Uri url, {
-    required Map<String, String> body,
-    Map<String, String>? headers,
-  }) {
-    // Force form-encoding, do NOT let callers override with application/json
-    final merged = <String, String>{
-      'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-      ...?headers,
-    };
-    // If someone passed application/json, overwrite it
-    merged['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
-
-    return http.post(url, headers: merged, body: body);
-  }
 }

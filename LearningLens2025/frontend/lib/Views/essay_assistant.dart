@@ -527,7 +527,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       return null;
     }
 
-    // Description (already in session.essay) → plain text
+    // Description → plain text
     final essayDescription = removeHtmlTags(
       _currentSession!.essay.description.toString(),
     ).trim();
@@ -1498,7 +1498,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                                         ))
                                 .toList(),
                             onChanged: (_mode == AiMode.assistant)
-                                ? null // 🔒 disables dropdown
+                                ? null 
                                 : (val) =>
                                     setState(() => _selectedPrompt = val),
                             hint: const Text('Choose a helper prompt'),
@@ -1512,7 +1512,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     // --- Button to submit Pre-built prompt as user message.
                     FilledButton.icon(
                       onPressed: (!_sessionActive || _mode == AiMode.assistant)
-                          ? null // 🔒 disables when no session OR in Assistant mode
+                          ? null 
                           : () {
                               final submittedPrompt = types.PartialText(
                                 text: getPreBuiltPrompt(_selectedPrompt),
@@ -2114,7 +2114,7 @@ class _EssayModalContent extends StatelessWidget {
     final String dueText = (essay.dueDate != null)
         ? essay.dueDate!.toLocal().toIso8601String().split('T').first
         : 'No due date';
-    final String descriptionText = (essay.description.toString() ?? '');
+    final String descriptionText = removeHtmlTags(essay.description.toString() ?? '');
 
     return Column(
       children: [
