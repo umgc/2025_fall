@@ -46,8 +46,7 @@ Future<void> main() async {
       // Configure URL strategy for web to remove hash from URLs
       usePathUrlStrategy();
 
-      // Load environment quickly
-      await dotenv.load();
+        
 
       // Create providers (don't initialize them yet)
       final userProvider = UserProvider();

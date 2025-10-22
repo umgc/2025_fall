@@ -1,0 +1,153 @@
+package com.careconnect.config;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.PropertySource;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.regions.providers.DefaultAwsRegionProviderChain;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Initializes SSM Parameter Store as a property source for production environment.
+ * This class loads secrets from AWS SSM before the Spring context is fully initialized,
+ * allowing them to be used in @Value annotations and application.properties.
+ *
+ * To enable this initializer, add to application-prod.properties:
+ * context.initializer.classes=com.careconnect.config.SsmPropertySourceInitializer
+ */
+public class SsmPropertySourceInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SsmPropertySourceInitializer.class);
+    private static final String SSM_PARAMETER_PREFIX = "/careconnect/prod/";
+    private static final String PROPERTY_SOURCE_NAME = "ssmPropertySource";
+
+    // List of parameter names to load from SSM
+    private static final List<String> SSM_PARAMETERS = Arrays.asList(
+            "stripe-secret-key",
+            "stripe-webhook-secret",
+            "openai-api-key",
+            "deepseek-api-key",
+            "jwt-secret",
+            "sendgrid-api-key",
+            "google-client-id",
+            "google-client-secret",
+            "fitbit-client-id",
+            "fitbit-client-secret",
+            "db-password",
+            "db-username",
+            "firebase-service-account-key",
+            "aws-access-key-id",
+            "aws-secret-access-key"
+    );
+
+    // Mapping of SSM parameter names to Spring property names
+    private static final Map<String, String> PARAMETER_MAPPING = new HashMap<String, String>() {{
+        put("stripe-secret-key", "stripe.secret-key");
+        put("stripe-webhook-secret", "stripe.webhook-secret");
+        put("openai-api-key", "openai.api-key");
+        put("deepseek-api-key", "spring.ai.openai.api-key");
+        put("jwt-secret", "security.jwt.secret");
+        put("sendgrid-api-key", "careconnect.email.sendgrid.api-key");
+        put("google-client-id", "spring.security.oauth2.client.registration.google.client-id");
+        put("google-client-secret", "spring.security.oauth2.client.registration.google.client-secret");
+        put("fitbit-client-id", "spring.security.oauth2.client.registration.fitbit.client-id");
+        put("fitbit-client-secret", "spring.security.oauth2.client.registration.fitbit.client-secret");
+        put("db-password", "careconnect.db.password");
+        put("db-username", "careconnect.db.username");
+        put("firebase-service-account-key", "firebase.service-account-key");
+        put("aws-access-key-id", "aws.s3.access-key");
+        put("aws-secret-access-key", "aws.s3.secret-key");
+    }};
+
+    @Override
+    public void initialize(ConfigurableApplicationContext applicationContext) {
+        ConfigurableEnvironment environment = applicationContext.getEnvironment();
+
+        // Check if we're in production profile and AWS is enabled
+        String[] activeProfiles = environment.getActiveProfiles();
+        boolean isProduction = Arrays.asList(activeProfiles).contains("prod");
+
+        // Check if AWS is enabled (default true if not specified)
+        String awsEnabled = environment.getProperty("careconnect.aws.enabled", "true");
+
+        if (!isProduction || !"true".equalsIgnoreCase(awsEnabled)) {
+            logger.info("SSM PropertySource not initialized - not in production mode or AWS disabled");
+            return;
+        }
+
+        logger.info("Initializing SSM Parameter Store property source for production...");
+
+        try {
+            // Create SSM client
+            Region region = new DefaultAwsRegionProviderChain().getRegion();
+            SsmClient ssmClient = SsmClient.builder()
+                    .region(region)
+                    .credentialsProvider(DefaultCredentialsProvider.create())
+                    .build();
+
+            // Load parameters from SSM
+            Map<String, Object> ssmProperties = loadParametersFromSsm(ssmClient);
+
+            // Add SSM property source to environment
+            if (!ssmProperties.isEmpty()) {
+                PropertySource<?> ssmPropertySource = new MapPropertySource(PROPERTY_SOURCE_NAME, ssmProperties);
+                environment.getPropertySources().addFirst(ssmPropertySource);
+                logger.info("SSM PropertySource initialized with {} parameters", ssmProperties.size());
+            } else {
+                logger.warn("No SSM parameters loaded - application may use environment variable fallbacks");
+            }
+
+            // Close SSM client
+            ssmClient.close();
+
+        } catch (Exception e) {
+            logger.error("Failed to initialize SSM PropertySource - falling back to environment variables", e);
+            // Don't fail application startup, just log the error and continue
+        }
+    }
+
+    private Map<String, Object> loadParametersFromSsm(SsmClient ssmClient) {
+        Map<String, Object> properties = new HashMap<>();
+
+        for (String parameterName : SSM_PARAMETERS) {
+            String fullParameterName = SSM_PARAMETER_PREFIX + parameterName;
+            String springPropertyName = PARAMETER_MAPPING.get(parameterName);
+
+            if (springPropertyName == null) {
+                logger.warn("No Spring property mapping found for SSM parameter: {}", parameterName);
+                continue;
+            }
+
+            try {
+                GetParameterRequest request = GetParameterRequest.builder()
+                        .name(fullParameterName)
+                        .withDecryption(true)
+                        .build();
+
+                GetParameterResponse response = ssmClient.getParameter(request);
+                String value = response.parameter().value();
+
+                properties.put(springPropertyName, value);
+                logger.info("Loaded SSM parameter: {} -> {}", fullParameterName, springPropertyName);
+
+            } catch (Exception e) {
+                logger.warn("Could not load SSM parameter: {} - will use environment variable fallback if available",
+                        fullParameterName);
+            }
+        }
+
+        return properties;
+    }
+}
