@@ -5,20 +5,14 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/services/api_service.dart';
 
 class OpenAiLLM implements LLM {
-  @override
   final String apiKey;
-  @override
   final String url = 'https://api.openai.com/v1/chat/completions';
-  @override
   final double tokenCount = 0.25;
-  @override
   final int contextSize;
-  @override
   final int maxOutputTokens;
   //Uri Object for HTTP requests
   final parsedUrl = Uri.parse('https://api.openai.com/v1/chat/completions');
 
-  @override
   final String model = 'gpt-4o-mini';
 
   OpenAiLLM(
