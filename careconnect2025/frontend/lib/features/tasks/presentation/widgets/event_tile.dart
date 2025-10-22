@@ -1,7 +1,8 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// =============================
 /// EventTile Widget
@@ -27,7 +28,9 @@ class EventTile extends StatelessWidget {
 
     // Pick the first event and get its task + color
     final task = events.first.event;
-    final color = TaskTypeUtils.getColor(task?.taskType);
+    final color = context.select<TaskTypeManager, Color>(
+      (mgr) => mgr.getColor(task?.taskType),
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
