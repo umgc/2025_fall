@@ -144,6 +144,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navMore => 'ተጨማሪ';
 
   @override
+  String get notetakerAssistant => 'Notetaker Assistant';
+
+  @override
   String get settingsTitle => 'ቅንብሮች';
 
   @override

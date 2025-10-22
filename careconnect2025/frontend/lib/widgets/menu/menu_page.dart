@@ -72,7 +72,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.receipt_long,
         label: t.invoiceAssistant,
         route: '/invoice-assistant/dashboard',
-        visibleFor: const {'CAREGIVER', 'ADMIN','PATIENT'},
+        visibleFor: const {'CAREGIVER', 'ADMIN', 'PATIENT'},
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -85,7 +85,7 @@ class _MenuPageState extends State<MenuPage> {
         icon: Icons.verified_user,
         label: t.evv,
         route: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN',},
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
@@ -110,8 +110,8 @@ class _MenuPageState extends State<MenuPage> {
       _MenuItem(icon: Icons.watch, label: t.wearables, route: '/wearables'),
       _MenuItem(
         icon: Icons.folder,
-        label: t.fileManagement,
-        route: '/file-management',
+        label: t.notetakerAssistant,
+        route: '/notetaker-search',
       ),
       _MenuItem(
         icon: Icons.person_add,
@@ -207,37 +207,31 @@ class _MenuPageState extends State<MenuPage> {
           // Shortcuts grid from provider
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-           sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisExtent: 88,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final t = AppLocalizations.of(context)!;           
-              final d = activeShortcuts[index];
-              final label = d.localizedLabel(t);                 
-              return _ShortcutTile(
-                key: ValueKey('shortcut_${d.key}_${t.localeName}'), 
-                shortcut: _Shortcut(
-                  d.icon,
-                  label,
-                  onTap: () => context.push(resolveRoute(d)),
-                ),
-              );
-            },
-            childCount: activeShortcuts.length,
-          ),
-        ),
-
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisExtent: 88,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final t = AppLocalizations.of(context)!;
+                final d = activeShortcuts[index];
+                final label = d.localizedLabel(t);
+                return _ShortcutTile(
+                  key: ValueKey('shortcut_${d.key}_${t.localeName}'),
+                  shortcut: _Shortcut(
+                    d.icon,
+                    label,
+                    onTap: () => context.push(resolveRoute(d)),
+                  ),
+                );
+              }, childCount: activeShortcuts.length),
+            ),
           ),
 
           // Tools
-          SliverToBoxAdapter(
-            child: _SectionHeader(title: t.tools),
-          ),
+          SliverToBoxAdapter(child: _SectionHeader(title: t.tools)),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
@@ -255,9 +249,7 @@ class _MenuPageState extends State<MenuPage> {
           ),
 
           // Preferences
-          SliverToBoxAdapter(
-            child: _SectionHeader(title: t.preferences),
-          ),
+          SliverToBoxAdapter(child: _SectionHeader(title: t.preferences)),
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -304,11 +296,7 @@ class _MenuPageState extends State<MenuPage> {
                     );
                   } else {
                     return Column(
-                      children: [
-                        darkTile,
-                        const Divider(height: 1),
-                        langTile,
-                      ],
+                      children: [darkTile, const Divider(height: 1), langTile],
                     );
                   }
                 },
@@ -327,8 +315,7 @@ class _MenuPageState extends State<MenuPage> {
                 ),
                 title: Text(
                   t.logout,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () async {
                   await userProvider.clearUser();
@@ -376,19 +363,19 @@ class _MenuPageState extends State<MenuPage> {
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
-                   children: list.map((d) {
+                  children: list.map((d) {
                     final checked = working.contains(d.key);
-                      final t2 = AppLocalizations.of(ctx)!;
-                      return CheckboxListTile(
-                        key: ValueKey('sheet_${d.key}_${t2.localeName}'),            
-                        value: checked,
-                        title: Row(
-                          children: [
-                            Icon(d.icon),
-                            const SizedBox(width: 12),
-                            Text(d.localizedLabel(t2)),                              
-                          ],
-                        ),
+                    final t2 = AppLocalizations.of(ctx)!;
+                    return CheckboxListTile(
+                      key: ValueKey('sheet_${d.key}_${t2.localeName}'),
+                      value: checked,
+                      title: Row(
+                        children: [
+                          Icon(d.icon),
+                          const SizedBox(width: 12),
+                          Text(d.localizedLabel(t2)),
+                        ],
+                      ),
                       onChanged: (v) {
                         setState(() {
                           if (v == true) {
@@ -468,7 +455,7 @@ class _MenuItem {
   bool isVisibleFor(String roleUpper) {
     if (visibleFor == null || visibleFor!.isEmpty) return true;
     return visibleFor!.contains(roleUpper);
-    }
+  }
 }
 
 class _ToolTile extends StatelessWidget {
@@ -480,7 +467,8 @@ class _ToolTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: item.onTap ??
+        onTap:
+            item.onTap ??
             (item.route != null ? () => context.push(item.route!) : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -545,7 +533,6 @@ class _ShortcutTile extends StatelessWidget {
   }
 }
 
-
 class _LoggedOutPrompt extends StatelessWidget {
   final VoidCallback onLogin;
   const _LoggedOutPrompt({required this.onLogin});
@@ -561,23 +548,17 @@ class _LoggedOutPrompt extends StatelessWidget {
           children: [
             Icon(Icons.login, size: 64, color: Theme.of(context).disabledColor),
             const SizedBox(height: 12),
-            Text(
-              t.pleaseLogIn,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(t.pleaseLogIn, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               t.loginRequiredMessage,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).disabledColor,
-                  ),
+                color: Theme.of(context).disabledColor,
+              ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onLogin,
-              child: Text(t.login),
-            ),
+            ElevatedButton(onPressed: onLogin, child: Text(t.login)),
           ],
         ),
       ),

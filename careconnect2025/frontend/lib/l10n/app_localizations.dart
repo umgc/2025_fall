@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'More'**
   String get navMore;
 
+  /// No description provided for @notetakerAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Notetaker Assistant'**
+  String get notetakerAssistant;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:
