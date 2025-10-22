@@ -48,9 +48,9 @@
 "navMenu": "Menu",
 "navPatientList": "Liste des patients",
 "navAnalytics": "Analytique",
-"navMore": "Plus",
+  "navMore": "Plus",
 
-"notetakerAssistant": "Notetaker Assistant",
+  "notetakerAssistant": "Assistant de prise de notes",
 
 "settingsTitle": "Paramètres",
 "settingsAppearance": "Apparence",

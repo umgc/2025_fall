@@ -48,13 +48,11 @@
 "navMenu": "ሜኑ",
 "navPatientList": "የታካሚዎች ዝርዝር",
 "navAnalytics": "ትንታኔ",
-"navMore": "ተጨማሪ",
+  "navMore": "ተጨማሪ",
 
-"notetakerAssistant": "Notetaker Assistant",
+  "notetakerAssistant": "በተምናበብ መርዘት አገልጋይ",
 
-"settingsTitle": "ቅንብሮች",
-
-"settingsAppearance": "ቅርጸታዊ መልኩ",
+"settingsTitle": "ቅንብሮች","settingsAppearance": "ቅርጸታዊ መልኩ",
 "settingsNotifications": "ማስታወቂያዎች",
 "settingsLoadingNotificationSettings": "የማስታወቂያ ቅንብሮች በመጫን ላይ …",
 "settingsUnableToLoadNotificationSettings": "የማስታወቂያ ቅንብሮችን መጫን አይቻልም",
