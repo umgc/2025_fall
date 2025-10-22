@@ -19,6 +19,14 @@
         {
             "filePath": "lib\\widgets\\menu\\menu_page.dart",
             "group": "Default"
+        },
+        {
+            "filePath": "lib\\pages\\settings_page.dart",
+            "group": "Default"
+        },
+        {
+            "filePath": "lib\\features\\welcome\\presentation\\pages\\welcome_page.dart",
+            "group": "Default"
         }
     ]
 }
