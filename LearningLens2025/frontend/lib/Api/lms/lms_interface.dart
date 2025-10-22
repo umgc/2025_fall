@@ -27,7 +27,6 @@ abstract class LmsInterface {
   String? profileImage;
   List<Course>? courses;
   UserRole? role;
-  
 
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
@@ -85,15 +84,15 @@ abstract class LmsInterface {
 
   // Sumbit Essay Draft
   Future<int> uploadFileToDraft({
-      required File file,
-      required int contextId,
+    required File file,
+    required int contextId,
   });
   Future<void> appendFileToDraft({
-      required File file,
-      required int contextId,
-      required int draftItemId,
+    required File file,
+    required int contextId,
+    required int draftItemId,
   });
-    Future<void> saveAssignmentSubmissionOnlineText({
+  Future<void> saveAssignmentSubmissionOnlineText({
     required int assignId,
     required String text,
     int format = 1,

@@ -338,8 +338,7 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Essay Assistant',
           'description': 'Utilize AI to help complete essay assignments.',
-          'onPressed': () => Navigator.push(
-              context,
+          'onPressed': () => Navigator.push(context,
               MaterialPageRoute(builder: (context) => EssayAssistant())),
           'icon': Icons.assistant_outlined
         },

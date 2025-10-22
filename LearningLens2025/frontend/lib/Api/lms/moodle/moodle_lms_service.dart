@@ -63,7 +63,7 @@ class MoodleLmsService implements LmsInterface {
   UserRole? role;
 
   List<Override>? overrides;
-  
+
   int? userId;
 
   String? get userToken => _userToken;
@@ -1406,114 +1406,122 @@ class MoodleLmsService implements LmsInterface {
   }
 
   /// Method to sumbit Essay to Moodle draft area
-@override
-Future<int> uploadFileToDraft({required File file, required int contextId}) async {
-  if (_userToken == null) throw StateError('User not logged in to Moodle');
-  final uri = Uri.parse('$apiURL/webservice/upload.php?token=$_userToken&contextid=$contextId');
-  final req = ApiService().multipartPost(uri)
-    ..files.add(await ApiService().multipartFileFromPath('file', file.path));
+  @override
+  Future<int> uploadFileToDraft(
+      {required File file, required int contextId}) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+    final uri = Uri.parse(
+        '$apiURL/webservice/upload.php?token=$_userToken&contextid=$contextId');
+    final req = ApiService().multipartPost(uri)
+      ..files.add(await ApiService().multipartFileFromPath('file', file.path));
 
-  final streamed = await req.send();
-  final body = await streamed.stream.bytesToString();
-  if (streamed.statusCode != 200) _throwIfMoodleException(body);
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode != 200) _throwIfMoodleException(body);
 
-  final decoded = jsonDecode(body);
-  if (decoded is Map && decoded['itemid'] != null) return decoded['itemid'] as int;
-  if (decoded is List && decoded.isNotEmpty && decoded.first['itemid'] != null) return decoded.first['itemid'] as int;
-  throw StateError('Unexpected upload response: $body');
-}
-
-@override
-Future<void> appendFileToDraft({
-  required File file,
-  required int contextId,
-  required int draftItemId,
-}) async {
-  if (_userToken == null) throw StateError('User not logged in to Moodle');
-  final uri = Uri.parse('$apiURL/webservice/upload.php?token=$_userToken&contextid=$contextId&itemid=$draftItemId');
-  final req = ApiService().multipartPost(uri)
-    ..files.add(await ApiService().multipartFileFromPath('file', file.path));
-
-  final streamed = await req.send();
-  final body = await streamed.stream.bytesToString();
-  if (streamed.statusCode != 200) _throwIfMoodleException(body);
-}
-
-Never _throwIfMoodleException(String body) {
-  try {
     final decoded = jsonDecode(body);
-    if (decoded is Map && decoded.containsKey('exception')) {
-      throw HttpException('${decoded['exception']}: ${decoded['message']}');
-    }
-  } catch (_) { /* non-JSON body */ }
-  throw HttpException(body);
-}
-
-@override
-Future<void> saveAssignmentSubmissionOnlineText({
-  required int assignId,
-  required String text,
-  int format = 1,
-  int? draftItemId,
-}) async {
-  if (_userToken == null) throw StateError('User not logged in to Moodle');
-
-  final itemId = draftItemId ?? await _getUnusedDraftItemId();
-
-   final res = await ApiService().httpPost(
-    Uri.parse(apiURL + serverUrl),
-    body: {
-      'wstoken': _userToken!,
-      'wsfunction': 'mod_assign_save_submission',
-      'moodlewsrestformat': 'json',
-
-      'assignmentid': '$assignId',
-      'plugindata[onlinetext_editor][text]': text,
-      'plugindata[onlinetext_editor][format]': '$format',
-      'plugindata[onlinetext_editor][itemid]': '$itemId',
-    },
-  );
-
-  // Useful logging
-  print('mod_assign_save_submission response: ${res.statusCode} ${res.body}');
-
-  if (res.statusCode != 200) throw HttpException(res.body);
-  try {
-    final d = jsonDecode(res.body);
-    if (d is Map && d['exception'] != null) {
-      throw HttpException('${d['exception']}: ${d['message']}');
-    }
-  } catch (_) {/* non-JSON OK */}
-}
-@override
-Future<void> saveAssignmentSubmissionFiles({
-  required int assignId,
-  required int draftItemId,
-}) async {
-  if (_userToken == null) throw StateError('User not logged in to Moodle');
-  final res = await ApiService().httpPostForm(
-    Uri.parse(apiURL + serverUrl),
-    body: {
-      'wstoken': _userToken!,
-      'wsfunction': 'mod_assign_save_submission',
-      'moodlewsrestformat': 'json',
-      'assignmentid': '$assignId',
-      'plugindata[files_filemanager]': '$draftItemId',
-    },
-  );
-if (res.statusCode != 200) { throw HttpException(res.body); }
-try {
-  final d = jsonDecode(res.body);
-  if (d is Map && d['exception'] != null) {
-    throw HttpException('${d['exception']}: ${d['message']}');
+    if (decoded is Map && decoded['itemid'] != null)
+      return decoded['itemid'] as int;
+    if (decoded is List &&
+        decoded.isNotEmpty &&
+        decoded.first['itemid'] != null) return decoded.first['itemid'] as int;
+    throw StateError('Unexpected upload response: $body');
   }
-} catch (_) {
-  // Handle non-JSON response
-  print('Non-JSON response received: ${res.body}');
-}
-}
 
-@override
+  @override
+  Future<void> appendFileToDraft({
+    required File file,
+    required int contextId,
+    required int draftItemId,
+  }) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+    final uri = Uri.parse(
+        '$apiURL/webservice/upload.php?token=$_userToken&contextid=$contextId&itemid=$draftItemId');
+    final req = ApiService().multipartPost(uri)
+      ..files.add(await ApiService().multipartFileFromPath('file', file.path));
+
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode != 200) _throwIfMoodleException(body);
+  }
+
+  Never _throwIfMoodleException(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded.containsKey('exception')) {
+        throw HttpException('${decoded['exception']}: ${decoded['message']}');
+      }
+    } catch (_) {/* non-JSON body */}
+    throw HttpException(body);
+  }
+
+  @override
+  Future<void> saveAssignmentSubmissionOnlineText({
+    required int assignId,
+    required String text,
+    int format = 1,
+    int? draftItemId,
+  }) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+
+    final itemId = draftItemId ?? await _getUnusedDraftItemId();
+
+    final res = await ApiService().httpPost(
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'mod_assign_save_submission',
+        'moodlewsrestformat': 'json',
+        'assignmentid': '$assignId',
+        'plugindata[onlinetext_editor][text]': text,
+        'plugindata[onlinetext_editor][format]': '$format',
+        'plugindata[onlinetext_editor][itemid]': '$itemId',
+      },
+    );
+
+    // Useful logging
+    print('mod_assign_save_submission response: ${res.statusCode} ${res.body}');
+
+    if (res.statusCode != 200) throw HttpException(res.body);
+    try {
+      final d = jsonDecode(res.body);
+      if (d is Map && d['exception'] != null) {
+        throw HttpException('${d['exception']}: ${d['message']}');
+      }
+    } catch (_) {/* non-JSON OK */}
+  }
+
+  @override
+  Future<void> saveAssignmentSubmissionFiles({
+    required int assignId,
+    required int draftItemId,
+  }) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+    final res = await ApiService().httpPostForm(
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'mod_assign_save_submission',
+        'moodlewsrestformat': 'json',
+        'assignmentid': '$assignId',
+        'plugindata[files_filemanager]': '$draftItemId',
+      },
+    );
+    if (res.statusCode != 200) {
+      throw HttpException(res.body);
+    }
+    try {
+      final d = jsonDecode(res.body);
+      if (d is Map && d['exception'] != null) {
+        throw HttpException('${d['exception']}: ${d['message']}');
+      }
+    } catch (_) {
+      // Handle non-JSON response
+      print('Non-JSON response received: ${res.body}');
+    }
+  }
+
+  @override
   Future<void> submitAssignmentForGrading({
     required int assignId,
     bool acceptSubmissionStatement = true,
@@ -1526,12 +1534,14 @@ try {
         'wstoken': _userToken!,
         'wsfunction': 'mod_assign_submit_for_grading',
         'moodlewsrestformat': 'json',
-        'assignmentid': '$assignId',               
+        'assignmentid': '$assignId',
         'acceptsubmissionstatement': acceptSubmissionStatement ? '1' : '0',
       },
     );
 
-    if (res.statusCode != 200) { throw HttpException(res.body); }
+    if (res.statusCode != 200) {
+      throw HttpException(res.body);
+    }
     try {
       final d = jsonDecode(res.body);
       if (d is Map && d['exception'] != null) {
@@ -1539,9 +1549,10 @@ try {
       }
     } catch (_) {}
   }
+
   @override
   //test method to get sumbmission status
-    Future<Map<String, dynamic>> getSubmissionStatusRaw({
+  Future<Map<String, dynamic>> getSubmissionStatusRaw({
     required int assignId,
     int? forUserId,
   }) async {
@@ -1556,7 +1567,9 @@ try {
         if (forUserId != null) 'userid': '$forUserId',
       },
     );
-    if (res.statusCode != 200) { throw HttpException(res.body); }
+    if (res.statusCode != 200) {
+      throw HttpException(res.body);
+    }
     final d = jsonDecode(res.body);
     if (d is Map && d['exception'] != null) {
       throw HttpException('${d['exception']}: ${d['message']}');
@@ -1564,21 +1577,21 @@ try {
     return (d as Map).cast<String, dynamic>();
   }
 
-    //get draft item id for assignment
-    Future<int> _getUnusedDraftItemId() async {
-      if (_userToken == null) throw StateError('User not logged in to Moodle');
-      final res = await ApiService().httpPost(
-        Uri.parse(apiURL + serverUrl),
-        body: {
-          'wstoken': _userToken!,
-          'wsfunction': 'core_files_get_unused_draft_itemid',
-          'moodlewsrestformat': 'json',
-        },
-      );
-      if (res.statusCode != 200) throw HttpException(res.body);
-      final d = jsonDecode(res.body);
-      final itemid = (d is Map ? d['itemid'] : null);
-      if (itemid is int) return itemid;
-      throw StateError('Unexpected itemid response: ${res.body}');
-    }
+  //get draft item id for assignment
+  Future<int> _getUnusedDraftItemId() async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+    final res = await ApiService().httpPost(
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'core_files_get_unused_draft_itemid',
+        'moodlewsrestformat': 'json',
+      },
+    );
+    if (res.statusCode != 200) throw HttpException(res.body);
+    final d = jsonDecode(res.body);
+    final itemid = (d is Map ? d['itemid'] : null);
+    if (itemid is int) return itemid;
+    throw StateError('Unexpected itemid response: ${res.body}');
+  }
 }

@@ -12,7 +12,7 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_quill/flutter_quill.dart'; 
+import 'package:flutter_quill/flutter_quill.dart';
 
 import 'Views/dashboard.dart';
 import 'Views/edit_questions.dart';

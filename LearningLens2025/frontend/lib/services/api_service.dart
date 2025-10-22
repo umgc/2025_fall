@@ -106,7 +106,8 @@ class ApiService {
       );
     }
   }
-    /// Creates a new [http.MultipartRequest] for file uploads.
+
+  /// Creates a new [http.MultipartRequest] for file uploads.
   http.MultipartRequest multipartPost(Uri uri) {
     return http.MultipartRequest('POST', uri);
   }
@@ -120,19 +121,18 @@ class ApiService {
 
   //Post method for moodle file upload
   Future<http.Response> httpPostForm(
-  Uri url, {
-  required Map<String, String> body,
-  Map<String, String>? headers,
-}) {
-  // Force form-encoding, do NOT let callers override with application/json
-  final merged = <String, String>{
-    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-    ...?headers,
-  };
-  // If someone passed application/json, overwrite it
-  merged['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
+    Uri url, {
+    required Map<String, String> body,
+    Map<String, String>? headers,
+  }) {
+    // Force form-encoding, do NOT let callers override with application/json
+    final merged = <String, String>{
+      'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+      ...?headers,
+    };
+    // If someone passed application/json, overwrite it
+    merged['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
 
-  return http.post(url, headers: merged, body: body);
+    return http.post(url, headers: merged, body: body);
+  }
 }
-}
-

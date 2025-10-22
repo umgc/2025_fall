@@ -265,25 +265,32 @@ class ApiSingleton implements LmsInterface {
   }
 
   @override
-  Future<void> appendFileToDraft({required File file, required int contextId, required int draftItemId}) {
+  Future<void> appendFileToDraft(
+      {required File file, required int contextId, required int draftItemId}) {
     // TODO: implement appendFileToDraft
     throw UnimplementedError();
   }
 
   @override
-  Future<void> saveAssignmentSubmissionFiles({required int assignId, required int draftItemId}) {
+  Future<void> saveAssignmentSubmissionFiles(
+      {required int assignId, required int draftItemId}) {
     // TODO: implement saveAssignmentSubmissionFiles
     throw UnimplementedError();
   }
 
   @override
-  Future<void> saveAssignmentSubmissionOnlineText({required int assignId, required String text, int format = 1, int? draftItemId}) {
+  Future<void> saveAssignmentSubmissionOnlineText(
+      {required int assignId,
+      required String text,
+      int format = 1,
+      int? draftItemId}) {
     // TODO: implement saveAssignmentSubmissionOnlineText
     throw UnimplementedError();
   }
 
   @override
-  Future<void> submitAssignmentForGrading({required int assignId, bool? acceptSubmissionStatement}) {
+  Future<void> submitAssignmentForGrading(
+      {required int assignId, bool? acceptSubmissionStatement}) {
     // TODO: implement submitAssignmentForGrading
     throw UnimplementedError();
   }
@@ -293,9 +300,10 @@ class ApiSingleton implements LmsInterface {
     // TODO: implement uploadFileToDraft
     throw UnimplementedError();
   }
-  
+
   @override
-  Future<Map<String, dynamic>> getSubmissionStatusRaw({required int assignId, int? forUserId}) {
+  Future<Map<String, dynamic>> getSubmissionStatusRaw(
+      {required int assignId, int? forUserId}) {
     // TODO: implement getSubmissionStatusRaw
     throw UnimplementedError();
   }

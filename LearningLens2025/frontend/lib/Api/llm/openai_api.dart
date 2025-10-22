@@ -318,9 +318,9 @@ class OpenAiLLM implements LLM {
     return data['choices'][0]['message']['content'].toString().trim();
   }
 
-    /// Methiod used to enable Streaming responses from the AI model.
-    @override
-    Stream<String> chatStream({
+  /// Methiod used to enable Streaming responses from the AI model.
+  @override
+  Stream<String> chatStream({
     List<Map<String, dynamic>>? context,
     String? prompt,
     double temperature = 0.7,
@@ -348,7 +348,8 @@ class OpenAiLLM implements LLM {
           ? [
               {
                 'role': 'system',
-                'content': 'You are a helpful assistant. Be precise and concise.'
+                'content':
+                    'You are a helpful assistant. Be precise and concise.'
               },
               {'role': 'user', 'content': prompt}
             ]
@@ -370,7 +371,8 @@ class OpenAiLLM implements LLM {
       final streamedResponse = await client.send(req);
       if (streamedResponse.statusCode != 200) {
         final errBody = await streamedResponse.stream.bytesToString();
-        throw Exception('API stream error: ${streamedResponse.statusCode} - $errBody');
+        throw Exception(
+            'API stream error: ${streamedResponse.statusCode} - $errBody');
       }
 
       final lineStream = streamedResponse.stream

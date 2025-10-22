@@ -19,7 +19,7 @@ class ChatTurn {
 
   const ChatTurn({required this.role, required this.content});
 
-   ChatTurn copyWith({String? role, String? content}) =>
+  ChatTurn copyWith({String? role, String? content}) =>
       ChatTurn(role: role ?? this.role, content: content ?? this.content);
 
   // JSON should use Map<String, dynamic>

@@ -1,5 +1,4 @@
 import 'package:learninglens_app/Views/essay_assistant.dart';
-import 'package:learninglens_app/beans/Essay_Assistant_Session.dart';
 import 'package:learninglens_app/beans/chatLog.dart';
 
 String buildLlmPrompt({
@@ -103,17 +102,18 @@ Each paragraph:
 ''';
 }
 
-PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String? userNotes, String? essayDescription) {
+PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText,
+    String? userNotes, String? essayDescription) {
   String core = '';
   List<String> modules = [];
   String? submission = submissionText ?? ''; // Default to empty string if null
   String? notes = userNotes ?? ''; // Default to empty string if null
-  String? description = essayDescription ?? ''; // Default to empty string if null
+  String? description =
+      essayDescription ?? ''; // Default to empty string if null
 
   // Base core instructions
-  core +=
-      ''' 
-      You are an AI assistant designed to help students write and improve essays. Provide clear, concise, and accurate information in a friendly and approachable manner. Always aim to enhance the user\'s learning experience.
+  core += '''
+      You are an AI assistant designed to help students write and improve essays. Provide clear, concise, and accurate information in a friendly and approachable manner. Always aim to enhance the user's learning experience.
       You have three main modes: Brainstorm, Outline, and Revise. As well as several helper functions.
       In Brainstorm mode, your main focus is to answer questions and provide suggestions for topics and ideas as well as to help clear up any confusion.
       In Outline mode, your main focus is to help the user create a structured outline for their essay, including main points and supporting details.
@@ -125,8 +125,7 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String?
   // Mode-specific instructions
   switch (mode) {
     case AiMode.brainstorm:
-      modules.add(
-          '''
+      modules.add('''
           Your current mode is "Brainstorm". In this mode, help the user generate ideas, topics, and answer questions related to research for their essay based on the assignment description.
           -You should ask clarifying questions to better understand the user's needs and provide relevant suggestions.
           -Encourage the user to think creatively and explore different angles for their essay.
@@ -134,19 +133,15 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String?
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
 
           ''');
-      break;
     case AiMode.draftOutline:
-      modules.add(
-          ''' 
+      modules.add('''
           Your current mode is "Outline". In this mode, assist the user in creating a structured outline for their essay, including main points and supporting details.
           -Help the user organize their ideas into a coherent structure.
           -Encourage the user to think about the logical flow of their essay and how to effectively present their arguments.
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
           ''');
-      break;
     case AiMode.revise:
-      modules.add(
-          '''
+      modules.add('''
           Your current mode is "Revise". In this mode, help the user improve their essay by providing feedback on structure, clarity, grammar, and style.
           -Using the provided submission text, identify areas for improvement and suggest specific changes.
           -Encourage the user to think critically about their writing and how to effectively communicate their ideas.
@@ -155,67 +150,60 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String?
           -When prompted to focus on a specific aspect of the essay, such as grammar or style, tailor your feedback accordingly and leaving out other aspects of revision.
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
           ''');
-      break;
     case AiMode.assistant:
-      modules.add(
-          '''
+      modules.add('''
           Your current mode is "Assistant". In this mode, you are to assist the user with their essay by providing relevant information and guidance in more open-ended manner.
           -You should ask clarifying questions to better understand the user's needs and provide relevant suggestions.
           -Encourage the user to think creatively and explore different angles for their essay.
           -Avoid providing direct answers or solutions; instead, guide the user to develop their own ideas.
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
           ''');
-      break; 
   }
   // Add description module if available
   if (description.isNotEmpty) {
-    modules.add(
-        '''
+    modules.add('''
         The essay assignment description is as follows:
         "$description"
         Use this description to inform your suggestions and feedback.
         ''');
   }
   if (submission.isNotEmpty) {
-  modules.add(
-      '''
+    modules.add('''
       The user has provided the following essay text for reference:
       "$submission"
       Use this text to inform your suggestions and feedback.
       ''');
   }
   if (notes.isNotEmpty) {
-    modules.add(
-        '''
+    modules.add('''
         The user has provided the following notes for reference:
         "$notes"
         Use these notes to inform your suggestions and feedback.
         ''');
   }
   return PermTokens(core: core, modules: modules);
-
 }
 
 String getPreBuiltPrompt(PreBuiltPrompt? prompt) {
-switch (prompt) {
-  case PreBuiltPrompt.GenerateTopicIdeas:
-    return '''
+  switch (prompt) {
+    case PreBuiltPrompt.GenerateTopicIdeas:
+      return '''
 **[Pre-Built Prompt: Generate Topic Ideas]**
 You are activating a pre-built essay assistant prompt.
 Generate a list of potential essay topics based on the student's subject or assignment description.
 Provide 3–5 unique and engaging ideas that are relevant, clear, and researchable.
 ''';
 
-  case PreBuiltPrompt.QuestionsToExplore:
-    return '''
+    case PreBuiltPrompt.QuestionsToExplore:
+      return '''
 [Pre-Built Prompt: Questions To Explore]
 This is a pre-built essay assistant prompt.
 Generate a set of critical or exploratory questions the student could answer in their essay.
 Focus on questions that promote analysis, comparison, or deeper reflection on the topic.
 ''';
 
-  case PreBuiltPrompt.FindSources:
-    return '''
+    case PreBuiltPrompt.FindSources:
+      return '''
 [Pre-Built Prompt: Find Sources]
 This is a pre-built essay assistant prompt.
 Suggest reliable academic or credible online sources the student could use to support their essay.
@@ -223,8 +211,8 @@ For each source, include a short explanation of its relevance.
 Do not fabricate citations—use generic example placeholders if unsure.
 ''';
 
-  case PreBuiltPrompt.CreateOutline:
-    return '''
+    case PreBuiltPrompt.CreateOutline:
+      return '''
 [Pre-Built Prompt: Create Outline]
 This is a pre-built essay assistant prompt.
 Help the student organize their essay by producing a structured outline.
@@ -232,8 +220,8 @@ Include an introduction, 2 to 3 body sections with main ideas and evidence, and 
 Keep it simple, logical, and easy to follow.
 ''';
 
-  case PreBuiltPrompt.GrammarToneSpellCheck:
-    return '''
+    case PreBuiltPrompt.GrammarToneSpellCheck:
+      return '''
 [Pre-Built Prompt: Grammar-Tone-SpellCheck]
 This is a pre-built essay assistant prompt.
 Review the provided text for grammar, tone, and spelling.
@@ -241,27 +229,27 @@ Provide corrected sentences or phrases and explain any key improvements.
 Maintain the student’s original intent and tone.
 ''';
 
-  case PreBuiltPrompt.ClarityandConciseness:
-    return '''
+    case PreBuiltPrompt.ClarityandConciseness:
+      return '''
 [Pre-Built Prompt: Clarity and Conciseness]
 This is a pre-built essay assistant prompt.
 Review the provided essay or paragraph for clarity and conciseness.
 Suggest revisions that make the writing more direct, readable, and well-structured without changing the meaning.
 ''';
 
-  case PreBuiltPrompt.CitationsandFormatting:
-    return '''
+    case PreBuiltPrompt.CitationsandFormatting:
+      return '''
 [Pre-Built Prompt: Citations and Formatting]
 This is a pre-built essay assistant prompt.
 Check the student’s essay for proper citation style and formatting (APA, MLA, etc.).
 Point out inconsistencies or missing citations and provide examples of correct formatting.
 ''';
 
-  default:
-    return '''
+    default:
+      return '''
 [Pre-Built Prompt: Unknown]
 This is a placeholder pre-built prompt.
 No valid prompt type was matched. Please try again or check the configuration.
 ''';
+  }
 }
-} 
