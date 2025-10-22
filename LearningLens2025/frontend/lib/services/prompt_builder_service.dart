@@ -197,22 +197,71 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText, String?
 }
 
 String getPreBuiltPrompt(PreBuiltPrompt? prompt) {
-  switch (prompt) {
-    case PreBuiltPrompt.GenerateTopicIdeas:
-      return 'Test prompt for now respond with the following Number: 1';
-    case PreBuiltPrompt.QuestionsToExplore:
-      return 'Test prompt for now respond with the following Number: 2';
-    case PreBuiltPrompt.FindSources:
-      return 'Test prompt for now respond with the following Number: 3';
-    case PreBuiltPrompt.CreateOutline:
-      return 'Test prompt for now respond with the following Number: 4';
-    case PreBuiltPrompt.GrammarToneSpellCheck:
-      return 'Test prompt for now respond with the following Number: 5';
-    case PreBuiltPrompt.ClarityandConciseness:
-      return 'Test prompt for now respond with the following Number: 6';
-    case PreBuiltPrompt.CitationsandFormatting:
-      return 'Test prompt for now respond with the following Number: 7';
-    default:
-      return 'Test prompt for now respond with the following Number: 0';
-  }
+switch (prompt) {
+  case PreBuiltPrompt.GenerateTopicIdeas:
+    return '''
+**[Pre-Built Prompt: Generate Topic Ideas]**
+You are activating a pre-built essay assistant prompt.
+Generate a list of potential essay topics based on the student's subject or assignment description.
+Provide 3–5 unique and engaging ideas that are relevant, clear, and researchable.
+''';
+
+  case PreBuiltPrompt.QuestionsToExplore:
+    return '''
+[Pre-Built Prompt: Questions To Explore]
+This is a pre-built essay assistant prompt.
+Generate a set of critical or exploratory questions the student could answer in their essay.
+Focus on questions that promote analysis, comparison, or deeper reflection on the topic.
+''';
+
+  case PreBuiltPrompt.FindSources:
+    return '''
+[Pre-Built Prompt: Find Sources]
+This is a pre-built essay assistant prompt.
+Suggest reliable academic or credible online sources the student could use to support their essay.
+For each source, include a short explanation of its relevance.
+Do not fabricate citations—use generic example placeholders if unsure.
+''';
+
+  case PreBuiltPrompt.CreateOutline:
+    return '''
+[Pre-Built Prompt: Create Outline]
+This is a pre-built essay assistant prompt.
+Help the student organize their essay by producing a structured outline.
+Include an introduction, 2 to 3 body sections with main ideas and evidence, and a conclusion.
+Keep it simple, logical, and easy to follow.
+''';
+
+  case PreBuiltPrompt.GrammarToneSpellCheck:
+    return '''
+[Pre-Built Prompt: Grammar-Tone-SpellCheck]
+This is a pre-built essay assistant prompt.
+Review the provided text for grammar, tone, and spelling.
+Provide corrected sentences or phrases and explain any key improvements.
+Maintain the student’s original intent and tone.
+''';
+
+  case PreBuiltPrompt.ClarityandConciseness:
+    return '''
+[Pre-Built Prompt: Clarity and Conciseness]
+This is a pre-built essay assistant prompt.
+Review the provided essay or paragraph for clarity and conciseness.
+Suggest revisions that make the writing more direct, readable, and well-structured without changing the meaning.
+''';
+
+  case PreBuiltPrompt.CitationsandFormatting:
+    return '''
+[Pre-Built Prompt: Citations and Formatting]
+This is a pre-built essay assistant prompt.
+Check the student’s essay for proper citation style and formatting (APA, MLA, etc.).
+Point out inconsistencies or missing citations and provide examples of correct formatting.
+''';
+
+  default:
+    return '''
+[Pre-Built Prompt: Unknown]
+This is a placeholder pre-built prompt.
+No valid prompt type was matched. Please try again or check the configuration.
+''';
+}
 } 

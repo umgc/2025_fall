@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 
@@ -105,4 +106,33 @@ class ApiService {
       );
     }
   }
+    /// Creates a new [http.MultipartRequest] for file uploads.
+  http.MultipartRequest multipartPost(Uri uri) {
+    return http.MultipartRequest('POST', uri);
+  }
+
+  /// Creates a [http.MultipartFile] from a local file path.
+  Future<http.MultipartFile> multipartFileFromPath(
+      String fieldName, String filePath) async {
+    final file = File(filePath);
+    return await http.MultipartFile.fromPath(fieldName, file.path);
+  }
+
+  //Post method for moodle file upload
+  Future<http.Response> httpPostForm(
+  Uri url, {
+  required Map<String, String> body,
+  Map<String, String>? headers,
+}) {
+  // Force form-encoding, do NOT let callers override with application/json
+  final merged = <String, String>{
+    'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+    ...?headers,
+  };
+  // If someone passed application/json, overwrite it
+  merged['Content-Type'] = 'application/x-www-form-urlencoded; charset=utf-8';
+
+  return http.post(url, headers: merged, body: body);
 }
+}
+

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/grade.dart';
@@ -25,6 +27,7 @@ abstract class LmsInterface {
   String? profileImage;
   List<Course>? courses;
   UserRole? role;
+  
 
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
@@ -79,4 +82,37 @@ abstract class LmsInterface {
   Future<dynamic> getQuizStatsForStudent(String quizId, int userId);
   Future<List<Participant>> getEssayGradesForParticipants(
       String courseId, int essayId);
+
+  // Sumbit Essay Draft
+  Future<int> uploadFileToDraft({
+      required File file,
+      required int contextId,
+  });
+  Future<void> appendFileToDraft({
+      required File file,
+      required int contextId,
+      required int draftItemId,
+  });
+    Future<void> saveAssignmentSubmissionOnlineText({
+    required int assignId,
+    required String text,
+    int format = 1,
+    int? draftItemId,
+  });
+
+  Future<void> saveAssignmentSubmissionFiles({
+    required int assignId,
+    required int draftItemId,
+  });
+
+  Future<void> submitAssignmentForGrading({
+    required int assignId,
+    bool acceptSubmissionStatement,
+  });
+  Future<Map<String, dynamic>> getSubmissionStatusRaw({
+    required int assignId,
+    int? forUserId,
+  }) {
+    throw UnimplementedError();
+  }
 }

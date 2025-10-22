@@ -14,41 +14,53 @@
 //      3.7) Modals (Essay details, Submit confirm, Quill editor)
 //   4) Pure helpers (top-level functions)
 //   5) Small UI helpers (stateless widgets)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 1) Imports
  * Keep framework → domain → UI → 3rd-party consistent and grouped.
  * ──────────────────────────────────────────────────────────────────────────── */
-//import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
 
 import 'dart:convert';
-
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
+// Third-party
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'package:learninglens_app/Controller/essay_generator.dart';
+import 'package:learninglens_app/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
+
+// Api
+import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
-
+import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
+import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
+// Controller
+import 'package:learninglens_app/Controller/custom_appbar.dart';
+// Views
 import 'package:learninglens_app/Views/essays_view.dart';
+// beans
+import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/chatLog.dart';
 import 'package:learninglens_app/beans/course.dart';
-import 'package:learninglens_app/Controller/custom_appbar.dart';
-import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-
-import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:learninglens_app/beans/essay_assistant_session.dart';
+import 'package:learninglens_app/beans/participant.dart';
+// services
 import 'package:learninglens_app/services/LLMContextBuilder.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/prompt_builder_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -76,23 +88,75 @@ enum PreBuiltPrompt {
   GrammarToneSpellCheck,
   ClarityandConciseness,
   CitationsandFormatting,
+  Assistant,
 }
 
-/// Simple container for a saved essay draft.
-/// `deltaJson` is the Quill Delta (ops) JSON shape.
-class _EssayDraft {
-  _EssayDraft({required this.deltaJson, required this.updatedAt});
-  final List<dynamic> deltaJson; // Quill Delta JSON
-  final DateTime updatedAt;
-}
-class _NotesDraft {
-  _NotesDraft({required this.deltaJson, required this.updatedAt});
-  final List<dynamic> deltaJson; // Quill Delta JSON
-  final DateTime updatedAt;
-}
+enum EssayStatus { notStarted, inProgress, submitted }
 
 /* ────────────────────────────────────────────────────────────────────────────
- * 3) EssayAssistant Widget
+ * 3) Pure helpers (top-level)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/// Get essay assignments from LMS.
+/// If `courseID` is null or 0 => include all courses.
+Future<List<Assignment>> getAllEssays(int? courseID) async {
+  List<Assignment> result = [];
+  for (Course c in LmsFactory.getLmsService().courses ?? []) {
+    if (courseID == 0 || courseID == null || c.id == courseID) {
+      result.addAll(c.essays ?? []);
+    }
+  }
+  return result;
+}
+
+/// Get a single essay by its ID, with optional course filter.
+/// If `courseID` is null or 0 => search all courses.
+Assignment? getEssay(int? essayID, int? courseID) {
+  Assignment? result;
+  for (Course c in LmsFactory.getLmsService().courses ?? []) {
+    if (courseID == 0 || courseID == null || c.id == courseID) {
+      for (Assignment a in c.essays ?? []) {
+        if (a.id == essayID) {
+          result = a;
+        }
+      }
+    }
+  }
+  return result;
+}
+/// Get the course for a given essay.
+Future<Course?> getCourseForEssay(Assignment essay) async {
+  for (Course c in LmsFactory.getLmsService().courses ?? []) {
+    if (c.id == essay.courseId) {
+      return c;
+    }
+  }
+  return null;
+}
+Future<Participant?> getStudentForEssay(int courseId) async {
+  final lms = LmsFactory.getLmsService();
+  final uid = (lms as MoodleLmsService).userId;
+  final participants = await lms.getCourseParticipants(courseId.toString());
+  for (final p in participants) {
+    if (p.id == uid) return p;
+  }
+  return null;
+}
+
+/// Strip HTML tags (useful if LMS descriptions are rich-text).
+String removeHtmlTags(String htmlText) {
+  final regex = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: false);
+  return htmlText.replaceAll(regex, '');
+}
+
+// Check if user has API key for selected LLM
+bool _hasKeyFor(LlmType llm) {
+  return LocalStorageService.userHasLlmKey(llm);
+}
+
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 4) EssayAssistant Widget
  * ──────────────────────────────────────────────────────────────────────────── */
 class EssayAssistant extends StatefulWidget {
   const EssayAssistant({super.key});
@@ -103,7 +167,7 @@ class EssayAssistant extends StatefulWidget {
 
 class _EssayAssistantState extends State<EssayAssistant> {
   /* ──────────────────────────────────────────────────────────────────────────
-   * 3.1) State fields
+   * 4.1) State fields
    *  - Session
    *  - Chat
    *  - Sidebars (left: essays; right: AI controls)
@@ -113,23 +177,40 @@ class _EssayAssistantState extends State<EssayAssistant> {
 
 
   // ------------- Session state  -------------
-  SharedPreferences? _prefs;
+  SharedPreferences? _prefs; // for local persistence
   EssaySession? _currentSession;     // currently active session (if any)
   final Map<String, EssaySession> _sessions = {}; // key: essayId (String), value: EssaySession
-  
-  bool get _sessionActive => _currentSession != null;
-  String get essayID => _currentSession?.id ?? '';
+  String? _activeAssistantMsgId; // for tracking streaming assistant message
 
+  Future<Course?> get _currentCourse => getCourseForEssay(_currentSession!.essay);     // course of current essay
+  Future<Participant?> get _currentStudent => getStudentForEssay(_currentSession!.essay.courseId); // student using the assistant
+
+  bool get _sessionActive => _currentSession != null; // Check if a session is active
+  String get essayID => _currentSession?.id ?? ''; // Current essay/session ID
+
+  /// Start or continue a session for the given essay.
   Future<void> _startSessionFor(Assignment essay, {bool replay = true}) async {
-    //Clear chat UI
+
+    // Get EssayKey
+    final essayKey = _essayKeyOf(essay);
+    _statusCache[essayKey] = EssayStatus.inProgress;
+
+    // Load existing or create new session
+    final session = _sessions[essayKey] ??
+      EssaySession(essay: essay, id: essayKey, chatLog: []);
+  
+    // Update state
     setState(() {
+      _currentSession = session;
+      _sessions[essayKey] = session;
+      // Clear chat messages for new session load
       _messages.clear();
       _inputCtrl.clear(); 
     });
-    // Get EssayKey
-    final String essayKey =
-      (essay.id != null) ? essay.id.toString() : 'general_${essay.name.hashCode}';
+    
+    // Replay chat log if requested
     if (replay && _currentSession!.chatLog.isNotEmpty) {
+    _postIntroMsg();
     setState(() {
       for (final turn in _currentSession!.chatLog) {
         if (turn.isUser) {
@@ -137,7 +218,7 @@ class _EssayAssistantState extends State<EssayAssistant> {
             types.TextMessage(
               id: const Uuid().v4(),
               author: _me,
-              text: turn.content,
+              text: turn.content ?? '',
               createdAt: DateTime.now().millisecondsSinceEpoch,
             ),
           );
@@ -145,7 +226,7 @@ class _EssayAssistantState extends State<EssayAssistant> {
           _messages.add(
             types.SystemMessage(
               id: const Uuid().v4(),
-              text: turn.content,
+              text: turn.content ?? '',
               createdAt: DateTime.now().millisecondsSinceEpoch,
             ),
           );
@@ -154,16 +235,15 @@ class _EssayAssistantState extends State<EssayAssistant> {
     });
   } else {
     // Fresh system line so the chat isn’t empty
+    _postIntroMsg();
     _appendSystemMessage('Starting session for "${essay.name}".');
   }
 
   //Persist right away so this session is saved separately
   await _saveCurrentSessionToPrefs();
-
   _scrollToBottom();
 }
-
-
+  /// Show a snackbar if no session is active.
   void _guardNoSession() {
     if (!_sessionActive) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,24 +253,27 @@ class _EssayAssistantState extends State<EssayAssistant> {
   }
 
   // ---------------- Chat state ----------------
-  final List<types.Message> _messages = [];
-  late final types.User _me;
+  final List<types.Message> _messages = []; // chat messages for Chat UI
+  late final types.User _me; // current user identity
 
-  final _inputCtrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
+  final _inputCtrl = TextEditingController(); // input field controller
+  final _scrollCtrl = ScrollController(); // chat scroll controller
   
   // ---------------- Left sidebar (essays) state ----------------
   int? _selectedSidebarIndex;        // selected essay index in the left list
   List<Assignment> _essays = [];     // loaded from LMS (all courses or filtered)
+  bool _isReloadingEssays = false;  // loading state
+  final Map<String, EssayStatus> _statusCache = {}; // key = essayKey , value = EssayStatus
 
   // ---------------- Right sidebar (AI controls) state ----------------
   AiMode _mode = AiMode.brainstorm;  // current AI mode
-  PreBuiltPrompt? _selectedHelper;  // helper within a mode (dropdown)
+  PreBuiltPrompt? _selectedPrompt;  // prompt within a mode (dropdown)
   late LlmType _selectedLLM;          // your enum (with .displayName)
   double _temperature = 0.7;      // 0.0–2.0 typical; start reasonable
+  
 
-  // Helpers available for each mode
-  final Map<AiMode, Map<String, PreBuiltPrompt>> _helpersByMode = {
+  // Pre-built prompts available for each mode
+  final Map<AiMode, Map<String, PreBuiltPrompt>> _promptsByMode = {
     AiMode.brainstorm: {
       'Generate topic ideas': PreBuiltPrompt.GenerateTopicIdeas,
       'Questions to explore': PreBuiltPrompt.QuestionsToExplore,
@@ -205,7 +288,7 @@ class _EssayAssistantState extends State<EssayAssistant> {
       'Citations and formatting': PreBuiltPrompt.CitationsandFormatting,
     },
     AiMode.assistant: {
-      '-': PreBuiltPrompt.GenerateTopicIdeas, // Placeholder
+      '-': PreBuiltPrompt.Assistant,
     }
   };
 
@@ -223,7 +306,7 @@ class _EssayAssistantState extends State<EssayAssistant> {
 
   // General tooltip for the "Helpers" label
   final String _helpersTooltip =
-      'Contextual helpers that change with the selected mode.';
+      'Pre-built prompts to guide the AI in assisting you. Select one to get started.';
 
   // ---------------- Quill editor state ----------------
   late final quill.QuillController _quillDraftController;
@@ -247,12 +330,10 @@ class _EssayAssistantState extends State<EssayAssistant> {
     _me = types.User(
       id: 'user-${DateTime.now().millisecondsSinceEpoch}',
       firstName: 'You',
-      imageUrl: LmsFactory.getLmsService().profileImage,
     );
 
     // Seed a welcome system message (renders as full-width text, no bubble)
-    _appendSystemMessage('Welcome to the Essay Assistant!');
-    _loadAllSessionsFromPrefs();
+    _postIntroMsg();
 
     // Quill controller with basic config (external rich paste enabled)
     _quillDraftController = quill.QuillController.basic(
@@ -301,25 +382,48 @@ class _EssayAssistantState extends State<EssayAssistant> {
    *  - _handleSendPressed: adds user message and gets LLM response
    *  - _scrollToBottom: keep the view pinned to latest
    * ────────────────────────────────────────────────────────────────────────── */
+void _postIntroMsg() {
+      _appendSystemMessage('''
+## Welcome to the Essay Assistant!\n
+This space is designed to help you plan, write, and refine your essay from start to finish. You can interact with the assistant through different Modes, use Helper Prompts for specific tasks, jot down quick thoughts in Notes, and compose or edit your full essay in the Draft Editor.
 
-  void _handleSendPressed(types.PartialText partial) {
-    if (partial.text.trim().isEmpty) return;
-    _appendUserMessage(partial.text.trim());
-    _inputCtrl.clear();
+## Modes:\n
+Each mode changes how the assistant responds:\n
+• **Brainstorm** – generate ideas and clarify your topic.\n
+• **Outline** – build structure with main points and supporting details.\n
+• **Revise** – improve clarity, grammar, and flow in your draft.\n
 
-    //Get LLM response
-    getLLMResponse(partial.text.trim(), _selectedLLM, _temperature).then((response) {
-      if (response != null && response.isNotEmpty) {
-        _appendAssistantMessage(response);
-        _scrollToBottom();
-      } else {
-        _appendSystemMessage('Error: No response from the AI model.');
-      }
-    }).catchError((error) {
-      _appendSystemMessage('Error getting AI response: $error');
-    });
-    _scrollToBottom();
-  }
+**Helper Prompts:**\n
+These are pre-built tools that perform focused tasks — such as checking grammar, suggesting sources, or creating outlines. You can use them anytime to get targeted help without switching modes.
+
+**Notes Section:**\n
+Use this to capture quick ideas, reminders, or references as you work. Notes stay linked to your essay session so you won’t lose your thoughts between sessions.
+
+**Draft Editor:**\n
+This is your main writing space. You can write freely, review feedback from the assistant, and make revisions directly here. When you’re ready, you can export or submit your final essay.
+
+**Select an essay from the left sidebar to get started!**
+
+Tip: The assistant adapts to your mode and notes, so the more context you provide, the better it can help.
+      ''');
+}
+
+// Handle user pressing "Send" in chat input
+void _handleSendPressed(types.PartialText partial) {
+  if (partial.text.trim().isEmpty) return;
+  _appendUserMessage(partial.text.trim());
+  _inputCtrl.clear();
+
+  // Let getLLMResponse handle ALL assistant/error UI.
+  getLLMResponse(partial.text.trim(), _selectedLLM, _temperature)
+      .catchError((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('There was a problem generating a reply.')),
+        );
+      });
+
+  _scrollToBottom();
+}
 
   // Helper to append user message (GenerateContext appends to ChatLog)
   void _appendUserMessage(String text) {
@@ -368,102 +472,404 @@ class _EssayAssistantState extends State<EssayAssistant> {
       );
     });
   }
+
+    // Start streaming assistant response in chat log
+    String _beginAssistantUiMessage() {
+      final id = const Uuid().v4();
+      setState(() {
+        _messages.add(
+          types.SystemMessage(
+            id: id,
+            text: '',
+            createdAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+      });
+      _scrollToBottom();
+      return id;
+    }
+    // Append chunk to streaming assistant UI message
+    void _appendAssistantUiChunk(String id, String chunk) {
+      final index = _messages.indexWhere((msg) => msg.id == id);
+      if (index == -1) return; // not found
+
+      final old = _messages[index];
+      final prev = (old is types.SystemMessage)
+      ? old.text
+      : (old is types.CustomMessage
+      ? (old.metadata?['text'] as String? ?? '')
+      : '');
+
+      setState(() {
+        _messages[index] = types.SystemMessage(
+          id: id,
+          text: prev + chunk,
+          createdAt: old.createdAt,
+        );
+      });
+      _scrollToBottom();
+    }
+
+    void _finalizeAssistantUi(String id, String fullText) {
+      final i = _messages.indexWhere((m) => m.id == id);
+      if (i != -1) {
+        final old = _messages[i];
+        setState(() {
+          _messages[i] = types.SystemMessage(
+            id: id,
+            text: fullText,
+            createdAt: old.createdAt,
+          );
+        });
+      }
+      _activeAssistantMsgId = null;
+    }
     /// Core method to get LLM response based on current session and context
     Future<String?> getLLMResponse(String userPrompt, LlmType llm, double temperature) async {
-    if (!_sessionActive) {
-      _appendSystemMessage('No active session.');
-      return null;
-    }
+      if (!_sessionActive) {
+        _appendSystemMessage('No active session.');
+        return null;
+      }
 
-    // Description (already in session.essay)
-    final essayDescription = removeHtmlTags(
-      _currentSession!.essay.description?.toString() ?? '',
-    ).trim();
+      // Description (already in session.essay) → plain text
+      final essayDescription = removeHtmlTags(
+        _currentSession!.essay.description.toString(),
+      ).trim();
 
-    // Draft / Notes → plain text
-    String? submissionText;
-    if (_currentSession!.draftDeltaOps != null) {
+      // Draft / Notes → plain text
+      String? submissionText;
+      if (_currentSession!.draftDeltaOps != null) {
+        try {
+          submissionText = quill.Document.fromJson(_currentSession!.draftDeltaOps!)
+              .toPlainText()
+              .trim();
+          if (submissionText!.isEmpty) submissionText = null;
+        } catch (_) {}
+      }
+
+      String? notesText;
+      if (_currentSession!.notesDeltaOps != null) {
+        try {
+          notesText = quill.Document.fromJson(_currentSession!.notesDeltaOps!)
+              .toPlainText()
+              .trim();
+          if (notesText!.isEmpty) notesText = null;
+        } catch (_) {}
+      }
+
+      final permContext = essayAssistPromptBuilder(
+        _mode,
+        submissionText,
+        notesText,
+        essayDescription,
+      );
+
+      final chatLog = _currentSession!.chatLog;
+
+      // ----- Pick model (unchanged) -----
+      LLM? aiModel;
+      switch (_selectedLLM) {
+        case LlmType.CHATGPT:
+          final key = LocalStorageService.getOpenAIKey();
+          if (key.isEmpty) return _appendError('OpenAI key missing');
+          aiModel = OpenAiLLM(key);
+          break;
+        case LlmType.GROK:
+          final key = LocalStorageService.getGrokKey();
+          if (key.isEmpty) return _appendError('Grok key missing');
+          aiModel = GrokLLM(key);
+          break;
+        case LlmType.PERPLEXITY:
+          final key = LocalStorageService.getPerplexityKey();
+          if (key.isEmpty) return _appendError('Perplexity key missing');
+          aiModel = PerplexityLLM(key);
+          break;
+        case LlmType.DEEPSEEK:
+          final key = LocalStorageService.getDeepseekKey();
+          if (key.isEmpty) return _appendError('Deepseek key missing');
+          aiModel = DeepseekLLM(key);
+          break;
+      }
+      if (aiModel == null) return null;
+
+      final fullContext = generateContext(
+        permTokens: permContext,
+        chatHistory: chatLog,
+        userPrompt: userPrompt,
+        llmContextSize: aiModel.contextSize,
+        maxOutputTokens: aiModel.maxOutputTokens,
+      );
+
+      // Log the user's turn immediately
+      _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
+
+      // Create a placeholder assistant message that we'll fill as tokens arrive
+      final int assistantIndex = _beginAssistantStream(); // returns index in chatLog
+
+      // Also create the UI placeholder bubble and track its id
+      _activeAssistantMsgId = _beginAssistantUiMessage();
+
+      final buffer = StringBuffer();
       try {
-        submissionText = quill.Document.fromJson(_currentSession!.draftDeltaOps!)
-            .toPlainText()
-            .trim();
-        if (submissionText!.isEmpty) submissionText = null;
-      } catch (_) {}
-    }
+        // ---- Preferred: streaming path (Option B) ----
+        // Requires: aiModel.chatStream(...) implemented OpenAI/DeepSeek compatible
+        await for (final token in aiModel.chatStream(
+          context: fullContext,
+          temperature: temperature,
+          
+        )) {
+          //test print
+          print('temperature: $temperature');
+          buffer.write(token);
+          _appendAssistantStream(assistantIndex, token); // UI: update bubble text
+        }
 
-    String? notesText;
-    if (_currentSession!.notesDeltaOps != null) {
+        final fullText = buffer.toString().trim();
+        _finishAssistantStream(assistantIndex, fullText);
+
+        //Log interaction
+        await _logAiInteraction(
+          userMsg: userPrompt,
+          systemResponse: fullText,
+        );
+
+        // Persist after each round
+        await _saveCurrentSessionToPrefs();
+        return fullText;
+      } catch (e) {
+        // ---- Fallback: non-streaming call (if streaming not supported) ----
+        try {
+          final fallback = await aiModel.chat(
+            context: fullContext,
+            temperature: temperature,
+            // stream: false by default in your LLMs
+          );
+          // Complete the streaming UI with the full fallback text
+          final fullText = (fallback ?? '').trim();
+          _finishAssistantStream(assistantIndex, fullText);
+          //Log interaction
+          await _logAiInteraction(
+            userMsg: userPrompt,
+            systemResponse: fullText,
+          );
+          await _saveCurrentSessionToPrefs();
+          return fullText.isEmpty ? null : fullText;
+        } catch (inner) {
+          // Clean up placeholder on hard failure
+          _finishAssistantStream(assistantIndex, '[Error: ${inner.toString()}]');
+          await _saveCurrentSessionToPrefs();
+          _appendError(inner.toString());
+          return null;
+        }
+      }
+    }
+    // Append chunk to streaming assistant message in chat log
+    Future<void> _logAiInteraction({
+      required String userMsg,
+      required String systemResponse,
+    }) async {
       try {
-        notesText = quill.Document.fromJson(_currentSession!.notesDeltaOps!)
-            .toPlainText()
-            .trim();
-        if (notesText!.isEmpty) notesText = null;
-      } catch (_) {}
+        final Course? course = await _currentCourse;
+        
+        final Assignment essay = _currentSession!.essay;
+        
+        final Participant? student = await _currentStudent;
+        
+ 
+
+        if (course == null || student == null) return;
+
+        final log = AiLog(
+          course,
+          essay,
+          student,
+          userMsg,
+          systemResponse,
+          _selectedLLM,
+        );
+        // Persist to database
+        await AILoggingSingleton().addLog(log);
+      } catch (_) {
+        // swallow logging failures to avoid breaking UX
+        print('AI logging failed.');
+      }
     }
 
-    final permContext = essayAssistPromptBuilder(
-      _mode,
-      submissionText,
-      notesText,
-      essayDescription,
-    );
+    ///Methods to push Draft to LMS
+    Future<void> _pushCurrentDraftToMoodle(Assignment essay) async {
+      if (_currentSession?.draftDeltaOps == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No draft to upload.')),
+        );
+        return;
+      }
 
-    final chatLog = _currentSession!.chatLog;
+      final lms = LmsFactory.getLmsService();
+      final ops = _currentSession!.draftDeltaOps!;
+      final html = deltaToHtml(ops);
 
-    // pick model (your existing switch, but return if no key)
-    LLM? aiModel;
-    switch (_selectedLLM) {
-      case LlmType.CHATGPT:
-        final key = LocalStorageService.getOpenAIKey();
-        if (key.isEmpty) return _appendError('OpenAI key missing');
-        aiModel = OpenAiLLM(key);
-        break;
-      case LlmType.GROK:
-        final key = LocalStorageService.getGrokKey();
-        if (key.isEmpty) return _appendError('Grok key missing');
-        aiModel = GrokLLM(key);
-        break;
-      case LlmType.PERPLEXITY:
-        final key = LocalStorageService.getPerplexityKey();
-        if (key.isEmpty) return _appendError('Perplexity key missing');
-        aiModel = PerplexityLLM(key);
-        break;
-      case LlmType.DEEPSEEK:
-        final key = LocalStorageService.getDeepseekKey();
-        if (key.isEmpty) return _appendError('Deepseek key missing');
-        aiModel = DeepseekLLM(key);
-        break;
+      // Get context id for this assignment
+      final contextId =
+          await lms.getContextId(essay.id!, essay.courseId.toString()) ?? 0;
+
+      // If you handle images, upload them here (optional)
+      int? draftItemId;
+      // draftItemId = await lms.uploadFileToDraft(file: myFile, contextId: contextId);
+
+      // Save the text itself as draft (format=1 for HTML)
+      final visible = RegExp(r'[^\s\u00A0]').hasMatch(
+        html.replaceAll(RegExp(r'<[^>]+>'), '')
+      );
+      if (!visible) {
+        // Show a message or send a minimal placeholder
+        print('Warning: Draft appears to be empty after stripping HTML tags.'); 
+      }
+      await lms.saveAssignmentSubmissionOnlineText(
+        assignId: essay.id!,
+        text: html,
+        format: 1,
+        draftItemId: draftItemId,
+      );
+      
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Draft saved to Moodle for "${essay.name}"')),
+      );
     }
-    if (aiModel == null) return null;
 
-    final fullContext = generateContext(
-      permTokens: permContext,
-      chatHistory: chatLog,
-      userPrompt: userPrompt,
-      llmContextSize: aiModel.contextSize,
-      maxOutputTokens: aiModel.maxOutputTokens,
-    );
+    Future<void> _submitNow(Assignment essay) async {
+      if (_currentSession?.draftDeltaOps == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No draft to submit. Open editor and save first.')),
+        );
+        return;
+      }
 
-    final response = await aiModel.chat(
-      context: fullContext,
-      temperature: temperature,
-    );
+      final lms = LmsFactory.getLmsService();
+      final ops = _currentSession!.draftDeltaOps!;
+      final html = deltaToHtml(ops).trim(); 
 
-    // Log + persist after each round
-    _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
-    if (response != null && response.isNotEmpty) {
-      _currentSession!.chatLog.add(ChatTurn(role: 'assistant', content: response));
+      final hasVisibleText = RegExp(r'[^\s\u00A0]').hasMatch(
+        html.replaceAll(RegExp(r'<[^>]+>'), ''),
+        );
+      if (!hasVisibleText) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your draft is empty. Type something and Save draft first.')),
+        );
+        return;
+      }
+
+      try {
+        // --- Preferred: Online-text path
+        await lms.saveAssignmentSubmissionOnlineText(
+          assignId: essay.id!,
+          text: html,
+          format: 1,      // HTML
+          // draftItemId: (optional) pass if you also uploaded images for editor
+        );
+
+        await lms.submitAssignmentForGrading(assignId: essay.id!);
+
+        final key = _essayKeyOf(essay);
+        final s = _sessions[key];
+        if (s != null) {
+          _statusCache[key] = EssayStatus.submitted;
+          await _saveCurrentSessionToPrefs();
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Submitted “${essay.name}” for grading.')),
+        );
+        }
+      } catch (e) {
+        // If the assignment doesn’t support online text, fall back to Files:
+        final msg = e.toString();
+        final notSupported = msg.contains('submissionpluginnotsupported') ||
+                            msg.contains('onlinetext');
+
+        if (!notSupported) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Submit failed: $msg')),
+            );
+          }
+          return;
+        }
+
+        // --- Fallback: Files-only (upload .html and save)
+        try {
+          final ctxId = await lms.getContextId(essay.id!, essay.courseId.toString()) ?? 0;
+
+          // write HTML to a temp file
+          final tmp = File('${Directory.systemTemp.path}/submission_${essay.id}.html');
+          await tmp.writeAsString(html);
+
+          final itemId = await lms.uploadFileToDraft(file: tmp, contextId: ctxId);
+          await lms.saveAssignmentSubmissionFiles(assignId: essay.id!, draftItemId: itemId);
+
+          await lms.submitAssignmentForGrading(assignId: essay.id!);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Submitted “${essay.name}” as file.')),
+          );
+        } catch (f) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Submit failed (files path): $f')),
+            );
+          }
+        }
+      }
     }
-    await _saveCurrentSessionToPrefs();
+  
 
-    return response;
-  }
+    /// ----- Helpers for streaming UI / model log -----
+    /// Adds an empty assistant message to the log so we can mutate it as tokens arrive.
+    /// Returns the index of that message in _currentSession!.chatLog.
 
+    int _beginAssistantStream() {
+      final turn = const ChatTurn(role: 'assistant', content: '');
+      _currentSession!.chatLog.add(turn);
+      _emitUiUpdate();
+      return _currentSession!.chatLog.length - 1;
+    }
+
+    /// Append chunk: replace ChatTurn immutably and update UI bubble
+    void _appendAssistantStream(int assistantIndex, String chunk) {
+      final turn = _currentSession!.chatLog[assistantIndex];
+      final updated = turn.copyWith(content: (turn.content ?? '') + chunk);
+      _currentSession!.chatLog[assistantIndex] = updated;
+      _emitUiUpdate();
+
+      if (_activeAssistantMsgId != null) {
+        _appendAssistantUiChunk(_activeAssistantMsgId!, chunk);
+      }
+    }
+
+    /// Finalize: replace ChatTurn immutably and finalize UI bubble
+    void _finishAssistantStream(int assistantIndex, String finalText) {
+      final turn = _currentSession!.chatLog[assistantIndex];
+      _currentSession!.chatLog[assistantIndex] = turn.copyWith(content: finalText);
+      _emitUiUpdate();
+
+      if (_activeAssistantMsgId != null) {
+        _finalizeAssistantUi(_activeAssistantMsgId!, finalText);
+      }
+    }
+
+    void _emitUiUpdate() {
+      if (!mounted) return;
+      setState(() {}); 
+    }
+
+  /// Append error message to chat as System line
   String? _appendError(String msg) {
     _appendSystemMessage('Error: $msg');
     return null;
   }
-
+  /// Scroll chat to bottom
   void _scrollToBottom() {
     // Schedule after frame so list length/size is final
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -485,10 +891,33 @@ class _EssayAssistantState extends State<EssayAssistant> {
    * ────────────────────────────────────────────────────────────────────────── */
 
   /// Load essays for the current user (all courses). Pass a courseId if needed.
-  Future<void> _loadEssays({int? courseId}) async {
-    final items = await getAllEssays(courseId);
-    if (mounted) {
-      setState(() => _essays = items);
+  Future<void> _loadEssays({int? courseId, bool toast = false}) async {
+    if (!mounted) return;
+    setState(() => _isReloadingEssays = true);
+
+    try {
+      final all = await getAllEssays(courseId);
+
+      final filtered = all
+          .where((a) => !_isOverdue(a)) // keep your “not overdue” filter
+          .toList()
+        ..sort((a, b) {
+          final ad = _effectiveDue(a);
+          final bd = _effectiveDue(b);
+          if (ad == null && bd == null) return 0;
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return ad.compareTo(bd);
+        });
+
+      if (mounted) setState(() => _essays = filtered);
+      if (toast && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Essays reloaded')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isReloadingEssays = false);
     }
   }
 
@@ -502,6 +931,7 @@ class _EssayAssistantState extends State<EssayAssistant> {
   // ------ Session -----
   /// Key for local storage of essay sessions
   static const String _kSessionKey = 'essay_sessions_v1';
+
   //  Helper to convert EssaySession map for storage
   Map<String, dynamic> _sessionToMap(EssaySession session) {
     return {
@@ -597,6 +1027,70 @@ Future<void> _saveCurrentSessionToPrefs() async {
   await _saveAllSessionToPrefs();
 }
 
+String deltaToHtml(List<dynamic> ops) {
+  final converter = QuillDeltaToHtmlConverter(
+    ops.cast<Map<String, dynamic>>(),
+    ConverterOptions(),
+  );
+  return converter.convert();
+}
+/// Helper to get essay key for sessions map
+String _essayKeyOf(Assignment e) =>
+    (e.id != null) ? e.id.toString() : 'general_${e.name.hashCode}';
+    
+/// Check if we have a saved session for this essay
+bool _hasSessionFor(Assignment e) => _sessions.containsKey(_essayKeyOf(e));
+
+DateTime? _effectiveDue(Assignment a) {
+  final d = a.cutoffDate ?? a.dueDate;
+  return d;
+}
+
+DateTime _normalizeToComparableLocal(DateTime d) {
+  final local = d.toLocal();
+  final isMidnight = local.hour == 0 && local.minute == 0 && local.second == 0;
+  if (isMidnight) {
+    return DateTime(local.year, local.month, local.day, 23, 59, 59);
+  }
+  return local;
+}
+
+bool _isOverdue(Assignment a) {
+  final d = _effectiveDue(a);
+  if (d == null) return false; // No date → show it
+  final deadline = _normalizeToComparableLocal(d);
+  return DateTime.now().isAfter(deadline);
+}
+
+
+EssayStatus _deriveStatusLocal(EssaySession? s) {
+  if (s == null) return EssayStatus.notStarted;
+  final hasDraft = s.draftDeltaOps != null &&
+      (() { try { return quill.Document.fromJson(s.draftDeltaOps!).toPlainText().trim().isNotEmpty; } catch (_) { return false; } })();
+  if (hasDraft || (s.chatLog.isNotEmpty)) return EssayStatus.inProgress;
+  return EssayStatus.notStarted;
+}
+
+EssayStatus _statusOf(Assignment a) {
+  final key = _essayKeyOf(a);
+  final cached = _statusCache[key];
+  if (cached != null) return cached;
+  final s = _sessions[key];
+  final derived = _deriveStatusLocal(s);
+  _statusCache[key] = derived;
+  return derived;
+}
+
+String _statusTextFor(Assignment a) {
+  switch (_statusOf(a)) {
+    case EssayStatus.notStarted:
+      return 'Not started';
+    case EssayStatus.inProgress:
+      return 'In progress';
+    case EssayStatus.submitted:
+      return 'Submitted';
+  }
+}
 
 
   /* ──────────────────────────────────────────────────────────────────────────
@@ -634,9 +1128,20 @@ Future<void> _saveCurrentSessionToPrefs() async {
                       children: [
                         const Icon(Icons.assignment_outlined, size: 20),
                         const SizedBox(width: 8),
-                        Text(
-                          'Essay Assignments',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Text('Essay Assignments', style: Theme.of(context).textTheme.titleMedium),
+                        const Spacer(),
+                        IconButton(
+                          tooltip: 'Reload',
+                          onPressed: _isReloadingEssays
+                              ? null
+                              : () => _loadEssays(toast: true),
+                          icon: _isReloadingEssays
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: const CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.refresh),
                         ),
                       ],
                     ),
@@ -644,8 +1149,11 @@ Future<void> _saveCurrentSessionToPrefs() async {
                   const Divider(height: 1),
 
                   // List of essay items (from LMS)
-                  Expanded(
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => _loadEssays(),
                     child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                       itemCount: _essays.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -659,21 +1167,20 @@ Future<void> _saveCurrentSessionToPrefs() async {
                                 .toIso8601String()
                                 .split('T')
                                 .first}';
+                        final status = _statusOf(assignment);
 
                         return ListTile(
                           dense: true,
                           selected: selected,
-                          selectedTileColor: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.08),
+                          selectedTileColor:
+                              Theme.of(context).colorScheme.primary.withOpacity(0.08),
                           title: Text(
                             assignment.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text('Due: $dueText'),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: _statusChip(status), 
                           onTap: () {
                             setState(() => _selectedSidebarIndex = i);
                             _openEssayDialog(context, assignment);
@@ -682,10 +1189,11 @@ Future<void> _saveCurrentSessionToPrefs() async {
                       },
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
 
           // =================== CENTER: Chat column ===================
           Expanded(
@@ -730,7 +1238,9 @@ Future<void> _saveCurrentSessionToPrefs() async {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
+                                  color: Theme.of(context)
+                                         .colorScheme
+                                         .primaryContainer,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: MarkdownBody(
@@ -918,7 +1428,7 @@ Future<void> _saveCurrentSessionToPrefs() async {
                         if (val == null) return;
                         setState(() {
                           _mode = val;      // Update mode
-                          _selectedHelper = null; // Reset helper when mode changes
+                          _selectedPrompt = null; // Reset prompt when mode changes
                         });
                       },
                     ),
@@ -928,7 +1438,7 @@ Future<void> _saveCurrentSessionToPrefs() async {
                     // --- Helpers: label + tooltip
                     Row(
                       children: [
-                        Text('Helpers',
+                        Text('Helper Prompts',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(width: 6),
                         Tooltip(
@@ -941,41 +1451,56 @@ Future<void> _saveCurrentSessionToPrefs() async {
                     const SizedBox(height: 8),
 
                     // --- Helpers dropdown (options depend on selected mode)
-                    DropdownButtonFormField<PreBuiltPrompt>(
-                      value: _selectedHelper,
+                    Tooltip(
+                      message: _mode == AiMode.assistant
+                          ? 'Helper prompts are not used in Assistant mode.'
+                          : 'Select a prebuilt helper prompt.',
+                      child: IgnorePointer(
+                        ignoring: _mode == AiMode.assistant,
+                        child: Opacity(
+                          opacity: _mode == AiMode.assistant ? 0.5 : 1.0,
+                          child:DropdownButtonFormField<PreBuiltPrompt>(
+                      value: _selectedPrompt,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         isDense: true,
                         contentPadding:
                             EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
-                      items: _helpersByMode[_mode]!
+                      items: _promptsByMode[_mode]!
                           .entries
                           .map((entry) => DropdownMenuItem<PreBuiltPrompt>(
                                 value: entry.value,
                                 child: Text(entry.key),
                               ))
                           .toList(),
-                      onChanged: (val) {
-                        setState(() => _selectedHelper = val);
-                      },
-                      hint: const Text('Choose a helper'),
+                      onChanged: (_mode == AiMode.assistant)
+                          ? null // 🔒 disables dropdown
+                          : (val) => setState(() => _selectedPrompt = val),
+                      hint: const Text('Choose a helper prompt'),
+                      ),
                     ),
+                  ),
+                ),
+
 
                     const SizedBox(height: 8),
 
                     // --- Button to submit Pre-built prompt as user message.
                    FilledButton.icon(
-                    onPressed: _sessionActive
-                        ? () {
-                          var submittedPrompt = types.PartialText(text: getPreBuiltPrompt(_selectedHelper));
-                            _handleSendPressed(submittedPrompt);
-                            _scrollToBottom();
-                          }
-                        : _guardNoSession,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Send helper Prompt'),
-                ),
+                      onPressed: (!_sessionActive || _mode == AiMode.assistant)
+                          ? null // 🔒 disables when no session OR in Assistant mode
+                          : () {
+                              final submittedPrompt = types.PartialText(
+                                text: getPreBuiltPrompt(_selectedPrompt),
+                              );
+                              _handleSendPressed(submittedPrompt);
+                              _scrollToBottom();
+                            },
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Send Prompt'),
+                    ),
+                    
 
                     const SizedBox(height: 12),
                     const Divider(height: 1),
@@ -1085,7 +1610,7 @@ Future<void> _saveCurrentSessionToPrefs() async {
                       }
                       : _guardNoSession,
                       icon: const Icon(Icons.edit_note_outlined),
-                      label: const Text('Open text editor'),
+                      label: const Text('Open Draft Editor'),
                     ),
                     const SizedBox(height: 8),
                     
@@ -1100,7 +1625,7 @@ Future<void> _saveCurrentSessionToPrefs() async {
                             }
                           : _guardNoSession,
                       icon: const Icon(Icons.sticky_note_2_outlined),
-                      label: const Text('Open notes'),
+                      label: const Text('Open Notes'),
                     ),
 
                     // Push controls to top, leave some breathing room
@@ -1114,6 +1639,27 @@ Future<void> _saveCurrentSessionToPrefs() async {
       ),
     );
   }
+  Widget _statusChip(EssayStatus s) {
+  switch (s) {
+    case EssayStatus.notStarted:
+      return Chip(
+        label: const Text('Not started'),
+        visualDensity: VisualDensity.compact,
+      );
+    case EssayStatus.inProgress:
+      return Chip(
+        label: const Text('In progress'),
+        visualDensity: VisualDensity.compact,
+        backgroundColor: Colors.amber.withOpacity(.2),
+      );
+    case EssayStatus.submitted:
+      return Chip(
+        label: const Text('Submitted'),
+        visualDensity: VisualDensity.compact,
+        backgroundColor: Colors.green.withOpacity(.2),
+      );
+  }
+}
 
 
   /* ──────────────────────────────────────────────────────────────────────────
@@ -1134,6 +1680,11 @@ Future<void> _saveCurrentSessionToPrefs() async {
         final mq = MediaQuery.of(ctx).size;
         final maxW = mq.width < 720 ? mq.width - 32 : 640.0;
 
+        final key = _essayKeyOf(essay);
+        final hasSession = _hasSessionFor(essay);
+        final primaryLabel = hasSession ? 'Continue Session' : 'Start New Session';
+
+
         return Dialog(
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -1145,115 +1696,21 @@ Future<void> _saveCurrentSessionToPrefs() async {
               maxHeight: mq.height * .85,  // Allow scrolling for tall content
             ),
             child: _EssayModalContent(
-              title: essay.name,
-              due: essay.dueDate.toString(),
-              description: essay.description,
+              essay: essay,
+              statusText: _statusTextFor(essay),
 
               // Start/Continue session → posts a system message to the chat
-              onStart: () {
+              onPrimary: () {
                 Navigator.of(ctx).pop();
+
+                // normalize/get session
+               final session = _sessions[key] ?? EssaySession(essay: essay, id: key, chatLog: []);
+               _sessions[key] = session;
+
                 _startSessionFor(essay);
-
-                setState(() {
-                  _messages.add(
-                    types.SystemMessage(
-                      id: const Uuid().v4(),
-                      text: 'Starting session for "${essay.name}".',
-                      createdAt: DateTime.now().millisecondsSinceEpoch,
-                    ),
-                  );
-                });
-
-                // If you need to save an existing session, do it here, then continue.
-
-                // Build the key for this essay and get/create the session
-                final String essayKey =
-                    (essay.id != null) ? essay.id.toString() : 'general_${essay.name.hashCode}';
-
-                _currentSession = _sessions[essayKey] ?? EssaySession(essay: essay);
-                _sessions[essayKey] = _currentSession!;
-
-                // Replay prior chat safely (null-safe + no duplicate instructions)
-                final prior = _currentSession!.chatLog ?? [];
-                if (prior.isNotEmpty) {
-                  setState(() {
-                    for (final turn in prior) {
-                      if (turn.isUser) {
-                        _messages.add(
-                          types.TextMessage(
-                            author: _me,
-                            id: const Uuid().v4(),
-                            text: turn.content,
-                            createdAt: DateTime.now().millisecondsSinceEpoch,
-                          ),
-                        );
-                      } else {
-                        _messages.add(
-                          types.SystemMessage(
-                            id: const Uuid().v4(),
-                            text: turn.content,
-                            createdAt: DateTime.now().millisecondsSinceEpoch,
-                          ),
-                        );
-                      }
-                    }
-                  });
-                  _scrollToBottom();
-                }
+                _scrollToBottom();
               },
-              // Submit → asks for confirmation first, then posts a success msg
-              onSubmit: () async {
-                final essayId =
-                    essay.id != null ? essay.id.toString() : 'general_draft';
-
-                // Require a saved draft
-                if (_currentSession?.draftDeltaOps == null) {
-                  final goEdit = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('No draft found'),
-                          content: const Text(
-                              'You need to save a draft before submitting. Open the editor now?'),
-                          actions: [
-                            TextButton(
-                                onPressed: () =>
-                                    Navigator.of(ctx).pop(false),
-                                child: const Text('Cancel')),
-                            FilledButton(
-                                onPressed: () =>
-                                    Navigator.of(ctx).pop(true),
-                                child: const Text('Open editor')),
-                          ],
-                        ),
-                      ) ??
-                      false;
-
-                  if (goEdit) {
-                    Navigator.of(context).pop(); // close the essay modal first
-                    _openQuillEditorDialogFor(essay); // open editor for that essay
-                  }
-                  return;
-                }
-
-                // If you want, also sync the draft once more before final submit:
-                // await _saveDraftToBackend(essayId, _drafts[essayId]!.deltaJson);
-
-                // Confirm submission
-                final confirmed = await _showSubmitConfirmation(context);
-                if (!confirmed) return;
-
-                Navigator.of(context).pop(); // close the essay modal
-
-                // TODO: real submission using _drafts[essayId]!.deltaJson
-                // await _submitEssay(essayId, _drafts[essayId]!.deltaJson);
-
-                // Notify user (decoupled from chat—snackbar is fine)
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('“${essay.name}” submitted.')),
-                  );
-                }
-              },
+              primaryLabel: primaryLabel,
             ),
           ),
         );
@@ -1374,7 +1831,6 @@ Future<void> _saveCurrentSessionToPrefs() async {
                           config: const quill.QuillEditorConfig(
                             placeholder: 'Write your essay here…',
                             padding: EdgeInsets.all(8),
-                            // No embedBuilders yet; keep simple while stabilizing
                           ),
                         ),
                       ),
@@ -1390,22 +1846,63 @@ Future<void> _saveCurrentSessionToPrefs() async {
                             child: const Text('Cancel'),
                           ),
                           const Spacer(),
+                           // Submit (only show when tied to a real assignment)
+                          if (essay != null)
+                            FilledButton.icon(
+                              icon: const Icon(Icons.send),
+                              label: const Text('Submit'),
+                              onPressed: () async {
+                                // Optional: quick confirm
+                                final ok = await _showSubmitConfirmation(context);
+                                if (!ok) return;
+
+                                try {
+                                  final deltaJson = _quillDraftController.document.toDelta().toJson();
+                                setState(() => _currentSession!.draftDeltaOps = deltaJson);
+                                  await _saveCurrentSessionToPrefs();
+                                  await _pushCurrentDraftToMoodle(essay);
+                                  await _submitNow(essay);
+
+                                  if (mounted) {
+                                    Navigator.of(ctx).pop(); // close editor after submit
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Submitted “${essay.name}”.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Submit failed: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+
+                          const SizedBox(width: 8),
                           FilledButton.icon(
                             icon: const Icon(Icons.save_outlined),
                             label: const Text('Save draft'),
                             onPressed: () async {
-                              final deltaJson = _quillDraftController.document
-                                  .toDelta()
-                                  .toJson();
-
+                              final deltaJson = _quillDraftController.document.toDelta().toJson();
                               setState(() {
-                                _currentSession!.draftDeltaOps = deltaJson;           
+                                _currentSession!.draftDeltaOps = deltaJson;
+                                _statusCache[_currentSession!.id] = EssayStatus.inProgress;
                               });
-
                               await _saveCurrentSessionToPrefs();
 
-                              if (mounted) Navigator.of(ctx).pop();
+                              if (essay?.id != null) {
+                                try {
+                                  await _pushCurrentDraftToMoodle(essay!);
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Moodle draft save failed: $e')),
+                                  );
+                                }
+                              }
+
                               if (mounted) {
+                                Navigator.of(ctx).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('Draft saved')),
                                 );
@@ -1552,50 +2049,6 @@ Future<void> _saveCurrentSessionToPrefs() async {
 }
 
 
-/* ────────────────────────────────────────────────────────────────────────────
- * 4) Pure helpers (top-level)
- *  - NOTE: These intentionally remain top-level so they can be reused across
- *          files later without reaching into a specific State class.
- * ──────────────────────────────────────────────────────────────────────────── */
-
-/// Get essay assignments from LMS.
-/// If `courseID` is null or 0 => include all courses.
-Future<List<Assignment>> getAllEssays(int? courseID) async {
-  List<Assignment> result = [];
-  for (Course c in LmsFactory.getLmsService().courses ?? []) {
-    if (courseID == 0 || courseID == null || c.id == courseID) {
-      result.addAll(c.essays ?? []);
-    }
-  }
-  return result;
-}
-
-/// Get a single essay by its ID, with optional course filter.
-/// If `courseID` is null or 0 => search all courses.
-Assignment? getEssay(int? essayID, int? courseID) {
-  Assignment? result;
-  for (Course c in LmsFactory.getLmsService().courses ?? []) {
-    if (courseID == 0 || courseID == null || c.id == courseID) {
-      for (Assignment a in c.essays ?? []) {
-        if (a.id == essayID) {
-          result = a;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-/// Strip HTML tags (useful if LMS descriptions are rich-text).
-String removeHtmlTags(String htmlText) {
-  final regex = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: false);
-  return htmlText.replaceAll(regex, '');
-}
-
-// Check if user has API key for selected LLM
-bool _hasKeyFor(LlmType llm) {
-  return LocalStorageService.userHasLlmKey(llm);
-}
 
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -1607,24 +2060,28 @@ bool _hasKeyFor(LlmType llm) {
 /// Essay details modal content (title, due, description, actions).
 class _EssayModalContent extends StatelessWidget {
   const _EssayModalContent({
-    required this.title,
-    required this.due,
-    required this.description,
-    required this.onStart,
-    required this.onSubmit,
+    required this.essay,
+    required this.statusText,
+    required this.onPrimary,
+    required this.primaryLabel,
   });
 
-  final String title;
-  final String due;
-  final dynamic description;
-  final VoidCallback onStart;
-  final VoidCallback onSubmit;
+  final Assignment essay;
+  final VoidCallback onPrimary;
+  final String primaryLabel;
+  final String statusText;
 
   @override
   Widget build(BuildContext context) {
+
+    final String dueText = (essay.dueDate != null)
+        ? essay.dueDate!.toLocal().toIso8601String().split('T').first
+        : 'No due date';
+    final String descriptionText = (essay.description?.toString() ?? '');
+
     return Column(
       children: [
-        // ---- Header row with title + close button
+        // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
           child: Row(
@@ -1633,7 +2090,7 @@ class _EssayModalContent extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  title,
+                  essay.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium,
@@ -1649,16 +2106,16 @@ class _EssayModalContent extends StatelessWidget {
         ),
         const Divider(height: 1),
 
-        // ---- Scrollable body with details/prompt
+        // Body
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _LabeledRow(label: 'Status', value: 'Not started'),
+                _LabeledRow(label: 'Status', value: statusText),
                 const SizedBox(height: 8),
-                _LabeledRow(label: 'Due', value: due),
+                _LabeledRow(label: 'Due', value: dueText),
                 const SizedBox(height: 8),
                 Text(
                   'Description',
@@ -1669,7 +2126,7 @@ class _EssayModalContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  description,
+                  descriptionText,
                   style: const TextStyle(height: 1.4),
                 ),
               ],
@@ -1677,22 +2134,15 @@ class _EssayModalContent extends StatelessWidget {
           ),
         ),
 
-        // ---- Footer action buttons
+        // Footer with ONE dynamic primary button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: onStart, // Triggers session start
-                  child: const Text('Start / Continue session'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
                 child: FilledButton(
-                  onPressed: onSubmit, // Opens confirmation, then submit
-                  child: const Text('Submit'),
+                  onPressed: onPrimary,
+                  child: Text(primaryLabel),
                 ),
               ),
             ],
@@ -1702,6 +2152,7 @@ class _EssayModalContent extends StatelessWidget {
     );
   }
 }
+
 
 /// Small labeled row used in the dialog body for clean label/value display.
 class _LabeledRow extends StatelessWidget {

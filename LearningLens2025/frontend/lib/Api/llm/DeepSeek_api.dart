@@ -282,6 +282,96 @@ class DeepseekLLM implements LLM {
     return data['choices'][0]['message']['content'].toString().trim();
   }
 
+  /// Methiod used to enable Streaming responses from the AI model.
+  @override
+  Stream<String> chatStream({
+  List<Map<String, dynamic>>? context,
+  String? prompt,
+  double temperature = 0.7,
+  double topP = 1.0,
+  double frequencyPenalty = 0.0,
+  double presencePenalty = 0.0,
+}) async* {
+  final hasContext = context != null && context.isNotEmpty;
+  final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
+  if (!hasContext && !singlePrompt) {
+    throw ArgumentError('Either messages or prompt must be provided.');
+  }
+  if (hasContext && singlePrompt) {
+    throw ArgumentError('Provide either messages or prompt, not both.');
+  }
+
+  final headers = {
+    'Authorization': 'Bearer $apiKey',
+    'Content-Type': 'application/json',
+  };
+
+  final body = {
+    'model': model,
+    'messages': singlePrompt
+        ? [
+            {
+              'role': 'system',
+              'content': 'You are a helpful assistant. Be precise and concise.'
+            },
+            {'role': 'user', 'content': prompt}
+          ]
+        : context,
+    'temperature': temperature,
+    'frequency_penalty': frequencyPenalty,
+    'presence_penalty': presencePenalty,
+    'max_tokens': maxOutputTokens,
+    'stream': true, // critical for SSE
+    };
+  print("Streaming body: $body");
+  final client = http.Client();
+  try {
+    final req = http.Request('POST', parsedUrl)
+      ..headers.addAll(headers)
+      ..body = jsonEncode(body);
+
+    final streamedResponse = await client.send(req);
+    if (streamedResponse.statusCode != 200) {
+      final errBody = await streamedResponse.stream.bytesToString();
+      throw Exception('API stream error: ${streamedResponse.statusCode} - $errBody');
+    }
+
+    final lineStream = streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    await for (final line in lineStream) {
+      if (line.isEmpty) continue;
+      if (!line.startsWith('data:')) continue;
+
+      final payload = line.substring(5).trim();
+      if (payload == '[DONE]') break;
+
+      dynamic jsonLine;
+      try {
+        jsonLine = jsonDecode(payload);
+      } catch (_) {
+        continue;
+      }
+
+      final choices = jsonLine['choices'];
+      if (choices is List && choices.isNotEmpty) {
+        final choice = choices[0];
+        final delta = choice['delta'];
+        if (delta is Map && delta.containsKey('content')) {
+          final token = (delta['content'] ?? '').toString();
+          if (token.isNotEmpty) yield token;
+        } else if (choice['message'] is Map &&
+            (choice['message']['content'] ?? '').toString().isNotEmpty) {
+          yield choice['message']['content'].toString();
+        }
+      }
+    }
+  } finally {
+    client.close();
+  }
+}
+
   /// Method used in the Quiz feature to parse the AI response to extract quiz data in XML format.
   List<String> parseQueryResponse(String resp) {
     // ignore: prefer_adjacent_string_concatenation

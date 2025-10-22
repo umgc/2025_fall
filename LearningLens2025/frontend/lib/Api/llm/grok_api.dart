@@ -212,4 +212,16 @@ class GrokLLM implements LLM {
   }) async {
     return "Not implemented yet";
   }
+
+  @override
+  Stream<String> chatStream({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+    double temperature = 0.7,
+    double topP = 1.0,
+    double frequencyPenalty = 0.0,
+    double presencePenalty = 0.0,
+  }) {
+    return Stream<String>.value('Not implemented yet');
+  }
 }

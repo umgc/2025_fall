@@ -44,6 +44,8 @@ dependencies:
   flutter_chat_types: ^3.6.2
   flutter_localizations:
     sdk: flutter
+  quill_delta: ^3.0.0-nullsafety.2
+  vsc_quill_delta_to_html: ^1.0.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
