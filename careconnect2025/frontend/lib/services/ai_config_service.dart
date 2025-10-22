@@ -137,11 +137,11 @@ class AIConfigService {
       authHeaders['Content-Type'] = 'application/json';
       authHeaders['Accept'] = '*/*';
 
-      // Compose request body to match backend API
+      // Compose request body to match backend UserAIConfigDTO structure
       final requestBody = {
         'userId': userId,
         'patientId': config.patientId,
-        'aiProvider': config.aiProvider,
+        'preferredAiProvider': config.aiProvider,
         'openaiModel': config.preferences['openaiModel'] ?? 'gpt-4',
         'deepseekModel': config.preferences['deepseekModel'] ?? 'deepseek-chat',
         'maxTokens': config.maxTokensPerSession,
@@ -154,14 +154,14 @@ class AIConfigService {
             config.preferences['includeMedicationsByDefault'] ?? true,
         'includeNotesByDefault':
             config.preferences['includeNotesByDefault'] ?? true,
-        'includeMoodPainLogsByDefault':
+        'includeMoodPainByDefault':
             config.preferences['includeMoodPainLogsByDefault'] ?? true,
         'includeAllergiesByDefault':
             config.preferences['includeAllergiesByDefault'] ?? true,
         'isActive': config.isActive,
         'systemPrompt':
             config.preferences['systemPrompt'] ??
-            'You are a helpful AI assistant.',
+            'You are a helpful AI assistant that helps patients access their health information.',
       };
 
       final response = await http.post(
