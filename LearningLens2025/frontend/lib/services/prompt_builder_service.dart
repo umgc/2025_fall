@@ -4,6 +4,7 @@ String buildLlmPrompt({
   required String tone,
   required String voice,
   required String detailLevel,
+  required String gradeLevel,
 }) {
   return '''
 I am building a program that generates essay rubric assignments that teachers can distribute to students,

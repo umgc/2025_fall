@@ -36,6 +36,7 @@ class SubmissionListState extends State<SubmissionList> {
   Map<int, String> toneSelectionMap = {};
   Map<int, String> voiceSelectionMap = {};
   Map<int, String> detailLevelSelectionMap = {};
+  Map<int, String> gradeLevelSelectionMap = {};
 
   late Future<List<SubmissionWithGrade>> futureSubmissionsWithGrades =
       api.getSubmissionsWithGrades(widget.assignmentId);
@@ -141,6 +142,14 @@ class SubmissionListState extends State<SubmissionList> {
     setState(() {
       if (newValue != null) {
         detailLevelSelectionMap[participantId] = newValue;
+      }
+    });
+  }
+
+  void _handleGradeLevelChanged(int participantId, String? newValue) {
+    setState(() {
+      if (newValue != null) {
+        gradeLevelSelectionMap[participantId] = newValue;
       }
     });
   }
@@ -512,6 +521,38 @@ class SubmissionListState extends State<SubmissionList> {
                                                           .toList(),
                                                     ),
                                                     SizedBox(height: 4),
+
+                                                    // Grade Level Dropdown
+                                                    DropdownButtonFormField<
+                                                        String>(
+                                                      value:
+                                                          gradeLevelSelectionMap[
+                                                                  participant
+                                                                      .id] ??
+                                                              'College',
+                                                      decoration:
+                                                          InputDecoration(
+                                                              labelText:
+                                                                  'Grade Level'),
+                                                      onChanged: (newValue) =>
+                                                          _handleGradeLevelChanged(
+                                                              participant.id,
+                                                              newValue),
+                                                      items: [
+                                                        'Elementary School',
+                                                        'Middle School',
+                                                        'High School',
+                                                        'College'
+                                                      ]
+                                                          .map((detail) =>
+                                                              DropdownMenuItem(
+                                                                value: detail,
+                                                                child: Text(
+                                                                    detail),
+                                                              ))
+                                                          .toList(),
+                                                    ),
+                                                    SizedBox(height: 4),
                                                   ],
                                                 )
                                               else
@@ -598,7 +639,10 @@ class SubmissionListState extends State<SubmissionList> {
                                                                         'Supportive',
                                                                     detailLevel:
                                                                         detailLevelSelectionMap[participant.id] ??
-                                                                            'Neutral');
+                                                                            'Neutral',
+                                                                    gradeLevel:
+                                                                        gradeLevelSelectionMap[participant.id] ??
+                                                                            'College');
 
                                                                 String apiKey =
                                                                     getApiKey(
@@ -751,6 +795,7 @@ class SubmissionListState extends State<SubmissionList> {
           '• Basic – 1 paragraph per criterion\n'
           '• Neutral – 2 paragraphs per criterion\n'
           '• Detailed – 3 paragraphs per criterion\n\n'
+          'Grade level adjusts the wording and language appropriate for different student grade levels:\n'
           'Note: These settings ONLY affect the written feedback.\n'
           'Grading is determined strictly by the rubric.',
         ),
