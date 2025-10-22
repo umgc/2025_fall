@@ -32,75 +32,89 @@ class ColorUtils {
   // Helper methods for creating color variations
   static Color getSuccessWithOpacity(double opacity) =>
       AppTheme.success.withOpacity(opacity);
-  static Color getSuccessLight() => const Color(0xFFEFFBF6);
-  static Color getSuccessLighter() => const Color(0xFFD6F5E9);
+  static Color getSuccessLight() =>
+      const Color(0xFFE8F5E9); // green.shade50 equivalent
+  static Color getSuccessLighter() =>
+      const Color(0xFFC8E6C9); // green.shade100 equivalent
 
   static Color getWarningWithOpacity(double opacity) =>
       AppTheme.warning.withOpacity(opacity);
-  static Color getWarningLight() => const Color(0xFFFFFAEB);
-  static Color getWarningLighter() => const Color(0xFFFEF3C7);
+  static Color getWarningLight() =>
+      const Color(0xFFFFF8E1); // amber.shade50 equivalent
+  static Color getWarningLighter() =>
+      const Color(0xFFFFECB3); // amber.shade100 equivalent
 
   static Color getErrorWithOpacity(double opacity) =>
       AppTheme.error.withOpacity(opacity);
-  static Color getErrorLight() => const Color(0xFFFFF1F2);
-  static Color getErrorLighter() => const Color(0xFFFECACA);
+  static Color getErrorLight() =>
+      const Color(0xFFFFEBEE); // red.shade50 equivalent
+  static Color getErrorLighter() =>
+      const Color(0xFFFFCDD2); // red.shade100 equivalent
 
   static Color getInfoWithOpacity(double opacity) =>
       AppTheme.info.withOpacity(opacity);
-  static Color getInfoLight() => const Color(0xFFE6F9FD);
-  static Color getInfoLighter() => const Color(0xFFCFF3FA);
+  static Color getInfoLight() =>
+      const Color(0xFFE3F2FD); // blue.shade50 equivalent
+  static Color getInfoLighter() =>
+      const Color(0xFFBBDEFB); // blue.shade100 equivalent
 
   static Color getPrimaryWithOpacity(double opacity) =>
       AppTheme.primary.withOpacity(opacity);
   static Color getPrimaryLight() => AppTheme.primaryLight;
-  static Color getPrimaryLighter() => const Color(0xFFE6F9FD);
+  static Color getPrimaryLighter() =>
+      const Color(0xFFE3F2FD); // blue.shade50 equivalent
 
   // Consistent gradient generators
   static LinearGradient getPrimaryGradient() => const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppTheme.primary, AppTheme.primaryDark],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppTheme.primary, AppTheme.primaryDark],
+  );
 
   static LinearGradient getSuccessGradient() => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [getSuccessLight(), getSuccessLighter()],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [getSuccessLight(), getSuccessLighter()],
+  );
 
   static LinearGradient getInfoGradient() => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [getInfoLight(), getInfoLighter()],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [getInfoLight(), getInfoLighter()],
+  );
 
-  // Chart colors - tuned for dark backgrounds
+  // Chart colors - using more accessible blue tones instead of green
   static Color getChartPrimary() => AppTheme.primary;
-  static Color getChartSecondary() => const Color(0xFF60A5FA); // blue-400
-  static Color getChartTertiary() => const Color(0xFFA78BFA);  // violet-300
-  static Color getChartQuaternary() => const Color(0xFF34D399); // emerald-400
+  static Color getChartSecondary() => AppTheme.info;
+  static Color getChartTertiary() => const Color(0xFF5C6BC0); // indigo.shade400
+  static Color getChartQuaternary() => const Color(0xFF26A69A); // teal.shade500
 
   // Platform-specific color utilities
   static Color getCardBackgroundForPlatform(BuildContext context) {
+    // iOS uses slightly off-white for cards
     if (ResponsiveUtils.isIOS) {
-      return const Color(0xFFFFFFFF); // iOS slightly brighter card
+      return const Color(0xFFF8F8F8);
     }
+    // Android and Web use pure white
     return AppTheme.cardBackground;
   }
 
+  // Get elevated button color with platform-specific adjustments
   static Color getElevatedButtonColor(BuildContext context) {
     if (kIsWeb) {
-      return AppTheme.primaryDark; // slightly darker for web contrast
+      // Web uses slightly darker primary for better contrast
+      return AppTheme.primaryDark;
     }
     return AppTheme.primary;
   }
 
+  // Get shadow color based on platform
   static Color getShadowColor(BuildContext context) {
     if (ResponsiveUtils.isIOS) {
-      return Colors.black.withOpacity(0.10);
+      return Colors.black.withOpacity(0.1); // iOS uses lighter shadows
     } else if (ResponsiveUtils.isAndroid) {
-      return Colors.black.withOpacity(0.18);
+      return Colors.black.withOpacity(0.2); // Android uses medium shadows
     }
-    return Colors.black.withOpacity(0.12);
+    return Colors.black.withOpacity(0.15); // Web uses medium-light shadows
   }
 }

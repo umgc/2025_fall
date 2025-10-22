@@ -1,4 +1,4 @@
-import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -63,9 +63,6 @@ class FiltersPanel extends StatelessWidget {
         Provider.of<UserProvider>(context, listen: false).user?.isCaregiver ??
         false;
 
-    final manager = context.watch<TaskTypeManager>();
-    final types = manager.taskTypeColors.keys.toList();
-
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -107,24 +104,13 @@ class FiltersPanel extends StatelessWidget {
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: types.map((type) {
-                          final color = manager.getColor(type);
-                          final icon = manager.getIcon(type);
-
+                        children: TaskTypeUtils.getSortedTypes().map((type) {
                           return FilterChip(
-                            avatar: Icon(icon, color: color, size: 18),
                             label: Text(
                               type[0].toUpperCase() + type.substring(1),
-                              style: TextStyle(
-                                color: selectedTypes.contains(type)
-                                    ? color
-                                    : null,
-                              ),
                             ),
                             selected: selectedTypes.contains(type),
-                            selectedColor: color.withOpacity(0.2),
                             onSelected: (_) => onTypeToggled(type),
-                            side: BorderSide(color: color, width: 1),
                           );
                         }).toList(),
                       ),

@@ -1,119 +1,41 @@
-import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 /// =============================
-/// Legend Widget (Display Only)
+/// LegendDot Widget
 /// =============================
 ///
-/// Shows task type icons + labels. Does NOT manage add/edit/delete.
-/// Parent can provide an [onManage] callback to open LegendEditor.
+/// Displays a small colored dot followed by a text label.
+/// - Typically used in a legend to explain what different colors mean
+///   (e.g., task types in the calendar).
 ///
-/// Use like:
-///   Legend(onManage: () {
-///     showDialog(context: context, builder: (_) => const LegendEditor());
-///   })
-class Legend extends StatelessWidget {
-  /// Optional: show a "Manage" icon in the header and invoke this callback.
-  final VoidCallback? onManage;
+/// Example:
+/// ```dart
+/// LegendDot(color: Colors.blue, label: "Medication")
+/// ```
+///
+/// This will render a small blue circle with the text "Medication" beside it.
+class LegendDot extends StatelessWidget {
+  /// The color of the dot.
+  final Color color;
 
-  /// Optional: make type chips interactive (used only if you want).
-  final void Function(String type)? onTypeTap;
-  final void Function(String type)? onTypeLongPress;
+  /// The label text shown next to the dot.
+  final String label;
 
-  /// Controls whether the header manage button shows. Defaults to true.
-  final bool showManageButton;
-
-  const Legend({
-    super.key,
-    this.onManage,
-    this.onTypeTap,
-    this.onTypeLongPress,
-    this.showManageButton = true,
-  });
+  const LegendDot({super.key, required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    final manager = context.watch<TaskTypeManager>();
-    final taskTypes = manager.taskTypeColors.keys.toList();
-
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Task Types",
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (showManageButton)
-                    IconButton(
-                      tooltip: "Manage Task Types",
-                      icon: const Icon(Icons.edit, size: 20),
-                      onPressed: onManage,
-                    ),
-                ],
-              ),
-            ),
-            const Divider(height: 4),
-
-            // Items
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: taskTypes.map((type) {
-                  final color = manager.getColor(type);
-                  final icon = manager.getIcon(type);
-
-                  final chip = Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, color: color, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        type[0].toUpperCase() + type.substring(1),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: color),
-                      ),
-                    ],
-                  );
-
-                  if (onTypeTap != null || onTypeLongPress != null) {
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(6),
-                      onTap: onTypeTap == null ? null : () => onTypeTap!(type),
-                      onLongPress: onTypeLongPress == null
-                          ? null
-                          : () => onTypeLongPress!(type),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        child: chip,
-                      ),
-                    );
-                  }
-                  return chip;
-                }).toList(),
-              ),
-            ),
-          ],
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
         ),
-      ),
+        const SizedBox(width: 4),
+        Text(label),
+      ],
     );
   }
 }

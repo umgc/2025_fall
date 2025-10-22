@@ -280,6 +280,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'zip': _zipController.text,
         'phone': _addressPhoneController.text,
       },
+      'verificationBaseUrl': 'http://localhost:50030',
     };
 
     final response = await http.post(

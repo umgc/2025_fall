@@ -14,7 +14,7 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "backend_bucket" {
-  bucket = "${var.cc_iac_bucket_name}-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.iac_bucket_name}-${data.aws_caller_identity.current.account_id}"
   tags   = merge(var.default_tags, { Name = "care-connect-backend-iac-bucket" })
 }
 

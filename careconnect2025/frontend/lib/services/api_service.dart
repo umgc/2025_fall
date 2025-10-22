@@ -113,12 +113,17 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
-  static Future<http.Response> login(String email, String password) async {
+  static Future<http.Response> login(
+    String email,
+    String password) async {
     return await _httpClient
         .post(
           Uri.parse('${ApiConstants.auth}/login'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'password': password}),
+          body: jsonEncode({
+            'email': email,
+            'password': password,
+          }),
         )
         .timeout(const Duration(seconds: 30));
   }
@@ -898,7 +903,9 @@ class ApiService {
   static Future<http.Response> getFamilyMembers(int patientId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     return await http.get(
-      Uri.parse('${ApiConstants._host}/v1/api/patients/$patientId'),
+      Uri.parse(
+        '${ApiConstants._host}/v1/api/patients/$patientId',
+      ),
       headers: headers,
     );
   }
@@ -1288,33 +1295,6 @@ class ApiService {
           body: jsonEncode(payload),
         )
         .timeout(const Duration(seconds: 30));
-  }
-
-  /// Update a task's completion status (V2)
-  ///
-  /// Sends a PUT request to /v2/api/tasks/{id}/complete with a JSON body:
-  /// `{ "isComplete": true/false }`
-  ///
-  /// Throws an [Exception] if the request fails.
-  static Future<void> updateTaskCompletionV2(
-    int taskId,
-    bool isComplete,
-  ) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    final url = Uri.parse('${ApiConstants.tasksV2}/$taskId/complete');
-    final body = jsonEncode({'isComplete': isComplete});
-
-    final response = await _httpClient
-        .put(url, headers: headers, body: body)
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to update task completion: ${response.statusCode} ${response.body}',
-      );
-    }
   }
 
   // Create a task (v2)

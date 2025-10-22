@@ -27,8 +27,7 @@ public class StripeService {
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
 
-    @Value("${stripe.api.url:https://api.stripe.com/v1}")
-    private String BASE_URL;
+    private final String BASE_URL = "https://api.stripe.com/v1";
     
     @Autowired
     private UserRepository userRepository;

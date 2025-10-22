@@ -25,7 +25,8 @@ class PatientHealthTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Health'),
-       
+        backgroundColor: const Color(0xFF14366E),
+        foregroundColor: Colors.white,
       ),
       body: const Center(
         child: Column(

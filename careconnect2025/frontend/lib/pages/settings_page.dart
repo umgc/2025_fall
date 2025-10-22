@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
-import '../l10n/app_localizations.dart';
 import '../providers/user_provider.dart';
 import '../widgets/theme_toggle_switch.dart';
 import '../models/notification_settings.dart';
 import '../services/notification_settings_service.dart';
-import '../providers/locale_provider.dart';
-import '../widgets/language/language_picker.dart';
-
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -27,40 +22,6 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadNotificationSettings();
   }
-Widget _buildLanguageCard(BuildContext context) {
-  final t = AppLocalizations.of(context)!;
-  final localeProvider = context.watch<LocaleProvider>();
-
-  final currentLabel = localeProvider.locale == null
-      ? t.systemDefault
-      : LanguagePicker.labelFor(localeProvider.locale!);
-
-  return Card(
-    margin: const EdgeInsets.only(bottom: 8),
-    child: ListTile(
-      leading: Icon(
-        Icons.language,
-        color: Theme.of(context).colorScheme.primary,
-        size: 24,
-      ),
-      title: Text(
-        t.language,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-      ),
-      subtitle: Text(
-        currentLabel,
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-      ),
-      onTap: () => LanguagePicker.show(context),
-    ),
-  );
-}
 
   Future<void> _loadNotificationSettings() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -69,13 +30,11 @@ Widget _buildLanguageCard(BuildContext context) {
     if (user != null) {
       final settings =
           await NotificationSettingsService.getNotificationSettings(user.id);
-      if (!mounted) return;
       setState(() {
         _notificationSettings = settings;
         _loadingSettings = false;
       });
     } else {
-      if (!mounted) return;
       setState(() {
         _loadingSettings = false;
       });
@@ -103,31 +62,31 @@ Widget _buildLanguageCard(BuildContext context) {
         updatedSettings = _notificationSettings!.copyWith(sms: value);
         break;
       case 'significantVitals':
-        updatedSettings =
-            _notificationSettings!.copyWith(significantVitals: value);
+        updatedSettings = _notificationSettings!.copyWith(
+          significantVitals: value,
+        );
         break;
       default:
         return;
     }
 
-    final saved =
-        await NotificationSettingsService.saveNotificationSettings(updatedSettings);
-    if (!mounted) return;
-
+    final saved = await NotificationSettingsService.saveNotificationSettings(
+      updatedSettings,
+    );
     if (saved != null) {
       setState(() {
         _notificationSettings = saved;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ ${AppLocalizations.of(context)!.settingsSnackUpdated}'),
+          content: const Text('✅ Notification settings updated'),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ ${AppLocalizations.of(context)!.settingsSnackUpdateFailed}'),
+          content: const Text('❌ Failed to update settings'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -140,9 +99,9 @@ Widget _buildLanguageCard(BuildContext context) {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -167,9 +126,9 @@ Widget _buildLanguageCard(BuildContext context) {
         title: Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w500,
-              ),
+            color: textColor,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: Icon(
@@ -200,9 +159,9 @@ Widget _buildLanguageCard(BuildContext context) {
         ),
         title: Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
         trailing: Switch(
@@ -215,7 +174,6 @@ Widget _buildLanguageCard(BuildContext context) {
   }
 
   Widget _buildThemeCard(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -225,13 +183,13 @@ Widget _buildLanguageCard(BuildContext context) {
           size: 24,
         ),
         title: Text(
-          t.darkMode,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+          'Dark Mode',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          t.settingsToggleThemeDesc,  
+          'Toggle between light and dark theme',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: const ThemeToggleSwitch(showIcon: false, showLabel: false),
@@ -240,28 +198,29 @@ Widget _buildLanguageCard(BuildContext context) {
   }
 
   void _showClearCacheDialog(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(t.settingsClearCache),
-        content: Text(t.settingsClearCacheDesc),
+        title: const Text('Clear Cache'),
+        content: const Text(
+          'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(t.cancel),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('✅ ${t.settingsCacheCleared}'),
+                  content: const Text('✅ Cache cleared successfully'),
                   backgroundColor: Theme.of(context).colorScheme.primary,
                 ),
               );
             },
-            child: Text(t.settingsClearCache),
+            child: const Text('Clear Cache'),
           ),
         ],
       ),
@@ -269,16 +228,15 @@ Widget _buildLanguageCard(BuildContext context) {
   }
 
   void _showSignOutDialog(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(t.settingsSignOut),
-        content: Text(t.settingsSignOutConfirmMessage),
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(t.cancel),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -289,7 +247,7 @@ Widget _buildLanguageCard(BuildContext context) {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: Text(
-              t.settingsSignOut,
+              'Sign Out',
               style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
           ),
@@ -299,26 +257,29 @@ Widget _buildLanguageCard(BuildContext context) {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          t.settingsDeleteAccount,
+          'Delete Account',
           style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
-        content: Text(t.settingsDeleteAccountDesc),
+        content: const Text(
+          'This action cannot be undone. All your data will be permanently deleted.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(t.cancel),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(t.settingsDeleteAccountRequested),
+                  content: const Text(
+                    'Account deletion requested. Please contact support.',
+                  ),
                   backgroundColor: Theme.of(context).colorScheme.secondary,
                 ),
               );
@@ -327,7 +288,7 @@ Widget _buildLanguageCard(BuildContext context) {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: Text(
-              t.settingsDeleteAccountAction,
+              'Delete Account',
               style: TextStyle(color: Theme.of(context).colorScheme.onError),
             ),
           ),
@@ -338,17 +299,20 @@ Widget _buildLanguageCard(BuildContext context) {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
-    final shouldHideSubscription = user != null &&
+    // Check if user is Patient or Family Member to hide subscription management
+    final shouldHideSubscription =
+        user != null &&
         (user.role.toLowerCase() == 'patient' ||
             user.role.toLowerCase() == 'family member');
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.settings), // use existing "Settings" key   
+        title: const Text('Settings'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -365,9 +329,11 @@ Widget _buildLanguageCard(BuildContext context) {
                   children: [
                     CircleAvatar(
                       radius: 36,
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      child: (user != null &&
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.1),
+                      child:
+                          (user != null &&
                               user.name != null &&
                               user.name!.isNotEmpty)
                           ? Text(
@@ -390,7 +356,7 @@ Widget _buildLanguageCard(BuildContext context) {
                               user.name != null &&
                               user.name!.isNotEmpty)
                           ? user.name!
-                          : t.fallbackUser,
+                          : 'User',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
@@ -401,33 +367,24 @@ Widget _buildLanguageCard(BuildContext context) {
                   ],
                 ),
               ),
-
-              // Appearance
-              _buildSectionHeader(context, t.settingsAppearance),
+              _buildSectionHeader(context, 'Appearance'),
               _buildThemeCard(context),
-              _buildLanguageCard(context),
               const SizedBox(height: 24),
-
-              // Notifications
-              _buildSectionHeader(context, t.settingsNotifications),
+              _buildSectionHeader(context, 'Notifications'),
               if (_loadingSettings)
-                Card(
-                  margin: const EdgeInsets.only(bottom: 8),
+                const Card(
+                  margin: EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    title: Text(t.settingsLoadingNotificationSettings),
+                    leading: CircularProgressIndicator(),
+                    title: Text('Loading notification settings...'),
                   ),
                 )
               else if (_notificationSettings != null) ...[
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.emergency,
-                  title: t.settingsNotifEmergency,
-                  subtitle: t.settingsNotifEmergencyDesc,
+                  title: 'Emergency Alerts',
+                  subtitle: 'Critical health alerts and emergencies',
                   value: _notificationSettings!.emergency,
                   onChanged: (value) =>
                       _updateNotificationSetting('emergency', value),
@@ -436,8 +393,8 @@ Widget _buildLanguageCard(BuildContext context) {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.video_call,
-                  title: t.settingsNotifVideoCall,
-                  subtitle: t.settingsNotifVideoCallDesc,
+                  title: 'Video Call Notifications',
+                  subtitle: 'Incoming video call alerts',
                   value: _notificationSettings!.videoCall,
                   onChanged: (value) =>
                       _updateNotificationSetting('videoCall', value),
@@ -445,8 +402,8 @@ Widget _buildLanguageCard(BuildContext context) {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.call,
-                  title: t.settingsNotifAudioCall,
-                  subtitle: t.settingsNotifAudioCallDesc,
+                  title: 'Audio Call Notifications',
+                  subtitle: 'Incoming audio call alerts',
                   value: _notificationSettings!.audioCall,
                   onChanged: (value) =>
                       _updateNotificationSetting('audioCall', value),
@@ -454,8 +411,8 @@ Widget _buildLanguageCard(BuildContext context) {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.favorite,
-                  title: t.settingsNotifSignificantVitals,
-                  subtitle: t.settingsNotifSignificantVitalsDesc,
+                  title: 'Significant Vitals',
+                  subtitle: 'Important changes in vital signs',
                   value: _notificationSettings!.significantVitals,
                   onChanged: (value) =>
                       _updateNotificationSetting('significantVitals', value),
@@ -463,8 +420,8 @@ Widget _buildLanguageCard(BuildContext context) {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.sms,
-                  title: t.settingsNotifSMS,
-                  subtitle: t.settingsNotifSMSDesc,
+                  title: 'SMS Notifications',
+                  subtitle: 'Text message alerts to your phone',
                   value: _notificationSettings!.sms,
                   onChanged: (value) =>
                       _updateNotificationSetting('sms', value),
@@ -472,8 +429,8 @@ Widget _buildLanguageCard(BuildContext context) {
                 _buildNotificationToggleCard(
                   context,
                   icon: Icons.stars,
-                  title: t.settingsNotifGamification,
-                  subtitle: t.settingsNotifGamificationDesc,
+                  title: 'Gamification',
+                  subtitle: 'Achievement and progress notifications',
                   value: _notificationSettings!.gamification,
                   onChanged: (value) =>
                       _updateNotificationSetting('gamification', value),
@@ -486,67 +443,57 @@ Widget _buildLanguageCard(BuildContext context) {
                       Icons.error_outline,
                       color: Theme.of(context).colorScheme.error,
                     ),
-                    title: Text(t.settingsUnableToLoadNotificationSettings),
+                    title: const Text('Unable to load notification settings'),
                     trailing: IconButton(
                       icon: const Icon(Icons.refresh),
                       onPressed: _loadNotificationSettings,
                     ),
                   ),
                 ),
-
               const SizedBox(height: 24),
-
-              // AI Assistant
-              _buildSectionHeader(context, t.settingsAIAssistant),
+              _buildSectionHeader(context, 'AI Assistant'),
               _buildSettingsCard(
                 context,
                 icon: Icons.smart_toy,
-                title: t.settingsAIConfiguration,
-                subtitle: t.settingsAIConfigurationDesc,
+                title: 'AI Configuration',
+                subtitle: 'Customize your AI assistant settings',
                 onTap: () => context.push('/ai-configuration'),
               ),
-
               const SizedBox(height: 24),
-
-              // Subscription (hide for patient/family member)
+              // Only show subscription management for non-patient/family member users
               if (!shouldHideSubscription) ...[
-                _buildSectionHeader(context, t.settingsSubscription),
+                _buildSectionHeader(context, 'Subscription'),
                 _buildSettingsCard(
                   context,
                   icon: Icons.subscriptions,
-                  title: t.settingsManageSubscription,
-                  subtitle: t.settingsManageSubscriptionDesc,
+                  title: 'Manage Subscription',
+                  subtitle: 'View or update your subscription plan',
                   onTap: () => context.push('/select-package'),
                 ),
                 const SizedBox(height: 24),
               ],
-
-              // Notetaker
-              _buildSectionHeader(context, t.settingsNotetakerAssistant),
+              _buildSectionHeader(context, 'Notetaker Assistant'),
               _buildSettingsCard(
                 context,
                 icon: Icons.edit_note,
-                title: t.settingsNotetakerConfiguration,
-                subtitle: t.settingsNotetakerConfigurationDesc,
+                title: 'Notetaker Configuration',
+                subtitle: 'Customize your Notetaker assistant settings',
                 onTap: () => context.push('/notetaker-configuration'),
               ),
-
               const SizedBox(height: 24),
-
-              // General
-              _buildSectionHeader(context, t.settingsGeneral),
+              _buildSectionHeader(context, 'General'),
               _buildSettingsCard(
                 context,
                 icon: Icons.cleaning_services,
-                title: t.settingsClearCache,
-                subtitle: t.settingsClearCacheShortDesc,
+                title: 'Clear Cache',
+                subtitle: 'Remove temporary files and cache data',
                 onTap: () => _showClearCacheDialog(context),
               ),
               _buildSettingsCard(
                 context,
                 icon: Icons.logout,
-                title: t.settingsSignOut,
-                subtitle: t.settingsSignOutDesc,
+                title: 'Sign Out',
+                subtitle: 'Sign out of your account',
                 onTap: () => _showSignOutDialog(context),
                 textColor: Theme.of(context).colorScheme.error,
                 iconColor: Theme.of(context).colorScheme.error,
@@ -554,13 +501,12 @@ Widget _buildLanguageCard(BuildContext context) {
               _buildSettingsCard(
                 context,
                 icon: Icons.delete_forever,
-                title: t.settingsDeleteAccount,
-                subtitle: t.settingsDeleteAccountShortDesc,
+                title: 'Delete Account',
+                subtitle: 'Permanently delete your account',
                 onTap: () => _showDeleteAccountDialog(context),
                 textColor: Theme.of(context).colorScheme.error,
                 iconColor: Theme.of(context).colorScheme.error,
               ),
-
               const SizedBox(height: 24),
             ],
           ),

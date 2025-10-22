@@ -1,8 +1,5 @@
 import 'package:care_connect_app/core/services/api_service.dart';
-import 'package:care_connect_app/l10n/app_localizations.dart';
-import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
-import 'package:care_connect_app/widgets/language/language_picker.dart';
 import 'package:care_connect_app/widgets/menu/shortcut_search_delegate.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
@@ -44,14 +41,12 @@ class _MenuPageState extends State<MenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(t.menuTitle)),
+        appBar: AppBar(title: const Text('Menu')),
         body: _LoggedOutPrompt(onLogin: () => context.push('/login')),
       );
     }
@@ -70,9 +65,9 @@ class _MenuPageState extends State<MenuPage> {
     final items = <_MenuItem>[
       _MenuItem(
         icon: Icons.receipt_long,
-        label: t.invoiceAssistant,
+        label: 'Invoice Assistant',
         route: '/invoice-assistant/dashboard',
-        visibleFor: const {'CAREGIVER', 'ADMIN','PATIENT'},
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -83,70 +78,65 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.verified_user,
-        label: t.evv,
+        label: 'EVV',
         route: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN',},
+        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
-        label: t.calendarAssistant,
+        label: 'Calendar Assistant',
         route: '/calendar',
       ),
       _MenuItem(
         icon: Icons.medication,
-        label: t.medicationManagement,
+        label: 'Medication Management',
         route: '/medication',
       ),
       _MenuItem(
         icon: Icons.public,
-        label: t.socialFeed,
+        label: 'Social Feed',
         onTap: () => context.go('/social-feed?userId=${user.id}'),
       ),
       _MenuItem(
         icon: Icons.emoji_events,
-        label: t.gamification,
+        label: 'Gamification',
         route: '/gamification',
       ),
-      _MenuItem(icon: Icons.watch, label: t.wearables, route: '/wearables'),
-      _MenuItem(
-        icon: Icons.folder,
-        label: t.fileManagement,
-        route: '/file-management',
-      ),
-      _MenuItem(
-        icon: Icons.person_add,
-        label: t.addPatient,
-        route: '/add-patient',
-        visibleFor: const {'CAREGIVER'},
-      ),
-      _MenuItem(
-        icon: Icons.settings,
-        label: t.settings,
-        route: '/settings',
-        section: _Section.settings,
-      ),
+      _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
       _MenuItem(
         icon: Icons.folder,
         label: 'File Management',
         route: '/file-management',
       ),
+      _MenuItem(
+        icon: Icons.person_add,
+        label: 'Add Patient',
+        route: '/add-patient',
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
+      ),
+      _MenuItem(
+        icon: Icons.settings,
+        label: 'Settings',
+        route: '/settings',
+        section: _Section.settings,
+      ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.menuTitle),
+        title: const Text('Menu'),
         actions: [
           IconButton(
-            onPressed: () => showSearch(
-              context: context,
-              delegate: ShortcutSearchDelegate(
-                roleUpper: role,
-                userId: user.id.toString(),
+              onPressed: () => showSearch(
+                context: context,
+                delegate: ShortcutSearchDelegate(
+                  roleUpper: role,                  
+                  userId: user.id.toString(),
+                ),
               ),
+              icon: const Icon(Icons.search),
+              tooltip: 'Search',
             ),
-            icon: const Icon(Icons.search),
-            tooltip: t.search,
-          ),
         ],
       ),
       body: CustomScrollView(
@@ -166,7 +156,7 @@ class _MenuPageState extends State<MenuPage> {
                     : null,
               ),
               title: Text(
-                user.name ?? t.fallbackUser,
+                user.name ?? 'User',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -190,13 +180,13 @@ class _MenuPageState extends State<MenuPage> {
               child: Row(
                 children: [
                   Text(
-                    t.yourShortcuts,
+                    'Your shortcuts',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.tune),
-                    tooltip: t.customize,
+                    tooltip: 'Customize',
                     onPressed: () => _openCustomizeShortcuts(context, role),
                   ),
                 ],
@@ -207,37 +197,31 @@ class _MenuPageState extends State<MenuPage> {
           // Shortcuts grid from provider
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-           sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            mainAxisExtent: 88,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final t = AppLocalizations.of(context)!;           
-              final d = activeShortcuts[index];
-              final label = d.localizedLabel(t);                 
-              return _ShortcutTile(
-                key: ValueKey('shortcut_${d.key}_${t.localeName}'), 
-                shortcut: _Shortcut(
-                  d.icon,
-                  label,
-                  onTap: () => context.push(resolveRoute(d)),
-                ),
-              );
-            },
-            childCount: activeShortcuts.length,
-          ),
-        ),
-
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisExtent: 88,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              delegate: SliverChildListDelegate.fixed(
+                activeShortcuts
+                    .map(
+                      (d) => _ShortcutTile(
+                        shortcut: _Shortcut(
+                          d.icon,
+                          d.label,
+                          onTap: () => context.push(resolveRoute(d)),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ),
 
           // Tools
-          SliverToBoxAdapter(
-            child: _SectionHeader(title: t.tools),
-          ),
+          const SliverToBoxAdapter(child: _SectionHeader(title: 'Tools')),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
@@ -246,6 +230,7 @@ class _MenuPageState extends State<MenuPage> {
                 mainAxisExtent: 64,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
+                
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, index) => _ToolTile(item: items[index]),
@@ -255,63 +240,14 @@ class _MenuPageState extends State<MenuPage> {
           ),
 
           // Preferences
-          SliverToBoxAdapter(
-            child: _SectionHeader(title: t.preferences),
-          ),
+          const SliverToBoxAdapter(child: _SectionHeader(title: 'Preferences')),
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 520;
-                  final divider = VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Theme.of(context).dividerColor,
-                  );
-
-                  final localeProvider = context.watch<LocaleProvider>();
-                  final currentLabel = localeProvider.locale == null
-                      ? t.systemDefault
-                      : LanguagePicker.labelFor(localeProvider.locale!);
-
-                  final darkTile = ListTile(
-                    leading: const Icon(Icons.brightness_6),
-                    title: Text(t.darkMode),
-                    trailing: const ThemeToggleSwitch(
-                      showIcon: false,
-                      showLabel: false,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  );
-
-                  final langTile = ListTile(
-                    leading: const Icon(Icons.language),
-                    title: Text(t.language),
-                    subtitle: Text(currentLabel),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => LanguagePicker.show(context),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  );
-
-                  if (isWide) {
-                    return Row(
-                      children: [
-                        Expanded(child: darkTile),
-                        divider,
-                        Expanded(child: langTile),
-                      ],
-                    );
-                  } else {
-                    return Column(
-                      children: [
-                        darkTile,
-                        const Divider(height: 1),
-                        langTile,
-                      ],
-                    );
-                  }
-                },
+              child: const ListTile(
+                leading: Icon(Icons.brightness_6),
+                title: Text('Dark Mode'),
+                trailing: ThemeToggleSwitch(showIcon: false, showLabel: false),
               ),
             ),
           ),
@@ -326,9 +262,8 @@ class _MenuPageState extends State<MenuPage> {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  t.logout,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error),
+                  'Logout',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () async {
                   await userProvider.clearUser();
@@ -340,7 +275,7 @@ class _MenuPageState extends State<MenuPage> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
-      ),
+      )
     );
   }
 
@@ -348,7 +283,6 @@ class _MenuPageState extends State<MenuPage> {
     BuildContext context,
     String roleUpper,
   ) async {
-    final t = AppLocalizations.of(context)!;
     final sp = context.read<ShortcutProvider>();
     final list = sp.visibleCatalogForRole(roleUpper);
     final working = Set<String>.from(sp.activeKeys);
@@ -369,26 +303,24 @@ class _MenuPageState extends State<MenuPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                t.customizeShortcuts,
+                'Customize Shortcuts',
                 style: Theme.of(ctx).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
-                   children: list.map((d) {
+                  children: list.map((d) {
                     final checked = working.contains(d.key);
-                      final t2 = AppLocalizations.of(ctx)!;
-                      return CheckboxListTile(
-                        key: ValueKey('sheet_${d.key}_${t2.localeName}'),            
-                        value: checked,
-                        title: Row(
-                          children: [
-                            Icon(d.icon),
-                            const SizedBox(width: 12),
-                            Text(d.localizedLabel(t2)),                              
-                          ],
-                        ),
+                    return CheckboxListTile(
+                      value: checked,
+                      title: Row(
+                        children: [
+                          Icon(d.icon),
+                          const SizedBox(width: 12),
+                          Text(d.label),
+                        ],
+                      ),
                       onChanged: (v) {
                         setState(() {
                           if (v == true) {
@@ -408,7 +340,7 @@ class _MenuPageState extends State<MenuPage> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: Text(t.cancel),
+                      child: const Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -418,7 +350,7 @@ class _MenuPageState extends State<MenuPage> {
                         await sp.setAll(working);
                         if (mounted) Navigator.pop(ctx);
                       },
-                      child: Text(t.save),
+                      child: const Text('Save'),
                     ),
                   ),
                 ],
@@ -468,7 +400,7 @@ class _MenuItem {
   bool isVisibleFor(String roleUpper) {
     if (visibleFor == null || visibleFor!.isEmpty) return true;
     return visibleFor!.contains(roleUpper);
-    }
+  }
 }
 
 class _ToolTile extends StatelessWidget {
@@ -480,7 +412,8 @@ class _ToolTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: item.onTap ??
+        onTap:
+            item.onTap ??
             (item.route != null ? () => context.push(item.route!) : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -514,7 +447,7 @@ class _Shortcut {
 
 class _ShortcutTile extends StatelessWidget {
   final _Shortcut shortcut;
-  const _ShortcutTile({super.key, required this.shortcut});
+  const _ShortcutTile({required this.shortcut});
 
   @override
   Widget build(BuildContext context) {
@@ -545,14 +478,12 @@ class _ShortcutTile extends StatelessWidget {
   }
 }
 
-
 class _LoggedOutPrompt extends StatelessWidget {
   final VoidCallback onLogin;
   const _LoggedOutPrompt({required this.onLogin});
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -562,22 +493,19 @@ class _LoggedOutPrompt extends StatelessWidget {
             Icon(Icons.login, size: 64, color: Theme.of(context).disabledColor),
             const SizedBox(height: 12),
             Text(
-              t.pleaseLogIn,
+              'Please log in',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              t.loginRequiredMessage,
+              'You need to be logged in to access the menu',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).disabledColor,
-                  ),
+                color: Theme.of(context).disabledColor,
+              ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: onLogin,
-              child: Text(t.login),
-            ),
+            ElevatedButton(onPressed: onLogin, child: const Text('Login')),
           ],
         ),
       ),

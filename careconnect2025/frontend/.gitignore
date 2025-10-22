@@ -125,7 +125,3 @@ test_video_calls.dart
 **/test/**/*token*
 **/test/**/*secret*
 **/test/**/*key*
-
-**/linux/flutter/generated_*
-**/macos/Flutter/GeneratedPluginRegistrant.swift
-**/windows/flutter/generated_*

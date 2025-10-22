@@ -19,17 +19,6 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-//subprojects {
-//    afterEvaluate { project ->
-//        if (project.hasProperty("android")) {
-//            project.android {
-//                if (namespace == null) {
-//                    namespace project.group
-//                }
-//            }
-//        }
-//    }
-//}
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }

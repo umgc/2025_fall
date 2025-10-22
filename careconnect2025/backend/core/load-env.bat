@@ -42,59 +42,8 @@ if not "%missing_vars%"=="" (
     echo Please update your .env file with the required values
     echo Please set the missing environment variables before starting the application
     exit /b 1
+) else (
+    echo Starting CareConnect Backend...
+    REM Execute the passed command with loaded environment
+    %*
 )
-
-REM Check optional environment variables and report which ones are using defaults
-echo.
-echo Optional environment variables (not set, using defaults from application-dev.properties):
-set "unset_count=0"
-
-if "%STRIPE_SECRET_KEY%"=="" (
-    echo   - STRIPE_SECRET_KEY
-    set /a unset_count+=1
-)
-if "%DEEPSEEK_API_KEY%"=="" (
-    echo   - DEEPSEEK_API_KEY
-    set /a unset_count+=1
-)
-if "%OPENAI_API_KEY%"=="" (
-    echo   - OPENAI_API_KEY
-    set /a unset_count+=1
-)
-if "%AWS_ACCESS_KEY_ID%"=="" (
-    echo   - AWS_ACCESS_KEY_ID
-    set /a unset_count+=1
-)
-if "%AWS_SECRET_ACCESS_KEY%"=="" (
-    echo   - AWS_SECRET_ACCESS_KEY
-    set /a unset_count+=1
-)
-if "%S3_BUCKET_NAME%"=="" (
-    echo   - S3_BUCKET_NAME
-    set /a unset_count+=1
-)
-if "%FITBIT_AUTHORIZATION_URI%"=="" (
-    echo   - FITBIT_AUTHORIZATION_URI
-    set /a unset_count+=1
-)
-if "%FITBIT_TOKEN_URI%"=="" (
-    echo   - FITBIT_TOKEN_URI
-    set /a unset_count+=1
-)
-if "%FITBIT_USERINFO_URI%"=="" (
-    echo   - FITBIT_USERINFO_URI
-    set /a unset_count+=1
-)
-if "%STRIPE_API_URL%"=="" (
-    echo   - STRIPE_API_URL
-    set /a unset_count+=1
-)
-
-if %unset_count%==0 (
-    echo   (All optional variables are set)
-)
-echo.
-
-echo Starting CareConnect Backend...
-REM Execute the passed command with loaded environment
-%*

@@ -26,11 +26,9 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
   Future<void> _watchConnectivity() async {
     final status = await Connectivity().checkConnectivity();
-    if (mounted)
-      setState(() => offline = status.contains(ConnectivityResult.none));
+    if (mounted) setState(() => offline = status.contains(ConnectivityResult.none));
     Connectivity().onConnectivityChanged.listen((result) {
-      if (mounted)
-        setState(() => offline = result.contains(ConnectivityResult.none));
+      if (mounted) setState(() => offline = result.contains(ConnectivityResult.none));
     });
   }
 
@@ -48,9 +46,8 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     final pdfPaths = <String>[];
 
     for (final f in picked.files) {
-      final path = f.path;
-      if (path == null) continue;
       final e = ext(f.name);
+
       if (e == 'png' || e == 'jpg' || e == 'jpeg') {
         // For images, create XFile properly for both web and mobile
         if (kIsWeb) {
@@ -105,10 +102,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
         future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
       );
 
-      await _handleExtractResult(
-        res,
-        failMessage: 'Could not extract invoice from images',
-      );
+      await _handleExtractResult(res, failMessage: 'Could not extract invoice from images');
       if (!mounted) return;
     }
 
@@ -116,15 +110,11 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     if (pdfPaths.isNotEmpty) {
       final res = await runWithBlockingDialog<InvoiceResponseDto?>(
         context: context,
-        message:
-            'Extracting invoice data from PDF files. This may take a minute.',
+        message: 'Extracting invoice data from PDF files. This may take a minute.',
         future: InvoiceOcrLlmApi.extractWithLlm(pdfPaths: pdfPaths),
       );
 
-      await _handleExtractResult(
-        res,
-        failMessage: 'Could not extract invoice from PDF files',
-      );
+      await _handleExtractResult(res, failMessage: 'Could not extract invoice from PDF files');
       if (!mounted) return;
     }
   }
@@ -138,14 +128,14 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     );
     if (first == null) return;
 
-    if (!mounted) return;    
-    
-    final reviewed = await Navigator.of(context, rootNavigator: true).push<List<XFile>>(
-  MaterialPageRoute(
-    builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
-    fullscreenDialog: true,
-  ),
-);
+    if (!mounted) return;
+    final reviewed = await Navigator.push<List<XFile>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
+        fullscreenDialog: true,
+      ),
+    );
     if (!mounted) return;
 
     if (reviewed == null || reviewed.isEmpty) {
@@ -159,16 +149,10 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
       future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
     );
 
-    await _handleExtractResult(
-      res,
-      failMessage: 'Could not extract invoice from images',
-    );
+    await _handleExtractResult(res, failMessage: 'Could not extract invoice from images');
   }
 
-  Future<void> _handleExtractResult(
-    InvoiceResponseDto? res, {
-    required String failMessage,
-  }) async {
+  Future<void> _handleExtractResult(InvoiceResponseDto? res, {required String failMessage}) async {
     if (res == null) {
       _snack(failMessage);
       return;
@@ -189,28 +173,23 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     // Do not save here. Go to detail so user can review and save there.
     if (!mounted) return;
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(
-          invoice: res.invoice,
-          isNew: res.invoice.id.isEmpty,
-        ),
-      ),
-    );
+    await   Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute(builder: (_) => InvoiceDetailPage( invoice: res.invoice,
+          isNew: res.invoice.id.isEmpty)),
+                                );
   }
+
 
   Future<void> _onManualEntry() async {
     if (!mounted) return;
     // No saving here. Just open detail in create mode.
-    await Navigator.of(context, rootNavigator: true).push(
+    await Navigator.push(
+      context,
       MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(
-          invoice: InvoiceFactories.empty(),
-          isNew: true,
-        ),
+        builder: (_) => InvoiceDetailPage(invoice: InvoiceFactories.empty(), isNew: true),
+        fullscreenDialog: true,
       ),
     );
-   
   }
 
   void _snack(String msg) {
@@ -267,10 +246,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Secure Storage',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                          Text('Secure Storage', style: Theme.of(context).textTheme.titleSmall),
                           const SizedBox(height: 6),
                           Text(
                             'All original files are securely stored and encrypted. OCR processing will extract key information while preserving your original files.',
@@ -296,8 +272,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
   }) async {
     final text = StringBuffer();
     text.writeln(
-      message ??
-          'This invoice appears to be a duplicate of one already in the system.',
+      message ?? 'This invoice appears to be a duplicate of one already in the system.',
     );
     if (duplicateInvoiceNumber != null && duplicateInvoiceNumber.isNotEmpty) {
       text.writeln('Existing invoice number: $duplicateInvoiceNumber');
@@ -348,10 +323,7 @@ Future<T?> runWithBlockingDialog<T>({
               const SizedBox(height: 16),
               Text(message, textAlign: TextAlign.center),
               const SizedBox(height: 4),
-              const Text(
-                'Please wait',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
-              ),
+              const Text('Please wait', style: TextStyle(fontSize: 12, color: Colors.black54)),
             ],
           ),
         ),

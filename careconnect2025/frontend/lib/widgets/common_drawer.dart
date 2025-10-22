@@ -199,14 +199,6 @@ class _CommonDrawerState extends State<CommonDrawer> {
             isActive: widget.currentRoute == '/calendar',
           ),
 
-          _buildDrawerItem(
-            context,
-            icon: Icons.note,
-            title: 'Medical Notetaker',
-            route: '/notetaker-search',
-            isActive: widget.currentRoute == '/notetaker-search',
-          ),
-
           // Core Features (reordered logically)
           _buildDrawerItem(
             context,

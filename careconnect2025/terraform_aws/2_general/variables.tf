@@ -20,9 +20,6 @@ variable "domain_name" {
 variable "cc_ssm_params" {
   description = "List of secure SSM parameters to be created"
   type        = map(string) 
-  default = {
-    "username" = "cc_db_user"
-  } 
  
 }
 
@@ -30,9 +27,12 @@ variable "cc_iac_bucket_name" {
   description = "The name of the S3 bucket used for Care Connect infrastructure as code"
   type        = string
 }
-
 variable "cc_frontend_build_prefix" {
   description = "The prefix for the frontend build files in S3"
   type        = string
   default     = "cc-frontend-builds/"
+}
+variable "backend_bucket_check" { # That variable is just to ensure that the user has updated the backend S3 bucket name in main.tf
+  description = "Did you update the backend S3 bucket name in the main.tf to your own?\nIt is used to store the Terraform state file."
+  type        = bool  
 }

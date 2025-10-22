@@ -6,5 +6,4 @@ resource "aws_ssm_parameter" "cc_sensitive_env_variables" {
   type        = "SecureString"
   value       = var.cc_sensitive_params[each.key]
   tags        = var.default_tags
-  overwrite = true
 }

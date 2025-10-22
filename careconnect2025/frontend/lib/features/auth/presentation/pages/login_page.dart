@@ -1,7 +1,6 @@
-import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart'; 
+import 'package:provider/provider.dart';
 
 import '../../../../config/router/app_router.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -41,31 +40,49 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final extra = GoRouter.of(context).routerDelegate.currentConfiguration.extra;
+      // Get userType from widget or from GoRouter extra data
+      final extra = GoRouter.of(
+        context,
+      ).routerDelegate.currentConfiguration.extra;
 
+      // Use enhanced authentication service with role validation
       final authResult = await EnhancedAuthService.loginWithRoleValidation(
         email: _email.text.trim(),
         password: _pwd.text,
       );
 
       if (authResult.isSuccess) {
+        // Login and role validation successful
         final user = authResult.userSession!;
 
+        // Check if email is verified
         if (!user.emailVerified) {
+          // Show email verification dialog
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
             builder: (context) => EmailVerificationDialog(email: user.email),
           );
-          return;
+          return; // Don't proceed with navigation
         }
 
+        // Save user info to Provider
         Provider.of<UserProvider>(context, listen: false).setUser(user);
-        await Provider.of<UserProvider>(context, listen: false).fetchUserDetails();
+        await Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).fetchUserDetails();
+        print('fetchUserDetails completed');
+
+        // Add a small delay to ensure JWT token is fully saved before navigation
         await Future.delayed(const Duration(milliseconds: 100));
+
+        // Navigate to the appropriate dashboard based on user role
         navigateToDashboard(context);
       } else {
+        // Handle different types of authentication errors
         if (authResult.errorType == AuthErrorType.roleValidation) {
+          // Show role mismatch dialog
           await RoleMismatchDialog.show(
             context: context,
             actualRole: authResult.actualRole!,
@@ -74,6 +91,7 @@ class _LoginPageState extends State<LoginPage> {
             message: authResult.errorMessage!,
           );
         } else {
+          // Show regular authentication error
           setState(() {
             _error = authResult.errorMessage;
           });
@@ -90,13 +108,16 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final extra = GoRouter.of(
+      context,
+    ).routerDelegate.currentConfiguration.extra;
+    String userType = 'patient'; // Default
 
-    final extra = GoRouter.of(context).routerDelegate.currentConfiguration.extra;
-    String userType = 'patient';
     if (widget.userType != null) {
       userType = widget.userType!;
-    } else if (extra != null && extra is Map<String, dynamic> && extra.containsKey('userType')) {
+    } else if (extra != null &&
+        extra is Map<String, dynamic> &&
+        extra.containsKey('userType')) {
       userType = extra['userType'];
     }
 
@@ -110,7 +131,8 @@ class _LoginPageState extends State<LoginPage> {
             child: Container(
               constraints: BoxConstraints(
                 maxWidth: isMobile ? double.infinity : 500,
-                minHeight: MediaQuery.of(context).size.height -
+                minHeight:
+                    MediaQuery.of(context).size.height -
                     MediaQuery.of(context).padding.top -
                     MediaQuery.of(context).padding.bottom,
               ),
@@ -141,10 +163,12 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(8),
                         child: Image.asset(
                           'assets/images/CareConnectLogo.png',
+                          // Update this path to your PNG file
                           width: isMobile ? 150 : 170,
                           height: isMobile ? 150 : 170,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
+                            // Fallback if PNG doesn't load
                             return Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -177,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   // Tagline
                   Text(
-                    t.login_tagline,
+                    'Connect with care, track with confidence',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -199,9 +223,9 @@ class _LoginPageState extends State<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Form title
-                        Text(
-                          t.login_signInTitle,
-                          style: const TextStyle(
+                        const Text(
+                          'Sign in to your account',
+                          style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.primary,
@@ -212,7 +236,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         // Form subtitle
                         Text(
-                          t.login_signInSubtitle,
+                          'Enter your credentials to access CareConnect',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -225,9 +249,9 @@ class _LoginPageState extends State<LoginPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              t.login_usernameLabel,
-                              style: const TextStyle(
+                            const Text(
+                              'Username',
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textPrimary,
@@ -237,7 +261,7 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: _email,
                               decoration: InputDecoration(
-                                hintText: t.login_usernameHint,
+                                hintText: 'Enter your username',
                                 hintStyle: TextStyle(
                                   color: Colors.grey[400],
                                   fontSize: 14,
@@ -276,9 +300,9 @@ class _LoginPageState extends State<LoginPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              t.login_passwordLabel,
-                              style: const TextStyle(
+                            const Text(
+                              'Password',
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textPrimary,
@@ -289,7 +313,7 @@ class _LoginPageState extends State<LoginPage> {
                               controller: _pwd,
                               obscureText: !_showPassword,
                               decoration: InputDecoration(
-                                hintText: t.login_passwordHint,
+                                hintText: 'Enter your password',
                                 hintStyle: TextStyle(
                                   color: Colors.grey[400],
                                   fontSize: 14,
@@ -343,9 +367,9 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () => context.go('/reset-password'),
-                            child: Text(
-                              t.login_forgotPassword,
-                              style: const TextStyle(
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
                                 color: AppTheme.primary,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -393,18 +417,18 @@ class _LoginPageState extends State<LoginPage> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : Row(
+                                : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        t.login_signInCta,
-                                        style: const TextStyle(
+                                        'Sign In',
+                                        style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      const Icon(
+                                      SizedBox(width: 8),
+                                      Icon(
                                         Icons.arrow_forward_rounded,
                                         size: 18,
                                       ),
@@ -419,7 +443,7 @@ class _LoginPageState extends State<LoginPage> {
                         Column(
                           children: [
                             Text(
-                              t.login_noAccountPrompt,
+                              "Don't have an account?",
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -434,9 +458,9 @@ class _LoginPageState extends State<LoginPage> {
                                   vertical: 8,
                                 ),
                               ),
-                              child: Text(
-                                t.login_createAccountCta,
-                                style: const TextStyle(
+                              child: const Text(
+                                'Create Account',
+                                style: TextStyle(
                                   color: AppTheme.textPrimary,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -455,11 +479,14 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildSecurityBadge(t.login_badgeSecure, Icons.security),
+                      _buildSecurityBadge('Secure', Icons.security),
                       const SizedBox(width: 16),
-                      _buildSecurityBadge(t.login_badgeHipaa, Icons.verified_user),
+                      _buildSecurityBadge(
+                        'HIPAA Compliant',
+                        Icons.verified_user,
+                      ),
                       const SizedBox(width: 16),
-                      _buildSecurityBadge(t.login_badgeAccessible, Icons.accessibility),
+                      _buildSecurityBadge('Accessible', Icons.accessibility),
                     ],
                   ),
 
@@ -472,12 +499,15 @@ class _LoginPageState extends State<LoginPage> {
                       Icon(Icons.lock, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
                       Text(
-                        t.login_e2eEncrypted,
+                        'End-to-end encrypted',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       const SizedBox(width: 16),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primary,
                           borderRadius: BorderRadius.circular(4),
@@ -493,7 +523,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        t.login_wcagAACompliant,
+                        'WCAG AA compliant',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
