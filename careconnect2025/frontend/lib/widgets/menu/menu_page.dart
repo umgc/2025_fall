@@ -1,5 +1,8 @@
 import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/l10n/app_localizations.dart';
+import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/widgets/language/language_picker.dart';
 import 'package:care_connect_app/widgets/menu/shortcut_search_delegate.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
@@ -41,12 +44,14 @@ class _MenuPageState extends State<MenuPage> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Menu')),
+        appBar: AppBar(title: Text(t.menuTitle)),
         body: _LoggedOutPrompt(onLogin: () => context.push('/login')),
       );
     }
@@ -65,9 +70,9 @@ class _MenuPageState extends State<MenuPage> {
     final items = <_MenuItem>[
       _MenuItem(
         icon: Icons.receipt_long,
-        label: 'Invoice Assistant',
+        label: t.invoiceAssistant,
         route: '/invoice-assistant/dashboard',
-        visibleFor: const {'CAREGIVER', 'ADMIN'},
+        visibleFor: const {'CAREGIVER', 'ADMIN','PATIENT'},
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -78,45 +83,45 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.verified_user,
-        label: 'EVV',
+        label: t.evv,
         route: '/evv',
-        visibleFor: const {'CAREGIVER', 'ADMIN', 'FAMILY_LINK'},
+        visibleFor: const {'CAREGIVER', 'ADMIN',},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
-        label: 'Calendar Assistant',
+        label: t.calendarAssistant,
         route: '/calendar',
       ),
       _MenuItem(
         icon: Icons.medication,
-        label: 'Medication Management',
+        label: t.medicationManagement,
         route: '/medication',
       ),
       _MenuItem(
         icon: Icons.public,
-        label: 'Social Feed',
+        label: t.socialFeed,
         onTap: () => context.go('/social-feed?userId=${user.id}'),
       ),
       _MenuItem(
         icon: Icons.emoji_events,
-        label: 'Gamification',
+        label: t.gamification,
         route: '/gamification',
       ),
-      _MenuItem(icon: Icons.watch, label: 'Wearables', route: '/wearables'),
+      _MenuItem(icon: Icons.watch, label: t.wearables, route: '/wearables'),
       _MenuItem(
-        icon: Icons.note,
-        label: 'Notetaker Assistant',
-        route: '/notetaker-search',
+        icon: Icons.folder,
+        label: t.fileManagement,
+        route: '/file-management',
       ),
       _MenuItem(
         icon: Icons.person_add,
-        label: 'Add Patient',
+        label: t.addPatient,
         route: '/add-patient',
-        visibleFor: const {'CAREGIVER', 'ADMIN'},
+        visibleFor: const {'CAREGIVER'},
       ),
       _MenuItem(
         icon: Icons.settings,
-        label: 'Settings',
+        label: t.settings,
         route: '/settings',
         section: _Section.settings,
       ),
@@ -129,7 +134,7 @@ class _MenuPageState extends State<MenuPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Menu'),
+        title: Text(t.menuTitle),
         actions: [
           IconButton(
             onPressed: () => showSearch(
@@ -140,7 +145,7 @@ class _MenuPageState extends State<MenuPage> {
               ),
             ),
             icon: const Icon(Icons.search),
-            tooltip: 'Search',
+            tooltip: t.search,
           ),
         ],
       ),
@@ -161,7 +166,7 @@ class _MenuPageState extends State<MenuPage> {
                     : null,
               ),
               title: Text(
-                user.name ?? 'User',
+                user.name ?? t.fallbackUser,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -185,13 +190,13 @@ class _MenuPageState extends State<MenuPage> {
               child: Row(
                 children: [
                   Text(
-                    'Your shortcuts',
+                    t.yourShortcuts,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.tune),
-                    tooltip: 'Customize',
+                    tooltip: t.customize,
                     onPressed: () => _openCustomizeShortcuts(context, role),
                   ),
                 ],
@@ -202,31 +207,37 @@ class _MenuPageState extends State<MenuPage> {
           // Shortcuts grid from provider
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisExtent: 88,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              delegate: SliverChildListDelegate.fixed(
-                activeShortcuts
-                    .map(
-                      (d) => _ShortcutTile(
-                        shortcut: _Shortcut(
-                          d.icon,
-                          d.label,
-                          onTap: () => context.push(resolveRoute(d)),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
+           sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            mainAxisExtent: 88,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final t = AppLocalizations.of(context)!;           
+              final d = activeShortcuts[index];
+              final label = d.localizedLabel(t);                 
+              return _ShortcutTile(
+                key: ValueKey('shortcut_${d.key}_${t.localeName}'), 
+                shortcut: _Shortcut(
+                  d.icon,
+                  label,
+                  onTap: () => context.push(resolveRoute(d)),
+                ),
+              );
+            },
+            childCount: activeShortcuts.length,
+          ),
+        ),
+
           ),
 
           // Tools
-          const SliverToBoxAdapter(child: _SectionHeader(title: 'Tools')),
+          SliverToBoxAdapter(
+            child: _SectionHeader(title: t.tools),
+          ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
@@ -244,14 +255,63 @@ class _MenuPageState extends State<MenuPage> {
           ),
 
           // Preferences
-          const SliverToBoxAdapter(child: _SectionHeader(title: 'Preferences')),
+          SliverToBoxAdapter(
+            child: _SectionHeader(title: t.preferences),
+          ),
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: const ListTile(
-                leading: Icon(Icons.brightness_6),
-                title: Text('Dark Mode'),
-                trailing: ThemeToggleSwitch(showIcon: false, showLabel: false),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 520;
+                  final divider = VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: Theme.of(context).dividerColor,
+                  );
+
+                  final localeProvider = context.watch<LocaleProvider>();
+                  final currentLabel = localeProvider.locale == null
+                      ? t.systemDefault
+                      : LanguagePicker.labelFor(localeProvider.locale!);
+
+                  final darkTile = ListTile(
+                    leading: const Icon(Icons.brightness_6),
+                    title: Text(t.darkMode),
+                    trailing: const ThemeToggleSwitch(
+                      showIcon: false,
+                      showLabel: false,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  );
+
+                  final langTile = ListTile(
+                    leading: const Icon(Icons.language),
+                    title: Text(t.language),
+                    subtitle: Text(currentLabel),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => LanguagePicker.show(context),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  );
+
+                  if (isWide) {
+                    return Row(
+                      children: [
+                        Expanded(child: darkTile),
+                        divider,
+                        Expanded(child: langTile),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        darkTile,
+                        const Divider(height: 1),
+                        langTile,
+                      ],
+                    );
+                  }
+                },
               ),
             ),
           ),
@@ -266,8 +326,9 @@ class _MenuPageState extends State<MenuPage> {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  'Logout',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  t.logout,
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () async {
                   await userProvider.clearUser();
@@ -287,6 +348,7 @@ class _MenuPageState extends State<MenuPage> {
     BuildContext context,
     String roleUpper,
   ) async {
+    final t = AppLocalizations.of(context)!;
     final sp = context.read<ShortcutProvider>();
     final list = sp.visibleCatalogForRole(roleUpper);
     final working = Set<String>.from(sp.activeKeys);
@@ -307,24 +369,26 @@ class _MenuPageState extends State<MenuPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Customize Shortcuts',
+                t.customizeShortcuts,
                 style: Theme.of(ctx).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
-                  children: list.map((d) {
+                   children: list.map((d) {
                     final checked = working.contains(d.key);
-                    return CheckboxListTile(
-                      value: checked,
-                      title: Row(
-                        children: [
-                          Icon(d.icon),
-                          const SizedBox(width: 12),
-                          Text(d.label),
-                        ],
-                      ),
+                      final t2 = AppLocalizations.of(ctx)!;
+                      return CheckboxListTile(
+                        key: ValueKey('sheet_${d.key}_${t2.localeName}'),            
+                        value: checked,
+                        title: Row(
+                          children: [
+                            Icon(d.icon),
+                            const SizedBox(width: 12),
+                            Text(d.localizedLabel(t2)),                              
+                          ],
+                        ),
                       onChanged: (v) {
                         setState(() {
                           if (v == true) {
@@ -344,7 +408,7 @@ class _MenuPageState extends State<MenuPage> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
+                      child: Text(t.cancel),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -354,7 +418,7 @@ class _MenuPageState extends State<MenuPage> {
                         await sp.setAll(working);
                         if (mounted) Navigator.pop(ctx);
                       },
-                      child: const Text('Save'),
+                      child: Text(t.save),
                     ),
                   ),
                 ],
@@ -404,7 +468,7 @@ class _MenuItem {
   bool isVisibleFor(String roleUpper) {
     if (visibleFor == null || visibleFor!.isEmpty) return true;
     return visibleFor!.contains(roleUpper);
-  }
+    }
 }
 
 class _ToolTile extends StatelessWidget {
@@ -416,8 +480,7 @@ class _ToolTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap:
-            item.onTap ??
+        onTap: item.onTap ??
             (item.route != null ? () => context.push(item.route!) : null),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -451,7 +514,7 @@ class _Shortcut {
 
 class _ShortcutTile extends StatelessWidget {
   final _Shortcut shortcut;
-  const _ShortcutTile({required this.shortcut});
+  const _ShortcutTile({super.key, required this.shortcut});
 
   @override
   Widget build(BuildContext context) {
@@ -482,12 +545,14 @@ class _ShortcutTile extends StatelessWidget {
   }
 }
 
+
 class _LoggedOutPrompt extends StatelessWidget {
   final VoidCallback onLogin;
   const _LoggedOutPrompt({required this.onLogin});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -497,19 +562,22 @@ class _LoggedOutPrompt extends StatelessWidget {
             Icon(Icons.login, size: 64, color: Theme.of(context).disabledColor),
             const SizedBox(height: 12),
             Text(
-              'Please log in',
+              t.pleaseLogIn,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'You need to be logged in to access the menu',
+              t.loginRequiredMessage,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).disabledColor,
-              ),
+                    color: Theme.of(context).disabledColor,
+                  ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onLogin, child: const Text('Login')),
+            ElevatedButton(
+              onPressed: onLogin,
+              child: Text(t.login),
+            ),
           ],
         ),
       ),

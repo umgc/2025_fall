@@ -1,10 +1,10 @@
-import 'dart:async';
-
-import 'package:app_links/app_links.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:care_connect_app/l10n/app_localizations.dart';
+import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:provider/provider.dart';
@@ -51,15 +51,18 @@ Future<void> main() async {
       // Create providers (don't initialize them yet)
       final userProvider = UserProvider();
       final themeProvider = ThemeProvider();
-
+      final shortcutProvider = ShortcutProvider()..init();
+      final localeProvider = LocaleProvider();
+      await localeProvider.loadSaved();
       // Start the app immediately, initialize services in background
       runApp(
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: userProvider),
             ChangeNotifierProvider.value(value: themeProvider),
-            ChangeNotifierProvider(create: (_) => TaskTypeManager()),
-            ChangeNotifierProvider(create: (_) => ShortcutProvider()..init()),
+            ChangeNotifierProvider.value(value: shortcutProvider),
+            ChangeNotifierProvider.value(value: localeProvider),
+
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),
@@ -193,6 +196,7 @@ class CareConnectApp extends StatefulWidget {
 class _CareConnectAppState extends State<CareConnectApp> {
   StreamSubscription? _linkSubscription;
   late AppLinks _appLinks;
+   Locale? _localeOverride;
 
   @override
   void initState() {
@@ -251,10 +255,24 @@ class _CareConnectAppState extends State<CareConnectApp> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
 
     return MaterialApp.router(
       title: 'CareConnect',
       debugShowCheckedModeBanner: false,
+    // Use localized title instead of the hardcoded one above
+     // onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+      // Core i18n wiring
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,  
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+    //  set this to the chosen locale
+     locale: localeProvider.locale,
+
       themeMode: themeProvider.themeMode,
       theme: AppTheme.lightTheme.copyWith(
         visualDensity: VisualDensity.adaptivePlatformDensity,
