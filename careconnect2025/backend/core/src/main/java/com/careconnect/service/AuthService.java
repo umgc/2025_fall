@@ -48,7 +48,6 @@ import com.careconnect.security.Role;
 import jakarta.servlet.http.HttpServletResponse;
 
 
-
 @Service
 public class AuthService {
 
@@ -781,5 +780,7 @@ public LoginResponse loginV2(LoginRequest req,
             gamificationService.unlockAchievement(user.getId(), "5-Day Streak", 100);
         }
     }
+
+    
 
 }

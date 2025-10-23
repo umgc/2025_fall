@@ -4,6 +4,9 @@ import 'package:care_connect_app/features/integrations/presentation/pages/home_m
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/wearables_screen.dart';
+import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
+import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
+import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
@@ -58,7 +61,7 @@ import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_das
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
-
+import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
 Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
@@ -646,6 +649,24 @@ final GoRouter appRouter = GoRouter(
       path: '/notetaker-configuration',
       builder: (_, __) => const NotetakerConfigurationPage(),
     ),
+    GoRoute(
+      path: "/notetaker-search",
+      builder: (_, __) => const NotetakerSearchPage(),
+    ),
+    GoRoute(
+      path: "/notetaker/detail/:noteId",
+      builder: (context, state) {
+        final noteId = state.pathParameters['noteId'];
+        final extra = state.extra;
+        if (noteId == null || extra == null || extra is! PatientNote) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid note ID or missing note data')),
+          );
+        }
+        final note = extra as PatientNote;
+        return NotetakerDetailView();
+      },
+    ),
 
     // Video Call Test Route
     GoRoute(
@@ -662,7 +683,11 @@ final GoRouter appRouter = GoRouter(
       path: '/virtual-checkin',
       builder: (context, state) => const PatientVirtualCheckIn(),
     ),
-    
+        //Adding Calendar Assistant route
+    GoRoute(
+      path: '/alexaLogin',
+      builder: (_, __) => const AlexaLoginPage(),
+    ),
 
     // Handle routes from legacy menus
     GoRoute(
