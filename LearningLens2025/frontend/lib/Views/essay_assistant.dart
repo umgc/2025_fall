@@ -656,8 +656,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
   }
 
-    // Append chunk to streaming assistant message in chat log
-    Future<void> _logAiInteraction({
+  // Append chunk to streaming assistant message in chat log
+  Future<void> _logAiInteraction({
     required String userMsg,
     required String systemResponse,
   }) async {
@@ -671,7 +671,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       // 🔍 Create regex to find the "**Micro-Reflection:**" marker
       final RegExp regex = RegExp(
         r'\*\*Micro-Reflection:\*\*', // matches the literal bold markdown
-        caseSensitive: false,         // makes it case-insensitive
+        caseSensitive: false, // makes it case-insensitive
       );
 
       // Find the marker in the system response
@@ -702,7 +702,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       print('AI logging failed: $err\n$st');
     }
   }
-
 
   ///Methods to push Draft to LMS
   Future<void> _pushCurrentDraftToMoodle(Assignment essay) async {
@@ -1516,7 +1515,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                                         ))
                                 .toList(),
                             onChanged: (_mode == AiMode.assistant)
-                                ? null 
+                                ? null
                                 : (val) =>
                                     setState(() => _selectedPrompt = val),
                             hint: const Text('Choose a helper prompt'),
@@ -1530,7 +1529,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     // --- Button to submit Pre-built prompt as user message.
                     FilledButton.icon(
                       onPressed: (!_sessionActive || _mode == AiMode.assistant)
-                          ? null 
+                          ? null
                           : () {
                               final submittedPrompt = types.PartialText(
                                 text: getPreBuiltPrompt(_selectedPrompt),
@@ -2132,7 +2131,8 @@ class _EssayModalContent extends StatelessWidget {
     final String dueText = (essay.dueDate != null)
         ? essay.dueDate!.toLocal().toIso8601String().split('T').first
         : 'No due date';
-    final String descriptionText = removeHtmlTags(essay.description.toString() ?? '');
+    final String descriptionText =
+        removeHtmlTags(essay.description.toString() ?? '');
 
     return Column(
       children: [
