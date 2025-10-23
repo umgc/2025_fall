@@ -124,7 +124,12 @@ class DashboardAppHeader extends StatelessWidget
                                   try {
                                     dobDate = DateTime.parse(patient.dob);
                                   } catch (e) {
-                                    dobDate = DateTime.now(); // fallback
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Invalid date of birth. Cannot generate emergency QR.'),
+                                      ),
+                                    );
+                                    return;
                                   }
 
                                   // Calculate age
