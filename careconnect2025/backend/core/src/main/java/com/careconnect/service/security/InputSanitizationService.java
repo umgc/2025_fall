@@ -14,9 +14,9 @@ public class InputSanitizationService {
     @Autowired
     private SecurityAuditService securityAuditService;
 
-    // Patterns for detecting potentially harmful content
+    // Patterns for detecting potentially harmful content - focus on SQL injection syntax patterns
     private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
-        "(?i)(?:'\\s*or\\s*'1'='1|--|;\\s*drop\\s+table|;\\s*select\\s+.*\\s+from|\\bunion\\b\\s+select|\\bexec\\b|\\bexecute\\b|\\bcreate\\b\\s+table|\\balter\\b\\s+table|\\bdelete\\b\\s+from|\\binsert\\b\\s+into|\\bupdate\\b\\s+.*\\s+set)"
+        "(?i)(?:'\\s*or\\s*'1'='1|'\\s*or\\s*1=1|--|/\\*|\\*/|;\\s*drop\\s+table\\s+\\w+|;\\s*select\\s+\\*\\s+from|;\\s*delete\\s+from\\s+\\w+|;\\s*insert\\s+into\\s+\\w+|union\\s+all\\s+select|union\\s+select\\s+null|0x[0-9a-f]+|char\\(\\d+\\)|waitfor\\s+delay)"
     );
 
     private static final Pattern XSS_PATTERN = Pattern.compile(
