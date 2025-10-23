@@ -1,7 +1,7 @@
 package com.careconnect.service.evv;
 
-import com.careconnect.model.evv.EvvRecord;
-import com.careconnect.repository.evv.EvvRecordRepository;
+import com.careconnect.model.EvvRecord;
+import com.careconnect.repository.EvvRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

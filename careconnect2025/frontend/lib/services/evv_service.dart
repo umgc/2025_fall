@@ -26,9 +26,9 @@ class EvvService {
     final hours = offset.inHours.abs();
     final minutes = offset.inMinutes.abs() % 60;
     final sign = offset.isNegative ? '-' : '+';
-    final timezoneOffset = '${sign}${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+    final timezoneOffset = '$sign${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
     
-    return '${utc.toIso8601String().replaceAll('Z', timezoneOffset)}';
+    return utc.toIso8601String().replaceAll('Z', timezoneOffset);
   }
 
   // EVV Data Models
@@ -509,7 +509,8 @@ class EvvParticipant {
 
 class EvvRecord {
   final int id;
-  final EvvParticipant participant;
+  final EvvParticipant? participant; // Made nullable for backward compatibility
+  final PatientBasic? patient; // Added patient field
   final String serviceType;
   final String individualName;
   final int caregiverId;
@@ -540,7 +541,8 @@ class EvvRecord {
 
   EvvRecord({
     required this.id,
-    required this.participant,
+    this.participant,
+    this.patient,
     required this.serviceType,
     required this.individualName,
     required this.caregiverId,
@@ -573,7 +575,8 @@ class EvvRecord {
   factory EvvRecord.fromJson(Map<String, dynamic> json) {
     return EvvRecord(
       id: json['id'],
-      participant: EvvParticipant.fromJson(json['participant']),
+      participant: json['participant'] != null ? EvvParticipant.fromJson(json['participant']) : null,
+      patient: json['patient'] != null ? PatientBasic.fromJson(json['patient']) : null,
       serviceType: json['serviceType'],
       individualName: json['individualName'],
       caregiverId: json['caregiverId'],
@@ -601,6 +604,65 @@ class EvvRecord {
       correctedAt: json['correctedAt'] != null ? DateTime.parse(json['correctedAt']) : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+}
+
+// Basic patient info for EVV records
+class PatientBasic {
+  final int id;
+  final String firstName;
+  final String lastName;
+  final String? maNumber;
+  final String? dob;
+  final String? gender;
+  final PatientAddress? address;
+
+  PatientBasic({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    this.maNumber,
+    this.dob,
+    this.gender,
+    this.address,
+  });
+
+  factory PatientBasic.fromJson(Map<String, dynamic> json) {
+    return PatientBasic(
+      id: json['id'],
+      firstName: json['firstName'] ?? '',
+      lastName: json['lastName'] ?? '',
+      maNumber: json['maNumber'],
+      dob: json['dob'],
+      gender: json['gender'],
+      address: json['address'] != null ? PatientAddress.fromJson(json['address']) : null,
+    );
+  }
+}
+
+class PatientAddress {
+  final String? line1;
+  final String? line2;
+  final String? city;
+  final String? state;
+  final String? zip;
+
+  PatientAddress({
+    this.line1,
+    this.line2,
+    this.city,
+    this.state,
+    this.zip,
+  });
+
+  factory PatientAddress.fromJson(Map<String, dynamic> json) {
+    return PatientAddress(
+      line1: json['line1'],
+      line2: json['line2'],
+      city: json['city'],
+      state: json['state'],
+      zip: json['zip'],
     );
   }
 }
@@ -770,9 +832,9 @@ class EvvCorrectionRequest {
       final hours = offset.inHours.abs();
       final minutes = offset.inMinutes.abs() % 60;
       final sign = offset.isNegative ? '-' : '+';
-      final timezoneOffset = '${sign}${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+      final timezoneOffset = '$sign${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
       
-      return '${utc.toIso8601String().replaceAll('Z', timezoneOffset)}';
+      return utc.toIso8601String().replaceAll('Z', timezoneOffset);
     }
 
     return {

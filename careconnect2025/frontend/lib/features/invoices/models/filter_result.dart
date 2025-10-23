@@ -27,7 +27,7 @@ class DesktopTable extends StatelessWidget {
   final void Function(Invoice) onView;
   final void Function(Invoice) onPay;
 
-  const DesktopTable({
+  const DesktopTable({super.key, 
     required this.invoices,
     required this.onView,
     required this.onPay,
@@ -288,7 +288,7 @@ class MobileCard extends StatelessWidget {
         break;
       case PaymentStatus.sent:
       case PaymentStatus.partialPayment:
-        bg = cs.surfaceVariant;
+        bg = cs.surfaceContainerHighest;
         fg = cs.onSurfaceVariant;
         break;
     }

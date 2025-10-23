@@ -34,6 +34,7 @@ dependencies:
   flutter_chat_ui: ^2.0.0
   uuid: ^4.2.1
   file_picker: ^10.3.3
+  file_saver: ^0.2.7
   path: ^1.9.1
   shared_preferences: ^2.5.3
   dio: ^5.9.0
@@ -87,7 +88,7 @@ dependencies:
   # Platform detection
   platform: ^3.1.6
 # my key storage
-#  flutter_dotenv: ^6.0.0
+  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
   sqflite: ^2.4.2
 # -- Astha - start

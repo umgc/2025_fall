@@ -9,10 +9,10 @@ class ChatPage extends StatefulWidget {
   final String contactRole;
 
   const ChatPage({
-    Key? key,
+    super.key,
     required this.contactName,
     required this.contactRole,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();

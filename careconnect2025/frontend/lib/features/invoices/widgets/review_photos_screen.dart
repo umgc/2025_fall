@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 class ReviewPhotosScreen extends StatefulWidget {
   final List<XFile> initialPhotos;
-  const ReviewPhotosScreen({Key? key, required this.initialPhotos}) : super(key: key);
+  const ReviewPhotosScreen({super.key, required this.initialPhotos});
 
   @override
   State<ReviewPhotosScreen> createState() => _ReviewPhotosScreenState();

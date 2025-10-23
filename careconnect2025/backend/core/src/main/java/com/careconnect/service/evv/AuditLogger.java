@@ -1,7 +1,7 @@
 package com.careconnect.service.evv;
 
 import com.careconnect.model.evv.EvvAuditEvent;
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.model.EvvRecord;
 import com.careconnect.repository.evv.EvvAuditEventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

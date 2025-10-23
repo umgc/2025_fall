@@ -1,9 +1,9 @@
 package com.careconnect.service.evv;
 
+import com.careconnect.model.EvvRecord;
 import com.careconnect.model.evv.EvvOfflineQueue;
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.repository.EvvRecordRepository;
 import com.careconnect.repository.evv.EvvOfflineQueueRepository;
-import com.careconnect.repository.evv.EvvRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

@@ -1,5 +1,5 @@
 package com.careconnect.service.evv;
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.model.EvvRecord;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

@@ -4,7 +4,7 @@ import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 class AllergyInputForm extends StatefulWidget {
   final Function(Map<String, dynamic>)? onAllergyAdded;
 
-  const AllergyInputForm({Key? key, this.onAllergyAdded}) : super(key: key);
+  const AllergyInputForm({super.key, this.onAllergyAdded});
 
   @override
   State<AllergyInputForm> createState() => _AllergyInputFormState();
@@ -113,7 +113,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
           const Text('Severity', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedSeverity,
+            initialValue: _selectedSeverity,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),

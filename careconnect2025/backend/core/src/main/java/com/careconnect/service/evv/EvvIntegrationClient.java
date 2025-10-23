@@ -1,6 +1,6 @@
 package com.careconnect.service.evv;
 
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.model.EvvRecord;
 
 public interface EvvIntegrationClient {
     String destination();

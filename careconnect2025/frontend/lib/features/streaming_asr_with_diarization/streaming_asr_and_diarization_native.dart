@@ -114,7 +114,7 @@ class _StreamingAsrAndDiarizationScreenState
   sherpa_onnx.OnlineRecognizer? _recognizer;
   sherpa_onnx.OfflineRecognizer? _offlineRecognizer;
   sherpa_onnx.OnlineStream? _stream;
-  int _sampleRate = 16000;
+  final int _sampleRate = 16000;
 
   StreamSubscription<RecordState>? _recordSub;
   RecordState _recordState = RecordState.stop;
@@ -628,7 +628,7 @@ class _StreamingAsrAndDiarizationScreenState
                           Padding(
                             padding: EdgeInsets.all(10.0),
                             child: DropdownButtonFormField<String>(
-                              value: _selectedSpeaker,
+                              initialValue: _selectedSpeaker,
                               decoration: InputDecoration(labelText: 'Select A Speaker'),
                               items: _speakerList
                                   .map((option) => DropdownMenuItem(

@@ -7,7 +7,6 @@ import 'package:care_connect_app/features/integrations/presentation/pages/wearab
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
-import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -20,7 +19,7 @@ import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
-import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
+import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart' as hybrid_widget;
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -50,12 +49,15 @@ import '../../features/payments/presentation/pages/payment_success_page.dart';
 import '../../features/payments/presentation/pages/payment_cancel_page.dart';
 import '../../features/dashboard/presentation/pages/patient_status_page.dart';
 import '../../features/evv/presentation/pages/evv_dashboard.dart';
-import '../../features/evv/presentation/pages/evv_participant_management.dart';
-import '../../features/evv/presentation/pages/evv_record_creation.dart';
 import '../../features/evv/presentation/pages/evv_record_review.dart';
 import '../../features/evv/presentation/pages/evv_visit_history.dart';
 import '../../features/evv/presentation/pages/evv_corrections.dart';
 import '../../features/evv/presentation/pages/evv_offline_sync.dart';
+import '../../features/evv/presentation/pages/patient_selection_page.dart';
+import '../../features/evv/presentation/pages/evv_start_visit_page.dart';
+import '../../features/evv/presentation/pages/evv_visit_in_progress_page.dart';
+import '../../features/evv/presentation/pages/evv_visit_completed_page.dart';
+import 'package:care_connect_app/pages/video_call_test_page.dart';
 import '../../providers/user_provider.dart';
 import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
@@ -602,18 +604,10 @@ final GoRouter appRouter = GoRouter(
       builder: (_, __) => const MedicationManagementScreen(),
     ),
     
-    // EVV Routes
+    // EVV Routes - More specific routes first
     GoRoute(
-      path: '/evv',
-      builder: (_, __) => const EvvDashboard(),
-    ),
-    GoRoute(
-      path: '/evv/participants',
-      builder: (_, __) => const EvvParticipantManagementPage(),
-    ),
-    GoRoute(
-      path: '/evv/create-record',
-      builder: (_, __) => const EvvRecordCreationPage(),
+      path: '/evv/select-patient',
+      builder: (_, __) => const PatientSelectionPage(),
     ),
     GoRoute(
       path: '/evv/review-records',
@@ -630,6 +624,75 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/evv/offline-sync',
       builder: (_, __) => const EvvOfflineSyncPage(),
+    ),
+    GoRoute(
+      path: '/evv/create-record',
+      redirect: (context, state) => '/evv/select-patient',
+    ),
+    GoRoute(
+      path: '/evv/dashboard',
+      builder: (_, __) => const EvvDashboard(),
+    ),
+    GoRoute(
+      path: '/evv',
+      builder: (_, __) => const EvvDashboard(),
+    ),
+    GoRoute(
+      path: '/evv/start-visit',
+      builder: (context, state) {
+        final patientIdStr = state.uri.queryParameters['patientId'];
+        if (patientIdStr == null || int.tryParse(patientIdStr) == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Error'),
+              backgroundColor: const Color(0xFF14366E),
+            ),
+            body: const Center(
+              child: Text('Invalid or missing patient ID'),
+            ),
+          );
+        }
+        final patientId = int.tryParse(patientIdStr);
+        return EvvStartVisitPage(patientId: patientId!);
+      },
+    ),
+    GoRoute(
+      path: '/evv/visit-in-progress',
+      builder: (context, state) {
+        final patientIdStr = state.uri.queryParameters['patientId'];
+        if (patientIdStr == null || int.tryParse(patientIdStr) == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Error'),
+              backgroundColor: const Color(0xFF14366E),
+            ),
+            body: const Center(
+              child: Text('Invalid or missing patient ID'),
+            ),
+          );
+        }
+        final patientId = int.tryParse(patientIdStr);
+        return EvvVisitInProgressPage(patientId: patientId!);
+      },
+    ),
+    GoRoute(
+      path: '/evv/visit-completed',
+      builder: (context, state) {
+        final patientIdStr = state.uri.queryParameters['patientId'];
+        if (patientIdStr == null || int.tryParse(patientIdStr) == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Error'),
+              backgroundColor: const Color(0xFF14366E),
+            ),
+            body: const Center(
+              child: Text('Invalid or missing patient ID'),
+            ),
+          );
+        }
+        final patientId = int.tryParse(patientIdStr);
+        return EvvVisitCompletedPage(patientId: patientId!);
+      },
     ),
     GoRoute(
       path: '/profile-settings',
@@ -663,7 +726,7 @@ final GoRouter appRouter = GoRouter(
             body: Center(child: Text('Invalid note ID or missing note data')),
           );
         }
-        final note = extra as PatientNote;
+        final note = extra;
         return NotetakerDetailView();
       },
     ),
@@ -832,10 +895,10 @@ final GoRouter appRouter = GoRouter(
         
       ],
     ),
-        GoRoute(
-          path: 'menu',
-          name: 'menupage',
-          builder: (context, state) => const MenuPage(),
-        ),
+    GoRoute(
+      path: '/menu',
+      name: 'menupage',
+      builder: (context, state) => const MenuPage(),
+    ),
   ],
 );

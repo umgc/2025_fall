@@ -40,7 +40,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
 
 
   //Audio Recorder
-  int _sampleRate = 16000;
+  final int _sampleRate = 16000;
   late final AudioRecorder _audioRecorder;
   StreamSubscription<RecordState>? _recordSub;
   RecordState _recordState = RecordState.stop;
@@ -140,7 +140,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         actions: [
           TextButton(
             style: ButtonStyle(
-              padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
+              padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
             ),
             onPressed: (_isLoading || _isSaving)
                 ? null
@@ -152,7 +152,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
           ),
           TextButton(
             style: ButtonStyle(
-              padding: MaterialStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
+              padding: WidgetStateProperty.all(EdgeInsets.symmetric(horizontal: 5, vertical: 15)),
             ),
             onPressed: (_isLoading || _isSaving)
                 ? null
@@ -219,7 +219,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                                       children: <Widget>[
                                         Text(path.basename(file)),
                                         IconButton(
-                                            icon: new Icon(Icons.cancel),
+                                            icon: Icon(Icons.cancel),
                                             tooltip: 'delete voice sample',
                                             onPressed: () {
                                               setState(() {
@@ -253,7 +253,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                     children: <Widget>[
                       Text(value),
                       IconButton(
-                          icon: new Icon(Icons.cancel),
+                          icon: Icon(Icons.cancel),
                           tooltip: 'delete PII',
                           onPressed: () {
                             setState(() {
@@ -539,7 +539,9 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
     try {
       if (_user == null) throw Exception('User not found');
       List<PatientNotetakerKeyword> keywordList = [];
-      _PIIList.forEach((pii)=>keywordList.add(PatientNotetakerKeyword(keyword:'PII_$pii', event_type: 'ALERT')));
+      for (var pii in _PIIList) {
+        keywordList.add(PatientNotetakerKeyword(keyword:'PII_$pii', event_type: 'ALERT'));
+      }
       keyword_Event.forEach((keyword,event)=>keywordList.add(PatientNotetakerKeyword(keyword:keyword, event_type: event)));
       final config = PatientNotetakerConfigDTO(
         id: _currentConfig?.id,
@@ -617,7 +619,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
         Icons.person, // Changed from Icons.psychology for better compatibility
         [
           DropdownButtonFormField<String>(
-            value: _selectedPatientId,
+            initialValue: _selectedPatientId,
             decoration: InputDecoration(labelText: 'Select an option'),
             items: _patientList
                 .map((patient) => DropdownMenuItem(
@@ -779,7 +781,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                           Padding(
                             padding: EdgeInsets.all(10.0),
                             child: DropdownButtonFormField<String>(
-                              value: _selectedDropdownValue,
+                              initialValue: _selectedDropdownValue,
                               decoration: InputDecoration(labelText: 'Select an option'),
                               items: ['ALERT', 'TASK']
                                   .map((option) => DropdownMenuItem(
@@ -929,8 +931,8 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
               children: [
                 _buildInfoCard(theme, 'Tap the button below to start voice recognition. '
                     'The more voice samples provided the more accurate speaker identification will be.'
-                    'Try saying the phrases: \"The birch canoe slid on the smooth planks\", \"Glue the sheet to the dark blue background.\", \"It’s easy to tell the depth of a well.\", '
-                    '\"These days a chicken leg is a rare dish.\"'),
+                    'Try saying the phrases: "The birch canoe slid on the smooth planks", "Glue the sheet to the dark blue background.", "It’s easy to tell the depth of a well.", '
+                    '"These days a chicken leg is a rare dish."'),
                 const SizedBox(height: 16),
                 Row(
                 mainAxisAlignment: MainAxisAlignment.center,

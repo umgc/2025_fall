@@ -121,7 +121,7 @@ class DetailsSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<PaymentStatus>(
-          value: value.paymentStatus,
+          initialValue: value.paymentStatus,
           decoration: const InputDecoration(
             labelText: 'Payment Status',
             isDense: true,

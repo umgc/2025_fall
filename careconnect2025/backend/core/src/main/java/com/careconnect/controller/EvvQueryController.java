@@ -1,12 +1,12 @@
 package com.careconnect.controller;
 
-import com.careconnect.model.evv.EvvRecord;
-import com.careconnect.repository.evv.EvvRecordRepository;
+import com.careconnect.model.EvvRecord;
+import com.careconnect.repository.EvvRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-@RestController @RequestMapping("/v1/api/evv/records") @RequiredArgsConstructor
+@RestController @RequestMapping("/api/evv/records") @RequiredArgsConstructor
 public class EvvQueryController {
     private final EvvRecordRepository evvRecordRepository;
 

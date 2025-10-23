@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class UpcomingCheckins extends StatelessWidget {
-  const UpcomingCheckins({Key? key}) : super(key: key);
+  const UpcomingCheckins({super.key});
 
   @override
   Widget build(BuildContext context) {

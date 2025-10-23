@@ -1,7 +1,9 @@
-package com.careconnect.dto.evv;
+package com.careconnect.dto;
 
+import com.careconnect.dto.ParticipantResponseDto;
+import com.careconnect.dto.EvvRecordResponse;
 import com.careconnect.model.evv.EvvParticipant;
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.model.EvvRecord;
 
 public final class EvvDtoMapper {
     private EvvDtoMapper(){}
@@ -19,8 +21,8 @@ public final class EvvDtoMapper {
     public static EvvRecordResponse toDto(EvvRecord r){
         return EvvRecordResponse.builder()
                 .id(r.getId())
-                .participantId(r.getParticipant().getId())
-                .participantMaNumber(r.getParticipant().getMaNumber())
+                .patientId(r.getPatient().getId())
+                .patientMaNumber(r.getPatient().getMaNumber())
                 .serviceType(r.getServiceType())
                 .individualName(r.getIndividualName())
                 .caregiverId(r.getCaregiverId())

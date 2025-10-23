@@ -290,7 +290,7 @@ class _FilterBar extends StatelessWidget {
             final stacked = c.maxWidth < 520;
 
             final sortField = DropdownButtonFormField<String>(
-              value: sort,
+              initialValue: sort,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Sort By'),
               items: const [

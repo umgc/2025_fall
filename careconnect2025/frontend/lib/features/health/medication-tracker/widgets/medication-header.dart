@@ -4,8 +4,7 @@ class MedicationAppHeader extends StatelessWidget
     implements PreferredSizeWidget {
   final VoidCallback onAddPressed;
 
-  const MedicationAppHeader({Key? key, required this.onAddPressed})
-    : super(key: key);
+  const MedicationAppHeader({super.key, required this.onAddPressed});
 
   @override
   Widget build(BuildContext context) {

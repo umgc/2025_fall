@@ -1,5 +1,6 @@
 package com.careconnect.model.evv;
 
+import com.careconnect.model.EvvRecord;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

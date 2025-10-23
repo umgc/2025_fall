@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class RecentPatientActivity extends StatelessWidget {
-  const RecentPatientActivity({Key? key}) : super(key: key);
+  const RecentPatientActivity({super.key});
 
   @override
   Widget build(BuildContext context) {

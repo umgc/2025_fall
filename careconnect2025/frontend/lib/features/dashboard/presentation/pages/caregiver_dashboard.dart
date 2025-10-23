@@ -784,7 +784,16 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               const SizedBox(width: 8),
             ],
       currentRoute: '/dashboard',
-      body: _buildMainContent(),
+      body: Stack(
+        children: [
+          _buildMainContent(),
+          Positioned(
+            top: 20,
+            right: 20,
+            child: _buildStartNewVisitAppBarButton(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -939,7 +948,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           SliverPadding(
             padding: EdgeInsets.fromLTRB(
               horizontalMargin,
-              0,
+              20,
               horizontalMargin,
               8.0,
             ),
@@ -1010,6 +1019,31 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           final patient = patients[index];
           return _buildPatientCard(patient);
         }, childCount: patients.length),
+      ),
+    );
+  }
+
+  Widget _buildStartNewVisitAppBarButton() {
+    return ElevatedButton.icon(
+      onPressed: () {
+        context.go('/evv/select-patient');
+      },
+      icon: const Icon(Icons.add, color: Colors.white),
+      label: const Text(
+        'Start New Visit',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue[600],
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 2,
       ),
     );
   }

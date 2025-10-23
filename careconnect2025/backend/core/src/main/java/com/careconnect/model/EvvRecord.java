@@ -1,4 +1,4 @@
-package com.careconnect.model.evv;
+package com.careconnect.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -16,8 +16,11 @@ public class EvvRecord {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "participant_id", nullable = false)
-    private EvvParticipant participant;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "patient_id")
+    private Patient patient; // Direct reference to patient receiving care
+
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "participant_id")
+    private com.careconnect.model.evv.EvvParticipant participant; // Backward compatibility - deprecated
 
     @Column(name = "service_type", nullable = false) private String serviceType;
     @Column(name = "individual_name", nullable = false) private String individualName;

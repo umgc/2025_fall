@@ -12,6 +12,9 @@ import 'package:go_router/go_router.dart';
 // Core imports
 import 'package:care_connect_app/main.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/providers/theme_provider.dart';
+import 'package:care_connect_app/providers/locale_provider.dart';
+import 'package:care_connect_app/providers/shortcut_provider.dart';
 
 // Feature imports
 import 'package:care_connect_app/features/welcome/presentation/pages/welcome_page.dart';
@@ -66,8 +69,13 @@ STRIPE_PUBLISHABLE_KEY=test_key
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (_) => UserProvider(),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => UserProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => LocaleProvider()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()),
+          ],
           child: const CareConnectApp(),
         ),
       );
@@ -84,8 +92,13 @@ STRIPE_PUBLISHABLE_KEY=test_key
 
     testWidgets('CareConnect app has WelcomePage', (WidgetTester tester) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (_) => UserProvider(),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => UserProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => LocaleProvider()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()),
+          ],
           child: const CareConnectApp(),
         ),
       );
@@ -108,8 +121,13 @@ STRIPE_PUBLISHABLE_KEY=test_key
 
     testWidgets('LoginPage displays correctly', (WidgetTester tester) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (_) => UserProvider(),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => UserProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => LocaleProvider()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()),
+          ],
           child: const MaterialApp(home: LoginPage()),
         ),
       );
@@ -165,8 +183,13 @@ STRIPE_PUBLISHABLE_KEY=test_key
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
-        ChangeNotifierProvider(
-          create: (_) => UserProvider(),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => UserProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+            ChangeNotifierProvider(create: (_) => LocaleProvider()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()),
+          ],
           child: const MaterialApp(home: PatientStatusPage()),
         ),
       );

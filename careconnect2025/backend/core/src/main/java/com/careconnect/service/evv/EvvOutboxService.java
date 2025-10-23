@@ -1,6 +1,6 @@
 package com.careconnect.service.evv;
 
-import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.model.EvvRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -15,9 +15,17 @@ public class EvvOutboxService {
     private final ObjectMapper objectMapper;
 
     public void enqueue(EvvRecord record, String destination) {
+        // Get MA number from patient or participant (backward compatibility)
+        String maNumber = "UNKNOWN";
+        if (record.getPatient() != null) {
+            maNumber = record.getPatient().getMaNumber() != null ? record.getPatient().getMaNumber() : "UNKNOWN";
+        } else if (record.getParticipant() != null) {
+            maNumber = record.getParticipant().getMaNumber();
+        }
+        
         Map<String,Object> payload = Map.of(
                 "id", record.getId(),
-                "participant", record.getParticipant().getMaNumber(),
+                "participant", maNumber,
                 "serviceType", record.getServiceType(),
                 "timeIn", record.getTimeIn(),
                 "timeOut", record.getTimeOut(),

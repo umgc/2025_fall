@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf/shelf_io.dart' show logRequests;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
@@ -194,7 +195,7 @@ class MockServer {
         'role': role,
         'patientId': role == 'patient' ? MockData.patients.length + 1 : null,
         'caregiverId': role == 'caregiver' ? MockData.caregivers.length + 1 : null,
-        'stripeCustomerId': 'cus_mock_${role}${MockData.users.length + 1}'
+        'stripeCustomerId': 'cus_mock_$role${MockData.users.length + 1}'
       };
 
       MockData.users.add(newUser);
