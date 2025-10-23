@@ -54,9 +54,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Medical Notetaker'),
-      ),
+      appBar: AppBar(title: const Text('Notetaker Assistant')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildConfigForm(),
@@ -130,10 +128,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load Patient\'s Notetaker notes: $e'),
-            backgroundColor: Theme
-                .of(context)
-                .colorScheme
-                .error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -160,13 +155,12 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         setState(() {
           _patientList = (jsonDecode(patientResponse.body) as List<dynamic>)
               .map(
-                (patientWLink) =>
-            {
-              'id': patientWLink['patient']['id'].toString(),
-              'name':
-              '${patientWLink['patient']['firstName']} ${patientWLink['patient']['lastName']}',
-            },
-          )
+                (patientWLink) => {
+                  'id': patientWLink['patient']['id'].toString(),
+                  'name':
+                      '${patientWLink['patient']['firstName']} ${patientWLink['patient']['lastName']}',
+                },
+              )
               .toList();
         });
       } else {
@@ -179,10 +173,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load user profile: $e'),
-            backgroundColor: Theme
-                .of(context)
-                .colorScheme
-                .error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         setState(() => _isLoading = false);
@@ -204,10 +195,12 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     }
   }
 
-  Widget _buildSection(ThemeData theme,
-      String title,
-      IconData icon,
-      List<Widget> children) {
+  Widget _buildSection(
+    ThemeData theme,
+    String title,
+    IconData icon,
+    List<Widget> children,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -295,7 +288,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
 
   void _onNoteSelected(PatientNote note) {
     // Navigate to detail view with note
-    context.go('/notetaker/detail/${note.id}', extra: note);
+    context.push('/notetaker/detail/${note.id}', extra: note);
   }
 
   Widget _buildNotesSection(ThemeData theme) {
@@ -428,12 +421,11 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
         decoration: InputDecoration(labelText: 'Select an option'),
         items: _patientList
             .map(
-              (patient) =>
-              DropdownMenuItem(
+              (patient) => DropdownMenuItem(
                 value: patient['id'],
                 child: Text(patient['name']!),
               ),
-        )
+            )
             .toList(),
         onChanged: (value) {
           setState(() {
@@ -478,15 +470,15 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     );
   }
 
-  Future<void> checkForAITasks () async {
-    final response = await ApiService.getPatientTasksV2(int.parse(_selectedPatientId!));
+  Future<void> checkForAITasks() async {
+    final response = await ApiService.getPatientTasksV2(
+      int.parse(_selectedPatientId!),
+    );
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
       final List<Task> tasks = [];
       for (final raw in data) {
-        final map = TaskUtils.normalizeTaskMap(
-          Map<String, dynamic>.from(raw),
-        );
+        final map = TaskUtils.normalizeTaskMap(Map<String, dynamic>.from(raw));
 
         try {
           final baseTask = Task.fromJson(map);
@@ -496,14 +488,26 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
           debugPrint("Error parsing task for patient $_selectedPatientId: $e");
         }
       }
-      tasks.map((task)=>task.createdAt).forEach(print);
+      tasks.map((task) => task.createdAt).forEach(print);
       DateTime currentTime = DateTime.now();
       //check for tasks created in last 30 seconds
-      Task? recentTask = tasks.firstWhereOrNull((task)=>task.createdAt! > (currentTime.millisecondsSinceEpoch - 30000));
-      if(recentTask != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Row(children: [Icon(Icons.smart_toy), SizedBox(width: 10), Text('AI Generated A Task From Your Notes')]), backgroundColor: Colors.green));
+      Task? recentTask = tasks.firstWhereOrNull(
+        (task) =>
+            task.createdAt! > (currentTime.millisecondsSinceEpoch - 30000),
+      );
+      if (recentTask != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.smart_toy),
+                SizedBox(width: 10),
+                Text('AI Generated A Task From Your Notes'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } else {
       debugPrint(
@@ -513,24 +517,25 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
   }
 
   Widget _buildDiarizationCard(ThemeData theme) {
-    return _buildSection(theme, 'Record A Note', Icons.mic, [StreamingAsrAndDiarizationScreen(patientId: _selectedPatientId,
-      onUploadSuccess: (note) {
-        setState(() {
-          _currentPatientNotes?.add(note);
-          _filterNotes();
-        });
-        checkForAITasks();
-      },
-      onUploadError: (error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: Theme
-                .of(context)
-                .colorScheme
-                .error,
-          ),
-        );
-      })]);
+    return _buildSection(theme, 'Record A Note', Icons.mic, [
+      StreamingAsrAndDiarizationScreen(
+        patientId: _selectedPatientId,
+        onUploadSuccess: (note) {
+          setState(() {
+            _currentPatientNotes?.add(note);
+            _filterNotes();
+          });
+          checkForAITasks();
+        },
+        onUploadError: (error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        },
+      ),
+    ]);
   }
 }
