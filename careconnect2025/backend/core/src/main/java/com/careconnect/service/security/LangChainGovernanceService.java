@@ -125,7 +125,9 @@ public class LangChainGovernanceService {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(2);
         userRequestTrackers.entrySet().removeIf(entry -> {
             UserRequestTracker tracker = entry.getValue();
-            return ChronoUnit.HOURS.between(tracker.lastHourReset, LocalDateTime.now()) > 2;
+            LocalDateTime lastActivity = tracker.lastMinuteReset.isAfter(tracker.lastHourReset)
+                ? tracker.lastMinuteReset : tracker.lastHourReset;
+            return lastActivity.isBefore(cutoff);
         });
     }
 }
