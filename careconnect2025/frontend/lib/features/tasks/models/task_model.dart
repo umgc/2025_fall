@@ -17,6 +17,7 @@ class Task {
   int? assignedPatientId; // Optional, can be null if not assigned to a user
   String name;
   String description;
+  int? createdAt;
   DateTime date;
   TimeOfDay? timeOfDay; // Optional, can be null if not set
   bool isComplete;
@@ -36,6 +37,7 @@ class Task {
     this.assignedPatientId,
     required this.name,
     this.description = "",
+    this.createdAt,
     required this.date,
     this.timeOfDay,
     this.isComplete = false,
@@ -64,7 +66,8 @@ class Task {
       id: json['id'],
       name: json['name'] ?? "",
       description: json['description'] ?? "",
-      date: DateTime.tryParse(json['date'] ?? '') ?? DateTime.now(),
+      createdAt: json['createdAt'],
+      date: DateTime.parse(json['date']),
       timeOfDay: json['timeOfDay'] != null
           ? _parseTimeOfDay(json['timeOfDay'])
           : null,

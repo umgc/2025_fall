@@ -45,3 +45,5 @@ output "ses_dkim_cname_records" {
     "${token}._domainkey.${var.domain_name}" => "${token}.dkim.amazonses.com"
   }
 }
+
+# WebSocket outputs have been moved to 4_compute/outputs.tf

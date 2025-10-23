@@ -1,3 +1,4 @@
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -162,6 +163,8 @@ class _MainScreenState extends State<MainScreen> {
             _initializeNavigation();
           });
         }
+        
+
 
         return Scaffold(
           backgroundColor: _config.backgroundColor,
@@ -189,6 +192,7 @@ class _MainScreenState extends State<MainScreen> {
 
   /// Build the bottom navigation bar
   Widget _buildBottomNavigationBar() {
+   final t = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -213,7 +217,7 @@ class _MainScreenState extends State<MainScreen> {
           return BottomNavigationBarItem(
             icon: Icon(item.icon),
             activeIcon: Icon(item.activeIcon ?? item.icon),
-            label: item.label,
+           label: item.localizedLabel(t),
           );
         }).toList(),
       ),

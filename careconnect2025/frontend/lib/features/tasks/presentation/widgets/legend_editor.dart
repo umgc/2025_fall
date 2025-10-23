@@ -25,76 +25,80 @@ class LegendEditor extends StatelessWidget {
       insetPadding: const EdgeInsets.all(16),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Manage Task Types",
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-
-            /// =============================
-            /// Task Type Legend
-            /// =============================
-            Legend(
-              showManageButton: false,
-              onTypeTap: (type) {
-                final color = manager.getColor(type);
-                final icon = manager.getIcon(type);
-                _editType(context, manager, type, color, icon);
-              },
-              onTypeLongPress: (type) => _confirmDelete(context, manager, type),
-            ),
-
-            const SizedBox(height: 12),
-
-            /// =============================
-            /// Action Buttons
-            /// =============================
-            Row(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: 500,
+          ), // limit dialog height
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () => _addTaskType(context, manager),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Task Type'),
+                Text(
+                  "Manage Task Types",
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text("Reset Task Types"),
-                        content: const Text(
-                          "Restore default icons and colors for all task types?",
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text("Cancel"),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text("Reset"),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true) await manager.resetDefaults();
+                const SizedBox(height: 12),
+
+                /// Legend
+                Legend(
+                  showManageButton: false,
+                  onTypeTap: (type) {
+                    final color = manager.getColor(type);
+                    final icon = manager.getIcon(type);
+                    _editType(context, manager, type, color, icon);
                   },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text("Reset Defaults"),
+                  onTypeLongPress: (type) =>
+                      _confirmDelete(context, manager, type),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Close"),
+
+                const SizedBox(height: 12),
+
+                /// Action Buttons
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _addTaskType(context, manager),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Task Type'),
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Reset Task Types"),
+                            content: const Text(
+                              "Restore default icons and colors for all task types?",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Cancel"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text("Reset"),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) await manager.resetDefaults();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Reset Defaults"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Close"),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -154,7 +158,7 @@ class LegendEditor extends StatelessWidget {
                     await _attemptDelete(context, manager, name);
                   },
                 ),
-                const Spacer(),
+                const SizedBox(width: 16),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Cancel"),

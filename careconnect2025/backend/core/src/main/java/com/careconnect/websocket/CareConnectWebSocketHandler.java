@@ -45,9 +45,12 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
 
     // Store active connections: userId -> WebSocketSession
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
-    
+
     // Store user info for sessions: sessionId -> User
     private final Map<String, User> sessionUsers = new ConcurrentHashMap<>();
+
+    // Store email verification sessions: email -> WebSocketSession
+    private final Map<String, WebSocketSession> emailVerificationSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -78,6 +81,9 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
                     break;
                 case "subscribe-to-updates":
                     handleSubscribeToUpdates(session, payload);
+                    break;
+                case "subscribe-email-verification":
+                    handleSubscribeEmailVerification(session, payload);
                     break;
                 case "ai-chat-notification":
                     handleAIChatNotification(session, payload);
@@ -384,5 +390,59 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
     // Check if user is online
     public boolean isUserOnline(String userId) {
         return userSessions.containsKey(userId) && userSessions.get(userId).isOpen();
+    }
+
+    /**
+     * Handle subscription to email verification notifications
+     * This allows users who are not yet authenticated (unverified) to subscribe
+     */
+    private void handleSubscribeEmailVerification(WebSocketSession session, Map<String, Object> payload) throws Exception {
+        String email = (String) payload.get("email");
+
+        if (email == null || email.isEmpty()) {
+            sendErrorMessage(session, "Email is required for email verification subscription");
+            return;
+        }
+
+        // Store the session for this email
+        emailVerificationSessions.put(email.toLowerCase(), session);
+
+        Map<String, Object> response = Map.of(
+            "type", "email-verification-subscription-confirmed",
+            "email", email,
+            "message", "Subscribed to email verification notifications",
+            "timestamp", System.currentTimeMillis()
+        );
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+
+        log.info("Email verification subscription confirmed for: {}", email);
+    }
+
+    /**
+     * Send email verification success notification
+     * Called by AuthService when an email is verified
+     */
+    public void sendEmailVerificationNotification(String email) {
+        WebSocketSession session = emailVerificationSessions.get(email.toLowerCase());
+        if (session != null && session.isOpen()) {
+            try {
+                Map<String, Object> notification = Map.of(
+                    "type", "email-verified",
+                    "email", email,
+                    "verified", true,
+                    "message", "Your email has been verified successfully!",
+                    "timestamp", System.currentTimeMillis()
+                );
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(notification)));
+                log.info("Email verification notification sent to: {}", email);
+
+                // Clean up the session after sending notification
+                emailVerificationSessions.remove(email.toLowerCase());
+            } catch (Exception e) {
+                log.error("Failed to send email verification notification to {}: {}", email, e.getMessage());
+            }
+        } else {
+            log.warn("No active WebSocket session found for email verification: {}", email);
+        }
     }
 }
