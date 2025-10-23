@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.scheduling.annotation.Async;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.careconnect.dto.PatientNoteDTO;
 import com.careconnect.dto.PatientNotetakerConfigDTO;
 import com.careconnect.dto.v2.TaskDtoV2;
+import com.careconnect.model.Patient;
 import com.careconnect.model.PatientNote;
 import com.careconnect.model.PatientNotetakerConfig;
 import com.careconnect.model.PatientNotetakerKeyword;
@@ -134,7 +136,11 @@ public class PatientNotetakerService {
     
     @Async
     private List<String> detectKeyWords(Long patientId, String fileData) {
-        List<PatientNotetakerKeyword> keywords = patientNotetakerConfigRepository.findByPatientId(patientId).getTriggerKeywords();
+        PatientNotetakerConfig config = patientNotetakerConfigRepository.findByPatientId(patientId);
+        if(config == null) {
+            return  Collections.emptyList();
+        }
+        List<PatientNotetakerKeyword> keywords = config.getTriggerKeywords();
         List<String> foundKeywords = new ArrayList<>();
         //make lowercase for case insensitive comparisions
         fileData = fileData.toLowerCase();
