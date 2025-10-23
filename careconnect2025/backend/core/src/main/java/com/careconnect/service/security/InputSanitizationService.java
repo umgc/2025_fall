@@ -100,7 +100,7 @@ public class InputSanitizationService {
         boolean shouldBlock = false;
 
         // Check for suspicious patterns that might be injected
-        if (prompt.contains("ignore") || prompt.contains("forget") || prompt.contains("disregard")) {
+        if (PROMPT_INJECTION_PATTERN.matcher(prompt).find()) {
             issues.add("System prompt contains suspicious override instructions");
             shouldBlock = true;
             securityAuditService.logSecurityViolation(userId, conversationId, "SYSTEM_PROMPT_INJECTION", "Suspicious override detected");
