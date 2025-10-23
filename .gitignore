@@ -30,3 +30,7 @@ doc/api/
 
 .idea/
 .idea
+
+
+### VS Code ###
+.vscode/
