@@ -16,8 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "careconnect.invoice.llm.enabled", havingValue = "true", matchIfMissing = false)
-public class LlmExtractionService {
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
 
     private final ChatModel chatModel;
 
