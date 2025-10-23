@@ -17,16 +17,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+//Service configured to hit DeepSeek API v3 via OpenRouter for unlimited free tier 
 @Slf4j
 @Service
-@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "careconnect.openrouter.enabled", havingValue = "true", matchIfMissing = true)
 public class DeepSeekService {
 
-    @Value("${deepseek.api.key:}")
+    @Value("${openrouter.api.key:}")
     private String apiKey;
 
-    //@Value("${deepseek.api.url:https://api.deepseek.com/v1}")
-    @Value("${deepseek.api.url:https://openrouter.ai/api/v1}")
+    @Value("${openrouter.api.url:https://openrouter.ai/api/v1}")
     private String apiUrl;
 
     public DeepSeekService() {

@@ -1,21 +1,16 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as Path;
 import 'package:path_provider/path_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa_onnx;
 import 'package:simple_audio_trimmer/simple_audio_trimmer.dart';
-
-import '../../config/theme/app_theme.dart';
-import '../../providers/user_provider.dart';
-import '../../services/comprehensive_file_service.dart';
-import '../../services/enhanced_file_service.dart';
+import '../../services/notetaker_config_service.dart';
+import '../notetaker/models/patient_note_model.dart';
 import './utils.dart';
 
 // Remember to change `assets` in ../pubspec.yaml
@@ -87,16 +82,14 @@ Future<sherpa_onnx.OfflineRecognizer> createOfflineRecognizer() async {
 }
 
 class StreamingAsrAndDiarizationScreen extends StatefulWidget {
-  final List<FileCategory>? allowedCategories;
-  final int? patientId;
-  final Function(FileUploadResponse)? onUploadSuccess;
+  final Function(PatientNote)? onUploadSuccess;
   final Function(String)? onUploadError;
+  final String? patientId;
   const StreamingAsrAndDiarizationScreen({
     super.key,
-    this.allowedCategories,
-    this.patientId,
     this.onUploadSuccess,
     this.onUploadError,
+    this.patientId,
   });
 
   @override
@@ -113,9 +106,10 @@ class _StreamingAsrAndDiarizationScreenState
   String _last = '';
   int _index = 0;
   bool _isInitialized = false;
-  final _fileNameController = TextEditingController();
-  FileCategory? _selectedCategory;
   bool _isLoading = false;
+  List<String> _speakerList = [];
+  String? _selectedSpeaker;
+  late final TextEditingController _newSpeakerName;
 
   sherpa_onnx.OnlineRecognizer? _recognizer;
   sherpa_onnx.OfflineRecognizer? _offlineRecognizer;
@@ -129,27 +123,21 @@ class _StreamingAsrAndDiarizationScreenState
   void initState() {
     _audioRecorder = AudioRecorder();
     _controller = TextEditingController();
+    _newSpeakerName = TextEditingController();
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
-
     super.initState();
-  }
-
-  List<FileCategory> get _availableCategories {
-    if (widget.allowedCategories != null &&
-        widget.allowedCategories!.isNotEmpty) {
-      return widget.allowedCategories!;
-    } else {
-      return FileCategory.values;
-    }
   }
 
   Future<void> _start() async {
     setState(() {
       _controller.clear();
+      _newSpeakerName.clear();
       recordedData = [];
       _textToDisplay = '';
+      _speakerList = [];
+      _selectedSpeaker = null;
     });
     if (!_isInitialized) {
       sherpa_onnx.initBindings();
@@ -487,14 +475,20 @@ class _StreamingAsrAndDiarizationScreenState
         text: _textToDisplay,
         selection: TextSelection.collapsed(offset: _textToDisplay.length),
       );
+
       //Delete Temporary Files
       if (directory != null) {
-        File('${directory.path}/temporary.wav').deleteSync();
-        Directory('${directory.path}/temporary/').deleteSync();
+        File('${directory.path}/temporary.wav').delete();
+        Directory('${directory.path}/temporary/').delete(recursive: true);
       }
     }
     setState(() {
       _isLoading = false;
+      if(_textToDisplay.contains('speaker_')) {
+        RegExp regex = RegExp(r'speaker_\d+');
+        Iterable<Match> matches = regex.allMatches(_textToDisplay);
+        _speakerList = matches.map((match) => match.group(0)!).toSet().toList();
+      }
     });
   }
 
@@ -581,200 +575,131 @@ class _StreamingAsrAndDiarizationScreenState
       return;
     }
 
-    final fileName = _fileNameController.text.trim();
-    final fileBytes = Uint8List.fromList(_textToDisplay.codeUnits);
+    final createdNote = PatientNote(
+      id: '',
+      patientId: widget.patientId!,
+      note: _textToDisplay,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
+    );
 
-    await _uploadSpeechToTextFileToWeb(fileName, fileBytes);
+    PatientNote newNote = await NotetakerConfigService.createPatientNote(createdNote);
+
+    if(widget.onUploadSuccess != null) {
+      widget.onUploadSuccess!(newNote);
+    }
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Speech-to-text file saved')));
-  }
-
-  Future<void> _uploadSpeechToTextFileToWeb(
-    String fileName,
-    List<int> fileBytes,
-  ) async {
-    if (_selectedCategory == null || fileBytes.isEmpty || fileName.isEmpty) {
-      return;
-    }
-
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final user = userProvider.user;
-      if (user == null) {
-        throw Exception('User not logged in');
-      }
-
-      //Save File To Local
-      Directory? directory = await getExternalStorageDirectory();
-      if (directory != null) {
-        File localFile = await File(
-          '${directory.path}/notetaker_files/$fileName.txt',
-        ).create(recursive: true);
-        localFile.writeAsBytesSync(Uint8List.fromList(fileBytes));
-      } else if (widget.onUploadError != null) {
-        widget.onUploadError!('Could not save the file locally');
-      }
-
-      FileUploadResponse? response;
-
-      // Use the existing enhanced file service for other categories
-      response = await EnhancedFileService.uploadFileWeb(
-        fileBytes: Uint8List.fromList(fileBytes),
-        fileName: '$fileName.txt',
-        category: _selectedCategory!.value,
-        patientId: widget.patientId,
-      );
-
-      if (response != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('File uploaded successfully: ${response.fileName}'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
-
-        // Reset form
-        setState(() {
-          _selectedCategory = null;
-          _fileNameController.clear();
-          _textToDisplay = '';
-        });
-
-        // Callback
-        if (widget.onUploadSuccess != null) {
-          widget.onUploadSuccess!(response);
-        }
-      } else {
-        throw Exception('Upload failed - no response received');
-      }
-    } catch (e, stacktrace) {
-      print('Upload Exception: $e');
-      print('Stacktrace: $stacktrace');
-      final errorMessage = 'Upload failed: $e';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: AppTheme.error),
-      );
-
-      if (widget.onUploadError != null) {
-        widget.onUploadError!(errorMessage);
-      }
-    }
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Icon(Icons.mic, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Speech to Text',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    final categories = _availableCategories;
-
-    if (categories.isEmpty) {
-      return const Text('No categories available.');
-    }
-
-    return DropdownButtonFormField<FileCategory>(
-      items: categories.map((category) {
-        return DropdownMenuItem<FileCategory>(
-          value: category,
-          child: Text('${category.icon} ${category.displayName}'),
-        );
-      }).toList(),
-      onChanged: (value) {
-        setState(() {
-          _selectedCategory = value;
-        });
-      },
-      validator: (value) {
-        if (value == null) {
-          return 'Please select a file category';
-        }
-        return null;
-      },
-      initialValue: _selectedCategory,
-      // Starts as null!
-      hint: const Text('Select Category'),
-      // This shows when value is null
-      decoration: InputDecoration(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectCategory() async {
-    if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a file category first'),
-          backgroundColor: AppTheme.warning,
-        ),
-      );
-      return;
-    }
+    ).showSnackBar(const SnackBar(content: Text('Note saved'), backgroundColor: Colors.green,));
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildHeader(),
-        const SizedBox(height: 16),
-        _buildCategorySelector(),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _fileNameController,
-          decoration: const InputDecoration(
-            labelText: 'File Name',
-            hintText: 'Enter file name (no extension)',
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'File name cannot be empty';
-            }
-            if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(value.trim())) {
-              return 'Invalid characters in file name';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        _isLoading
-            ? Column(
-                children: [CircularProgressIndicator(), Text("Processing")],
-              )
-            : TextField(maxLines: 5, controller: _controller, readOnly: true),
-        const SizedBox(height: 16),
-        Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _buildRecordStopControl(),
-            const SizedBox(width: 16),
-            _buildText(),
+          children: [
+            _isLoading
+                ? Column(
+              children: [CircularProgressIndicator(), Text("Processing")],
+            )
+                : TextField(maxLines: 5, controller: _controller, readOnly: true),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                _buildRecordStopControl(),
+                const SizedBox(width: 16),
+                _buildText(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _speakerList.isNotEmpty ?
+            ElevatedButton(
+                child: const Text('Swap Speaker Names'),
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Expanded(
+                        child: SimpleDialog(
+                        title: Text("Swap Speaker Names"),
+                        children: <Widget> [
+                          Padding(
+                            padding: EdgeInsets.all(10.0),
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedSpeaker,
+                              decoration: InputDecoration(labelText: 'Select A Speaker'),
+                              items: _speakerList
+                                  .map((option) => DropdownMenuItem(
+                              value: option,
+                              child: Text(option),
+                              )).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedSpeaker = value;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return 'Please select an option';
+                                }
+                                  return null;
+                                },
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Icon(Icons.swap_vert),
+                          SizedBox(width: 12),
+                          Padding(
+                          padding: EdgeInsets.all(10.0),
+                          child:
+                            TextFormField(
+                            controller: _newSpeakerName,
+                            decoration: InputDecoration(labelText: 'Enter Name'),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'This field is required';
+                              }
+                                return null;
+                              },
+                            )
+                          ),
+                          SizedBox(width: 12),
+                          SimpleDialogOption(
+                            onPressed: () {
+                              if(_selectedSpeaker != null && _newSpeakerName.text.isNotEmpty) {
+                                setState(() {
+                                  _textToDisplay = _textToDisplay.replaceAll(
+                                      _selectedSpeaker!, _newSpeakerName.text);
+                                  _controller.value = TextEditingValue(
+                                    text: _textToDisplay,
+                                    selection: TextSelection.collapsed(
+                                        offset: _textToDisplay.length),
+                                  );
+                                });
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            child:const Text('Swap'),
+                          ),
+                        ]
+                        ),
+                      );
+                          //               Icon(Icons.swap_horiz,),
+
+                }
+            );}) : SizedBox.shrink(),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                if(_textToDisplay.isNotEmpty) {
+                  _saveRecognizedText();
+                }
+              },
+              child: const Text('Save Note'),
+            ),
           ],
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _textToDisplay.isNotEmpty ? _saveRecognizedText : null,
-          child: const Text('Save to File'),
-        ),
-      ],
     );
   }
 
@@ -806,11 +731,7 @@ class _StreamingAsrAndDiarizationScreenState
         child: InkWell(
           child: SizedBox(width: 56, height: 56, child: icon),
           onTap: () {
-            if (_selectedCategory == null) {
-              _selectCategory();
-            } else {
-              (_recordState != RecordState.stop) ? _stop() : _start();
-            }
+            (_recordState != RecordState.stop) ? _stop() : _start();
           },
         ),
       ),

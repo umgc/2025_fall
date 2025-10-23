@@ -72,3 +72,5 @@ app.log
 
 # Keep .env.example
 .env.example
+
+tfplan

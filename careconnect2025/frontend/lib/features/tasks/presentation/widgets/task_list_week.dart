@@ -28,13 +28,20 @@ class TaskListWeek extends StatelessWidget {
   /// Callback when the user taps the delete button on a task.
   final void Function(Task) onDelete;
 
-  const TaskListWeek({
+  /// Injectable backend update callback for easier testing.
+  final Future<void> Function(int taskId, bool complete) updateCompletion;
+
+  TaskListWeek({
     super.key,
     required this.events,
     required this.patientNames,
     required this.onEdit,
     required this.onDelete,
-  });
+    Future<void> Function(int, bool)? updateCompletion,
+  }) : updateCompletion =
+           updateCompletion ??
+           ((int id, bool complete) =>
+               ApiService.updateTaskCompletionV2(id, complete));
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +82,7 @@ class TaskListWeek extends StatelessWidget {
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
-                vertical: 4,
+                vertical: 2,
               ),
               leading: Icon(icon, color: color),
               title: Text(
@@ -89,7 +96,7 @@ class TaskListWeek extends StatelessWidget {
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
-                    runSpacing: 4, // adds a little space when wrapping
+                    runSpacing: 0,
                     children: [
                       Text(
                         "${task.date.month}/${task.date.day} • "
@@ -111,12 +118,11 @@ class TaskListWeek extends StatelessWidget {
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 4,
+                            vertical: 2,
                           ),
-                          minimumSize: const Size(
-                            0,
-                            28,
-                          ), // keeps button compact
+                          minimumSize: const Size(0, 26),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
                         ),
                         icon: task.isComplete
                             ? const Icon(Icons.check, size: 14)
@@ -137,10 +143,7 @@ class TaskListWeek extends StatelessWidget {
 
                           // Optional backend sync
                           try {
-                            await ApiService.updateTaskCompletionV2(
-                              task.id!,
-                              newStatus,
-                            );
+                            await updateCompletion(task.id!, newStatus);
                           } catch (e) {
                             // Roll back the change if API failed
                             setState(() => task.isComplete = !newStatus);

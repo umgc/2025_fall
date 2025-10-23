@@ -5,6 +5,7 @@ import com.careconnect.security.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -44,30 +45,33 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
-                .sessionManagement(sm -> sm
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .httpBasic(basic -> basic
-                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-                                "Basic Authentication Required")))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(
-                                (req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
-                .authorizeHttpRequests(auth -> auth
-                        /* ---------- Swagger/OpenAPI documentation - MUST BE FIRST --------------- */
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/v3/api-docs.yaml",
-                                "/v3/api-docs",
-                                "/swagger-resources/**",
-                                "/webjars/**",
-                                "/swagger-ui/index.html",
-                                "/api-docs/**",
-                                "/configuration/ui",
-                                "/configuration/security")
-                        .permitAll()
+            .sessionManagement(sm -> sm
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .httpBasic(basic -> basic
+                .authenticationEntryPoint((req, res, e) ->
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Basic Authentication Required")))
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) ->
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
+            .authorizeHttpRequests(auth -> auth
+                /* ---------- Allow OPTIONS for CORS preflight - MUST BE FIRST --------------- */
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                /* ---------- Swagger/OpenAPI documentation --------------- */
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml",
+                        "/v3/api-docs",
+                        "/swagger-resources/**",
+                        "/webjars/**",
+                        "/swagger-ui/index.html",
+                        "/api-docs/**",
+                        "/configuration/ui",
+                        "/configuration/security"
+                ).permitAll()
 
                         /* ---------- public API endpoints ------------------------ */
                         .requestMatchers(

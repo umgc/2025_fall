@@ -8,7 +8,6 @@ import 'package:care_connect_app/features/notetaker/models/patient_note_model.da
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
-import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -26,6 +25,7 @@ import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';

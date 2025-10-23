@@ -52,7 +52,8 @@ dependencies:
   # Temporarily disabled for faster builds
   # jitsi_meet_flutter_sdk: ^11.4.0
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
-  
+  flutter_localizations:
+    sdk: flutter
   intl: ^0.20.2 # data formatting
   camera: ^0.11.1 # emotion detector use
   pdf: ^3.11.3 # PDF generation
@@ -86,7 +87,7 @@ dependencies:
   # Platform detection
   platform: ^3.1.6
 # my key storage
-  flutter_dotenv: ^6.0.0
+#  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
   sqflite: ^2.4.2
 # -- Astha - start
@@ -175,7 +176,8 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-flutter:
+flutter: 
+  generate: true  # enables gen-l10n on build
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
@@ -184,8 +186,7 @@ flutter:
     - assets/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
     - assets/sherpa-onnx-zipformer-gigaspeech-2023-12-12/
     - assets/images/CareConnectLogo.png
-    - assets/images/CareConnectLogo.svg
-    - .env
+    - assets/images/CareConnectLogo.svg 
     - assets/images/default_avatar.svg
 
   # The following line ensures that the Material Icons font is
