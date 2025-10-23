@@ -88,6 +88,12 @@ class QrScreen extends StatelessWidget {
   final String payload;
   final String? emergencyId;
   final int? patientId;
+
+  // TODO: Replace with your actual server domain/IP
+  // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
+  // For production: use your actual domain (e.g., https://yourdomain.com)
+  static const String _baseUrl = 'http://localhost:8080';
+
   const QrScreen({required this.payload, this.emergencyId, this.patientId});
 
   @override
@@ -214,20 +220,12 @@ class QrScreen extends StatelessWidget {
 
   // Get the PDF URL for viewing (inline)
   String _getPdfUrl() {
-    // TODO: Replace with your actual server domain/IP
-    // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
-    // For production: use your actual domain (e.g., https://yourdomain.com)
-    const String baseUrl = 'http://localhost:8080'; // Change this!
-    return '$baseUrl/v1/api/emergency/$emergencyId.pdf';
+    return '$_baseUrl/v1/api/emergency/$emergencyId.pdf';
   }
 
   // Get the PDF URL for downloading (attachment)
   String _getDownloadPdfUrl() {
-    // TODO: Replace with your actual server domain/IP
-    // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
-    // For production: use your actual domain (e.g., https://yourdomain.com)
-    const String baseUrl = 'http://localhost:8080'; // Change this!
-    return '$baseUrl/v1/api/emergency/download/$emergencyId.pdf';
+    return '$_baseUrl/v1/api/emergency/download/$emergencyId.pdf';
   }
 
   // View PDF in browser or in-app
