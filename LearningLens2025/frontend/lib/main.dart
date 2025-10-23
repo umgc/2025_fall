@@ -9,6 +9,7 @@ import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/services/program_assessment_service.dart';
 import 'package:provider/provider.dart';
 
 import 'Views/dashboard.dart';
@@ -24,7 +25,7 @@ void main() async {
   // runApp(MyApp());
   await LocalStorageService.init(); // Initialize SharedPreferences
   await AILoggingSingleton().createDb();
-  await ProgramAssessmentState.createDb();
+  await ProgramAssessmentService.createDb();
 
   runApp(
     MultiProvider(

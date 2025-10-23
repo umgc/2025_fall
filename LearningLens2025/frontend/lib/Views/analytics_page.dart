@@ -1733,7 +1733,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                                   x: data!.indexOf(e),
                                                   barRods: [
                                                     BarChartRodData(
-                                                        toY: e[key2],
+                                                        toY: e[key2].toDouble(),
                                                         width: 20,
                                                         borderRadius:
                                                             BorderRadius.zero,

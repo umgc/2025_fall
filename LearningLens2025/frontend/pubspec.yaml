@@ -31,7 +31,6 @@ dependencies:
   file_picker: ^9.0.2
   pdf: ^3.10.1
   excel: ^4.0.6
-  postgres: ^3.5.6
   fl_chart: ^1.1.0
   path_provider: ^2.1.5
   url_launcher: ^6.3.2

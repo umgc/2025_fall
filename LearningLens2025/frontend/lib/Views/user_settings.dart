@@ -133,12 +133,14 @@ class UserSettingsState extends State<UserSettings> {
               const Divider(),
 
               // API Key Block
-              _buildApiKeyBlock(loginNotifier),
+              // _buildApiKeyBlock(loginNotifier),
 
               _buildGGUFModelPicker(),
 
               const SizedBox(height: 20),
               const Divider(),
+              // const SizedBox(height: 20),
+              // const Divider(),
 
               // Theme Color Picker
               Text(
@@ -280,7 +282,7 @@ class UserSettingsState extends State<UserSettings> {
   // -------------------------------------------
   // API Key Block
   // -------------------------------------------
-  Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
+   Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -315,8 +317,8 @@ class UserSettingsState extends State<UserSettings> {
       ],
     );
   }
-
-  Widget _buildApiKeyField({
+ 
+   Widget _buildApiKeyField({
     required String label,
     required TextEditingController controller,
     required LoginNotifier loginNotifier,
@@ -349,7 +351,6 @@ class UserSettingsState extends State<UserSettings> {
   }
 
   Future<void> _loadStoredModel() async {
-    // Load previously saved GGUF path
     final storedPath = LocalStorageService.getLocalLLMPath();
     String? modelName;
 
@@ -876,9 +877,7 @@ Attempting to run this app without the required model and hardware may result in
     }
   }
 
-  // -------------------------------------------
-  // Theme Color Picker
-  // -------------------------------------------
+ 
   void _pickColor() async {
     await showDialog(
       context: context,
