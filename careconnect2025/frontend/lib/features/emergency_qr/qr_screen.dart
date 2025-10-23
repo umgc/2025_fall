@@ -11,7 +11,6 @@ import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:http/http.dart' as http;
 
 class _Contact {
   final String name;
