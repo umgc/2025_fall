@@ -282,7 +282,7 @@ class UserSettingsState extends State<UserSettings> {
   // -------------------------------------------
   // API Key Block
   // -------------------------------------------
-   Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
+  Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,8 +317,8 @@ class UserSettingsState extends State<UserSettings> {
       ],
     );
   }
- 
-   Widget _buildApiKeyField({
+
+  Widget _buildApiKeyField({
     required String label,
     required TextEditingController controller,
     required LoginNotifier loginNotifier,
@@ -877,7 +877,6 @@ Attempting to run this app without the required model and hardware may result in
     }
   }
 
- 
   void _pickColor() async {
     await showDialog(
       context: context,
