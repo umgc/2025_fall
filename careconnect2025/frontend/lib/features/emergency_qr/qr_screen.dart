@@ -8,6 +8,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 
 class _Contact {
   final String name;
@@ -54,21 +58,29 @@ class EmergencyInfo {
       orElse: () => contacts.isNotEmpty ? contacts.first : const _Contact(name: 'None', role: '', phone: ''),
     );
 
-    return '''
-EMERGENCY MEDICAL INFORMATION
+    // Generate PNG image data URI
+    return _generateEmergencyCardPng(primaryContact);
+  }
 
-Name: $firstName $lastName | $bloodType
-DOB: ${dob.toIso8601String().substring(0, 10)} (Age: $age) | Gender: $gender
+  String _generateEmergencyCardPng(_Contact primaryContact) {
+    // Plain text with no special formatting that could trigger app redirects
+    return '''*** EMERGENCY MEDICAL INFO ***
+
+PATIENT: $firstName $lastName
+BLOOD: $bloodType
+BORN: ${dob.toIso8601String().substring(0, 10)} AGE $age
+GENDER: $gender
 ID: $id
 
-Critical Allergies: ${allergiesCritical.join(", ")}
+*** CRITICAL ALLERGIES ***
+${allergiesCritical.isEmpty ? 'NONE REPORTED' : allergiesCritical.join(' - ')}
 
-Primary Contact: ${primaryContact.name} ${primaryContact.phone}
+*** EMERGENCY CONTACT ***
+${primaryContact.name}
+PHONE: ${primaryContact.phone}
 
-Full Details: http://localhost:8080/v1/api/emergency/$id.pdf
-
-Scan offline for basic info • Tap link when online for full details
-''';
+CREATED: ${DateTime.now().toIso8601String().substring(0, 10)}
+FOR EMERGENCY PERSONNEL ONLY''';
   }
 }
 
@@ -202,15 +214,19 @@ class QrScreen extends StatelessWidget {
 
   // Get the PDF URL for viewing (inline)
   String _getPdfUrl() {
-    // Replace with your actual backend domain
-    const String baseUrl = 'http://localhost:8080'; // Update this with your domain
+    // TODO: Replace with your actual server domain/IP
+    // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
+    // For production: use your actual domain (e.g., https://yourdomain.com)
+    const String baseUrl = 'http://localhost:8080'; // Change this!
     return '$baseUrl/v1/api/emergency/$emergencyId.pdf';
   }
 
   // Get the PDF URL for downloading (attachment)
   String _getDownloadPdfUrl() {
-    // Replace with your actual backend domain
-    const String baseUrl = 'http://localhost:8080'; // Update this with your domain
+    // TODO: Replace with your actual server domain/IP
+    // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
+    // For production: use your actual domain (e.g., https://yourdomain.com)
+    const String baseUrl = 'http://localhost:8080'; // Change this!
     return '$baseUrl/v1/api/emergency/download/$emergencyId.pdf';
   }
 
