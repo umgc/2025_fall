@@ -67,8 +67,8 @@ class _IepPageState extends State<IepPage> {
       context: context,
       initialDate: epochTime != null
           ? DateTime.fromMillisecondsSinceEpoch(epochTime!.toInt() * 1000)
-          : DateTime.now(),
-      firstDate: DateTime(2000),
+          : selectedAssignment!.dueDate ?? DateTime.now(),
+      firstDate: selectedAssignment!.dueDate ?? DateTime.now(),
       lastDate: epochTime2 != null && selectedAssignment!.type == "essay"
           ? DateTime.fromMillisecondsSinceEpoch(epochTime2! * 1000)
           : DateTime(2100),
@@ -85,10 +85,12 @@ class _IepPageState extends State<IepPage> {
       context: context,
       initialDate: epochTime2 != null
           ? DateTime.fromMillisecondsSinceEpoch(epochTime2!.toInt() * 1000)
-          : DateTime.now(),
+          : epochTime != null
+              ? DateTime.fromMillisecondsSinceEpoch(epochTime! * 1000)
+              : selectedAssignment!.dueDate ?? DateTime.now(),
       firstDate: epochTime != null
           ? DateTime.fromMillisecondsSinceEpoch(epochTime! * 1000)
-          : DateTime(2000),
+          : selectedAssignment!.dueDate ?? DateTime.now(),
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != DateTime.now()) {
@@ -810,7 +812,7 @@ class _IepPageState extends State<IepPage> {
         'Assignment Type: "${selectedAssignment.type}"\n'
         'Assignment Due Date: "${selectedAssignment.dueDate}"\n'
         'Provide a textual summary. Additionally, suggest a number of attempts to provide the student as an integer from 0 to 10, with 0 representing no limit on the number of attempts. '
-        'Finally, suggest both a new Due Date and Final Deadline based on the original due date and the necessary accommodations. '
+        'Finally, suggest both a new Due Date and Final Deadline that are after the original due date and the necessary accommodations. '
         'Format dates in the format "MM/DD/YYYY". '
         'Return your analysis as a JSON array where the textual summary is an object with key "Summary". '
         'The suggested number of attempts should be returned as an object with key "Attempts". '

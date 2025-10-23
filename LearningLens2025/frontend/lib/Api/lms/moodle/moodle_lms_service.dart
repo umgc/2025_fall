@@ -1398,4 +1398,27 @@ class MoodleLmsService implements LmsInterface {
       return QuestionStatsType.fromJson(item);
     }).toList();
   }
+
+  // Publishes a grade and immediately makes it visible for a student's assignment submission
+  Future<bool> publishGrade(String assignmentId, String studentId,
+      String feedback, String grade) async {
+    final response =
+        await ApiService().httpPost(Uri.parse(apiURL + serverUrl), body: {
+      'wstoken': _userToken!,
+      'wsfunction': "mod_assign_save_grade",
+      'moodlewsrestformat': "json",
+      'assignmentid': assignmentId,
+      'userid': studentId,
+      'grade': grade,
+      'attemptnumber': '-1', // -1 = latest attempt
+      'workflowstate': 'released',
+      'addattempt': '0',
+      'applytoall': '0',
+      'plugindata[assignfeedbackcomments_editor][text]': feedback,
+      'plugindata[assignfeedbackcomments_editor][format]': '1'
+    });
+
+    // If the body text is 'null' that indicates the grade was published successfully
+    return response.body == 'null';
+  }
 }

@@ -85,10 +85,10 @@ class UserSettingsState extends State<UserSettings> {
               const Divider(),
 
               // API Key Block
-              _buildApiKeyBlock(loginNotifier),
+              // _buildApiKeyBlock(loginNotifier),
 
-              const SizedBox(height: 20),
-              const Divider(),
+              // const SizedBox(height: 20),
+              // const Divider(),
 
               // Theme Color Picker
               Text(
@@ -230,7 +230,7 @@ class UserSettingsState extends State<UserSettings> {
   // -------------------------------------------
   // API Key Block
   // -------------------------------------------
-  Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
+/*   Widget _buildApiKeyBlock(LoginNotifier loginNotifier) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -265,8 +265,8 @@ class UserSettingsState extends State<UserSettings> {
       ],
     );
   }
-
-  Widget _buildApiKeyField({
+ */
+/*   Widget _buildApiKeyField({
     required String label,
     required TextEditingController controller,
     required LoginNotifier loginNotifier,
@@ -297,7 +297,7 @@ class UserSettingsState extends State<UserSettings> {
       ],
     );
   }
-
+ */
   // -------------------------------------------
   // Theme Color Picker
   // -------------------------------------------
