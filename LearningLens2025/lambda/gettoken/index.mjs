@@ -82,7 +82,7 @@ export const handler = async (event, context) => {
 
   async function clearOldDatabaseEntries(client) {
     try {
-    await client`DELETE FROM AI_LOGS WHERE time AT TIME ZONE 'UTC' > (current_timestamp + interval '2 years') AT TIME ZONE 'UTC';`;
+    await client`DELETE FROM AI_LOGS WHERE time AT TIME ZONE 'UTC' < (current_timestamp - interval '2 years') AT TIME ZONE 'UTC';`;
     }
     catch (error) {
       console.error("Failed to clear old database entries: ", error);
