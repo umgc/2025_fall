@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html;
+import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 
 class _Contact {
   final String name;
@@ -55,7 +55,7 @@ class EmergencyInfo {
     );
 
     return '''
-VIAL OF LIFE - EMERGENCY INFO
+EMERGENCY MEDICAL INFORMATION
 
 Name: $firstName $lastName | $bloodType
 DOB: ${dob.toIso8601String().substring(0, 10)} (Age: $age) | Gender: $gender
@@ -80,15 +80,17 @@ class QrScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VIAL OF LIFE'),
+        title: const Text('Emergency Information'),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: theme.colorScheme.surface,
+        foregroundColor: theme.colorScheme.onSurface,
         elevation: 0,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -97,11 +99,11 @@ class QrScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF6F6F8),
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: theme.shadowColor.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -112,14 +114,14 @@ class QrScreen extends StatelessWidget {
                   version: QrVersions.auto,
                   size: 260,
                   gapless: false,
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
+                  backgroundColor: theme.colorScheme.surface,
+                  eyeStyle: QrEyeStyle(
                     eyeShape: QrEyeShape.circle,
-                    color: Colors.black,
+                    color: theme.colorScheme.onSurface,
                   ),
-                  dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleStyle: QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
-                    color: Colors.black,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -137,11 +139,11 @@ class QrScreen extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () => _viewPdf(context),
                         icon: const Icon(Icons.picture_as_pdf, size: 18),
-                        label: const Text('View Vial of Life PDF'),
+                        label: const Text('View Emergency PDF'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -159,11 +161,11 @@ class QrScreen extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () => _downloadPdf(context),
                             icon: const Icon(Icons.download, size: 18),
-                            label: const Text('Download Vial of Life PDF'),
+                            label: const Text('Download Emergency PDF'),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
+                              backgroundColor: theme.colorScheme.secondary,
+                              foregroundColor: theme.colorScheme.onSecondary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -176,11 +178,11 @@ class QrScreen extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () => _shareEmergencyInfo(context),
                             icon: const Icon(Icons.share, size: 18),
-                            label: const Text('Share Vial of Life Info'),
+                            label: const Text('Share Emergency Info'),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Colors.purple,
-                              foregroundColor: Colors.white,
+                              backgroundColor: theme.colorScheme.tertiary,
+                              foregroundColor: theme.colorScheme.onTertiary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -283,7 +285,7 @@ class QrScreen extends StatelessWidget {
           final blob = html.Blob([response.bodyBytes]);
           final url = html.Url.createObjectUrlFromBlob(blob);
           final anchor = html.AnchorElement(href: url)
-            ..setAttribute('download', 'vial-of-life-$emergencyId.pdf')
+            ..setAttribute('download', 'emergency-$emergencyId.pdf')
             ..click();
           html.Url.revokeObjectUrl(url);
 

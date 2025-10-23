@@ -114,25 +114,6 @@ public class EmergencyController {
         }
     }
 
-    /**
-     * Analyze the Vial of Life PDF form structure (for development/debugging)
-     */
-    @GetMapping("/analyze-form")
-    @Operation(
-        summary = "🔍 Analyze PDF Form",
-        description = "Development endpoint to analyze the Vial of Life PDF form fields",
-        tags = {"Emergency Information", "🛠️ Development"}
-    )
-    public ResponseEntity<String> analyzePdfForm() {
-        try {
-            vialOfLifePdfService.analyzePdfForm();
-            return ResponseEntity.ok("PDF form analysis completed. Check logs for field details.");
-        } catch (Exception e) {
-            logger.error("Error analyzing PDF form", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error analyzing PDF form: " + e.getMessage());
-        }
-    }
 
     /**
      * Health check endpoint for emergency services

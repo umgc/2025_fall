@@ -9,14 +9,10 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
-import org.apache.pdfbox.pdmodel.interactive.form.PDField;
-import org.apache.pdfbox.Loader;
 import java.awt.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -41,7 +37,6 @@ public class VialOfLifePdfService {
     @Autowired
     private FamilyMemberService familyMemberService;
 
-    private static final String TEMPLATE_PATH = "templates/vial-of-life-form.pdf";
 
     /**
      * Generate a pre-filled Vial of Life PDF for a patient
@@ -62,38 +57,16 @@ public class VialOfLifePdfService {
         List<MedicationDTO> medications = medicationService.getAllMedicationsForPatient(patientId);
         List<FamilyMemberLinkResponse> emergencyContacts = familyMemberService.getFamilyMembersByPatientId(patientId);
 
-        return fillPdfForm(patientProfile.get(), medications, emergencyContacts);
+        return createProfessionalEmergencyPdf(patientProfile.get(), medications, emergencyContacts);
     }
 
-    /**
-     * Analyze the PDF form to understand its field structure
-     */
-    public void analyzePdfForm() throws IOException {
-        ClassPathResource resource = new ClassPathResource(TEMPLATE_PATH);
-
-        byte[] pdfBytes = resource.getInputStream().readAllBytes();
-        try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-            PDAcroForm acroForm = document.getDocumentCatalog().getAcroForm();
-
-            if (acroForm == null) {
-                logger.warn("No form fields found in the PDF");
-                return;
-            }
-
-            logger.info("Analyzing Vial of Life PDF form fields:");
-            for (PDField field : acroForm.getFields()) {
-                String fieldName = field.getFullyQualifiedName();
-                String fieldValue = field.getValueAsString();
-                logger.info("Field: {} = '{}'", fieldName, fieldValue);
-            }
-        }
-    }
 
     /**
-     * Generate a professional emergency PDF from scratch
+     * Create a professional emergency PDF document from scratch
      */
-    private byte[] fillPdfForm(PatientProfileDTO patient, List<MedicationDTO> medications,
-                              List<FamilyMemberLinkResponse> emergencyContacts) throws IOException {
+    private byte[] createProfessionalEmergencyPdf(PatientProfileDTO patient,
+                                                 List<MedicationDTO> medications,
+                                                 List<FamilyMemberLinkResponse> emergencyContacts) throws IOException {
 
         logger.info("Generating professional emergency PDF from scratch");
 
@@ -104,23 +77,7 @@ public class VialOfLifePdfService {
             PDPage page = new PDPage();
             document.addPage(page);
 
-            // Create the professional emergency document
-            createProfessionalEmergencyPdf(document, page, patient, medications, emergencyContacts);
-
-            document.save(baos);
-        }
-
-        return baos.toByteArray();
-    }
-
-    /**
-     * Create a professional emergency PDF document from scratch
-     */
-    private void createProfessionalEmergencyPdf(PDDocument document, PDPage page, PatientProfileDTO patient,
-                                              List<MedicationDTO> medications,
-                                              List<FamilyMemberLinkResponse> emergencyContacts) throws IOException {
-
-        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
 
             // Page setup
             float pageWidth = page.getMediaBox().getWidth();
@@ -150,7 +107,12 @@ public class VialOfLifePdfService {
 
             // Footer
             drawFooter(contentStream, pageWidth, yPosition);
+            }
+
+            document.save(baos);
         }
+
+        return baos.toByteArray();
     }
 
     /**
@@ -399,107 +361,6 @@ public class VialOfLifePdfService {
         return yPosition - 15;
     }
 
-    private void fillPatientBasicInfo(PDAcroForm acroForm, PatientProfileDTO patient) throws IOException {
-        // Common field names that might exist in Vial of Life forms
-        // These will need to be adjusted based on the actual form fields
-
-        setFieldValue(acroForm, "name", patient.firstName() + " " + patient.lastName());
-        setFieldValue(acroForm, "firstName", patient.firstName());
-        setFieldValue(acroForm, "lastName", patient.lastName());
-
-        if (patient.dob() != null) {
-            setFieldValue(acroForm, "dateOfBirth", patient.dob());
-            setFieldValue(acroForm, "dob", patient.dob());
-
-            // Try to parse DOB and calculate age if possible
-            try {
-                LocalDate dobDate = LocalDate.parse(patient.dob());
-                int age = Period.between(dobDate, LocalDate.now()).getYears();
-                setFieldValue(acroForm, "age", String.valueOf(age));
-            } catch (Exception e) {
-                logger.warn("Could not parse DOB for age calculation: {}", patient.dob());
-            }
-        }
-
-        setFieldValue(acroForm, "gender", patient.gender() != null ? patient.gender().toString() : "");
-        setFieldValue(acroForm, "bloodType", ""); // bloodType not available in current DTO
-
-        // Address information
-        if (patient.address() != null) {
-            setFieldValue(acroForm, "address", patient.address().toString());
-        }
-    }
-
-    private void fillMedicalInfo(PDAcroForm acroForm, PatientProfileDTO patient, List<MedicationDTO> medications) throws IOException {
-        // Fill allergies
-        if (patient.allergies() != null && !patient.allergies().isEmpty()) {
-            StringBuilder allergiesText = new StringBuilder();
-            for (var allergy : patient.allergies()) {
-                if (allergiesText.length() > 0) allergiesText.append(", ");
-                allergiesText.append(allergy.allergen());
-                if (allergy.severity() != null && allergy.severity().toString().equalsIgnoreCase("CRITICAL")) {
-                    allergiesText.append(" (CRITICAL)");
-                }
-            }
-            setFieldValue(acroForm, "allergies", allergiesText.toString());
-            setFieldValue(acroForm, "medicalAllergies", allergiesText.toString());
-        }
-
-        // Medical conditions not available in current DTO structure
-
-        // Fill current medications
-        if (medications != null && !medications.isEmpty()) {
-            StringBuilder medicationsText = new StringBuilder();
-            List<MedicationDTO> activeMeds = medications.stream()
-                .filter(MedicationDTO::isActive)
-                .toList();
-
-            for (MedicationDTO med : activeMeds) {
-                if (medicationsText.length() > 0) medicationsText.append("\n");
-                medicationsText.append(med.medicationName());
-                if (med.dosage() != null) {
-                    medicationsText.append(" - ").append(med.dosage());
-                }
-                if (med.frequency() != null) {
-                    medicationsText.append(" (").append(med.frequency()).append(")");
-                }
-            }
-            setFieldValue(acroForm, "medications", medicationsText.toString());
-            setFieldValue(acroForm, "currentMedications", medicationsText.toString());
-        }
-    }
-
-    private void fillEmergencyContacts(PDAcroForm acroForm, List<FamilyMemberLinkResponse> emergencyContacts) throws IOException {
-        if (emergencyContacts != null && !emergencyContacts.isEmpty()) {
-            // Primary emergency contact
-            FamilyMemberLinkResponse primaryContact = emergencyContacts.get(0);
-            setFieldValue(acroForm, "emergencyContactName", primaryContact.familyMemberName());
-            setFieldValue(acroForm, "emergencyContactEmail", primaryContact.familyMemberEmail());
-            setFieldValue(acroForm, "emergencyContactRelationship", primaryContact.relationship());
-
-            // Secondary emergency contact (if available)
-            if (emergencyContacts.size() > 1) {
-                FamilyMemberLinkResponse secondaryContact = emergencyContacts.get(1);
-                setFieldValue(acroForm, "emergencyContact2Name", secondaryContact.familyMemberName());
-                setFieldValue(acroForm, "emergencyContact2Email", secondaryContact.familyMemberEmail());
-                setFieldValue(acroForm, "emergencyContact2Relationship", secondaryContact.relationship());
-            }
-        }
-    }
-
-    private void setFieldValue(PDAcroForm acroForm, String fieldName, String value) {
-        try {
-            PDField field = acroForm.getField(fieldName);
-            if (field != null && value != null) {
-                field.setValue(value);
-                logger.debug("Set field '{}' = '{}'", fieldName, value);
-            } else if (field == null) {
-                logger.debug("Field '{}' not found in form", fieldName);
-            }
-        } catch (IOException e) {
-            logger.warn("Could not set value for field '{}': {}", fieldName, e.getMessage());
-        }
-    }
 
     /**
      * Extract patient ID from emergency ID
