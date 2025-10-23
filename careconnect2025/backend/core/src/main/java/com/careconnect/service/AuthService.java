@@ -73,7 +73,7 @@ public class AuthService {
     @Autowired
     private CaregiverRepository caregivers;
 
-    @Autowired 
+    @Autowired
     private FamilyMemberRepository familyMembers;
 
     @Autowired
@@ -84,6 +84,9 @@ public class AuthService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private com.careconnect.websocket.CareConnectWebSocketHandler webSocketHandler;
 
     // Google OAuth configuration
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -97,6 +100,15 @@ public class AuthService {
 
     @Value("${careconnect.baseurl:http://localhost:8080}")
     private String backendUrl;
+
+    @Value("${spring.security.oauth2.client.provider.google.authorization-uri}")
+    private String googleAuthUri;
+
+    @Value("${spring.security.oauth2.client.provider.google.token-uri}")
+    private String googleTokenUri;
+
+    @Value("${spring.security.oauth2.client.provider.google.user-info-uri}")
+    private String googleUserInfoUri;
 
     @Transactional
     public ResponseEntity<?> register(RegisterRequest request) {
@@ -254,6 +266,17 @@ public class AuthService {
             user.setIsVerified(true);
             user.setVerificationToken(null); // Clear token so it can't be reused
             userRepository.save(user);
+
+            // Send WebSocket notification if handler is available
+            if (webSocketHandler != null) {
+                try {
+                    webSocketHandler.sendEmailVerificationNotification(user.getEmail());
+                } catch (Exception e) {
+                    // Log error but don't fail the verification
+                    System.err.println("Failed to send WebSocket notification for email verification: " + e.getMessage());
+                }
+            }
+
             return ResponseEntity.ok("Your email has been verified! You can now log in.");
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired verification link.");
@@ -606,7 +629,7 @@ public LoginResponse loginV2(LoginRequest req,
     public String buildGoogleOAuthUrl() {
         try {
             String redirectUri = URLEncoder.encode(backendUrl + "/v1/api/auth/sso/google/callback", StandardCharsets.UTF_8);
-            return "https://accounts.google.com/o/oauth2/v2/auth?" +
+            return googleAuthUri + "?" +
                    "client_id=" + googleClientId +
                    "&redirect_uri=" + redirectUri +
                    "&scope=openid%20email%20profile" +
@@ -649,8 +672,6 @@ public LoginResponse loginV2(LoginRequest req,
 
  private String exchangeCodeForToken(String code) {
         try {
-            String tokenUrl = "https://oauth2.googleapis.com/token";
-
             RestTemplate restTemplate = new RestTemplate();
 
             // Set the Content-Type header
@@ -669,7 +690,7 @@ public LoginResponse loginV2(LoginRequest req,
 
             // Use exchange method to send the request with explicit headers
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                tokenUrl,
+                googleTokenUri,
                 HttpMethod.POST,
                 requestEntity,
                 new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
@@ -724,7 +745,7 @@ public LoginResponse loginV2(LoginRequest req,
      */
     private Map<String, Object> getUserInfoFromGoogle(String accessToken) {
         try {
-            String userInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + accessToken;
+            String userInfoUrl = googleUserInfoUri + "?access_token=" + accessToken;
 
             RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<Map<String, Object>> response = restTemplate.exchange(

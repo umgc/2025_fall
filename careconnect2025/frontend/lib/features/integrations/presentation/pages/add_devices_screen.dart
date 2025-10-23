@@ -1,14 +1,15 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:care_connect_app/config/env_constant.dart';
 import 'package:fitbitter/fitbitter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart'; 
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:health/health.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+ 
 
 class ConnectedDevice {
   final String id;
@@ -66,8 +67,8 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
   List<ConnectedDevice> _connectedDevices = [];
 
   // Fitbit configuration
-  final fitbitClientId = dotenv.env['FITBIT_CLIENT_ID']!;
-  final fitbitClientSecret = dotenv.env['FITBIT_CLIENT_SECRET']!;
+  final fitbitClientId = getFitbitClientId();
+  final fitbitClientSecret =getFitbitClientSecret();
   static const String redirectUri = 'care-connect://add-device';
 
   // Platform-specific health platforms
