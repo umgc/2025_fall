@@ -290,7 +290,7 @@ class LocalLLMService implements LLM {
         completer.complete(finalResponse.replaceAll(regex, '').trim());
       }
     });
-  
+
     _runningRequestId = requestId;
 
     // Wait until inference finishes
@@ -307,10 +307,10 @@ class LocalLLMService implements LLM {
       fllamaCancelInference(_runningRequestId!);
       _runningRequestId = null;
     }
-    if(count != null){
-      while(count! >= 0){
+    if (count != null) {
+      while (count! >= 0) {
         fllamaCancelInference(count);
-        count --;
+        count--;
       }
     }
   }
@@ -391,7 +391,7 @@ class LocalLLMService implements LLM {
 
     if (result! && count != null) {
       cancel(count: count);
-    }else if (result && count == null){
+    } else if (result && count == null) {
       cancel();
     }
     return result;

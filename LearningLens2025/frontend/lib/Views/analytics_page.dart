@@ -1,7 +1,6 @@
 import 'dart:io' show File, Platform; // For non-web file I/O
 import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart'; // For file saving on non-web platforms
 import 'package:flutter_to_pdf/flutter_to_pdf.dart';

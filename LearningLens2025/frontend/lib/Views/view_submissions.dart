@@ -550,7 +550,6 @@ class SubmissionListState extends State<SubmissionList> {
                                                       null)
                                                     isLoading
                                                         ? Row(
-                                                            
                                                             children: [
                                                               const CircularProgressIndicator(),
                                                               if (selectedLLM ==
