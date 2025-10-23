@@ -88,10 +88,10 @@ class QrScreen extends StatelessWidget {
   final String? emergencyId;
   final int? patientId;
 
-  // TODO: Replace with your actual server domain/IP
-  // For development: use your computer's IP address (e.g., http://192.168.1.100:8080)
-  // For production: use your actual domain (e.g., https://yourdomain.com)
-  static const String _baseUrl = 'http://localhost:8080';
+  // The base URL is now configurable via the BASE_URL environment variable.
+  // Set it at build time with: flutter run --dart-define=BASE_URL=https://yourdomain.com
+  // For development, it defaults to http://localhost:8080 if BASE_URL is not set.
+  static const String _baseUrl = String.fromEnvironment('BASE_URL', defaultValue: 'http://localhost:8080');
 
   const QrScreen({required this.payload, this.emergencyId, this.patientId});
 
