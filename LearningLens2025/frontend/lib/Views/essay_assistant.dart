@@ -402,21 +402,23 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
   }
 
 // Handle user pressing "Send" in chat input
-  void _handleSendPressed(types.PartialText partial) {
+  Future<void> _handleSendPressed(types.PartialText partial) async {
     if (partial.text.trim().isEmpty) return;
     _appendUserMessage(partial.text.trim());
     _inputCtrl.clear();
 
     // Let getLLMResponse handle ALL assistant/error UI.
-    getLLMResponse(partial.text.trim(), _selectedLLM, _temperature)
-        .catchError((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('There was a problem generating a reply.')),
+    try {
+      await getLLMResponse(
+        partial.text.trim(),
+        _selectedLLM,
+        _temperature,
       );
-    });
-
-    _scrollToBottom();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('There was a problem generating a reply: $e')),
+      );
+    }
   }
 
   // Helper to append user message (GenerateContext appends to ChatLog)
@@ -437,22 +439,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     });
   }
 
-  // Helper to append AI/assistant message and log it if session active
-  void _appendAssistantMessage(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
-
-    // UI (SetState)
-    setState(() {
-      _messages.add(
-        types.SystemMessage(
-          id: const Uuid().v4(),
-          text: trimmed,
-          createdAt: DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    });
-  }
 
   // Helper to append System lines only
   void _appendSystemMessage(String text) {
@@ -519,6 +505,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
     _activeAssistantMsgId = null;
   }
+  
 
   /// Core method to get LLM response based on current session and context
   Future<String?> getLLMResponse(
@@ -530,7 +517,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
     // Description → plain text
     final essayDescription = removeHtmlTags(
-      _currentSession!.essay.description.toString(),
+      _currentSession!.essay.description,
     ).trim();
 
     // Draft / Notes → plain text
@@ -571,20 +558,26 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         final key = LocalStorageService.getOpenAIKey();
         if (key.isEmpty) return _appendError('OpenAI key missing');
         aiModel = OpenAiLLM(key);
+        break;
+
       case LlmType.GROK:
         final key = LocalStorageService.getGrokKey();
         if (key.isEmpty) return _appendError('Grok key missing');
         aiModel = GrokLLM(key);
+        break;
+
       case LlmType.PERPLEXITY:
         final key = LocalStorageService.getPerplexityKey();
         if (key.isEmpty) return _appendError('Perplexity key missing');
         aiModel = PerplexityLLM(key);
+        break;
+
       case LlmType.DEEPSEEK:
         final key = LocalStorageService.getDeepseekKey();
         if (key.isEmpty) return _appendError('Deepseek key missing');
         aiModel = DeepseekLLM(key);
+        break;
     }
-
     final fullContext = generateContext(
       permTokens: permContext,
       chatHistory: chatLog,
@@ -637,7 +630,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           // stream: false by default in your LLMs
         );
         // Complete the streaming UI with the full fallback text
-        final fullText = (fallback ?? '').trim();
+        final fullText = (fallback).trim();
         _finishAssistantStream(assistantIndex, fullText);
         //Log interaction
         await _logAiInteraction(
@@ -647,7 +640,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         await _saveCurrentSessionToPrefs();
         return fullText.isEmpty ? null : fullText;
       } catch (inner) {
-        // Clean up placeholder on hard failure
         _finishAssistantStream(assistantIndex, '[Error: ${inner.toString()}]');
         await _saveCurrentSessionToPrefs();
         _appendError(inner.toString());
@@ -715,10 +707,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     final lms = LmsFactory.getLmsService();
     final ops = _currentSession!.draftDeltaOps!;
     final html = deltaToHtml(ops);
-
-    // Get context id for this assignment
-    final contextId =
-        await lms.getContextId(essay.id, essay.courseId.toString()) ?? 0;
 
     // If you handle images, upload them here (optional)
     int? draftItemId;
@@ -1050,8 +1038,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
   }
 
   /// Helper to get essay key for sessions map
-  String _essayKeyOf(Assignment e) =>
-      (e.id != null) ? e.id.toString() : 'general_${e.name.hashCode}';
+  String _essayKeyOf(Assignment e) => e.id.toString();
 
   /// Check if we have a saved session for this essay
   bool _hasSessionFor(Assignment e) => _sessions.containsKey(_essayKeyOf(e));
@@ -1808,23 +1795,13 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        final mq = MediaQuery.of(ctx).size;
-        final maxW = mq.width < 900 ? mq.width - 32 : 820.0;
-        final maxH = mq.height < 700 ? mq.height - 80 : 600.0;
-
         return Dialog(
           insetPadding: const EdgeInsets.all(24),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Builder(
             builder: (ctx) {
-              final mq = MediaQuery.of(ctx).size;
-              final double w = mq.width.clamp(480, 1100);
-              final double h = mq.height.clamp(420, 900);
-
               return SizedBox(
-                width: w * 0.85,
-                height: h * 0.85,
                 child: Column(
                   children: [
                     // ----- Header -----
@@ -2131,8 +2108,7 @@ class _EssayModalContent extends StatelessWidget {
     final String dueText = (essay.dueDate != null)
         ? essay.dueDate!.toLocal().toIso8601String().split('T').first
         : 'No due date';
-    final String descriptionText =
-        removeHtmlTags(essay.description.toString() ?? '');
+    final String descriptionText = removeHtmlTags(essay.description);
 
     return Column(
       children: [
