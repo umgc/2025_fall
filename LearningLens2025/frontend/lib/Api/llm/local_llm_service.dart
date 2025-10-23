@@ -158,7 +158,7 @@ class LocalLLMService implements LLM {
 
     int requestId = await fllamaChat(request, (response, responseJson, done) {
       responseBuff.add(response);
-      print(response);
+      //print(response);
       if (done) {
         _runningRequestId = null;
         finalResponse = _getFinalResponse(responseBuff);
@@ -290,7 +290,7 @@ class LocalLLMService implements LLM {
         completer.complete(finalResponse.replaceAll(regex, '').trim());
       }
     });
-
+  
     _runningRequestId = requestId;
 
     // Wait until inference finishes
@@ -302,10 +302,16 @@ class LocalLLMService implements LLM {
   }
 
   // Cancel the current inference if running
-  void cancel() {
-    if (_runningRequestId != null) {
+  void cancel({int? count}) {
+    if (count == null && _runningRequestId != null) {
       fllamaCancelInference(_runningRequestId!);
       _runningRequestId = null;
+    }
+    if(count != null){
+      while(count! >= 0){
+        fllamaCancelInference(count);
+        count --;
+      }
     }
   }
 
@@ -361,7 +367,7 @@ class LocalLLMService implements LLM {
     }
   }
 
-  Future<bool> showCancelConfirmationDialog() async {
+  Future<bool> showCancelConfirmationDialog({int? count}) async {
     final result = await showDialog<bool>(
       context: navigatorKey.currentContext!,
       builder: (context) => AlertDialog(
@@ -383,7 +389,9 @@ class LocalLLMService implements LLM {
       ),
     );
 
-    if (result!) {
+    if (result! && count != null) {
+      cancel(count: count);
+    }else if (result && count == null){
       cancel();
     }
     return result;

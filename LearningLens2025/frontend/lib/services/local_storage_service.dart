@@ -240,6 +240,11 @@ class LocalStorageService {
         '';
   }
 
+  // Retrieves the url where the csv file with the models/download urls are located.
+  static String getLocalLLMDownloadURLPath() {
+    return dotenv.env['LOCAL_MODEL_DOWNLOAD_URL_PATH'] ?? '';
+  }
+
   // returns whether or not the local LLM has a path
   static hasLocalLLMPath() {
     return getLocalLLMPath().isNotEmpty;

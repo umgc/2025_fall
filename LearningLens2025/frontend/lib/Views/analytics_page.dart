@@ -44,6 +44,9 @@ import 'dart:convert';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
+
 /// Enum to represent export formats.
 enum ExportFormat { pdf, excel }
 
@@ -76,6 +79,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   Map<String, dynamic>? analyticsData;
   bool isLoading = false;
   String errorMsg = '';
+  bool canceled = false;
 
   // Live data for dropdowns.
   List<Course> _coursesData = [];
@@ -127,6 +131,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<List<String>> _exportFrameIds = [];
 
   LlmType? selectedLLM;
+  bool _localLlmAvail = !kIsWeb;
+
+  // count the number of instances running so we can cancel them all.
 
   List<List<Color>> contrastColors = Colors.primaries.map((e) {
     HSLColor hsl = HSLColor.fromColor(e);
@@ -916,11 +923,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 items: LlmType.values.map((LlmType llm) {
                   return DropdownMenuItem<LlmType>(
                     value: llm,
-                    enabled: LocalStorageService.userHasLlmKey(llm),
+                    enabled: (llm == LlmType.LOCAL &&
+                            LocalStorageService.getLocalLLMPath() != "" &&
+                            _localLlmAvail) ||
+                        LocalStorageService.userHasLlmKey(llm),
                     child: Text(
                       llm.displayName,
                       style: TextStyle(
-                        color: LocalStorageService.userHasLlmKey(llm)
+                        color: (llm == LlmType.LOCAL &&
+                                    LocalStorageService.getLocalLLMPath() !=
+                                        "" &&
+                                    _localLlmAvail) ||
+                                LocalStorageService.userHasLlmKey(llm)
                             ? Colors.black87
                             : Colors.grey,
                       ),
@@ -928,6 +942,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   );
                 }).toList()),
           ]),
+          if (selectedLLM == LlmType.LOCAL) ...[
+            const SizedBox(height: 6),
+            const Text(
+              "Running a Large Language Model (LLM) requires substantial hardware resources.\nWhile 7B or higher thinking (Qwen) models can be used to generate the analysis, it may produce inaccurate or misleading responses. Additionally, it will not generate any reference.\nFor optimal results, we strongly recommend using the external API for this task.\nPlease use the local LLM responsibly and independently verify any critical information.",
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black54,
+              ),
+            ),
+          ],
           Row(
             children: [
               ElevatedButton(
@@ -965,6 +989,34 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               ),
             ],
           ),
+          if (selectedLLM == LlmType.LOCAL &&
+              (_isAnalyzingSuccess ||
+                  _isAnalyzingFail ||
+                  _isAnalyzingAssignment ||
+                  _isAnalyzingAi ||
+                  _isAnalyzingStudents))
+            TextButton(
+              onPressed: () async {
+                bool decision = await LocalLLMService()
+                    .showCancelConfirmationDialog(count: 10);
+                if (decision) {
+                  canceled = true;
+                  isLoading = false;
+                  _isAnalyzingSuccess = false;
+                  _isAnalyzingFail = false;
+                  _isAnalyzingAssignment = false;
+                  _isAnalyzingAi = false;
+                  _isAnalyzingStudents = false;
+                }
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+              ),
+              child: const Text(
+                'Cancel Generation',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            ),
         ],
       ),
     );
@@ -1949,7 +2001,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
       return;
     }
-
+    canceled = false;
     Participant? selectedParticipant =
         participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
 
@@ -2121,26 +2173,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           }
         }
       }
-      await Future.wait(futures);
-      await Future.wait([
-        _analyzeAssignmentImprovements(
-            selectedAssessment.name,
-            selectedCourse.fullName,
-            assignmentDescription,
-            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
-            selectedGradeLevel),
-        _analyzeCourseImprovements(
-            selectedAssessment.name,
-            selectedCourse.fullName,
-            assignmentDescription,
-            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
-            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
-            selectedGradeLevel)
-      ]);
-      setState(() {
-        _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
-      });
+      if (!canceled) {
+        await Future.wait(futures);
+        await Future.wait([
+          _analyzeAssignmentImprovements(
+              selectedAssessment.name,
+              selectedCourse.fullName,
+              assignmentDescription,
+              _aiAnalysisSuccess.isEmpty
+                  ? ""
+                  : _aiAnalysisSuccess[0]["Summary"],
+              _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+              selectedGradeLevel),
+          _analyzeCourseImprovements(
+              selectedAssessment.name,
+              selectedCourse.fullName,
+              assignmentDescription,
+              _aiAnalysisSuccess.isEmpty
+                  ? ""
+                  : _aiAnalysisSuccess[0]["Summary"],
+              _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+              selectedGradeLevel)
+        ]);
+        setState(() {
+          _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
+        });
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2661,37 +2719,45 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       aiModel = GrokLLM(LocalStorageService.getGrokKey());
     } else if (selectedLLM == LlmType.DEEPSEEK) {
       aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
     } else {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     }
 
-    try {
-      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
-      String normalizedResult = result.trim();
-      // Remove markdown code block wrappers if present.
-      if (normalizedResult.startsWith("```json")) {
-        normalizedResult = normalizedResult.substring(7);
-      }
-      if (normalizedResult.endsWith("```")) {
-        normalizedResult =
-            normalizedResult.substring(0, normalizedResult.length - 3);
-      }
-      normalizedResult = normalizedResult.trim();
-      print(normalizedResult);
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+      try {
+        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+        if (!canceled) {
+          String normalizedResult = result.trim();
+          // Remove markdown code block wrappers if present.
+          if (normalizedResult.startsWith("```json")) {
+            normalizedResult = normalizedResult.substring(7);
+          }
+          if (normalizedResult.endsWith("```")) {
+            normalizedResult =
+                normalizedResult.substring(0, normalizedResult.length - 3);
+          }
+          normalizedResult = normalizedResult.trim();
+          print(normalizedResult);
 
-      var jsonData = json.decode(normalizedResult);
-      if (jsonData is List) {
-        return List<Map<String, dynamic>>.from(jsonData);
-      } else {
+          var jsonData = json.decode(normalizedResult);
+          if (jsonData is List) {
+            return List<Map<String, dynamic>>.from(jsonData);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content:
+                      Text("AI analysis did not return a valid JSON array.")),
+            );
+          }
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("AI analysis did not return a valid JSON array.")),
+          SnackBar(content: Text("Error during AI analysis: $e")),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error during AI analysis: $e")),
-      );
     }
     return [];
   }

@@ -111,7 +111,8 @@ class _EssayGenerationState extends State<EssayGeneration> {
   }
 
   Future<dynamic> pingApi(String inputs) async {
-    if (await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
       try {
         setState(() {
           _isLoading = true; // Set loading state to true
@@ -378,24 +379,25 @@ class _EssayGenerationState extends State<EssayGeneration> {
                                             fontSize: 18,
                                             color: Colors.black54),
                                       ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          bool decision = await LocalLLMService()
-                                              .showCancelConfirmationDialog();
-                                          if (decision) {
-                                            canceled = true;
-                                          }
-                                        },
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: Colors.redAccent,
+                                      if (selectedLLM == LlmType.LOCAL)
+                                        TextButton(
+                                          onPressed: () async {
+                                            bool decision = await LocalLLMService()
+                                                .showCancelConfirmationDialog();
+                                            if (decision) {
+                                              canceled = true;
+                                            }
+                                          },
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.redAccent,
+                                          ),
+                                          child: const Text(
+                                            'Cancel Generation',
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500),
+                                          ),
                                         ),
-                                        child: const Text(
-                                          'Cancel Generation',
-                                          style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500),
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 )

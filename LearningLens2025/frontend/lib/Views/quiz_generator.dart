@@ -60,7 +60,7 @@ class _AssessmentState extends State<CreateAssessment> {
 
   void generateQuiz(Map<String, TextEditingController> fields) async {
     canceled = false;
-    if (await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+    if (selectedLLM != LlmType.LOCAL || await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
       if (!mounted) return;
       if (_formKey.currentState!.validate()) {
         // Parse question counts, defaulting to 0 if empty
@@ -191,9 +191,9 @@ class _AssessmentState extends State<CreateAssessment> {
                                   if (selectedLLM == LlmType.LOCAL)
                                     TextButton(
                                       onPressed: () async {
-                                        bool result = await LocalLLMService()
+                                        bool decision = await LocalLLMService()
                                             .showCancelConfirmationDialog();
-                                        if (result) {
+                                        if(decision){
                                           canceled = true;
                                         }
                                       },

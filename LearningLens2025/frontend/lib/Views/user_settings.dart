@@ -41,6 +41,7 @@ class UserSettingsState extends State<UserSettings> {
   String? selectedModel;
   bool isDownloading = false;
   bool _modelsLoading = true;
+  bool fetchModelsFail = false;
 
   double downloadProgress = 0.0;
 
@@ -54,12 +55,21 @@ class UserSettingsState extends State<UserSettings> {
     //_checkSelectedModelDownloaded();
   }
 
+  bool get isWindows {
+    try {
+      return Platform.isWindows;
+    } catch (_) {
+      return false; // Safe fallback for unsupported platforms
+    }
+  }
+
   Future<void> _initCycle() async {
     await _loadStoredValues();
     await _fetchModelsCsv();
     await _loadStoredModel();
-    if (!(LocalStorageService.hasGPUInfo() &&
-        LocalStorageService.hasGPUVRam())) {
+    if (isWindows &&
+        !(LocalStorageService.hasGPUInfo() &&
+            LocalStorageService.hasGPUVRam())) {
       await getWindowsGPUInfo();
     }
   }
@@ -359,72 +369,78 @@ class UserSettingsState extends State<UserSettings> {
     });
   }
 
-  // Fetch CSV from GitHub
+  // Fetch CSV from URL
   Future<void> _fetchModelsCsv() async {
-    final url = Uri.parse(
-      'https://raw.githubusercontent.com/ssung13/SWEN670F2025/main/models.csv',
-    );
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final csvContent = response.body;
-        final Map<String, String> tempMap = {};
-        for (var line in LineSplitter.split(csvContent)) {
-          if (line.trim().isEmpty) continue;
-          final parts = line.split(',');
-          if (parts.length >= 2) tempMap[parts[0].trim()] = parts[1].trim();
-        }
-        setState(() {
-          modelMap = tempMap;
-          if (modelMap.isNotEmpty) {
-            selectedModel = modelMap.keys.first;
+    fetchModelsFail = false;
+    final downloadUrl = LocalStorageService.getLocalLLMDownloadURLPath();
+    if (downloadUrl != '') {
+      final url = Uri.parse(
+        downloadUrl,
+      );
+      try {
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final csvContent = response.body;
+          final Map<String, String> tempMap = {};
+          for (var line in LineSplitter.split(csvContent)) {
+            if (line.trim().isEmpty) continue;
+            final parts = line.split(',');
+            if (parts.length >= 2) tempMap[parts[0].trim()] = parts[1].trim();
           }
-          _modelsLoading = false;
-        });
-      } else {
-        print('Failed to fetch CSV: ${response.statusCode}');
+          setState(() {
+            modelMap = tempMap;
+            if (modelMap.isNotEmpty) {
+              selectedModel = modelMap.keys.first;
+            }
+            _modelsLoading = false;
+          });
+        } else {
+          print('Failed to fetch CSV: ${response.statusCode}');
+          setState(() => _modelsLoading = false);
+        }
+      } catch (e) {
+        print('Error fetching CSV: $e');
         setState(() => _modelsLoading = false);
       }
-    } catch (e) {
-      print('Error fetching CSV: $e');
-      setState(() => _modelsLoading = false);
+    } else {
+      setState(() {
+        fetchModelsFail = true;
+        _modelsLoading = false;
+      });
     }
   }
 
   // detects GPU for Local LLM and displays message accordingly
   Future<void> getWindowsGPUInfo() async {
     // only available in Windows
-    if (Platform.isWindows) {
-      // Run dxdiag and export results to a text file
-      final result = await Process.run('dxdiag', ['/t', 'gpu_info.txt']);
+    // Run dxdiag and export results to a text file
+    final result = await Process.run('dxdiag', ['/t', 'gpu_info.txt']);
 
-      if (result.exitCode == 0) {
-        final file = File('gpu_info.txt');
+    if (result.exitCode == 0) {
+      final file = File('gpu_info.txt');
 
-        // Read safely as Latin1 (Windows ANSI)
-        final bytes = await file.readAsBytes();
-        final content = const Latin1Decoder().convert(bytes);
+      // Read safely as Latin1 (Windows ANSI)
+      final bytes = await file.readAsBytes();
+      final content = const Latin1Decoder().convert(bytes);
 
-        // Extract GPU name and VRAM
-        final gpuMatch = RegExp(r'Card name:\s*(.*)').firstMatch(content);
-        final vramMatch =
-            RegExp(r'Dedicated Memory:\s*(.*)').firstMatch(content);
+      // Extract GPU name and VRAM
+      final gpuMatch = RegExp(r'Card name:\s*(.*)').firstMatch(content);
+      final vramMatch = RegExp(r'Dedicated Memory:\s*(.*)').firstMatch(content);
 
-        final gpu = gpuMatch?.group(1)?.trim() ?? 'Unknown GPU';
-        final vram = vramMatch?.group(1)?.trim() ?? 'Unknown VRAM';
+      final gpu = gpuMatch?.group(1)?.trim() ?? 'Unknown GPU';
+      final vram = vramMatch?.group(1)?.trim() ?? 'Unknown VRAM';
 
-        LocalStorageService.saveGPUInfo(gpu);
-        LocalStorageService.saveGPUVRam(vram);
+      LocalStorageService.saveGPUInfo(gpu);
+      LocalStorageService.saveGPUVRam(vram);
 
-        _gpuModel = gpu;
-        _gpuVRAM = vram;
+      _gpuModel = gpu;
+      _gpuVRAM = vram;
 
-        print("GPU : $gpu VRAM: $vram");
+      print("GPU : $gpu VRAM: $vram");
 
-        await file.delete();
-      } else {
-        print('dxdiag failed: ${result.stderr}');
-      }
+      await file.delete();
+    } else {
+      print('dxdiag failed: ${result.stderr}');
     }
   }
 
@@ -444,7 +460,6 @@ class UserSettingsState extends State<UserSettings> {
             LocalStorageService.getGPUVRam() != "Unknown VRAM")) {
       final double? vramGB =
           double.tryParse(vramInfo.replaceAll(RegExp(r'[^0-9.]'), ''));
-      print(vramGB);
       if (vramGB != null && vramGB / 1000 >= 8.0) {
         messageColor = Colors.green;
         icon = Icons.check_circle;
@@ -535,7 +550,7 @@ class UserSettingsState extends State<UserSettings> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Local LLM Model is not available in web',
+            'Local LLM Feature is not available in web',
             style: TextStyle(fontSize: 20),
           ),
         ],
@@ -557,6 +572,18 @@ class UserSettingsState extends State<UserSettings> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
+          if (fetchModelsFail)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.warning, color: Colors.red, size: 32),
+                Text(
+                  'Fetching recommended local LLM failed. Please check your connection or try again.',
+                  style: TextStyle(fontSize: 16, color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
 
           Row(
             children: [
@@ -832,9 +859,8 @@ Running such models locally demands high-end hardware:
 Attempting to run this app without the required model and hardware may result in unreliable output or total failure.
 ''',
               style: TextStyle(
-                color: Colors.redAccent,
+                color: Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.w600,
-                fontStyle: FontStyle.italic,
                 fontSize: 14,
                 height: 1.4, // for readability across lines
               ),

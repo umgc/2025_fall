@@ -20,6 +20,8 @@ import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/override.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class IepPage extends StatefulWidget {
   IepPage();
@@ -52,6 +54,8 @@ class _IepPageState extends State<IepPage> {
   TextEditingController iepRecommendation = TextEditingController();
 
   LlmType? selectedLLM;
+  bool _localLlmAvail = !kIsWeb;
+  bool canceled = false;
 
   @override
   void initState() {
@@ -326,20 +330,42 @@ class _IepPageState extends State<IepPage> {
                                 items: LlmType.values.map((LlmType llm) {
                                   return DropdownMenuItem<LlmType>(
                                     value: llm,
-                                    enabled:
+                                    enabled: (llm == LlmType.LOCAL &&
+                                            LocalStorageService
+                                                    .getLocalLLMPath() !=
+                                                "" &&
+                                            _localLlmAvail) ||
                                         LocalStorageService.userHasLlmKey(llm),
                                     child: Text(
                                       llm.displayName,
                                       style: TextStyle(
-                                        color:
-                                            LocalStorageService.userHasLlmKey(
-                                                    llm)
-                                                ? Colors.black87
-                                                : Colors.grey,
+                                        color: (llm == LlmType.LOCAL &&
+                                                    LocalStorageService
+                                                            .getLocalLLMPath() !=
+                                                        "" &&
+                                                    _localLlmAvail) ||
+                                                LocalStorageService
+                                                    .userHasLlmKey(llm)
+                                            ? Colors.black87
+                                            : Colors.grey,
                                       ),
                                     ),
                                   );
                                 }).toList()))),
+                    if (selectedLLM == LlmType.LOCAL) ...[
+                      const SizedBox(
+                          width: 350,
+                          child: Align(
+                            alignment: AlignmentGeometry.topRight,
+                            child: Text(
+                              "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          )),
+                    ],
                     SizedBox(
                         width: 350,
                         child: Align(
@@ -353,13 +379,41 @@ class _IepPageState extends State<IepPage> {
                                         selectedAssignment!, iepSummary)
                                     : null,
                                 child: _isAIRecommending
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2),
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                          if (selectedLLM == LlmType.LOCAL)
+                                            TextButton(
+                                              onPressed: () async {
+                                                bool decision =
+                                                    await LocalLLMService()
+                                                        .showCancelConfirmationDialog();
+                                                if (decision) {
+                                                  canceled = true;
+                                                }
+                                              },
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    Colors.redAccent,
+                                              ),
+                                              child: const Text(
+                                                'Cancel Generation',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.w500),
+                                              ),
+                                            ),
+                                        ],
                                       )
-                                    : Text('Recommend IEP')))),
+                                    : const Text('Recommend IEP')))),
+
                     SizedBox(
                         width: 350,
                         child: TextField(
@@ -799,6 +853,8 @@ class _IepPageState extends State<IepPage> {
       aiModel = GrokLLM(LocalStorageService.getGrokKey());
     } else if (selectedLLM == LlmType.DEEPSEEK) {
       aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
     } else {
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     }
@@ -837,54 +893,60 @@ class _IepPageState extends State<IepPage> {
     DateTime? deadline;
     int? newAttempts;
 
-    try {
-      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
-      String normalizedResult = result.trim();
-      // Remove markdown code block wrappers if present.
-      if (normalizedResult.startsWith("```json")) {
-        normalizedResult = normalizedResult.substring(7);
-      }
-      if (normalizedResult.endsWith("```")) {
-        normalizedResult =
-            normalizedResult.substring(0, normalizedResult.length - 3);
-      }
-      normalizedResult = normalizedResult.trim();
-      print(normalizedResult);
-      var jsonData = json.decode(normalizedResult);
-      List<Map<String, dynamic>>? jsonList;
-      if (jsonData is List) {
-        jsonList = List<Map<String, dynamic>>.from(jsonData);
-        if (jsonList.isNotEmpty && jsonList[0].containsKey("Summary")) {
-          summary = jsonList[0]["Summary"].toString();
-        }
-        if (jsonList.length > 1 &&
-            selectedAssignment.type == "quiz" &&
-            jsonList[1].containsKey("Attempts")) {
-          newAttempts = jsonList[1]["Attempts"];
-        }
-        if (jsonList.length > 2 && jsonList[2].containsKey("Due Date")) {
-          due = DateFormat.yMd().tryParse(jsonList[2]["Due Date"]) ??
-              DateTime.now();
-        }
-        if (jsonList.length > 3 &&
-            selectedAssignment.type == "essay" &&
-            jsonList[3].containsKey("Deadline")) {
-          deadline = DateFormat.yMd().tryParse(jsonList[3]["Deadline"]) ??
-              DateTime.now();
-          if (due != null && deadline.isBefore(due)) {
-            deadline = due;
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+      try {
+        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+        String normalizedResult = result.trim();
+        if (!canceled) {
+          // Remove markdown code block wrappers if present.
+          if (normalizedResult.startsWith("```json")) {
+            normalizedResult = normalizedResult.substring(7);
+          }
+          if (normalizedResult.endsWith("```")) {
+            normalizedResult =
+                normalizedResult.substring(0, normalizedResult.length - 3);
+          }
+          normalizedResult = normalizedResult.trim();
+          print(normalizedResult);
+          var jsonData = json.decode(normalizedResult);
+          List<Map<String, dynamic>>? jsonList;
+          if (jsonData is List) {
+            jsonList = List<Map<String, dynamic>>.from(jsonData);
+            if (jsonList.isNotEmpty && jsonList[0].containsKey("Summary")) {
+              summary = jsonList[0]["Summary"].toString();
+            }
+            if (jsonList.length > 1 &&
+                selectedAssignment.type == "quiz" &&
+                jsonList[1].containsKey("Attempts")) {
+              newAttempts = jsonList[1]["Attempts"];
+            }
+            if (jsonList.length > 2 && jsonList[2].containsKey("Due Date")) {
+              due = DateFormat.yMd().tryParse(jsonList[2]["Due Date"]) ??
+                  DateTime.now();
+            }
+            if (jsonList.length > 3 &&
+                selectedAssignment.type == "essay" &&
+                jsonList[3].containsKey("Deadline")) {
+              deadline = DateFormat.yMd().tryParse(jsonList[3]["Deadline"]) ??
+                  DateTime.now();
+              if (due != null && deadline.isBefore(due)) {
+                deadline = due;
+              }
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content:
+                      Text("AI analysis did not return a valid JSON array.")),
+            );
           }
         }
-      } else {
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("AI analysis did not return a valid JSON array.")),
+          SnackBar(content: Text("Error during AI analysis: $e")),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error during AI analysis: $e")),
-      );
     }
     setState(() {
       _isAIRecommending = false;

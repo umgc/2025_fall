@@ -549,9 +549,8 @@ class SubmissionListState extends State<SubmissionList> {
                                                   if (submissionWithGrade !=
                                                       null)
                                                     isLoading
-                                                        ? Stack(
-                                                            alignment: Alignment
-                                                                .center,
+                                                        ? Row(
+                                                            
                                                             children: [
                                                               const CircularProgressIndicator(),
                                                               if (selectedLLM ==
