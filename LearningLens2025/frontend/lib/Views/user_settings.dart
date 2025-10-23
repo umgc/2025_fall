@@ -469,7 +469,7 @@ class UserSettingsState extends State<UserSettings> {
         message =
             'Your system meets the recommended hardware requirements for running a local large language model (LLM). '
             'A discrete GPU with at least 8 GB of VRAM has been detected, providing acceptable performance for 7B models, which are recommended for both efficiency and accuracy. '
-            'As a general guideline, each 1 billion (1B) model parameters typically requires approximately 1 GB of VRAM. Your GPU may not be optimal for models larger than 7B. Please ensure your system has sufficient VRAM before attempting to run larger models. '
+            'As a general guideline, each 1 billion (1B) model parameters typically requires about 1 GB of VRAM. Your GPU may not be optimal for models larger than 7B, so please ensure your system has enough VRAM before attempting to run larger models. '
             'Ensure your graphics drivers are up to date and that sufficient resources are available for optimal operation. '
             'For the best performance and accuracy, using an API-hosted LLM is still recommended.';
       } else {
@@ -529,7 +529,6 @@ class UserSettingsState extends State<UserSettings> {
                     child: Text(
                       message,
                       style: TextStyle(
-                        color: messageColor,
                         fontWeight: FontWeight.w500,
                         fontSize: 14,
                         height: 1.5,
@@ -571,9 +570,40 @@ class UserSettingsState extends State<UserSettings> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Local LLM Model:',
+            'Local LLM:',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8.0),
+            child: Text(
+              '''
+⚠️ Hardware & Model Requirements
+
+This app requires a Qwen model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
+Currently, only GGUF format is supported.
+
+Running such models locally demands high-end hardware:
+• A discrete GPU with at least 8GB or more VRAM is required (RTX 3060 or better).
+• Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
+• For the best accuracy, a Qwen model with more than 14B parameters is recommended (12GB or more VRAM is recommended)
+
+Attempting to run this app without the required model and hardware may result in unreliable output or total failure.
+
+Please refer to the information below to better understand your device's GPU and memory specifications.
+''',
+              style: TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                height: 1.4, // for readability across lines
+              ),
+              textAlign: TextAlign.justify,
+            ),
+          ),
+
+          buildGpuStatusMessage(),
+
+          const Divider(),
           const SizedBox(height: 8),
           if (fetchModelsFail)
             Row(
@@ -587,7 +617,10 @@ class UserSettingsState extends State<UserSettings> {
                 ),
               ],
             ),
-
+          const Text(
+            'Load Local LLM:',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           Row(
             children: [
               // Dropdown with checkmark
@@ -707,7 +740,6 @@ class UserSettingsState extends State<UserSettings> {
                   }).toList(),
                 ),
               ),
-              const SizedBox(width: 10),
 
               // Right-hand panel
               if (selectedModel != null)
@@ -846,34 +878,7 @@ class UserSettingsState extends State<UserSettings> {
                 style: const TextStyle(fontStyle: FontStyle.italic),
               ),
             ),
-          const Padding(
-            padding: EdgeInsets.only(top: 8.0),
-            child: Text(
-              '''
-⚠️ Hardware & Model Requirements
-
-This app requires a Qwen model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
-
-Running such models locally demands high-end hardware:
-• A discrete GPU with at least 8GB or more VRAM is required (RTX 3060 or better).
-• Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
-• For the best accuracy, a Qwen model with more than 14B parameters is recommended (12GB or more VRAM is recommended)
-
-Attempting to run this app without the required model and hardware may result in unreliable output or total failure.
-''',
-              style: TextStyle(
-                color: Color.fromARGB(255, 0, 0, 0),
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                height: 1.4, // for readability across lines
-              ),
-              textAlign: TextAlign.justify,
-            ),
-          ),
-
-          buildGpuStatusMessage(),
-
-          const Divider(),
+          const SizedBox(width: 10),
         ],
       );
     }
