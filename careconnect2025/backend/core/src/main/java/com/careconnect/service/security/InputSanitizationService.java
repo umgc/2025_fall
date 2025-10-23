@@ -16,7 +16,7 @@ public class InputSanitizationService {
 
     // Patterns for detecting potentially harmful content
     private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
-        "(?i).*(union|select|insert|update|delete|drop|alter|create|exec|execute|script|javascript|vbscript).*"
+        "(?i)(?:'\\s*or\\s*'1'='1|--|;\\s*drop\\s+table|;\\s*select\\s+.*\\s+from|\\bunion\\b\\s+select|\\bexec\\b|\\bexecute\\b|\\bcreate\\b\\s+table|\\balter\\b\\s+table|\\bdelete\\b\\s+from|\\binsert\\b\\s+into|\\bupdate\\b\\s+.*\\s+set)"
     );
 
     private static final Pattern XSS_PATTERN = Pattern.compile(
@@ -52,21 +52,21 @@ public class InputSanitizationService {
         boolean shouldBlock = false;
 
         // Check for SQL injection attempts
-        if (SQL_INJECTION_PATTERN.matcher(input).matches()) {
+        if (SQL_INJECTION_PATTERN.matcher(input).find()) {
             issues.add("Potential SQL injection detected");
             shouldBlock = true;
             securityAuditService.logSecurityViolation(userId, conversationId, "SQL_INJECTION_ATTEMPT", input.length() + " chars");
         }
 
         // Check for XSS attempts
-        if (XSS_PATTERN.matcher(input).matches()) {
+        if (XSS_PATTERN.matcher(input).find()) {
             issues.add("Potential XSS detected");
             shouldBlock = true;
             securityAuditService.logSecurityViolation(userId, conversationId, "XSS_ATTEMPT", input.length() + " chars");
         }
 
         // Check for prompt injection attempts
-        if (PROMPT_INJECTION_PATTERN.matcher(input).matches()) {
+        if (PROMPT_INJECTION_PATTERN.matcher(input).find()) {
             issues.add("Potential prompt injection detected");
             shouldBlock = true;
             securityAuditService.logSecurityViolation(userId, conversationId, "PROMPT_INJECTION_ATTEMPT", input.length() + " chars");
@@ -78,7 +78,7 @@ public class InputSanitizationService {
 
         // Basic sanitization - remove potentially harmful characters
         String sanitized = input
-            .replaceAll("<script[^>]*>.*?</script>", "")
+            .replaceAll("(?s)<script[^>]*>.*?</script>", "")
             .replaceAll("(?i)javascript:", "")
             .replaceAll("(?i)vbscript:", "")
             .trim();

@@ -635,8 +635,8 @@ public class DefaultAIChatService implements AIChatService {
 
                            aiResponse = responseResult.getSanitizedContent();
 
-                           // Add sanitized AI response to memory (use raw for internal memory, sanitized for user)
-                           chatMemory.add(dev.langchain4j.data.message.AiMessage.from(rawAiResponse));
+                           // Add sanitized AI response to memory (store sanitized version to prevent sensitive info leakage)
+                           chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
 
                            // Log AI response (use sanitized length for accurate metrics)
                            chatAuditService.logAiResponse(
