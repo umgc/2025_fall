@@ -56,8 +56,8 @@ public class ResponseSanitizationService {
         // Remove potential sensitive data
         if (SENSITIVE_DATA_PATTERN.matcher(response).find()) {
             sanitized = sanitized.replaceAll("(?i)(password|secret|token|credential): [^\\s]+", "[Sensitive data removed]");
-            // Remove SSNs in formats: XXX-XX-XXXX, XXX XX XXXX, XXXXXXXXX
-            sanitized = sanitized.replaceAll("\\b\\d{3}-\\d{2}-\\d{4}\\b|\\b\\d{3}\\s\\d{2}\\s\\d{4}\\b|\\b\\d{9}\\b", "[SSN removed]");
+            // Remove SSNs in formats: XXX-XX-XXXX, XXX XX XXXX
+            sanitized = sanitized.replaceAll("\\b\\d{3}-\\d{2}-\\d{4}\\b|\\b\\d{3}\\s\\d{2}\\s\\d{4}\\b", "[SSN removed]");
             sanitized = sanitized.replaceAll("\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b", "[Credit card number removed]");
             sanitizedItems.add("Sensitive personal data");
             securityAuditService.logSanitizationAction(userId, conversationId, "RESPONSE_SENSITIVE_DATA_REMOVED", "Removed sensitive data from AI response");
