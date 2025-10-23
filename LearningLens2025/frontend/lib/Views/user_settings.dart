@@ -279,6 +279,7 @@ class UserSettingsState extends State<UserSettings> {
     );
   }
 
+/*
   // -------------------------------------------
   // API Key Block
   // -------------------------------------------
@@ -349,6 +350,7 @@ class UserSettingsState extends State<UserSettings> {
       ],
     );
   }
+  */
 
   Future<void> _loadStoredModel() async {
     final storedPath = LocalStorageService.getLocalLLMPath();
@@ -877,6 +879,9 @@ Attempting to run this app without the required model and hardware may result in
     }
   }
 
+  // -------------------------------------------
+  // Theme Color Picker
+  // -------------------------------------------
   void _pickColor() async {
     await showDialog(
       context: context,
