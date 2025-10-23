@@ -14,30 +14,72 @@ class VideoWidget extends StatefulWidget{
 
 class VideoWidgetState extends State<VideoWidget>
 {
-  late CameraController controller;
-  late Future<void> controllerFuture;
+  CameraController? controller;
+  Future<void>? controllerFuture;
 
   @override
   void initState() {
     super.initState();
+    _initializeCamera();
+  }
 
-    //controller = CameraController(widget.camera, ResolutionPreset.medium);
-    controllerFuture = controller.initialize();
+  Future<void> _initializeCamera() async {
+    try {
+      // Get available cameras
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        return;
+      }
+
+      // Initialize the camera controller
+      controller = CameraController(
+        cameras.first,
+        ResolutionPreset.medium,
+      );
+
+      controllerFuture = controller!.initialize();
+      setState(() {});
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+    }
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return  Container(
-      alignment: Alignment.center,
-      height: 50,
-      width: 50,
-      child: Text("This is the Video Widget"),
+    if (controller == null || controllerFuture == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return FutureBuilder<void>(
+      future: controllerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error: ${snapshot.error}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
+          }
+          return AspectRatio(
+            aspectRatio: controller!.value.aspectRatio,
+            child: CameraPreview(controller!),
+          );
+        } else {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+      },
     );
   }
 

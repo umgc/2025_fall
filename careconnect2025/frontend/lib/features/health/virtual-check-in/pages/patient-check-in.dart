@@ -37,15 +37,46 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   void cameraHandler() async
   {
-    ///TODO: Find a way to turn videoCallActive false
     if(!videoCallActive)
       {
         targetCamera = setUpCamera();
-        ///videoWidget = VideoWidget(camera: targetCamera);
         showVideoCall = true;
+        videoCallActive = true;
         setState(() {
         });
       }
+  }
+
+  void submitVideo() async {
+    // TODO: Implement video submission logic
+    // This is where you would upload/save the video recording
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Video submitted successfully! (placeholder)"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // Close the video recording
+    setState(() {
+      showVideoCall = false;
+      videoCallActive = false;
+    });
+  }
+
+  void discardVideo() async {
+    // Close the video recording without saving
+    setState(() {
+      showVideoCall = false;
+      videoCallActive = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Video discarded"),
+        backgroundColor: Colors.grey,
+      ),
+    );
   }
 
   @override
@@ -54,6 +85,13 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
       appBar: AppBarHelper.createAppBar(
         context,
         title: 'Daily Check-In',
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        onPressed: () => cameraHandler(),
+        tooltip: 'Start Video Call',
+        child: const Icon(Icons.video_call),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -72,19 +110,6 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  FloatingActionButton(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    onPressed: () => cameraHandler(),
-                    child: Icon(Icons.video_call)
-                  ),
-                  if(showVideoCall)
-                    Container(
-                        alignment: Alignment.center,
-                        height: 50,
-                        width: 50,
-                        child: VideoWidget()
-                    ),
                   const SizedBox(height: 4),
                   Text(
                     "Share how you're feeling today",
@@ -92,8 +117,56 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
               ),
+
+              // Video call widget
+              if(showVideoCall)
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const VideoWidget(),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: discardVideo,
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Discard'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey[600],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: submitVideo,
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: const Text('Submit'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if(showVideoCall)
+                const SizedBox(height: 16),
 
               // Mood selection card
               Card(
