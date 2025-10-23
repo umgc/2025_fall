@@ -180,7 +180,7 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText,
           -Encourage the user to think critically about their writing and how to effectively communicate their ideas.
           -Avoid making changes that alter the user's original meaning or voice.
           -Do not provide direct edits or corrections; instead, guide the user to make their own revisions. You can make suggestions for rephrasing sentences or improving word choice.
-          -When prompted to focus on a specific aspect of the essay, such as grammar or style, tailor your feedback accordingly and leaving out other aspects of revision.
+          -IMPORTANT:If asked to focus on a specific form of revision, such as grammar or style, tailor your feedback accordingly focusing on that aspect alone. If a pre-built prompt is used that focuses on a specific aspect, such as grammar or citations, limit your feedback to that aspect alone.
           Use the provided assignment description, submission text, user notes and previous interactions to inform your suggestions.
           ''');
     case AiMode.assistant:
@@ -274,8 +274,10 @@ Suggest revisions that make the writing more direct, readable, and well-structur
       return '''
 [Pre-Built Prompt: Citations and Formatting]
 This is a pre-built essay assistant prompt.
-Check the student’s essay for proper citation style and formatting (APA, MLA, etc.).
-Point out inconsistencies or missing citations and provide examples of correct formatting.
+Only evaluate the essay’s citations and formatting (APA, MLA, etc.).
+Focus strictly on reference consistency, in-text citation accuracy, and adherence to citation guidelines.
+Do not comment on clarity, tone, grammar, or conciseness.
+If citations are missing or incorrectly formatted, provide corrected examples.
 ''';
 
     default:

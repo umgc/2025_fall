@@ -25,7 +25,7 @@ class DeepseekLLM implements LLM {
     this.apiKey, {
     int? contextSize,
     int? maxOutputTokens,
-  })  : contextSize = contextSize ?? 4000,
+  })  : contextSize = contextSize ?? 16000,
         maxOutputTokens = maxOutputTokens ?? 1000;
 
   /// Converts the HTTP response string to a JSON object.

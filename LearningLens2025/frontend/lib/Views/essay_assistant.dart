@@ -4,16 +4,17 @@
 // Sections:
 //   1) Imports
 //   2) Top-level types/utilities (enum, draft holder, helpers)
-//   3) EssayAssistant widget + State
-//      3.1) State fields
-//      3.2) Lifecycle (init/dispose)
-//      3.3) Chat handling (send/scroll)
-//      3.4) LMS essay loading (left sidebar)
-//      3.5) Quill editor state + draft persistence stubs
-//      3.6) Build method (layout: Left | Center | Right)
-//      3.7) Modals (Essay details, Submit confirm, Quill editor)
-//   4) Pure helpers (top-level functions)
-//   5) Small UI helpers (stateless widgets)
+//   3) Pure helpers (top-level functions)
+//   4) EssayAssistant widget + State
+//      4.1) State fields
+//      4.2) Lifecycle (init/dispose)
+//      4.3) Chat handling (send/scroll)
+//      4.4) LMS essay loading (left sidebar)
+//      4.5) Quill editor state + draft persistence stubs
+//      4.6) Build method (layout: Left | Center | Right)
+//      4.7) Modals (Essay details, Submit confirm, Quill editor)
+//   5) Pure helpers (top-level functions)
+//   6) Small UI helpers (stateless widgets)
 // ─────────────────────────────────────────────────────────────────
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -592,6 +593,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       llmContextSize: aiModel.contextSize,
       maxOutputTokens: aiModel.maxOutputTokens,
     );
+    print('Full context for LLM:\n$fullContext');
 
     // Log the user's turn immediately
     _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
