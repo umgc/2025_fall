@@ -52,6 +52,7 @@ public class DefaultAIChatService implements AIChatService {
     private final LangChainGovernanceService langChainGovernanceService;
     private final AIChatCacheService cacheService;
     private final SecurityAuditService securityAuditService;
+    private final DocumentProcessingService documentProcessingService;
 
 
     @Autowired
@@ -69,7 +70,8 @@ public class DefaultAIChatService implements AIChatService {
                               ResponseSanitizationService responseSanitizationService,
                               LangChainGovernanceService langChainGovernanceService,
                               AIChatCacheService cacheService,
-                              SecurityAuditService securityAuditService) {
+                              SecurityAuditService securityAuditService,
+                              DocumentProcessingService documentProcessingService) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
@@ -85,6 +87,7 @@ public class DefaultAIChatService implements AIChatService {
         this.langChainGovernanceService = langChainGovernanceService;
         this.cacheService = cacheService;
         this.securityAuditService = securityAuditService;
+        this.documentProcessingService = documentProcessingService;
     }
     // Helper: Get or create patient AI config (with caching)
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
@@ -541,6 +544,14 @@ public class DefaultAIChatService implements AIChatService {
 
             String sanitizedUserMessage = userInputResult.getSanitizedContent();
 
+            // Process uploaded files and append to message
+            if (request.getUploadedFiles() != null && !request.getUploadedFiles().isEmpty()) {
+                String fileContent = processUploadedFiles(request.getUploadedFiles());
+                if (!fileContent.isEmpty()) {
+                    sanitizedUserMessage += "\n\n**Attached Documents:**\n" + fileContent;
+                }
+            }
+
             // System prompt
             String systemPrompt = null;
             if (request instanceof com.careconnect.dto.ChatRequest) {
@@ -729,6 +740,41 @@ public class DefaultAIChatService implements AIChatService {
             log.error("Error processing chat request: ", error);
             return buildErrorResponse(request, "An error occurred while processing your request");
         }
+    }
+
+    /**
+     * Process uploaded files and extract text content
+     */
+    private String processUploadedFiles(List<com.careconnect.dto.UploadedFileDTO> uploadedFiles) {
+        StringBuilder fileContent = new StringBuilder();
+
+        for (com.careconnect.dto.UploadedFileDTO file : uploadedFiles) {
+            try {
+                log.debug("Processing uploaded file: {} ({})", file.getFilename(), file.getContentType());
+
+                String extractedText = documentProcessingService.extractTextContent(file);
+
+                if (extractedText != null && !extractedText.trim().isEmpty()) {
+                    fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                    fileContent.append(extractedText);
+                    fileContent.append("\n\n");
+
+                    log.info("Successfully processed file: {} ({} characters extracted)",
+                             file.getFilename(), extractedText.length());
+                } else {
+                    log.warn("No text content extracted from file: {}", file.getFilename());
+                    fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                    fileContent.append("[File uploaded but no text content could be extracted]\n\n");
+                }
+
+            } catch (Exception e) {
+                log.error("Error processing uploaded file {}: {}", file.getFilename(), e.getMessage());
+                fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                fileContent.append("[Error processing file: ").append(e.getMessage()).append("]\n\n");
+            }
+        }
+
+        return fileContent.toString().trim();
     }
 
     // ...all other methods from original AIChatService...
