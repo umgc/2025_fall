@@ -48,8 +48,9 @@
 "navMenu": "मेनु",
 "navPatientList": "रोगी सूची",
 "navAnalytics": "विश्लेषण",
-"navMore": "थप",
+  "navMore": "थप",
 
+  "notetakerAssistant": "नोट टेकर सहायक",
 
 "settingsTitle": "सेटिङ्स",
 "settingsAppearance": "दिखावट",

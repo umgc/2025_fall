@@ -1,4 +1,4 @@
- import 'dart:developer' show log;
+import 'dart:developer' show log;
 import 'package:flutter/foundation.dart';
 // import 'package:flutter_dotenv/flutter_dotenv.dart'; // <-- REMOVED
 
@@ -6,30 +6,36 @@ import 'package:flutter/foundation.dart';
 // We define all the compile-time variables here
 
 const String _agoraAppId = String.fromEnvironment('AGORA_APP_ID');
-const String _agoraAppCertificate =
-    String.fromEnvironment('AGORA_APP_CERTIFICATE');
+const String _agoraAppCertificate = String.fromEnvironment(
+  'AGORA_APP_CERTIFICATE',
+);
 
 // This is the new, unified backend URL.
 // Set your local dev URL in defaultValue
 const String _backendBaseUrl = String.fromEnvironment(
   'BACKEND_URL',
-  defaultValue: 'http://192.168.1.155:8080',
+  defaultValue: 'http://localhost:8080',
 );
 
-const String _wsOverrideUrl =
-    String.fromEnvironment('WEBSOCKET_SERVER_URL');
+const String _wsOverrideUrl = String.fromEnvironment('WEBSOCKET_SERVER_URL');
 const String _backendToken = String.fromEnvironment('CC_BACKEND_TOKEN');
 const String _jwtSecret = String.fromEnvironment('JWT_SECRET');
 const String _deepSeekUri = String.fromEnvironment('DEEPSEEK_URI');
 const String _openAIKey = String.fromEnvironment('OPENAI_API_KEY');
 const String _deepSeekKey = String.fromEnvironment('DEEPSEEK_API_KEY');
 const String _googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
-const String _appDomain =
-    String.fromEnvironment('APP_DOMAIN', defaultValue: 'localhost');
-const String _appPort =
-    String.fromEnvironment('APP_PORT', defaultValue: '50030');
+const String _appDomain = String.fromEnvironment(
+  'APP_DOMAIN',
+  defaultValue: 'localhost',
+);
+const String _appPort = String.fromEnvironment(
+  'APP_PORT',
+  defaultValue: '50030',
+);
 const String _fitbitClientId = String.fromEnvironment('FITBIT_CLIENT_ID');
-const String _fitbitClientSecret = String.fromEnvironment('FITBIT_CLIENT_SECRET');
+const String _fitbitClientSecret = String.fromEnvironment(
+  'FITBIT_CLIENT_SECRET',
+);
 
 String getFitbitClientId() {
   final clientId = _fitbitClientId;
@@ -69,7 +75,7 @@ String _getUnifiedWebSocketBaseUrl() {
   if (_wsOverrideUrl.isNotEmpty) {
     return _wsOverrideUrl;
   }
- 
+
   final base = getBackendBaseUrl();
   if (base.startsWith('https://')) {
     return base.replaceFirst('https://', 'wss://');
@@ -98,7 +104,7 @@ String getBackendBaseUrl() {
   // as the build command now defines the correct URL.
   // We just return the value passed in.
   if (_backendBaseUrl.isEmpty) {
-     throw Exception('BACKEND_URL not set via --dart-define');
+    throw Exception('BACKEND_URL not set via --dart-define');
   }
   return _backendBaseUrl;
 }
