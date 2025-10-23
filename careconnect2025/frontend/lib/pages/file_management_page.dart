@@ -498,22 +498,19 @@ class _FileManagementPageState extends State<FileManagementPage>
             ),
             const SizedBox(height: 24),
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SpeechToTextCard(
-                  patientId: _userId,
-                  onUploadSuccess: (response) {
-                    _loadFiles(); // Refresh the files list
-                  },
-                  onUploadError: (error) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(error),
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                    );
-                  },
-                ),
+              child: StreamingAsrAndDiarizationScreen(
+                patientId: _userId,
+                onUploadSuccess: (response) {
+                  _loadFiles(); // Refresh the files list
+                },
+                onUploadError: (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(error),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                },
               ),
             )
           ],
