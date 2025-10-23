@@ -152,8 +152,25 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   }
 
   void _onMicPressed() {
-    setState(() => _wakeDetected = true);
-    _startListening();
+    if (_isListening) {
+      // Stop listening and process what we have
+      _timeoutTimer?.cancel();
+      _speech.stop();
+
+      final text = _buffer.trim().isNotEmpty
+          ? _buffer
+          : _speech.lastRecognizedWords;
+
+      if (text.trim().isNotEmpty) {
+        _process(text);
+      } else {
+        _showError('No speech detected.');
+        _reset();
+      }
+    } else {
+      setState(() => _wakeDetected = true);
+      _startListening();
+    }
   }
 
   @override

@@ -85,7 +85,9 @@ cd summer2025
     
 
 
-  2. ### Platform Setup & Run
+  2.  ### Load the Environment Variables
+        Load your .env into your environment by running `load-env.sh` (Windows: `load-env.bat`)
+3. ### Platform Setup & Run
 
       #### Quick Setup (All Platforms)
       ```bash
