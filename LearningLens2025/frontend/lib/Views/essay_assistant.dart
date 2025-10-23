@@ -439,7 +439,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     });
   }
 
-
   // Helper to append System lines only
   void _appendSystemMessage(String text) {
     setState(() {
@@ -505,7 +504,6 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
     _activeAssistantMsgId = null;
   }
-  
 
   /// Core method to get LLM response based on current session and context
   Future<String?> getLLMResponse(
@@ -558,25 +556,21 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         final key = LocalStorageService.getOpenAIKey();
         if (key.isEmpty) return _appendError('OpenAI key missing');
         aiModel = OpenAiLLM(key);
-        break;
 
       case LlmType.GROK:
         final key = LocalStorageService.getGrokKey();
         if (key.isEmpty) return _appendError('Grok key missing');
         aiModel = GrokLLM(key);
-        break;
 
       case LlmType.PERPLEXITY:
         final key = LocalStorageService.getPerplexityKey();
         if (key.isEmpty) return _appendError('Perplexity key missing');
         aiModel = PerplexityLLM(key);
-        break;
 
       case LlmType.DEEPSEEK:
         final key = LocalStorageService.getDeepseekKey();
         if (key.isEmpty) return _appendError('Deepseek key missing');
         aiModel = DeepseekLLM(key);
-        break;
     }
     final fullContext = generateContext(
       permTokens: permContext,
