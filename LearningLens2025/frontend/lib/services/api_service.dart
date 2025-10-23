@@ -118,5 +118,4 @@ class ApiService {
     final file = File(filePath);
     return await http.MultipartFile.fromPath(fieldName, file.path);
   }
-
 }

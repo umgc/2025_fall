@@ -1443,11 +1443,14 @@ class MoodleLmsService implements LmsInterface {
     if (streamed.statusCode != 200) _throwIfMoodleException(body);
 
     final decoded = jsonDecode(body);
-    if (decoded is Map && decoded['itemid'] != null)
+    if (decoded is Map && decoded['itemid'] != null) {
       return decoded['itemid'] as int;
+    }
     if (decoded is List &&
         decoded.isNotEmpty &&
-        decoded.first['itemid'] != null) return decoded.first['itemid'] as int;
+        decoded.first['itemid'] != null) {
+      return decoded.first['itemid'] as int;
+    }
     throw StateError('Unexpected upload response: $body');
   }
 
