@@ -7,6 +7,11 @@ import com.careconnect.dto.ChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
 import com.careconnect.util.UserAIConfigDefaults;
+import com.careconnect.service.security.InputSanitizationService;
+import com.careconnect.service.security.ResponseSanitizationService;
+import com.careconnect.service.security.LangChainGovernanceService;
+import com.careconnect.service.security.SecurityAuditService;
+import com.careconnect.service.cache.AIChatCacheService;
 import lombok.Builder;
 import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +27,7 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import dev.langchain4j.exception.AuthenticationException;
 
 @Service
 @Primary
@@ -41,6 +47,13 @@ public class DefaultAIChatService implements AIChatService {
     private final ChatMemoryFactory chatMemoryFactory;
     private final ChatAuditService chatAuditService;
     private final CaregiverPatientLinkService caregiverPatientLinkService;
+    private final InputSanitizationService inputSanitizationService;
+    private final ResponseSanitizationService responseSanitizationService;
+    private final LangChainGovernanceService langChainGovernanceService;
+    private final AIChatCacheService cacheService;
+    private final SecurityAuditService securityAuditService;
+    private final DocumentProcessingService documentProcessingService;
+
 
     @Autowired
     public DefaultAIChatService(ChatModel chatModel,
@@ -52,7 +65,13 @@ public class DefaultAIChatService implements AIChatService {
                               PatientContextRetrievalService patientContextRetrievalService,
                               ChatMemoryFactory chatMemoryFactory,
                               ChatAuditService chatAuditService,
-                              CaregiverPatientLinkService caregiverPatientLinkService) {
+                              CaregiverPatientLinkService caregiverPatientLinkService,
+                              InputSanitizationService inputSanitizationService,
+                              ResponseSanitizationService responseSanitizationService,
+                              LangChainGovernanceService langChainGovernanceService,
+                              AIChatCacheService cacheService,
+                              SecurityAuditService securityAuditService,
+                              DocumentProcessingService documentProcessingService) {
         this.chatModel = chatModel;
         this.userAIConfigRepository = userAIConfigRepository;
         this.chatConversationRepository = chatConversationRepository;
@@ -63,23 +82,29 @@ public class DefaultAIChatService implements AIChatService {
         this.chatMemoryFactory = chatMemoryFactory;
         this.chatAuditService = chatAuditService;
         this.caregiverPatientLinkService = caregiverPatientLinkService;
+        this.inputSanitizationService = inputSanitizationService;
+        this.responseSanitizationService = responseSanitizationService;
+        this.langChainGovernanceService = langChainGovernanceService;
+        this.cacheService = cacheService;
+        this.securityAuditService = securityAuditService;
+        this.documentProcessingService = documentProcessingService;
     }
-    // Helper: Get or create patient AI config
+    // Helper: Get or create patient AI config (with caching)
     private UserAIConfig getOrCreateUserAIConfig(Long userId, Long patientId) {
-        return userAIConfigRepository.findByUserIdAndPatientIdAndIsActiveTrue(userId, patientId)
+        return cacheService.findUserAIConfig(userId, patientId)
                 .orElseGet(() -> createDefaultUserAIConfig(userId, patientId));
     }
 
-    // Helper: Create default AI config
+    // Helper: Create default AI config (with caching)
     private UserAIConfig createDefaultUserAIConfig(Long userId, Long patientId) {
         UserAIConfig config = UserAIConfigDefaults.createMedicalDefaultConfig(userId, patientId);
-        return userAIConfigRepository.save(config);
+        return cacheService.saveUserAIConfig(config);
     }
 
-    // Helper: Get or create conversation
+    // Helper: Get or create conversation (with caching)
     private ChatConversation getOrCreateConversation(ChatRequest request, UserAIConfig aiConfig) {
         if (request.getConversationId() != null) {
-            Optional<ChatConversation> existing = chatConversationRepository.findByConversationIdAndIsActiveTrue(request.getConversationId());
+            Optional<ChatConversation> existing = cacheService.findConversation(request.getConversationId());
             if (existing.isPresent()) {
                 return existing.get();
             } else {
@@ -94,7 +119,7 @@ public class DefaultAIChatService implements AIChatService {
                         .aiModelUsed(determineModel(request, aiConfig))
                         .isActive(true)
                         .build();
-                return chatConversationRepository.save(newConversation);
+                return cacheService.saveConversation(newConversation);
             }
         }
         // No conversationId provided: create new conversation
@@ -108,7 +133,7 @@ public class DefaultAIChatService implements AIChatService {
                 .aiModelUsed(determineModel(request, aiConfig))
                 .isActive(true)
                 .build();
-        return chatConversationRepository.save(newConversation);
+        return cacheService.saveConversation(newConversation);
     }
 
     // Helper: Generate conversation title
@@ -423,8 +448,8 @@ public class DefaultAIChatService implements AIChatService {
 
         Patient patient = null;
         if (request.getPatientId() != null) {
-            // Patient chat - validate patient exists
-            patient = patientRepository.findById(request.getPatientId())
+            // Patient chat - validate patient exists (with caching)
+            patient = cacheService.findPatient(request.getPatientId())
                     .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
         } else {
             // Caregiver or other user chat - try to find associated patient through user
@@ -490,8 +515,8 @@ public class DefaultAIChatService implements AIChatService {
                                 "Access denied: You are not authorized to access this patient's information");
                     }
 
-                    // Load the patient for context building
-                    patient = patientRepository.findById(request.getPatientId())
+                    // Load the patient for context building (with caching)
+                    patient = cacheService.findPatient(request.getPatientId())
                             .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
                 }
 
@@ -502,6 +527,30 @@ public class DefaultAIChatService implements AIChatService {
                 );
             }
             // Debug logging removed for cleaner logs
+
+            // Sanitize user input first
+            InputSanitizationService.SanitizationResult userInputResult =
+                inputSanitizationService.sanitizeUserInput(
+                    request.getMessage(),
+                    request.getUserId(),
+                    conversation.getConversationId()
+                );
+
+            if (userInputResult.isBlocked()) {
+                log.warn("User input blocked for user {} in conversation {}: {}",
+                    request.getUserId(), conversation.getConversationId(), userInputResult.getIssues());
+                return buildErrorResponse(request, "Your message contains content that cannot be processed. Please rephrase and try again.");
+            }
+
+            String sanitizedUserMessage = userInputResult.getSanitizedContent();
+
+            // Process uploaded files and append to message
+            if (request.getUploadedFiles() != null && !request.getUploadedFiles().isEmpty()) {
+                String fileContent = processUploadedFiles(request.getUploadedFiles());
+                if (!fileContent.isEmpty()) {
+                    sanitizedUserMessage += "\n\n**Attached Documents:**\n" + fileContent;
+                }
+            }
 
             // System prompt
             String systemPrompt = null;
@@ -525,19 +574,35 @@ public class DefaultAIChatService implements AIChatService {
                 }
             }
 
+            // Sanitize system prompt
+            InputSanitizationService.SanitizationResult systemPromptResult =
+                inputSanitizationService.sanitizeSystemPrompt(
+                    systemPrompt,
+                    request.getUserId(),
+                    conversation.getConversationId()
+                );
+
+            if (systemPromptResult.isBlocked()) {
+                log.error("System prompt blocked for user {} in conversation {}: {}",
+                    request.getUserId(), conversation.getConversationId(), systemPromptResult.getIssues());
+                return buildErrorResponse(request, "System configuration error. Please contact support.");
+            }
+
+            String sanitizedSystemPrompt = systemPromptResult.getSanitizedContent();
+
             // Create ChatMemory for this conversation (session-based with 15-minute timeout)
             ChatMemory chatMemory = chatMemoryFactory.createSessionBasedChatMemory(conversation, aiConfig);
             
             // Add system prompt and medical context to memory if not already present
             if (chatMemory.messages().isEmpty()) {
-                chatMemory.add(dev.langchain4j.data.message.SystemMessage.from(systemPrompt));
+                chatMemory.add(dev.langchain4j.data.message.SystemMessage.from(sanitizedSystemPrompt));
                 if (medicalContext != null && !medicalContext.trim().isEmpty()) {
                     chatMemory.add(dev.langchain4j.data.message.SystemMessage.from(medicalContext));
                 }
             }
-            
-                   // Add user message to memory
-                   chatMemory.add(dev.langchain4j.data.message.UserMessage.from(request.getMessage()));
+
+                   // Add sanitized user message to memory
+                   chatMemory.add(dev.langchain4j.data.message.UserMessage.from(sanitizedUserMessage));
 
                    // Log user message sent
                    chatAuditService.logMessageSent(
@@ -557,11 +622,23 @@ public class DefaultAIChatService implements AIChatService {
 
                        // Extract the actual text content from the LangChain4j response
                        if (response != null && response.aiMessage() != null && response.aiMessage().text() != null) {
-                           aiResponse = response.aiMessage().text();
-                           // Add AI response to memory
-                           chatMemory.add(dev.langchain4j.data.message.AiMessage.from(aiResponse));
+                           String rawAiResponse = response.aiMessage().text();
 
-                           // Log AI response
+                           // Sanitize AI response for medical data protection and system information disclosure
+                           ResponseSanitizationService.SanitizationResult responseResult =
+                               responseSanitizationService.sanitizeAIResponse(
+                                   rawAiResponse,
+                                   request.getUserId(),
+                                   conversation.getConversationId(),
+                                   request.getPatientId()
+                               );
+
+                           aiResponse = responseResult.getSanitizedContent();
+
+                           // Add sanitized AI response to memory (use raw for internal memory, sanitized for user)
+                           chatMemory.add(dev.langchain4j.data.message.AiMessage.from(rawAiResponse));
+
+                           // Log AI response (use sanitized length for accurate metrics)
                            chatAuditService.logAiResponse(
                                request.getUserId(),
                                conversation.getConversationId(),
@@ -578,6 +655,15 @@ public class DefaultAIChatService implements AIChatService {
                                "ai_service_error"
                            );
                        }
+                   } catch (AuthenticationException e) {
+                       log.error("AI service authentication failed - API key invalid or expired: {}", e.getMessage());
+                       aiResponse = "I'm sorry, but the AI service is currently unavailable due to authentication issues. Please contact support.";
+                       chatAuditService.logSystemError(
+                           request.getUserId(),
+                           conversation.getConversationId(),
+                           "AI_AUTHENTICATION_ERROR",
+                           "authentication_failure"
+                       );
                    } catch (IllegalStateException e) {
                        log.error("DeepSeek API key not configured properly", e);
                        aiResponse = "I'm sorry, but the AI service is currently unavailable. Please contact support if this issue persists.";
@@ -654,6 +740,41 @@ public class DefaultAIChatService implements AIChatService {
             log.error("Error processing chat request: ", error);
             return buildErrorResponse(request, "An error occurred while processing your request");
         }
+    }
+
+    /**
+     * Process uploaded files and extract text content
+     */
+    private String processUploadedFiles(List<com.careconnect.dto.UploadedFileDTO> uploadedFiles) {
+        StringBuilder fileContent = new StringBuilder();
+
+        for (com.careconnect.dto.UploadedFileDTO file : uploadedFiles) {
+            try {
+                log.debug("Processing uploaded file: {} ({})", file.getFilename(), file.getContentType());
+
+                String extractedText = documentProcessingService.extractTextContent(file);
+
+                if (extractedText != null && !extractedText.trim().isEmpty()) {
+                    fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                    fileContent.append(extractedText);
+                    fileContent.append("\n\n");
+
+                    log.info("Successfully processed file: {} ({} characters extracted)",
+                             file.getFilename(), extractedText.length());
+                } else {
+                    log.warn("No text content extracted from file: {}", file.getFilename());
+                    fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                    fileContent.append("[File uploaded but no text content could be extracted]\n\n");
+                }
+
+            } catch (Exception e) {
+                log.error("Error processing uploaded file {}: {}", file.getFilename(), e.getMessage());
+                fileContent.append("**File: ").append(file.getFilename()).append("**\n");
+                fileContent.append("[Error processing file: ").append(e.getMessage()).append("]\n\n");
+            }
+        }
+
+        return fileContent.toString().trim();
     }
 
     // ...all other methods from original AIChatService...
