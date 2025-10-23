@@ -246,6 +246,21 @@ class SubmissionDetailState extends State<SubmissionDetail> {
               ),
             ),
           ),
+          TableCell(
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                'Weight',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+                softWrap: true,
+                overflow: TextOverflow.visible,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
           ...rubric!.criteria.first.levels.map((level) {
             return TableCell(
               child: Padding(
@@ -253,7 +268,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                 child: Align(
                   alignment: Alignment.center,
                   child: Text(
-                    '${level.score} pts',
+                    '${level.score}%',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -295,6 +310,15 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                   criterion.description,
                   softWrap: true,
                   overflow: TextOverflow.visible,
+                ),
+              ),
+            ),
+            TableCell( // Weight
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  '${criterion.weight}%', 
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
@@ -364,12 +388,10 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                     width: 1.0), // Outer border for the table
                 columnWidths: {
                   0: FlexColumnWidth(.5), // Criteria column
-                  for (int i = 1;
-                      i <= rubric!.criteria.first.levels.length;
-                      i++)
+                  1: FlexColumnWidth(.5),
+                  for (int i = 2; i < 2 + rubric!.criteria.first.levels.length; i++)
                     i: FlexColumnWidth(1), // Score columns
-                  rubric!.criteria.first.levels.length + 1:
-                      FlexColumnWidth(1.8), // Remarks column
+                  2 + rubric!.criteria.first.levels.length: FlexColumnWidth(1.8), // Remarks column
                 },
                 children: tableRows,
               ),
