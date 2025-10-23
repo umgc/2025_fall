@@ -128,7 +128,7 @@ dependencies:
   #for recording audio samples for speaker recognition
   record: ^6.1.1
   #for breaking audio into smaller files
-  simple_audio_trimmer: ^0.1.4
+  new_simple_audio_trimmer: ^0.1.5
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
 # Team D - Dependencies Begin
