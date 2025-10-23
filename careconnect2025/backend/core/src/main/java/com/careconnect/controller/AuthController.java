@@ -8,6 +8,7 @@ import com.careconnect.service.AuthService;
 import com.careconnect.service.AlexaCodeStoreService;
 import com.careconnect.service.PasswordResetService;
 import com.careconnect.security.JwtTokenProvider;
+import com.careconnect.security.TokenHashService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,11 +34,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
+import com.careconnect.security.TokenHashService;
 
 @RestController
 @RequestMapping("/v1/api/auth")
@@ -161,37 +166,20 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    @Operation(
-        summary = "🔄 Resend verification email",
-        description = "Resend verification email to an unverified user",
-        tags = {"🔑 Authentication"},
-        security = {} // No authentication required for resending verification
+    @Operation(summary = "🔄 Resend verification email", description = "Resend verification email to an unverified user", tags = {
+            "🔑 Authentication" }, security = {} // No authentication required for resending verification
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Verification email sent successfully",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+            @ApiResponse(responseCode = "200", description = "Verification email sent successfully", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "message": "Verification email sent successfully! Please check your inbox."
                     }
-                    """)
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Email already verified",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+                    """))),
+            @ApiResponse(responseCode = "400", description = "Email already verified", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "error": "This email address is already verified."
                     }
-                    """)
-            )
-        )
+                    """)))
     })
     public ResponseEntity<?> resendVerification(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -203,25 +191,15 @@ public class AuthController {
     }
 
     @GetMapping("/check-verification")
-    @Operation(
-        summary = "🔍 Check email verification status",
-        description = "Check if an email address is verified without sending any emails",
-        tags = {"🔑 Authentication"},
-        security = {} // No authentication required for checking verification status
+    @Operation(summary = "🔍 Check email verification status", description = "Check if an email address is verified without sending any emails", tags = {
+            "🔑 Authentication" }, security = {} // No authentication required for checking verification status
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Verification status retrieved",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(value = """
+            @ApiResponse(responseCode = "200", description = "Verification status retrieved", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
                     {
                         "verified": true
                     }
-                    """)
-            )
-        )
+                    """)))
     })
     public ResponseEntity<?> checkVerification(@RequestParam String email) {
         if (email == null || email.isEmpty()) {
@@ -445,6 +423,9 @@ public class AuthController {
     private PatientRepository patientRepository; // ✅ inject patient repo to find patient by email
 
     @Autowired
+    private TokenHashService tokenHashService;
+
+    @Autowired
     private AlexaCodeStoreService alexaCodeStore;
 
     @PostMapping("/sso/alexa/code")
@@ -470,20 +451,20 @@ public class AuthController {
     public ResponseEntity<?> exchangeAlexaToken(
             @RequestParam Map<String, String> params,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-
+    
         // 1️⃣ Validate Basic Auth (Alexa client credentials)
         if (authHeader == null || !authHeader.startsWith("Basic ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "missing_authorization"));
         }
-
+    
         try {
             String base64Credentials = authHeader.substring("Basic ".length());
             String decoded = new String(Base64.getDecoder().decode(base64Credentials));
             String[] parts = decoded.split(":", 2);
             String clientId = parts[0];
             String clientSecret = parts.length > 1 ? parts[1] : "";
-
+    
             if (!clientId.equals(alexaClientId) || !clientSecret.equals(alexaClientSecret)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "invalid_client_credentials"));
@@ -492,32 +473,32 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", "invalid_basic_auth"));
         }
-
+    
         String grantType = params.get("grant_type");
         String code = params.get("code");
         String refreshToken = params.get("refresh_token");
-
+    
         // 2️⃣ Handle authorization_code grant (initial linking)
         if ("authorization_code".equalsIgnoreCase(grantType)) {
             if (code == null || code.isBlank()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "missing_authorization_code"));
             }
-
+    
             String jwtToken = alexaCodeStore.consumeCode(code);
             if (jwtToken == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "invalid_code"));
             }
-
+    
             // 🧠 Validate JWT token before linking
             if (!jwt.validateToken(jwtToken)) {
                 System.err.println("🔓 Token expired during OAuth exchange");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "expired_token"));
             }
-
-            // ✅ Mark patient as Alexa-linked (successful OAuth flow)
+    
+            // ✅ Mark patient as Alexa-linked and SAVE REFRESH TOKEN
             try {
                 String email = jwt.getEmailFromToken(jwtToken);
                 if (email == null) {
@@ -525,115 +506,146 @@ public class AuthController {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(Map.of("error", "invalid_token_claims"));
                 }
-
+    
                 Optional<User> userOpt = userRepository.findByEmail(email);
                 if (userOpt.isEmpty()) {
                     System.err.println("🔓 User not found during Alexa linking: " + email);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(Map.of("error", "user_not_found"));
                 }
-
+    
                 User user = userOpt.get();
                 Optional<Patient> patientOpt = patientRepository.findByUser(user);
-
+    
                 if (patientOpt.isEmpty()) {
                     System.err.println("🔓 No patient record for user during Alexa linking: " + email);
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                             .body(Map.of("error", "patient_not_found"));
                 }
-
+    
                 Patient patient = patientOpt.get();
+                
+                // 🌀 Generate refresh token (PLAIN TEXT for returning to Alexa)
+                String plainRefreshToken = UUID.randomUUID().toString();
+                
+                // 🔒 HASH the token before saving to database
+                String hashedRefreshToken = tokenHashService.hashToken(plainRefreshToken);
+                
+                LocalDateTime expiresAt = LocalDateTime.now().plusDays(30);
+                
+                // ✅ Save HASHED token to patient entity
                 patient.setAlexaLinked(true);
+                patient.setAlexaRefreshToken(hashedRefreshToken);
+                patient.setAlexaRefreshTokenExpiresAt(expiresAt);
+                patient.setAlexaRefreshTokenCreatedAt(LocalDateTime.now());
                 patientRepository.save(patient);
+                
                 System.out.println("✅ Successfully linked Alexa for patient " + patient.getId());
-
+                System.out.println("🔑 Refresh token expires at: " + expiresAt);
+    
+                // 📤 Return PLAIN TEXT token to Alexa (NOT hashed!)
+                return ResponseEntity.ok(Map.of(
+                        "access_token", jwtToken,
+                        "token_type", "Bearer",
+                        "expires_in", 3600,
+                        "refresh_token", plainRefreshToken));
+    
             } catch (Exception e) {
-                System.err.println("⚠️ Failed to mark patient as linked: " + e.getMessage());
+                System.err.println("⚠️ Failed to link Alexa: " + e.getMessage());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(Map.of("error", "linking_failed", "details", e.getMessage()));
             }
-
-            // 🌀 Issue refresh token
-            String newRefreshToken = UUID.randomUUID().toString();
-            alexaCodeStore.saveRefreshToken(newRefreshToken, jwtToken);
-
-            return ResponseEntity.ok(Map.of(
-                    "access_token", jwtToken,
-                    "token_type", "Bearer",
-                    "expires_in", 3600,
-                    "refresh_token", newRefreshToken));
         }
-
+    
         // 3️⃣ Handle refresh_token grant (token refresh)
         else if ("refresh_token".equalsIgnoreCase(grantType)) {
             if (refreshToken == null || refreshToken.isBlank()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "missing_refresh_token"));
             }
-
-            String existingJwt = alexaCodeStore.findJwtByRefreshToken(refreshToken);
-            if (existingJwt == null) {
-                System.err.println("🔓 Invalid refresh token - unlinking may be needed");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "invalid_refresh_token"));
-            }
-
-            // 🧠 Validate the existing JWT before refreshing
-            if (!jwt.validateToken(existingJwt)) {
-                System.err.println("🔓 Existing JWT invalid during refresh - unlinking Alexa");
-
-                // Unlink the account since token is invalid
-                try {
-                    String email = jwt.getEmailFromToken(existingJwt);
-                    if (email != null) {
-                        userRepository.findByEmail(email).ifPresent(user -> {
-                            patientRepository.findByUser(user).ifPresent(patient -> {
-                                patient.setAlexaLinked(false);
-                                patientRepository.save(patient);
-                                System.out.println("🔓 Unlinked Alexa for patient " + patient.getId()
-                                        + " - invalid token during refresh");
-                            });
-                        });
-                    }
-                } catch (Exception e) {
-                    System.err.println("⚠️ Failed to unlink during refresh: " + e.getMessage());
-                }
-
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "token_expired"));
-            }
-
-            // Generate new JWT
-            String newJwt = jwt.refresh(jwt.getClaims(existingJwt));
-
-            // ✅ Confirm Alexa is still linked (refresh successful)
+    
+            // 🔍 Get ALL patients and verify refresh token against each
             try {
-                String email = jwt.getEmailFromToken(newJwt);
-                if (email != null) {
-                    userRepository.findByEmail(email).ifPresent(user -> {
-                        patientRepository.findByUser(user).ifPresent(patient -> {
-                            if (!patient.isAlexaLinked()) {
-                                patient.setAlexaLinked(true);
-                                patientRepository.save(patient);
-                                System.out.println(
-                                        "✅ Re-linked Alexa for patient " + patient.getId() + " during refresh");
-                            }
-                        });
-                    });
+                List<Patient> allPatients = patientRepository.findAll();
+                Patient matchedPatient = null;
+                
+                // 🔐 Verify refresh token against each patient's hashed token
+                for (Patient patient : allPatients) {
+                    if (patient.getAlexaLinked() && 
+                        patient.getAlexaRefreshToken() != null &&
+                        tokenHashService.verifyToken(refreshToken, patient.getAlexaRefreshToken())) {
+                        
+                        matchedPatient = patient;
+                        break;
+                    }
                 }
+                
+                if (matchedPatient == null) {
+                    System.err.println("🔓 Invalid refresh token - patient not found");
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "invalid_refresh_token"));
+                }
+    
+                Patient patient = matchedPatient;
+    
+                // ⏰ Check if refresh token is expired
+                if (patient.isAlexaRefreshTokenExpired()) {
+                    System.err.println("🔓 Refresh token expired - unlinking Alexa");
+                    
+                    patient.setAlexaLinked(false);
+                    patient.setAlexaRefreshToken(null);
+                    patient.setAlexaRefreshTokenExpiresAt(null);
+                    patientRepository.save(patient);
+                    
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("error", "refresh_token_expired"));
+                }
+    
+                // 🧠 Generate new tokens
+                try {
+                    User user = patient.getUser();
+                    String email = user.getEmail();
+                    
+                    String existingJwt = alexaCodeStore.findJwtByRefreshToken(refreshToken);
+
+                    // Generate new access token
+                    String newJwt = jwt.refresh(jwt.getClaims(existingJwt));
+                    
+                    // 🔄 Generate new refresh token
+                    String newPlainRefreshToken = UUID.randomUUID().toString();
+                    String newHashedRefreshToken = tokenHashService.hashToken(newPlainRefreshToken);
+                    
+                    LocalDateTime newExpiresAt = LocalDateTime.now().plusDays(30);
+                    
+                    // ✅ Save HASHED new token
+                    patient.setAlexaRefreshToken(newHashedRefreshToken);
+                    patient.setAlexaRefreshTokenExpiresAt(newExpiresAt);
+                    patientRepository.save(patient);
+                    
+                    System.out.println("✅ Refreshed token for patient " + patient.getId());
+                    System.out.println("🔑 New refresh token expires at: " + newExpiresAt);
+    
+                    // 📤 Return PLAIN TEXT new token to Alexa (NOT hashed!)
+                    return ResponseEntity.ok(Map.of(
+                            "access_token", newJwt,
+                            "token_type", "Bearer",
+                            "expires_in", 3600,
+                            "refresh_token", newPlainRefreshToken));
+                            
+                } catch (Exception e) {
+                    System.err.println("⚠️ Failed to refresh token: " + e.getMessage());
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("error", "refresh_failed", "details", e.getMessage()));
+                }
+                
             } catch (Exception e) {
-                System.err.println("⚠️ Failed to update link status during refresh: " + e.getMessage());
+                System.err.println("⚠️ Error during refresh: " + e.getMessage());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "internal_error"));
             }
-
-            return ResponseEntity.ok(Map.of(
-                    "access_token", newJwt,
-                    "token_type", "Bearer",
-                    "expires_in", 3600,
-                    "refresh_token", refreshToken));
         }
-
+    
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "unsupported_grant_type"));
     }
-
 }

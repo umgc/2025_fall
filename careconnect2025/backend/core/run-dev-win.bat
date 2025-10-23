@@ -154,11 +154,6 @@ echo - File Storage: Local
 echo - Docker: Docker Desktop
 echo ----------------------------------------
 
-REM ALEXA TESTING: The following lines are used to build a temporary forward-facing url
-REM for Alexa skill to call. Should be replaced when we have a constant domain available
-echo Starting NGROK
-start "" ngrok.exe http 8080
-
 echo Starting Spring Boot application...
 set SPRING_PROFILES_ACTIVE=dev
 

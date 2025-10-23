@@ -5,15 +5,20 @@ import com.careconnect.model.Patient;
 import com.careconnect.model.User;
 import com.careconnect.repository.UserRepository;
 import com.careconnect.repository.PatientRepository;
+import com.careconnect.service.v2.TaskServiceV2;
+import com.careconnect.dto.v2.TaskDtoV2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/alexa")
@@ -28,10 +33,10 @@ public class AlexaController {
     @Autowired
     private PatientRepository patientRepository;
 
-    // @Value("${careconnect.api.base-url:http://localhost:8080/v2/api/tasks}")
-    private String baseUrl = "http://localhost:8080/v2/api/tasks";
+    // 🆕 Inject TaskServiceV2 instead of using RestTemplate
+    @Autowired
+    private TaskServiceV2 taskService;
 
-    private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
 
     // ==============================================================
@@ -74,16 +79,6 @@ public class AlexaController {
             System.err.println("⚠️ Failed to extract Alexa token: " + e.getMessage());
             return null;
         }
-    }
-
-    // ==============================================================
-    // 🔧 Helper: Build Authorization header
-    // ==============================================================
-    private HttpHeaders createAuthHeaders(String token) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + token);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return headers;
     }
 
     // ==============================================================
@@ -151,85 +146,196 @@ public class AlexaController {
     }
 
     // ==============================================================
-    // 📅 1️⃣ Get CareConnect Tasks (authenticated)
+    // 🆕 Helper: Parse and normalize task data from Alexa
     // ==============================================================
-    @PostMapping("/calendarTasks")
+    private TaskDtoV2 normalizeAlexaTaskData(Map<String, Object> alexaBody, Long patientId) {
+        TaskDtoV2 taskDto = new TaskDtoV2();
+
+        // Core fields
+        taskDto.setCompleted(false);
+
+        // Task name (title)
+        if (alexaBody.containsKey("name")) {
+            taskDto.setName((String) alexaBody.get("name"));
+        } else if (alexaBody.containsKey("title")) {
+            taskDto.setName((String) alexaBody.get("title"));
+        }
+
+        // Task description
+        if (alexaBody.containsKey("description")) {
+            taskDto.setDescription((String) alexaBody.get("description"));
+        }
+
+        // Date
+        if (alexaBody.containsKey("date")) {
+            String dateStr = (String) alexaBody.get("date");
+            try {
+                // Validate ISO date format (YYYY-MM-DD)
+                LocalDate.parse(dateStr);
+                taskDto.setDate(dateStr + "T00:00:00");
+            } catch (DateTimeParseException ex) {
+                System.err.println("⚠️ Invalid date format from Alexa: " + dateStr);
+                taskDto.setDate(LocalDate.now().toString() + "T00:00:00");
+            }
+        } else {
+            taskDto.setDate(LocalDate.now().toString() + "T00:00:00");
+        }
+
+        // Time of day
+        if (alexaBody.containsKey("timeOfDay")) {
+            String timeStr = (String) alexaBody.get("timeOfDay");
+            try {
+                LocalTime.parse(timeStr);
+                taskDto.setTimeOfDay(timeStr);
+            } catch (DateTimeParseException ex) {
+                System.err.println("⚠️ Invalid time format from Alexa: " + timeStr);
+            }
+        }
+
+        // Task type
+        if (alexaBody.containsKey("taskType")) {
+            taskDto.setTaskType((String) alexaBody.get("taskType"));
+        }
+
+        // Frequency (recurrence)
+        if (alexaBody.containsKey("frequency")) {
+            taskDto.setFrequency((String) alexaBody.get("frequency"));
+        }
+
+        // Interval
+        if (alexaBody.containsKey("interval")) {
+            Object intervalObj = alexaBody.get("interval");
+            if (intervalObj instanceof Integer) {
+                taskDto.setInterval((Integer) intervalObj);
+            } else if (intervalObj instanceof String) {
+                try {
+                    taskDto.setInterval(Integer.parseInt((String) intervalObj));
+                } catch (NumberFormatException ex) {
+                    taskDto.setInterval(1);
+                }
+            }
+        }
+
+        // Count (number of occurrences)
+        if (alexaBody.containsKey("count")) {
+            Object countObj = alexaBody.get("count");
+            if (countObj instanceof Integer) {
+                taskDto.setCount((Integer) countObj);
+            } else if (countObj instanceof String) {
+                try {
+                    taskDto.setCount(Integer.parseInt((String) countObj));
+                } catch (NumberFormatException ex) {
+                    taskDto.setCount(1);
+                }
+            }
+        }
+
+        // Days of week
+        if (alexaBody.containsKey("daysOfWeek")) {
+            Object daysObj = alexaBody.get("daysOfWeek");
+            if (daysObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<?> daysList = (List<?>) daysObj;
+                List<Boolean> booleanDays = daysList.stream()
+                        .map(day -> {
+                            if (day instanceof Boolean) {
+                                return (Boolean) day;
+                            } else if (day instanceof String) {
+                                return Boolean.parseBoolean((String) day);
+                            } else if (day instanceof Integer) {
+                                return ((Integer) day) != 0;
+                            }
+                            return false;
+                        })
+                        .collect(Collectors.toList());
+                taskDto.setDaysOfWeek(booleanDays);
+            }
+        }
+
+        return taskDto;
+    }
+
+    // ==============================================================
+    // 1️⃣ Get Tasks (authenticated) - NOW USES TASKSERVICEV2
+    // ==============================================================
+    @GetMapping("/calendarTasks/get")
     public ResponseEntity<?> getCalendarTasks(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody(required = false) Map<String, Object> alexaBody) {
+            @RequestParam(value = "filter", defaultValue = "week") String filter) {
         Long patientId = null;
         try {
-            // 🧩 1. Extract token (from header or Alexa payload)
-            String token = null;
+            System.out.println("📥 Received Alexa task retrieval request");
 
+            String token = null;
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 token = authHeader.substring(7);
-            } else if (alexaBody != null && alexaBody.containsKey("accessToken")) {
-                token = (String) alexaBody.get("accessToken");
-            } else if (alexaBody != null) {
-                String raw = new ObjectMapper().writeValueAsString(alexaBody);
-                token = extractAlexaToken(raw);
             }
 
             // 🚨 UNLINK CASE 1: Invalid or expired token
             if (token == null || !jwtTokenProvider.validateToken(token)) {
-                System.err.println("🔓 Token validation failed - potential expired/revoked token");
+                System.err.println("🔓 Token validation failed for task retrieval");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or missing access token"));
+                        .body(Map.of("error", "Missing or invalid access token"));
             }
 
-            // 🧩 2. Resolve patient ID from JWT → DB lookup
             patientId = resolvePatientIdFromToken(token);
-            
-            // 🚨 UNLINK CASE 2: Unable to resolve patient (user deleted, role changed, etc.)
+
+            // 🚨 UNLINK CASE 2: Unable to resolve patient
             if (patientId == null) {
-                System.err.println("🔓 Unable to resolve patient ID - user may have been deleted or role changed");
+                System.err.println("🔓 Unable to resolve patient ID for task retrieval");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("error", "Unable to determine patient ID"));
+                        .body(Map.of("error", "Unable to resolve patient ID"));
             }
 
-            // 🧩 3. Forward to CareConnect backend
-            String url = String.format("%s/patient/%d", baseUrl, patientId);
-            HttpEntity<String> entity = new HttpEntity<>(null, createAuthHeaders(token));
+            // 🆕 Use TaskServiceV2 to get tasks instead of RestTemplate
+            List<TaskDtoV2> allTasks = taskService.getTasksByPatient(patientId);
+            System.out.println("📋 Retrieved " + allTasks.size() + " tasks for patient " + patientId);
 
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-            System.out.println("🧾 [CareConnect API] Status: " + response.getStatusCode());
-            System.out.println("🧾 [CareConnect API] Body: " + response.getBody());
-            
-            // 🚨 UNLINK CASE 3: Forbidden - user no longer has access to this patient
-            if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
-                unlinkAlexaAccount(patientId, "Access forbidden - user no longer authorized for this patient");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied to patient data"));
-            }
-            
-            // 🚨 UNLINK CASE 4: Unauthorized from backend - token rejected by backend
-            if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                unlinkAlexaAccount(patientId, "Backend rejected token - authentication failed");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Authentication failed"));
+            // Filter by week if requested
+            if ("week".equalsIgnoreCase(filter)) {
+                System.out.println("📅 Filtering tasks by week...");
+
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.time.DayOfWeek dayOfWeek = today.getDayOfWeek();
+
+                // Get start of week (Sunday)
+                java.time.LocalDate startOfWeek = today.minusDays(
+                        dayOfWeek == java.time.DayOfWeek.SUNDAY ? 0 : dayOfWeek.getValue());
+
+                // Get end of week (Saturday)
+                java.time.LocalDate endOfWeek = startOfWeek.plusDays(6);
+
+                System.out.println("📅 Week range: " + startOfWeek + " to " + endOfWeek);
+
+                // Filter tasks within this week
+                List<TaskDtoV2> weekTasks = allTasks.stream()
+                        .filter(task -> {
+                            try {
+                                String dateStr = task.getDate();
+                                if (dateStr != null) {
+                                    java.time.LocalDate taskDate = java.time.LocalDate.parse(
+                                            dateStr.substring(0, 10));
+                                    boolean inWeek = !taskDate.isBefore(startOfWeek) && !taskDate.isAfter(endOfWeek);
+                                    return inWeek;
+                                }
+                                return false;
+                            } catch (Exception e) {
+                                System.err.println("⚠️ Error parsing task date: " + e.getMessage());
+                                return false;
+                            }
+                        })
+                        .collect(Collectors.toList());
+
+                System.out.println("📋 Filtered to " + weekTasks.size() + " tasks for this week (out of "
+                        + allTasks.size() + " total)");
+
+                return ResponseEntity.ok(weekTasks);
             }
 
-            // 🧩 4. Return tasks from CareConnect API
-            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
+            return ResponseEntity.ok(allTasks);
 
-        } catch (org.springframework.web.client.HttpClientErrorException ex) {
-            // 🚨 UNLINK CASE 5: Handle HTTP 401/403 exceptions from backend
-            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
-                if (patientId != null) {
-                    unlinkAlexaAccount(patientId, "Backend authentication/authorization error: " + ex.getStatusCode());
-                }
-                return ResponseEntity.status(ex.getStatusCode())
-                        .body(Map.of("error", "Authentication or authorization failed"));
-            }
-            
-            // Network/connectivity issues - don't unlink
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error fetching tasks", "details", ex.getMessage()));
-                    
         } catch (Exception e) {
-            // Network/connectivity issues - don't unlink
+            System.err.println("⚠️ Error retrieving tasks: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error fetching tasks", "details", e.getMessage()));
@@ -237,7 +343,7 @@ public class AlexaController {
     }
 
     // ==============================================================
-    // 🆕 2️⃣ Add New CareConnect Task (authenticated)
+    // 2️⃣ Add New CareConnect Task (authenticated) - NOW USES TASKSERVICEV2
     // ==============================================================
     @PostMapping("/calendarTasks/add")
     public ResponseEntity<?> addCalendarTask(
@@ -245,6 +351,8 @@ public class AlexaController {
             @RequestBody Map<String, Object> alexaBody) {
         Long patientId = null;
         try {
+            System.out.println("📥 Received Alexa task creation request: " + alexaBody);
+
             String token = null;
 
             // 1️⃣ Prefer Authorization header
@@ -264,7 +372,7 @@ public class AlexaController {
             }
 
             patientId = resolvePatientIdFromToken(token);
-            
+
             // 🚨 UNLINK CASE 2: Unable to resolve patient
             if (patientId == null) {
                 System.err.println("🔓 Unable to resolve patient ID for task creation");
@@ -272,49 +380,45 @@ public class AlexaController {
                         .body(Map.of("error", "Unable to resolve patient ID"));
             }
 
-            // Build CareConnect request
-            String url = String.format("%s/patient/%d", baseUrl, patientId);
-            alexaBody.put("patientId", patientId);
-            alexaBody.put("taskType", "TASK");
-            alexaBody.putIfAbsent("isCompleted", false);
-            alexaBody.putIfAbsent("daysOfWeek", new ArrayList<>());
+            // 🆕 Convert Alexa data to TaskDtoV2
+            TaskDtoV2 taskDto = normalizeAlexaTaskData(alexaBody, patientId);
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(alexaBody, createAuthHeaders(token));
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-            // 🚨 UNLINK CASE 3: Forbidden - user no longer has access
-            if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
-                unlinkAlexaAccount(patientId, "Access forbidden during task creation");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Access denied to patient data"));
-            }
-            
-            // 🚨 UNLINK CASE 4: Unauthorized from backend
-            if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                unlinkAlexaAccount(patientId, "Backend rejected token during task creation");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Authentication failed"));
+            // Validate required fields
+            if (taskDto.getName() == null || taskDto.getName().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Task name is required"));
             }
 
-            return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
-            
-        } catch (org.springframework.web.client.HttpClientErrorException ex) {
-            // 🚨 UNLINK CASE 5: Handle HTTP 401/403 exceptions from backend
-            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED || ex.getStatusCode() == HttpStatus.FORBIDDEN) {
-                if (patientId != null) {
-                    unlinkAlexaAccount(patientId, "Backend auth error during task creation: " + ex.getStatusCode());
+            if (taskDto.getDate() == null || taskDto.getDate().isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Task date is required"));
+            }
+
+            System.out.println("📤 Creating task via TaskServiceV2: " + taskDto);
+
+            // 🆕 Use TaskServiceV2 to create task instead of RestTemplate
+            try {
+                TaskDtoV2 createdTask = taskService.createTask(patientId, taskDto);
+                System.out.println("✅ Task created successfully: " + createdTask);
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
+            } catch (Exception e) {
+                System.err.println("❌ Error creating task via service: " + e.getMessage());
+
+                // 🚨 UNLINK CASE 3: Check if it's an authorization issue
+                if (e.getMessage() != null &&
+                        (e.getMessage().contains("Unauthorized") ||
+                                e.getMessage().contains("Forbidden"))) {
+                    unlinkAlexaAccount(patientId, "Backend rejected task creation: " + e.getMessage());
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "Access denied to patient data"));
                 }
-                return ResponseEntity.status(ex.getStatusCode())
-                        .body(Map.of("error", "Authentication or authorization failed"));
+
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Error adding task", "details", e.getMessage()));
             }
-            
-            // Network/connectivity issues - don't unlink
-            ex.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error adding task", "details", ex.getMessage()));
-                    
+
         } catch (Exception e) {
-            // Network/connectivity issues - don't unlink
+            System.err.println("❌ Exception during task creation: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error adding task", "details", e.getMessage()));
