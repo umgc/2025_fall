@@ -1,8 +1,11 @@
 class HtmlConverter {
   // Convert string by replacing common HTML tags.
-  static String convert(String htmlString) {
+  static String? convert(String? htmlString) {
     return htmlString
+        ?.replaceAll('<p>', '\n')
         .replaceAll('<p>', '\n')
+        .replaceAll('<br>', '\n\n')
+        .replaceAll('<br />', '\n\n')
         .replaceAll('</p>', '\n')
         .replaceAll('<li>', '\n')
         .replaceAll('</li>', '\n')
