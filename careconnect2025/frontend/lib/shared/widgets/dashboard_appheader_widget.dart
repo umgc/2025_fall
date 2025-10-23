@@ -132,8 +132,12 @@ class DashboardAppHeader extends StatelessWidget
                                     return;
                                   }
 
-                                  // Calculate age
-                                  final age = DateTime.now().year - dobDate.year;
+                                  // Calculate accurate age
+                                  final now = DateTime.now();
+                                  int age = now.year - dobDate.year;
+                                  if (now.month < dobDate.month || (now.month == dobDate.month && now.day < dobDate.day)) {
+                                    age--;
+                                  }
 
                                   // Create emergency ID from patient ID
                                   final emergencyId = 'VIAL${user.patientId ?? user.id}';
