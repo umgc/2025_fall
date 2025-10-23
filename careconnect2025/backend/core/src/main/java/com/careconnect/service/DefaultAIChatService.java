@@ -548,7 +548,18 @@ public class DefaultAIChatService implements AIChatService {
             if (request.getUploadedFiles() != null && !request.getUploadedFiles().isEmpty()) {
                 String fileContent = processUploadedFiles(request.getUploadedFiles());
                 if (!fileContent.isEmpty()) {
-                    sanitizedUserMessage += "\n\n**Attached Documents:**\n" + fileContent;
+                    InputSanitizationService.SanitizationResult fileContentResult =
+                        inputSanitizationService.sanitizeUserInput(
+                            fileContent,
+                            request.getUserId(),
+                            conversation.getConversationId()
+                        );
+                    if (fileContentResult.isBlocked()) {
+                        log.warn("Uploaded file content blocked for user {} in conversation {}: {}",
+                            request.getUserId(), conversation.getConversationId(), fileContentResult.getIssues());
+                        return buildErrorResponse(request, "Your uploaded document contains content that cannot be processed. Please remove or modify the document and try again.");
+                    }
+                    sanitizedUserMessage += "\n\n**Attached Documents:**\n" + fileContentResult.getSanitizedContent();
                 }
             }
 
