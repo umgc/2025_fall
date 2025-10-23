@@ -9,6 +9,10 @@ import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
 import 'patient_more_features_bottom_drawer.dart';
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
+import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
+
+
 
 /// Represents a single item in the bottom navigation bar.
 ///
@@ -113,7 +117,7 @@ class BottomNavConfig {
         icon: Icons.health_and_safety_outlined,
         activeIcon: Icons.health_and_safety,
         routeName: 'health',
-        screen: const PatientHealthTab(),
+        screen: PatientDetailsPage(patientId: '<current-patient-id>'),
       ),
       BottomNavItem(
         label: 'Messages',

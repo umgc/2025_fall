@@ -24,8 +24,14 @@ import '../models/virtual_check_in_question.dart';
 
 class PatientDetailsPage extends StatelessWidget {
   final String patientId;
+  /// NEW: when true, caregiver UI (can configure); when false, patient UI (no configure).
+  final bool isCaregiver;
 
-  const PatientDetailsPage({super.key, required this.patientId});
+  const PatientDetailsPage({
+    super.key,
+    required this.patientId,
+    this.isCaregiver = false, // default to patient behavior
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +180,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-// --- Virtual Check-In configuration (popup) ---
+    // --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -219,7 +225,7 @@ class PatientDetailsPage extends StatelessWidget {
             ),
 
             // Tab bar row (like your mock)
-            _TabsStrip(),
+            const _TabsStrip(),
 
             // Tab views
             Expanded(
@@ -228,7 +234,7 @@ class PatientDetailsPage extends StatelessWidget {
                   // ---- Info ----
                   ListView(
                     padding: const EdgeInsets.only(top: 12, bottom: 16),
-                    children:  [
+                    children: [
                       ContactInfoCard(
                         phone: '(555) 123-4567',
                         email: 'sarah.johnson@email.com',
@@ -239,13 +245,14 @@ class PatientDetailsPage extends StatelessWidget {
                         state: 'IL',
                         postalCode: '62701',
                       ),
-                      EmergencyContactCard(
+                      const EmergencyContactCard(
                         contactName: 'Michael Johnson',
                         relationship: 'Spouse',
                         phone: '(555) 987-6543',
                       ),
                     ],
                   ),
+
 
                   // ---- Mood ----
                   ListView(
@@ -271,8 +278,8 @@ class PatientDetailsPage extends StatelessWidget {
                     children: [
                       VirtualCheckInHistoryCard(
                         entries: virtualCheckIns,
+                        showConfigure: true, // caregiver sees the button
                         onConfigure: () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>>(
                             context: context,
                             isScrollControlled: true,
@@ -282,12 +289,16 @@ class PatientDetailsPage extends StatelessWidget {
                             ),
                             builder: (_) => VirtualCheckInConfigSheet(initial: initialQuestions),
                           );
+
+                          if (!context.mounted) return;
                           if (updated != null) {
-                            messenger.showSnackBar(
+                            ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Virtual check-in configuration saved')),
                             );
+                            // TODO: persist `updated` to backend and refresh UI
                           }
-                        },
+                        }
+                        // patients can't configure
                       ),
                     ],
                   ),
@@ -300,10 +311,14 @@ class PatientDetailsPage extends StatelessWidget {
     );
   }
 }
-
 /// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _DetailsAppBar({required this.title, required this.subtitle});
+  const _DetailsAppBar({
+    super.key,                      // <-- add this
+    required this.title,
+    required this.subtitle,
+  });
+
   final String title;
   final String subtitle;
 
@@ -340,9 +355,10 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-
-/// The tab buttons row (Info • Mood • Health • Virtual Check-In) styled like your mock.
+/// The tab buttons row (Info • Mood • Health • Virtual Check-In)
 class _TabsStrip extends StatelessWidget {
+  const _TabsStrip({super.key});     // <-- add const + super.key
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -368,5 +384,3 @@ class _TabsStrip extends StatelessWidget {
     );
   }
 }
-
-
