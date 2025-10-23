@@ -145,6 +145,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMore => 'More';
 
   @override
+  String get notetakerAssistant => 'Notetaker Assistant';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
