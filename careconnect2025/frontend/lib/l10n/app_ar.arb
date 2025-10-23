@@ -48,10 +48,11 @@
 "navMenu": "القائمة",
 "navPatientList": "قائمة المرضى",
 "navAnalytics": "التحليلات",
-"navMore": "المزيد",
+  "navMore": "المزيد",
 
+  "notetakerAssistant": "مساعد المدوّن",
 
-"settingsTitle": "الإعدادات",
+  "settingsTitle": "الإعدادات",
 "settingsAppearance": "المظهر",
 "settingsNotifications": "الإشعارات",
 "settingsLoadingNotificationSettings": "جارٍ تحميل إعدادات الإشعارات...",
