@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 REM ================================
-REM CareConnect Backend Environment Loader (Windows)
+REM CareConnect Frontend Environment Loader (Windows)
 REM ================================
 
 echo Loading CareConnect environment variables...

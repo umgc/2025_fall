@@ -1,6 +1,6 @@
 #!/bin/bash
 # ================================
-# CareConnect Backend Environment Loader (Linux/macOS)
+# CareConnect Frontend Environment Loader (Linux/macOS)
 # ================================
 
 set -e  # Exit on error
