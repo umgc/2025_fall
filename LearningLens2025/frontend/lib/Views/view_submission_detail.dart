@@ -216,7 +216,8 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                                     MaterialPageRoute(
                                       builder: (context) => ViewReflectionPage(
                                         participant: widget.participant,
-                                        submission: widget.submission,
+                                        submission:
+                                            widget.submission.submission,
                                       ),
                                     ),
                                   );
