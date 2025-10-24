@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
+import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
@@ -583,7 +584,9 @@ class SubmissionListState extends State<SubmissionList> {
                                                             value: gradeLevelSelectionMap[
                                                                     participant
                                                                         .id] ??
-                                                                'College',
+                                                                LearningLensConstants
+                                                                    .gradeLevels
+                                                                    .last,
                                                             decoration:
                                                                 InputDecoration(
                                                                     labelText:
@@ -593,12 +596,8 @@ class SubmissionListState extends State<SubmissionList> {
                                                                     participant
                                                                         .id,
                                                                     newValue),
-                                                            items: [
-                                                              'Elementary School',
-                                                              'Middle School',
-                                                              'High School',
-                                                              'College'
-                                                            ]
+                                                            items: LearningLensConstants
+                                                                .gradeLevels
                                                                 .map((detail) =>
                                                                     DropdownMenuItem(
                                                                       value:
@@ -689,7 +688,7 @@ class SubmissionListState extends State<SubmissionList> {
                                                                           detailLevel: detailLevelSelectionMap[participant.id] ??
                                                                               'Neutral',
                                                                           gradeLevel:
-                                                                              gradeLevelSelectionMap[participant.id] ?? 'College');
+                                                                              gradeLevelSelectionMap[participant.id] ?? LearningLensConstants.gradeLevels.last);
 
                                                                       String
                                                                           apiKey =
