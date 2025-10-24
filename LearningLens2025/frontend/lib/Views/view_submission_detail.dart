@@ -268,7 +268,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                 child: Align(
                   alignment: Alignment.center,
                   child: Text(
-                    '${level.score}%',
+                    '${level.score / (rubric!.criteria.first.levels.last.score / 100)}%',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -313,11 +313,12 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                 ),
               ),
             ),
-            TableCell( // Weight
+            TableCell(
+              // Weight
               child: Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text(
-                  '${criterion.weight}%', 
+                  '${criterion.levels.last.score / 100}%',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -389,9 +390,12 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                 columnWidths: {
                   0: FlexColumnWidth(.5), // Criteria column
                   1: FlexColumnWidth(.5),
-                  for (int i = 2; i < 2 + rubric!.criteria.first.levels.length; i++)
+                  for (int i = 2;
+                      i < 2 + rubric!.criteria.first.levels.length;
+                      i++)
                     i: FlexColumnWidth(1), // Score columns
-                  2 + rubric!.criteria.first.levels.length: FlexColumnWidth(1.8), // Remarks column
+                  2 + rubric!.criteria.first.levels.length:
+                      FlexColumnWidth(1.8), // Remarks column
                 },
                 children: tableRows,
               ),

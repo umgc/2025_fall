@@ -53,7 +53,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
     'November',
     'December'
   ];
-  List<String> years = ['2023', '2024', '2025'];
+  List<String> years = ['2023', '2024', '2025', '2026'];
   List<String> hours =
       List.generate(24, (index) => index.toString().padLeft(2, '0'));
   List<String> minutes =
