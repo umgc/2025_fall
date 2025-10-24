@@ -1,0 +1,12 @@
+package com.careconnect.asl.model;
+public class AslRequest {
+  private String text;
+  private String locale;
+  private Boolean preferVideo;
+  public String getText(){ return text; }
+  public void setText(String t){ this.text=t; }
+  public String getLocale(){ return locale; }
+  public void setLocale(String l){ this.locale=l; }
+  public Boolean getPreferVideo(){ return preferVideo; }
+  public void setPreferVideo(Boolean p){ this.preferVideo=p; }
+}
