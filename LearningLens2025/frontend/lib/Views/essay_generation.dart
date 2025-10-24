@@ -161,11 +161,15 @@ class _EssayGenerationState extends State<EssayGeneration> {
         #CriteriaName must be replaced with the name of the criteria.
         #WeightPercentage must be replaced with the weight of this criterion as a number (total of all criteria should sum to 100).
         #CriteriaDef must be replaced with a detailed description of what meeting that criteria would look like for each scale value.
-        #ScoreValue must be replaced with a percentage label (like "20%", "40%", "60%", "80%", "100%") based on the selected point scale.
-        For example:
-        - If the selected point scale is 5, create levels for 20%, 40%, 60%, 80%, and 100%.
-        - If the selected point scale is 4, create levels for 25%, 50%, 75%, and 100%.
-        You should create as many "levels" objects as there are point scale values, and ensure the percentages are evenly distributed from 0% up to 100%.
+        #ScoreValue must be replaced with a percentage label starting at "0%" and ending at "100%", with all intermediate percentages evenly calculated based on the selected point scale.
+          For example:
+          - If the selected point scale is 5, create levels for 0%, 25%, 50%, 75%, and 100%.
+          - If the selected point scale is 4, create levels for 0%, 33%, 67%, and 100%.
+          - If the selected point scale is 3, create levels for 0%, 50%, and 100%.
+          - If the selected point scale is 2, create levels for 0% and 100%.
+          - If the selected point scale is 1, create a single level at 100%.
+          Ensure the percentages always start at 0% and end at 100%, and that all levels are evenly distributed in between.
+        You should create as many "levels" objects as there are point scale values, and ensure the percentages are evenly distributed from 0% up to 100%.The percentage must always start at 0% and end with 100%.
         Make sure the JSON exactly matches the format above, or you will receive an error.
         Do not include any additional information in your response.
         Here is the assignment information:
