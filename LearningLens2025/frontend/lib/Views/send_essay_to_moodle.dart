@@ -109,7 +109,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
 
       for (int i = 0; i < levels.length; i++) {
         headers.add({
-          "title": '${levels[i]['score']}', // The score (5, 3, 1) as headers
+          "title": '${levels[i]['score']}%', // The score (5, 3, 1) as headers
           'index': i + 3,
           'key': 'level_$i'
         });

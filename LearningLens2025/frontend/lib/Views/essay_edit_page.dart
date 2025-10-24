@@ -218,7 +218,7 @@ class EssayEditPageState extends State<EssayEditPage> {
         ],
       ),
     );
-}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -400,7 +400,8 @@ class EssayEditPageState extends State<EssayEditPage> {
       if (scores.first != 0 || scores.last != 100) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('First level must be 0% and last level must be 100%.'),
+            content:
+                Text('First level must be 0% and last level must be 100%.'),
             backgroundColor: Colors.red,
           ),
         );
