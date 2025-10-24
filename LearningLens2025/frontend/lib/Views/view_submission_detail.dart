@@ -226,8 +226,11 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blueAccent,
                                   foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  textStyle: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ),
                               SizedBox(height: 8),
