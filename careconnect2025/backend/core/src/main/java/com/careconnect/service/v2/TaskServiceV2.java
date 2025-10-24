@@ -2,6 +2,7 @@ package com.careconnect.service.v2;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -156,6 +157,7 @@ public class TaskServiceV2 {
                 .name(taskDto.getName())
                 .description(taskDto.getDescription())
                 .date(taskDto.getDate())
+                .createdAt(Instant.now().toEpochMilli())
                 .timeOfDay(taskDto.getTimeOfDay())
                 .isCompleted(taskDto.isCompleted())
                 .frequency(taskDto.getFrequency())
@@ -191,6 +193,37 @@ public class TaskServiceV2 {
 
         return mapToDto(savedParent);
 
+    }
+
+    /**
+     * Updates the completion status of a specific task.
+     *
+     * <p>
+     * This method retrieves the task by its unique identifier, updates its
+     * {@code isComplete} flag to the given value, and persists the change to the
+     * database. It is typically called when a user marks a task as complete or
+     * incomplete from the front-end interface.
+     * </p>
+     *
+     * <p>
+     * This operation is transactional to ensure data consistency — if the task
+     * is not found, a {@link TaskNotFoundException} is thrown and no changes are
+     * committed.
+     * </p>
+     *
+     * @param id         the unique identifier of the task to update
+     * @param isComplete the new completion state (true = completed, false = not
+     *                   completed)
+     * @return a {@link TaskDtoV2} representing the updated task
+     * @throws TaskNotFoundException if no task exists with the given ID
+     */
+    public TaskDtoV2 updateCompletionStatus(Long id, boolean isComplete) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException(id));
+
+        task.setCompleted(isComplete);
+        Task saved = taskRepository.save(task);
+        return mapToDto(saved);
     }
 
     /**
@@ -514,6 +547,7 @@ public class TaskServiceV2 {
                 .name(task.getName())
                 .description(task.getDescription())
                 .date(task.getDate())
+                .createdAt(task.getCreatedAt())
                 .timeOfDay(task.getTimeOfDay())
                 .isCompleted(task.isCompleted())
                 .frequency(task.getFrequency())

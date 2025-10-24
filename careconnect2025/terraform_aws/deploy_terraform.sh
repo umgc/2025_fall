@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# TODO - update all applies to use this: terraform apply -var="cc_iac_bucket_name=my-cc-iac-bucket"
-#         Update all bucket variable uses to use cc_iac_bucket_name
-
-
 set -e  # Exit on any error
 
 # Parse command-line arguments
@@ -116,6 +112,93 @@ build_frontend() {
     cd "$SCRIPT_DIR"
 }
 
+# Function to print terraform outputs after deployment
+print_outputs() {
+    local folder_name="$1"
+
+    echo ""
+    print_info "--------------------------------------------------"
+    print_info "Key Outputs from $folder_name:"
+    print_info "--------------------------------------------------"
+
+    case "$folder_name" in
+        "2_general")
+            # Output key information from 2_general
+            local main_api_endpoint=$(terraform output -raw main_api_endpoint 2>/dev/null)
+            local amplify_url=$(terraform output -raw amplify_url 2>/dev/null)
+
+            if [ -n "$main_api_endpoint" ]; then
+                print_success "Main API Endpoint: $main_api_endpoint"
+            fi
+
+            if [ -n "$amplify_url" ]; then
+                print_success "Amplify URL: https://$amplify_url"
+            fi
+            ;;
+
+        "3_database")
+            # Output database information
+            local db_endpoint=$(terraform output -raw db_endpoint 2>/dev/null)
+            local db_port=$(terraform output -raw db_port 2>/dev/null)
+
+            if [ -n "$db_endpoint" ]; then
+                print_success "Database Endpoint: $db_endpoint"
+            fi
+
+            if [ -n "$db_port" ]; then
+                print_success "Database Port: $db_port"
+            fi
+            ;;
+
+        "4_compute")
+            # Output Lambda information
+            local lambda_arn=$(terraform output -raw cc_main_backend_lambda_arn 2>/dev/null)
+            local lambda_invoke_arn=$(terraform output -raw cc_main_backend_lambda_invoke_arn 2>/dev/null)
+            local lambda_function_name=$(terraform output -raw cc_main_backend_lambda_function_name 2>/dev/null)
+            local websocket_api_endpoint=$(terraform output -raw websocket_api_endpoint 2>/dev/null)
+            local websocket_management_endpoint=$(terraform output -raw websocket_management_endpoint 2>/dev/null)
+
+            if [ -n "$lambda_function_name" ]; then
+                print_success "Lambda Function Name: $lambda_function_name"
+            fi
+
+            if [ -n "$lambda_arn" ]; then
+                print_success "Lambda ARN: $lambda_arn"
+            fi
+
+            if [ -n "$lambda_invoke_arn" ]; then
+                print_success "Lambda Invoke ARN: $lambda_invoke_arn"
+                print_info "  (Used by API Gateway to invoke Lambda)"
+            fi
+
+            if [ -n "$websocket_api_endpoint" ]; then
+                print_success "WebSocket Client Endpoint: $websocket_api_endpoint"
+                print_info "  (Use this in Flutter frontend for WebSocket connections)"
+            fi
+
+            if [ -n "$websocket_management_endpoint" ]; then
+                print_success "WebSocket Management Endpoint: $websocket_management_endpoint"
+                print_info "  (Lambda uses this to send messages to WebSocket connections)"
+            fi
+
+            # Retrieve and display WebSocket endpoint from Lambda environment
+            if [ -n "$lambda_function_name" ]; then
+                local ws_endpoint=$(aws lambda get-function-configuration \
+                    --function-name "$lambda_function_name" \
+                    --query 'Environment.Variables.AWS_WEBSOCKET_API_ENDPOINT' \
+                    --output text 2>/dev/null)
+
+                if [ -n "$ws_endpoint" ] && [ "$ws_endpoint" != "None" ] && [ "$ws_endpoint" != "" ]; then
+                    print_success "Lambda WebSocket Endpoint (from env): $ws_endpoint"
+                fi
+            fi
+            ;;
+    esac
+
+    print_info "--------------------------------------------------"
+    echo ""
+}
+
 # Function to collect SSM parameters
 collect_ssm_params() {
     print_info "Collecting SSM parameters for 2_general..."
@@ -210,13 +293,13 @@ run_terraform() {
         print_info "Validating Terraform configuration..."
         terraform validate
 
-        # Plan
+        # Plan and save to file
         print_info "Planning Terraform changes..."
-        terraform plan $tf_var_flags
+        terraform plan -out=tfplan $tf_var_flags
 
-        # Apply (Terraform will prompt for variables and confirmation)
+        # Apply the saved plan
         print_info "Applying Terraform configuration..."
-        terraform apply $tf_var_flags 
+        terraform apply tfplan
 
         if [ $? -eq 0 ]; then
             print_success "Terraform apply completed for $folder_name"
@@ -247,16 +330,19 @@ run_terraform() {
         print_info "Validating Terraform configuration..."
         terraform validate
 
-        # Plan
+        # Plan and save to file
         print_info "Planning Terraform changes..."
-        terraform plan $tf_var_flags
+        terraform plan -out=tfplan $tf_var_flags
 
-        # Apply (Terraform will prompt for variables and confirmation)
+        # Apply the saved plan
         print_info "Applying Terraform configuration..."
-        terraform apply $tf_var_flags
+        terraform apply tfplan
 
         if [ $? -eq 0 ]; then
             print_success "Terraform apply completed for $folder_name"
+
+            # Output key information after successful deployment
+            print_outputs "$folder_name"
         else
             print_error "Terraform apply failed for $folder_name"
             exit 1
@@ -397,7 +483,6 @@ main() {
         "2_general"
         "3_database"
         "4_compute"
-        "5_deploy"
     )
 
     # Check if all folders exist
@@ -496,6 +581,244 @@ main() {
     print_success "=================================================="
     print_success "All Terraform deployments completed successfully!"
     print_success "=================================================="
+    echo ""
+
+    # Print final summary with all important endpoints
+    print_final_summary
+}
+
+# Function to print final deployment summary
+print_final_summary() {
+    print_info "=================================================="
+    print_info "DEPLOYMENT SUMMARY - IMPORTANT ENDPOINTS"
+    print_info "=================================================="
+    echo ""
+
+    # Get outputs from each module
+    print_info "Retrieving deployment information..."
+    echo ""
+
+    # 2_general outputs
+    if [ -d "$SCRIPT_DIR/2_general" ]; then
+        cd "$SCRIPT_DIR/2_general"
+
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        print_success "API Endpoints (from 2_general)"
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        local main_api=$(terraform output -raw main_api_endpoint 2>/dev/null)
+        local amplify=$(terraform output -raw amplify_url 2>/dev/null)
+
+        echo ""
+        print_info "REST API:"
+        [ -n "$main_api" ] && echo "  $main_api" || echo "  (not available)"
+
+        echo ""
+        print_info "Frontend (Amplify):"
+        [ -n "$amplify" ] && echo "  https://$amplify" || echo "  (not available)"
+
+        cd "$SCRIPT_DIR"
+    fi
+
+    echo ""
+
+    # 4_compute outputs
+    if [ -d "$SCRIPT_DIR/4_compute" ]; then
+        cd "$SCRIPT_DIR/4_compute"
+
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        print_success "Lambda Backend (from 4_compute)"
+        print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        local lambda_name=$(terraform output -raw cc_main_backend_lambda_function_name 2>/dev/null)
+        local lambda_arn=$(terraform output -raw cc_main_backend_lambda_arn 2>/dev/null)
+        local lambda_invoke=$(terraform output -raw cc_main_backend_lambda_invoke_arn 2>/dev/null)
+        local ws_client=$(terraform output -raw websocket_api_endpoint 2>/dev/null)
+        local ws_mgmt=$(terraform output -raw websocket_management_endpoint 2>/dev/null)
+
+        echo ""
+        print_info "Function Name:"
+        [ -n "$lambda_name" ] && echo "  $lambda_name" || echo "  (not available)"
+
+        echo ""
+        print_info "Lambda ARN:"
+        [ -n "$lambda_arn" ] && echo "  $lambda_arn" || echo "  (not available)"
+
+        echo ""
+        print_info "Invoke ARN (for API Gateway):"
+        if [ -n "$lambda_invoke" ]; then
+            echo "  $lambda_invoke"
+            print_info "  → All 3 WebSocket routes (\$connect, \$disconnect, \$default) use this ARN"
+        else
+            echo "  (not available)"
+        fi
+
+        echo ""
+        print_info "WebSocket Client Endpoint:"
+        [ -n "$ws_client" ] && echo "  $ws_client" || echo "  (not available)"
+        [ -n "$ws_client" ] && print_info "  → Use this in Flutter for real-time connections"
+
+        echo ""
+        print_info "WebSocket Management API:"
+        [ -n "$ws_mgmt" ] && echo "  $ws_mgmt" || echo "  (not available)"
+        [ -n "$ws_mgmt" ] && print_info "  → Lambda uses this to send messages"
+
+        # Get WebSocket endpoint from Lambda environment
+        if [ -n "$lambda_name" ]; then
+            local ws_env=$(aws lambda get-function-configuration \
+                --function-name "$lambda_name" \
+                --query 'Environment.Variables.AWS_WEBSOCKET_API_ENDPOINT' \
+                --output text 2>/dev/null)
+
+            echo ""
+            print_info "Lambda Environment - WebSocket Endpoint:"
+            if [ -n "$ws_env" ] && [ "$ws_env" != "None" ] && [ "$ws_env" != "" ]; then
+                echo "  $ws_env"
+                print_success "  ✓ Lambda is configured with WebSocket endpoint"
+            else
+                echo "  (not configured)"
+                print_warning "  ⚠ Lambda may need re-deployment to get WebSocket endpoint"
+            fi
+        fi
+
+        cd "$SCRIPT_DIR"
+    fi
+
+    echo ""
+    echo ""
+
+    # Configure Lambda environment variables
+    configure_lambda_environment
+}
+
+# Function to configure Lambda environment variables after deployment
+configure_lambda_environment() {
+    print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    print_success "Configuring Lambda Environment Variables"
+    print_success "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+
+    # Get Lambda function name from 4_compute outputs
+    cd "$SCRIPT_DIR/4_compute"
+    local lambda_name=$(terraform output -raw cc_main_backend_lambda_function_name 2>/dev/null)
+
+    if [ -z "$lambda_name" ]; then
+        print_error "Could not retrieve Lambda function name from Terraform outputs"
+        print_warning "Skipping Lambda environment configuration"
+        return 1
+    fi
+
+    print_info "Lambda Function: $lambda_name"
+    echo ""
+
+    # Collect Terraform outputs
+    print_info "Collecting Terraform outputs..."
+
+    # From 2_general
+    cd "$SCRIPT_DIR/2_general"
+    local main_api=$(terraform output -raw main_api_endpoint 2>/dev/null)
+    local amplify=$(terraform output -raw amplify_url 2>/dev/null)
+    local s3_bucket=$(terraform output -raw internal_s3_bucket 2>/dev/null)
+
+    # From 3_database
+    cd "$SCRIPT_DIR/3_database"
+    local db_endpoint=$(terraform output -raw db_cluster_endpoint 2>/dev/null)
+    local db_port=$(terraform output -raw db_cluster_port 2>/dev/null)
+    local db_name=$(terraform output -raw db_cluster_name 2>/dev/null)
+    local db_secret_arn=$(terraform output -raw db_master_user_secret_arn 2>/dev/null)
+
+    # From 4_compute
+    cd "$SCRIPT_DIR/4_compute"
+    local ws_mgmt=$(terraform output -raw websocket_management_endpoint 2>/dev/null)
+
+    # Get database password from Secrets Manager
+    print_info "Retrieving database password from Secrets Manager..."
+    local db_password=$(aws secretsmanager get-secret-value \
+        --secret-id "$db_secret_arn" \
+        --query 'SecretString' \
+        --output text 2>/dev/null | jq -r '.password' 2>/dev/null)
+
+    if [ -z "$db_password" ]; then
+        print_warning "Could not retrieve database password from Secrets Manager"
+        db_password="PLACEHOLDER_PASSWORD"
+    fi
+
+    # Create temporary JSON file for Lambda environment variables
+    local env_file="/tmp/lambda_env_config.json"
+
+    print_info "Creating Lambda environment configuration..."
+    cat > "$env_file" <<EOF
+{
+  "Variables": {
+    "APP_FRONTEND_BASE_URL": "https://${amplify}",
+    "AWS_S3_BUCKET": "${s3_bucket}",
+    "AWS_S3_BASE_URL": "https://${s3_bucket}.s3.us-east-1.amazonaws.com",
+    "BASE_URL": "${main_api}",
+    "CC_APP_ROLE": "$(cd $SCRIPT_DIR/2_general && terraform output -raw cc_app_role_arn 2>/dev/null)",
+    "CORS_ALLOWED_LIST": "http://localhost:*,http://127.0.0.1:*,https://${amplify}",
+    "DB_HOST": "${db_endpoint}",
+    "DB_NAME": "${db_name}",
+    "DB_PASSWORD_SECRET_ARN": "${db_secret_arn}",
+    "DB_PORT": "${db_port}",
+    "DB_USER": "postgres",
+    "DB_PASSWORD": "${db_password}",
+    "AWS_WEBSOCKET_API_ENDPOINT": "${ws_mgmt}",
+    "JDBC_URI": "jdbc:postgresql://${db_endpoint}:${db_port}/${db_name}",
+    "CARECONNECT_DATABASE_USE_AWS_CONFIG": "false",
+    "SPRING_DATASOURCE_URL": "jdbc:postgresql://${db_endpoint}:${db_port}/${db_name}",
+    "SPRING_DATASOURCE_USERNAME": "postgres",
+    "SPRING_DATASOURCE_PASSWORD": "${db_password}",
+    "STRIPE_SECRET_KEY": "sk_test_placeholder_replace_with_real_key",
+    "SECURITY_JWT_SECRET": "placeholder_jwt_secret_minimum_256_bits_required_for_hs256_algorithm_please_replace",
+    "OPENAI_API_KEY": "sk-placeholder-openai-key",
+    "STRIPE_WEBHOOK_SIGNING_SECRET": "whsec_placeholder_stripe_webhook_secret",
+    "FITBIT_CLIENT_ID": "placeholder",
+    "FITBIT_CLIENT_SECRET": "placeholder",
+    "GOOGLE_CLIENT_ID": "placeholder.apps.googleusercontent.com",
+    "GOOGLE_CLIENT_SECRET": "placeholder",
+    "SENDGRID_API_KEY": "SG.placeholder",
+    "FIREBASE_PROJECT_ID": "careconnectcapstone",
+    "FIREBASE_SERVICE_ACCOUNT_KEY": "firebase-service-account.json",
+    "FIREBASE_SENDER_ID": "663999888931"
+  }
+}
+EOF
+
+    print_info "Updating Lambda environment variables..."
+    if aws lambda update-function-configuration \
+        --function-name "$lambda_name" \
+        --environment "file://$env_file" > /dev/null 2>&1; then
+        print_success "Lambda environment variables updated successfully!"
+        echo ""
+
+        print_info "Configured variables:"
+        echo "  ✓ Database connection (JDBC_URI, DB_HOST, DB_NAME, DB_PORT, DB_USER, DB_PASSWORD)"
+        echo "  ✓ AWS services (S3_BUCKET, WEBSOCKET_ENDPOINT)"
+        echo "  ✓ Application URLs (BASE_URL, FRONTEND_BASE_URL)"
+        echo "  ✓ CORS configuration"
+        echo ""
+
+        print_warning "Placeholder variables (replace with real values):"
+        echo "  • STRIPE_SECRET_KEY"
+        echo "  • SECURITY_JWT_SECRET (required for JWT authentication)"
+        echo "  • OPENAI_API_KEY"
+        echo "  • STRIPE_WEBHOOK_SIGNING_SECRET"
+        echo "  • OAuth2 credentials (FITBIT, GOOGLE)"
+        echo "  • SENDGRID_API_KEY"
+        echo ""
+
+        print_info "To update these values, use:"
+        echo "  aws lambda update-function-configuration --function-name $lambda_name \\"
+        echo "    --environment Variables={...}"
+    else
+        print_error "Failed to update Lambda environment variables"
+        print_info "You can manually update them using the AWS Console or CLI"
+    fi
+
+    # Clean up temp file
+    rm -f "$env_file"
+
+    cd "$SCRIPT_DIR"
 }
 
 # Run main function

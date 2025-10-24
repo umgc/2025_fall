@@ -20,6 +20,9 @@ variable "domain_name" {
 variable "cc_ssm_params" {
   description = "List of secure SSM parameters to be created"
   type        = map(string) 
+  default = {
+    "username" = "cc_db_user"
+  } 
  
 }
 
