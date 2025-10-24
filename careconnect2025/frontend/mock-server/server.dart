@@ -195,7 +195,7 @@ class MockServer {
         'role': role,
         'patientId': role == 'patient' ? MockData.patients.length + 1 : null,
         'caregiverId': role == 'caregiver' ? MockData.caregivers.length + 1 : null,
-        'stripeCustomerId': 'cus_mock_$role${MockData.users.length + 1}'
+        'stripeCustomerId': 'cus_mock_${role}${MockData.users.length + 1}'
       };
 
       MockData.users.add(newUser);
