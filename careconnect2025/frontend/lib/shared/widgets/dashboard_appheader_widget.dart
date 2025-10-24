@@ -1,4 +1,7 @@
 import 'package:care_connect_app/pages/settings_page.dart';
+import 'package:care_connect_app/features/emergency_qr/qr_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 
 /// Dashboard App header
@@ -104,6 +107,82 @@ class DashboardAppHeader extends StatelessWidget
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Emergency QR Icon
+                          SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                                final patient = userProvider.patientModel;
+                                final user = userProvider.user;
+
+                                if (patient != null && user != null) {
+                                  // Parse date of birth
+                                  DateTime dobDate;
+                                  try {
+                                    dobDate = DateTime.parse(patient.dob);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Invalid date of birth. Cannot generate emergency QR.'),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  // Calculate accurate age
+                                  final now = DateTime.now();
+                                  int age = now.year - dobDate.year;
+                                  if (now.month < dobDate.month || (now.month == dobDate.month && now.day < dobDate.day)) {
+                                    age--;
+                                  }
+
+                                  // Create emergency ID from patient ID
+                                  final emergencyId = 'VIAL${user.patientId ?? user.id}';
+
+                                  final emergencyInfo = EmergencyInfo(
+                                    firstName: patient.firstName,
+                                    lastName: patient.lastName,
+                                    bloodType: '', // Will be filled from backend
+                                    dob: dobDate,
+                                    age: age,
+                                    gender: patient.gender,
+                                    id: emergencyId,
+                                    allergiesCritical: [], // Will be loaded from backend
+                                    contacts: [],
+                                    secureToken: user.token,
+                                  );
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => QrScreen(
+                                        payload: emergencyInfo.qrPayload(),
+                                        emergencyId: emergencyId,
+                                        patientId: user.patientId ?? user.id,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  // Show error if no patient data available
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Patient data not available for emergency QR'),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: Icon(
+                                Icons.local_hospital,
+                                color: Colors.red,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Settings Icon
                           SizedBox(
                             width: 40,
                             height: 40,
@@ -184,7 +263,7 @@ class DashboardAppHeader extends StatelessWidget
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            "Welcome back ${userName}",
+                            "Welcome back $userName",
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w600,
