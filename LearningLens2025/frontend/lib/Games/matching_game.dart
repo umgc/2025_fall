@@ -86,124 +86,132 @@ class _MatchingGameState extends State<MatchingGame> {
                 trailing: Text(r['status'] ?? ''),
               )),
           const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: widget.onComplete,
-            child: const Text('Close'),
-          ),
         ],
       );
     }
-    return Column(
-      children: [
-        if (widget.previewMode)
-          Container(
-            width: double.infinity,
-            color: Colors.yellow.shade100,
-            padding: const EdgeInsets.all(8),
-            child: const Text(
-              'Preview Mode - Answers not interactive',
-              style: TextStyle(color: Colors.black87),
-              textAlign: TextAlign.center,
-            ),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          const Text(
+            'Drag a term to its matching definition.',
+            style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center,
           ),
-        const Text(
-          'Match the terms with the correct definitions:',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-        Expanded(
-          child: Row(
-            children: [
-              // Left side: draggable terms
-              Expanded(
-                child: Column(
-                  children: leftItems.map((term) {
-                    return Draggable<String>(
-                      data: term,
-                      feedback: Material(
+          const SizedBox(height: 8),
+          const Text(
+            'Match the terms with the correct definitions:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 400,
+            child: Row(
+              children: [
+                // Left side: draggable terms
+                Expanded(
+                  child: Column(
+                    children: leftItems.map((term) {
+                      return Draggable<String>(
+                        data: term,
+                        feedback: Material(
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.blueAccent,
+                            child: Text(term,
+                                style: const TextStyle(color: Colors.white)),
+                          ),
+                        ),
+                        childWhenDragging:
+                            Opacity(opacity: 0.5, child: Text(term)),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          color: Colors.blueAccent,
-                          child: Text(term,
-                              style: const TextStyle(color: Colors.white)),
+                          child: Text(term),
                         ),
-                      ),
-                      childWhenDragging:
-                          Opacity(opacity: 0.5, child: Text(term)),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(term),
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
 
-              const VerticalDivider(),
+                const VerticalDivider(),
 
-              // Right side: drop targets for definitions
-              Expanded(
-                child: Column(
-                  children: rightItems.map((definition) {
-                    final matchedTerm = userMatches.entries
-                        .firstWhere((e) => e.value == definition,
-                            orElse: () => MapEntry('', ''))
-                        .key;
-                    return DragTarget<String>(
-                      builder: (context, candidateData, rejectedData) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.all(8),
-                          color: matchedTerm.isNotEmpty
-                              ? Colors.greenAccent
-                              : Colors.grey.shade200,
-                          child: Text(
-                            matchedTerm.isNotEmpty
-                                ? '$matchedTerm → $definition'
-                                : definition,
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        );
-                      },
-                      onAccept: (term) {
-                        setState(() {
-                          userMatches[term] = definition;
-                        });
-                      },
-                    );
-                  }).toList(),
+                // Right side: drop targets for definitions
+                Expanded(
+                  child: Column(
+                    children: rightItems.map((definition) {
+                      final matchedTerm = userMatches.entries
+                          .firstWhere((e) => e.value == definition,
+                              orElse: () => MapEntry('', ''))
+                          .key;
+                      return DragTarget<String>(
+                        builder: (context, candidateData, rejectedData) {
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.all(8),
+                            color: matchedTerm.isNotEmpty
+                                ? Colors.greenAccent
+                                : Colors.grey.shade200,
+                            child: Text(
+                              matchedTerm.isNotEmpty
+                                  ? '$matchedTerm → $definition'
+                                  : definition,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        },
+                        onAccept: (term) {
+                          setState(() {
+                            userMatches[term] = definition;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
-        if (!widget.previewMode && !gameFinished)
-          ElevatedButton(
-            onPressed: () {
-              if (gameFinished) return;
+          const SizedBox(height: 20),
+          if (!gameFinished)
+            ElevatedButton(
+              onPressed: () {
+                if (gameFinished) return;
 
-              score = 0;
-              results.clear();
+                score = 0;
+                results.clear();
 
-              for (var entry in userMatches.entries) {
-                final correct = correctMatches[entry.key] == entry.value;
-                if (correct) score++;
-                results.add({
-                  'term': entry.key,
-                  'selected': entry.value,
-                  'correct': correctMatches[entry.key] ?? '',
-                  'status': correct ? '✅ Correct' : '❌ Incorrect'
+                for (var entry in userMatches.entries) {
+                  final correct = correctMatches[entry.key] == entry.value;
+                  if (!widget.previewMode && correct) score++;
+                  results.add({
+                    'term': entry.key,
+                    'selected': entry.value,
+                    'correct': correctMatches[entry.key] ?? '',
+                    'status': correct ? '✅ Correct' : '❌ Incorrect'
+                  });
+                }
+
+                setState(() {
+                  gameFinished = true;
                 });
-              }
-
-              setState(() {
-                gameFinished = true;
-              });
-            },
-            child: const Text('Submit Answers'),
-          ),
-      ],
+              },
+              child: const Text('Submit Answers'),
+            ),
+          if (gameFinished)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: OutlinedButton(
+                onPressed: widget.onComplete,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.blue),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text('Close'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

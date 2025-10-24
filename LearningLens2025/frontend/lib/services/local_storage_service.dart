@@ -194,7 +194,7 @@ class LocalStorageService {
 
   /// Retrieves Grok API key from storage or dotenv.
   static String getGrokKey() {
-    return _prefs.getString('grokKey') ?? dotenv.env['grok_apiKey'] ?? '';
+    return _prefs.getString('grokKey') ?? dotenv.env['grokKey'] ?? '';
   }
 
   static bool hasGrokKey() {

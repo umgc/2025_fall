@@ -22,6 +22,7 @@ class _QuizGameState extends State<QuizGame> {
   bool showResult = false;
   bool? wasCorrect;
   List<Map<String, String>> userAnswers = [];
+  String? previewSelected;
 
   void checkAnswer(String selected) {
     final correctAnswerIndex = widget.questions[currentIndex]['answer'] as int;
@@ -29,16 +30,26 @@ class _QuizGameState extends State<QuizGame> {
             [correctAnswerIndex]
         .toString();
     final correct = correctAnswerText == selected;
+
     userAnswers.add({
       'question': widget.questions[currentIndex]['question'],
       'selected': selected,
       'correct': correctAnswerText,
     });
-    setState(() {
-      wasCorrect = correct;
-      if (!widget.previewMode && correct) score++;
-      showResult = true;
-    });
+
+    if (widget.previewMode) {
+      setState(() {
+        previewSelected = selected;
+        showResult = true;
+      });
+    } else {
+      setState(() {
+        wasCorrect = correct;
+        if (correct) score++;
+        showResult = true;
+      });
+    }
+
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) nextQuestion();
     });
@@ -51,6 +62,7 @@ class _QuizGameState extends State<QuizGame> {
         currentIndex++;
         showResult = false;
         wasCorrect = null;
+        previewSelected = null;
       });
     } else {
       setState(() {
@@ -110,9 +122,12 @@ class _QuizGameState extends State<QuizGame> {
               title: Text(option),
               leading: Radio<String>(
                 value: option,
-                groupValue: showResult
-                    ? question['options'][question['answer'] as int].toString()
-                    : null,
+                groupValue: widget.previewMode
+                    ? previewSelected
+                    : (showResult
+                        ? question['options'][question['answer'] as int]
+                            .toString()
+                        : null),
                 onChanged: showResult ? null : (_) => checkAnswer(option),
               ),
             );
