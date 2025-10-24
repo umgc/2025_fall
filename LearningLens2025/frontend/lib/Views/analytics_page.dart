@@ -2728,7 +2728,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (selectedLLM != LlmType.LOCAL ||
         await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
       try {
-        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt) ?? "");
         if (!canceled) {
           String normalizedResult = result.trim();
           // Remove markdown code block wrappers if present.

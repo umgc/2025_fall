@@ -899,7 +899,7 @@ class _IepPageState extends State<IepPage> {
     if (selectedLLM != LlmType.LOCAL ||
         await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
       try {
-        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+        var result = await aiModel.postToLlm(HtmlConverter.convert(prompt) ?? "");
         String normalizedResult = result.trim();
         if (!canceled) {
           // Remove markdown code block wrappers if present.
