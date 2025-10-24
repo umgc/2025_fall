@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
 import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
 
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
@@ -14,6 +17,7 @@ class PatientVirtualCheckIn extends StatefulWidget {
 class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   int? selectedMood;
   final TextEditingController _notesController = TextEditingController();
+  final String apiURL = "placeholder";
   late Future<VideoWidget> videoWidget;
   late bool showVideoCall = false;
   late bool currentlyRecording = false;
@@ -88,7 +92,9 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
         return;
       }
 
-    currentlyRecording = false;
+    XFile video = await controller.stopVideoRecording();
+    await http.post(Uri.parse(apiURL)); ///TODO: Add a proper body that includes XFile Video
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Video submitted successfully! (placeholder)"),
@@ -98,6 +104,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
     // Close the video recording
     setState(() {
+      currentlyRecording = false;
       showVideoCall = false;
       videoCallActive = false;
     });
@@ -121,7 +128,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   ///Done: Add a pause/start functionality
   ///TODO: Add a preview
-  ///TODO: Control the camera with code
+  ///Done: Control the camera with code
   ///TODO: Submit video file
 
   @override
