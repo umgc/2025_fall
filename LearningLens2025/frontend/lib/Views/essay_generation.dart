@@ -288,7 +288,7 @@ class _EssayGenerationState extends State<EssayGeneration> {
                     if (selectedLLM == LlmType.LOCAL) ...[
                       const SizedBox(height: 6),
                       const Text(
-                        "The recommended model for Rubric Generation is a 7B or higher reasoning (Qwen) models.\nRunning a Large Language Model (LLM) requires substantial hardware resources. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\n",
+                        "The recommended model for Rubric Generation is a 7B or higher reasoning (Qwen) model.\nRunning a Large Language Model (LLM) requires substantial hardware resources. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\n",
                         style: TextStyle(fontSize: 13, color: Colors.black54),
                       ),
                     ],

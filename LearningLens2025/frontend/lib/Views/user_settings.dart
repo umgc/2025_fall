@@ -374,7 +374,9 @@ class UserSettingsState extends State<UserSettings> {
 
   // Fetch CSV from URL
   Future<void> _fetchModelsCsv() async {
-    fetchModelsFail = false;
+    setState(() {
+      fetchModelsFail = false;
+    });
     final downloadUrl = LocalStorageService.getLocalLLMDownloadURLPath();
     if (downloadUrl != '') {
       final url = Uri.parse(
@@ -436,8 +438,10 @@ class UserSettingsState extends State<UserSettings> {
       LocalStorageService.saveGPUInfo(gpu);
       LocalStorageService.saveGPUVRam(vram);
 
-      _gpuModel = gpu;
-      _gpuVRAM = vram;
+      setState(() {
+        _gpuModel = gpu;
+        _gpuVRAM = vram;
+      });
 
       print("GPU : $gpu VRAM: $vram");
 
@@ -579,15 +583,15 @@ class UserSettingsState extends State<UserSettings> {
               '''
 ⚠️ Hardware & Model Requirements
 
-This app requires a Qwen model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
-Currently, only GGUF format is supported.
+This app requires a reasoning model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
+Only GGUF models are currently supported.
 
 Running such models locally demands high-end hardware:
-• A discrete GPU with at least 8GB or more VRAM is required (RTX 3060 or better).
+• A discrete GPU with at least 8GB or more VRAM is recommended to run 7B models.
 • Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
-• For the best accuracy, a Qwen model with more than 14B parameters is recommended (12GB or more VRAM is recommended)
 
-Attempting to run this app without the required model and hardware may result in unreliable output or total failure.
+Using the local LLM without the recommended model and hardware may result in unreliable output or total failure.
+For the best performance and accuracy, using an API-hosted LLM is recommended.
 
 Please refer to the information below to better understand your device's GPU and memory specifications.
 ''',
@@ -873,11 +877,33 @@ Please refer to the information below to better understand your device's GPU and
           if (_ggufModelPath != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                'Currently Loaded Model: $_ggufModelPath',
-                style: const TextStyle(fontStyle: FontStyle.italic),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Currently Loaded Model: $_ggufModelPath',
+                      style: const TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                  if (_ggufModelPath != "")
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _ggufModelPath = "";
+                          LocalStorageService.saveLocalLLMPath("");
+                        });
+                      },
+                      icon: const Icon(Icons.clear, size: 18),
+                      label: const Text('Unload Model'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                      ),
+                    ),
+                ],
               ),
             ),
+
           const SizedBox(width: 10),
         ],
       );
