@@ -148,6 +148,7 @@ dependencies:
   ##EVV Dependencies
   connectivity_plus: ^6.0.5
   device_info_plus: ^12.1.0
+  flutter_local_notifications: ^17.2.3
   # Team D - Dependencies End
 dependency_overrides:
   # llama_cpp_dart:
