@@ -23,6 +23,7 @@ class _GamificationViewState extends State<GamificationView> {
   bool _isGameCreated = false;
   List<Map<String, dynamic>>? _generatedGameData;
   LlmType? _selectedLLM;
+  bool _gameNeedsRefresh = false;
 
   void showLoadingDialog(BuildContext context) {
     showDialog(
@@ -77,6 +78,8 @@ class _GamificationViewState extends State<GamificationView> {
                 final file = result.files.single;
                 setState(() {
                   _selectedFile = file;
+                  _gameNeedsRefresh = true;
+                  _isGameCreated = false;
                 });
                 // For now, just show a snackbar with the file name
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +133,8 @@ class _GamificationViewState extends State<GamificationView> {
                 onSelected: (_) {
                   setState(() {
                     _selectedDifficulty = level;
+                    _gameNeedsRefresh = true;
+                    _isGameCreated = false;
                   });
                 },
               );
@@ -150,6 +155,8 @@ class _GamificationViewState extends State<GamificationView> {
             onChanged: (val) {
               setState(() {
                 _selectedLLM = val;
+                _gameNeedsRefresh = true;
+                _isGameCreated = false;
               });
             },
           ),
@@ -212,6 +219,7 @@ class _GamificationViewState extends State<GamificationView> {
                   setState(() {
                     _generatedGameData = response;
                     _isGameCreated = true;
+                    _gameNeedsRefresh = false;
                   });
 
                   Navigator.pop(context);
@@ -233,6 +241,12 @@ class _GamificationViewState extends State<GamificationView> {
               child: ElevatedButton(
                 child: const Text('Preview Game'),
                 onPressed: () {
+                  if (_gameNeedsRefresh || _generatedGameData == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Please click "Create Game" before previewing.')),
+                    );
+                    return;
+                  }
                   showDialog(
                     context: context,
                     builder: (context) {
@@ -301,6 +315,8 @@ class _GamificationViewState extends State<GamificationView> {
       onPressed: () {
         setState(() {
           _selectedGameType = label;
+          _gameNeedsRefresh = true;
+          _isGameCreated = false;
         });
       },
     );
