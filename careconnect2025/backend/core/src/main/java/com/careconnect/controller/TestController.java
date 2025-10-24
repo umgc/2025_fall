@@ -23,6 +23,7 @@ import java.util.Map;
 @Tag(name = "Testing", description = "Public testing endpoints for verifying API functionality")
 public class TestController {
 
+
     @GetMapping("/health")
     @Operation(
         summary = "Health check",
@@ -128,4 +129,6 @@ public class TestController {
             "supportContact", "support@careconnect.com"
         ));
     }
+
+
 }

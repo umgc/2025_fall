@@ -5,6 +5,7 @@ import com.careconnect.security.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,6 +17,22 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    /**
+     * ✅ 1️⃣ Alexa-specific chain
+     * This chain ONLY applies to /v1/api/auth/sso/alexa/**
+     * It disables JWT + BasicAuth filters entirely.
+     */
+    @Bean
+    SecurityFilterChain alexaSecurityChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/v1/api/auth/sso/alexa/**") // match these URLs only
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .httpBasic(basic -> basic.disable()); // disable BasicAuth only for Alexa
+
+        return http.build();
+    }
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
@@ -38,7 +55,10 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, e) ->
                     res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
             .authorizeHttpRequests(auth -> auth
-                /* ---------- Swagger/OpenAPI documentation - MUST BE FIRST --------------- */
+                /* ---------- Allow OPTIONS for CORS preflight - MUST BE FIRST --------------- */
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                /* ---------- Swagger/OpenAPI documentation --------------- */
                 .requestMatchers(
                         "/swagger-ui/**",
                         "/swagger-ui.html",
