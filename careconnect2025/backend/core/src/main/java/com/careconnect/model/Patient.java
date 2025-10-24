@@ -14,7 +14,7 @@ import lombok.*;
 @Builder
 @Entity
 public class Patient {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
