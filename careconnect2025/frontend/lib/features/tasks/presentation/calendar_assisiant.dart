@@ -46,8 +46,8 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
   bool isLoading = true;
   String? error;
   bool _filtersExpanded = false;
-  final Set<String> _selectedTypes = {};
-  final Set<int> _selectedPatients = {};
+  Set<String> _selectedTypes = {};
+  Set<int> _selectedPatients = {};
   Map<int, String> patientNames = {};
   DateTime? _selectedDay;
 
@@ -724,7 +724,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       final List<Task> expandedTasks = [];
 
       for (final Task base in baseTasks) {
-        final Object built = RecurrenceUtils.buildTask(baseTask: base);
+        final Object? built = RecurrenceUtils.buildTask(baseTask: base);
 
         if (built is List<Task>) {
           expandedTasks.addAll(built);
@@ -859,7 +859,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
     // Expand recurrence safely
     final List<Task> expandedTasks = <Task>[];
     for (final Task base in editedTasks) {
-      final Object built = RecurrenceUtils.buildTask(baseTask: base);
+      final Object? built = RecurrenceUtils.buildTask(baseTask: base);
 
       if (built is List<Task>) {
         expandedTasks.addAll(built);

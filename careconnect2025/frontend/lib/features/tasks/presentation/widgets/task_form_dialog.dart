@@ -436,7 +436,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                                   final name =
                                       "${p['patient']?['firstName'] ?? ''} ${p['patient']?['lastName'] ?? ''}"
                                           .trim();
-                                  if (pid == null) 
+                                  if (pid == null)
                                     return const SizedBox.shrink();
                                   return CheckboxListTile(
                                     title: Text(
