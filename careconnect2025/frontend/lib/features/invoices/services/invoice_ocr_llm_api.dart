@@ -34,7 +34,6 @@ class InvoiceOcrLlmApi {
   static Future<InvoiceResponseDto?> extractWithLlm({
     List<XFile> images = const [],
     List<String> pdfPaths = const [],
-    List<Uint8List> pdfBytes = const [], // <-- 1. PARAMETER ADDED HERE
   }) async {
     final uri = Uri.parse('${ApiConstants.invoices}/extract-llm');
     final headers = await AuthTokenManager.getAuthHeaders();
@@ -57,18 +56,7 @@ class InvoiceOcrLlmApi {
       ));
     }
 
-    // <-- 2. NEW LOGIC BLOCK ADDED HERE
-    // PDFs (from bytes)
-    int pdfBytesCounter = 0;
-    for (final bytes in pdfBytes) {
-      req.files.add(http.MultipartFile.fromBytes(
-        'files',
-        bytes,
-        filename: 'upload_${pdfBytesCounter++}.pdf', // Generate a filename
-        contentType: MediaType('application', 'pdf'),
-      ));
-    }
-    // END OF NEW LOGIC BLOCK
+  
 
     final streamed = await req.send().timeout(const Duration(seconds: 180));
     final resp = await http.Response.fromStream(streamed);

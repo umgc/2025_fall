@@ -246,8 +246,8 @@ class AppTheme {
       ),
       dividerTheme: const DividerThemeData(thickness: 1, color: borderColor),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.disabled)) {
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.disabled)) {
             return textSecondary.withOpacity(0.3);
           }
           return primary;
@@ -362,8 +362,8 @@ class AppTheme {
         color: borderColorDarkTheme,
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.disabled)) {
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.disabled)) {
             return textSecondaryDarkTheme.withOpacity(0.3);
           }
           return primaryDarkTheme;

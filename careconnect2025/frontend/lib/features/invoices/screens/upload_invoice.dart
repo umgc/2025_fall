@@ -34,7 +34,6 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     });
   }
 
-  // --- THIS IS THE MODIFIED FUNCTION ---
   Future<void> _onUploadFile() async {
     final picked = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -44,97 +43,91 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     );
     if (picked == null) return;
 
-    // 1. UNIFY ALL FILES
-    // Convert all picked files (images and PDFs) into a single List<XFile>
-    // to pass to the review screen.
-    final allFilesToReview = <XFile>[];
+    String? ext(String? p) => p?.split('.').last.toLowerCase();
+    final imageFiles = <XFile>[];
+    final pdfPaths = <String>[];
+
     for (final f in picked.files) {
-      if (kIsWeb) {
-        if (f.bytes != null) {
-          allFilesToReview.add(XFile.fromData(f.bytes!, name: f.name));
+      final path = f.path;
+      if (path == null) continue;
+      final e = ext(f.name);
+      if (e == 'png' || e == 'jpg' || e == 'jpeg') {
+        // For images, create XFile properly for both web and mobile
+        if (kIsWeb) {
+          // On web, create XFile from bytes
+          if (f.bytes != null) {
+            imageFiles.add(XFile.fromData(f.bytes!, name: f.name));
+          }
+        } else {
+          // On mobile, use path if available
+          if (f.path != null) {
+            imageFiles.add(XFile(f.path!));
+          }
         }
-      } else {
+      } else if (e == 'pdf') {
+        // For PDF, we still need paths for now
+        // TODO: Updated PDF handling for web compatibility
         if (f.path != null) {
-          allFilesToReview.add(XFile(f.path!));
-        }
+          pdfPaths.add(f.path!);
+      } else if (kIsWeb) {
+          _snack('PDF upload on web is not currently supported. Please use mobile device or upload images instead.');
+                return;
+      }
       }
     }
 
-    if (allFilesToReview.isEmpty) {
+    if (imageFiles.isEmpty && pdfPaths.isEmpty) {
       _snack('No supported files selected');
       return;
     }
 
-    // 2. GO TO REVIEW SCREEN
-    // Pass ALL files (images and PDFs) to the review screen.
-    // We assume ReviewPhotosScreen will pass back any file it can't preview.
-    final reviewedFiles = await Navigator.push<List<XFile>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ReviewPhotosScreen(
-          initialPhotos: allFilesToReview, // Pass all files
+    // Images flow
+    if (imageFiles.isNotEmpty) {
+      final reviewed = await Navigator.push<List<XFile>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReviewPhotosScreen(
+            initialPhotos: imageFiles,
+          ),
+          fullscreenDialog: true,
         ),
-        fullscreenDialog: true,
-      ),
-    );
-    if (!mounted) return;
+      );
+      if (!mounted) return;
 
-    if (reviewedFiles == null || reviewedFiles.isEmpty) {
-      _snack('No files selected');
-      return;
-    }
-
-    // 3. EXTRACT AFTER REVIEW
-    // Now that the user has clicked "Done", separate the
-    // *reviewed* files and send them to the API.
-
-    String? ext(String? p) => p?.split('.').last.toLowerCase();
-    final imageFiles = <XFile>[];
-    final pdfPaths = <String>[];
-    final pdfBytes = <Uint8List>[];
-
-    for (final f in reviewedFiles) {
-      final e = ext(f.name);
-      if (e == null) continue;
-
-      if (e == 'png' || e == 'jpg' || e == 'jpeg') {
-        imageFiles.add(f); // XFile is already in the right format
-      } else if (e == 'pdf') {
-        if (kIsWeb) {
-          // On web, XFile from pickFiles will have bytes.
-          // We need to read them.
-          pdfBytes.add(await f.readAsBytes());
-        } else {
-          // On mobile, XFile has a path.
-          pdfPaths.add(f.path);
-        }
+      if (reviewed == null || reviewed.isEmpty) {
+        _snack('No photos selected');
+        return;
       }
+
+      final res = await runWithBlockingDialog<InvoiceResponseDto?>(
+        context: context,
+        message: 'Extracting invoice data from images. This may take a minute.',
+        future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
+      );
+
+       await _handleExtractResult(
+        res,
+        failMessage: 'Could not extract invoice from images',
+      );
+      if (!mounted) return;
     }
 
-    // 4. RUN API CALL
-    // Make a SINGLE API call with all file types
-    if (imageFiles.isEmpty && pdfPaths.isEmpty && pdfBytes.isEmpty) {
-      _snack('No supported files were returned from review');
-      return;
+      // PDFs flow
+    if (pdfPaths.isNotEmpty) {
+      final res = await runWithBlockingDialog<InvoiceResponseDto?>(
+        context: context,
+        message:
+            'Extracting invoice data from PDF files. This may take a minute.',
+        future: InvoiceOcrLlmApi.extractWithLlm(pdfPaths: pdfPaths),
+      );
+
+      await _handleExtractResult(
+        res,
+        failMessage: 'Could not extract invoice from PDF files',
+      );
+      if (!mounted) return;
     }
-
-    final res = await runWithBlockingDialog<InvoiceResponseDto?>(
-      context: context,
-      message: 'Extracting invoice data. This may take a minute.',
-      future: InvoiceOcrLlmApi.extractWithLlm(
-        images: imageFiles,
-        pdfPaths: pdfPaths,
-        pdfBytes: pdfBytes,
-      ),
-    );
-
-    await _handleExtractResult(
-      res,
-      failMessage: 'Could not extract invoice data from files',
-    );
-    if (!mounted) return;
   }
-  // --- END OF MODIFIED FUNCTION ---
 
 
   Future<void> _onTakePhoto() async {
