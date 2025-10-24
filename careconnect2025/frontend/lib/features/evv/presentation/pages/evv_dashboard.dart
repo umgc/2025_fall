@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/evv_service.dart';
-import 'evv_participant_management.dart';
-import 'evv_record_creation.dart';
+import '../../../../widgets/common_drawer.dart';
+import '../../../../widgets/app_bar_helper.dart';
 import 'evv_record_review.dart';
 import 'evv_visit_history.dart';
 import 'evv_corrections.dart';
 import 'evv_offline_sync.dart';
+import 'patient_selection_page.dart';
 
 class EvvDashboard extends StatefulWidget {
   const EvvDashboard({super.key});
@@ -72,17 +73,19 @@ class _EvvDashboardState extends State<EvvDashboard> {
     final isCaregiver = user?.role == 'CAREGIVER';
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        drawer: const CommonDrawer(currentRoute: '/evv/dashboard'),
+        appBar: AppBarHelper.createAppBar(context, title: 'EVV Dashboard'),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EVV Dashboard'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
+      drawer: const CommonDrawer(currentRoute: '/evv/dashboard'),
+      appBar: AppBarHelper.createAppBar(
+        context,
+        title: 'EVV Dashboard',
+        additionalActions: [
           if (_offlineQueue.isNotEmpty)
             IconButton(
               icon: Stack(
@@ -265,27 +268,15 @@ class _EvvDashboardState extends State<EvvDashboard> {
               spacing: 12,
               runSpacing: 12,
               children: [
-                if (isAdmin || isCaregiver)
-                  _buildActionButton(
-                    'Add Participant',
-                    Icons.person_add,
-                    Colors.green,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EvvParticipantManagementPage(),
-                      ),
-                    ),
-                  ),
                 if (isCaregiver)
                   _buildActionButton(
-                    'Create EVV Record',
-                    Icons.add_circle,
+                    'Start Visit',
+                    Icons.play_circle,
                     Colors.blue,
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const EvvRecordCreationPage(),
+                        builder: (context) => const PatientSelectionPage(),
                       ),
                     ),
                   ),

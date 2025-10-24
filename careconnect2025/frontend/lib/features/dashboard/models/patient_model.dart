@@ -47,6 +47,7 @@ class Patient {
   final int? linkId;
   final String linkStatus;
   final String? gender;
+  final String? maNumber;
   final List<dynamic>? allergies;
   final Map<String, dynamic>? vitalConditions;
 
@@ -63,6 +64,7 @@ class Patient {
     this.linkId,
     this.linkStatus = 'ACTIVE',
     this.gender,
+    this.maNumber,
     this.allergies,
     this.vitalConditions,
   });
@@ -155,6 +157,7 @@ class Patient {
       linkId: linkId,
       linkStatus: linkStatus,
       gender: patientData['gender']?.toString(),
+      maNumber: patientData['maNumber']?.toString(),
       allergies: patientData['allergies'] ?? [],
       vitalConditions: patientData['latestVitals'] ?? {},
     );
@@ -266,6 +269,6 @@ class Patient {
 
   @override
   String toString() {
-    return 'Patient{id: $id, firstName: $firstName, lastName: $lastName, email: $email, phone: $phone, dob: $dob, relationship: $relationship, linkId: $linkId, linkStatus: $linkStatus, gender: $gender, allergies: $allergies, vitalConditions: $vitalConditions}';
+    return 'Patient{id: $id, firstName: $firstName, lastName: $lastName, email: $email, phone: $phone, dob: $dob, relationship: $relationship, maNumber: $maNumber, linkId: $linkId, linkStatus: $linkStatus, gender: $gender, allergies: $allergies, vitalConditions: $vitalConditions}';
   }
 }
