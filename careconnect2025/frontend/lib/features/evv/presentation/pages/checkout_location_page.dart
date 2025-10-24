@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/auth_token_manager.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 import 'dart:convert';
@@ -198,7 +197,7 @@ class _CheckoutLocationPageState extends State<CheckoutLocationPage> {
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join('&');
 
-    context.go('/evv/visit-complete?$queryString');
+    context.push('/evv/visit-complete?$queryString');
   }
 
   void _showLocationError(String message) {
@@ -235,9 +234,21 @@ class _CheckoutLocationPageState extends State<CheckoutLocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Check-Out Location',
-      currentRoute: '/evv/checkout-location',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Check-Out Location'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }

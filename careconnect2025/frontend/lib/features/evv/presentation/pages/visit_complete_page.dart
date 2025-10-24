@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/evv_service.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 
@@ -276,7 +275,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
           .join('&');
 
-      context.go('/evv/visit-completed-success?$queryString');
+      context.push('/evv/visit-completed-success?$queryString');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -293,9 +292,21 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Visit Complete',
-      currentRoute: '/evv/visit-complete',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Visit Complete'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }

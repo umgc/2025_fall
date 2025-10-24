@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/auth_token_manager.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 import 'dart:convert';
@@ -119,7 +118,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
     }
 
     // Navigate to Check-In Location page with selected patient and service type
-    context.go('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}');
+    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}');
   }
 
   String _formatAddress(Patient patient) {
@@ -146,9 +145,21 @@ class _StartVisitPageState extends State<StartVisitPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Start Visit',
-      currentRoute: '/evv/start-visit',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Start Visit'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }

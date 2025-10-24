@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/auth_token_manager.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 import 'dart:convert';
@@ -180,7 +179,7 @@ class _CheckinLocationPageState extends State<CheckinLocationPage> {
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join('&');
 
-    context.go('/evv/visit-progress?$queryString');
+    context.push('/evv/visit-progress?$queryString');
   }
 
   void _showLocationError(String message) {
@@ -217,9 +216,21 @@ class _CheckinLocationPageState extends State<CheckinLocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Check-In Location',
-      currentRoute: '/evv/checkin-location',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Check-In Location'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }
