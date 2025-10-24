@@ -1,3 +1,4 @@
+import 'features/asl_demo/asl_demo_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -87,7 +88,7 @@ class _CareConnectAppWithErrorBoundaryState
     ErrorWidget.builder = (FlutterErrorDetails details) {
       // You can customize this error UI as needed
       return MaterialApp(
-        home: Scaffold(
+home: const AslDemoScreen(),
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(32.0),
