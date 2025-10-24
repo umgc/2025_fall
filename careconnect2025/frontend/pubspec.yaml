@@ -143,7 +143,11 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-flutter:
+flutter:assets:
+  - assets/asl/fingerspelling/
+  - assets/asl/numbers/
+  - assets/asl/phrases/
+
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
