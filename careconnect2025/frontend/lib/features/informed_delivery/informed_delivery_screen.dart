@@ -137,7 +137,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   // final enableMockUSPSDigest =
   //     getEnableMockUSPSDigest().toLowerCase() == 'true';
 
-  final enableUSPSDigest = false;
+  final enableUSPSDigest = true;
   final enableMockUSPSDigest = true;
 
   Map<DateTime, List<String>> _imagesByDate = const {};

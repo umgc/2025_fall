@@ -7,7 +7,7 @@ import '../../services/auth_token_manager.dart';
 
 class ApiConstants {
   static final String _host = getBackendBaseUrl();
-  static final String informedDelivery = '$_host/api/usps';
+  static final String informedDelivery = '$_host/v1/api/usps';
 }
 
 class InformedDeliveryService {
