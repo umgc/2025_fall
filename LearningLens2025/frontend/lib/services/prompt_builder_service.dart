@@ -20,7 +20,7 @@ These two parts must NEVER influence each other.
 
 Grade the following submission strictly based on the rubric below. 
 The grading (scores) must be completely independent of tone, voice, or detail settings.
-After the grading is complete, generate feedback paragraphs that follow the specified tone, voice, and level of detail.
+After the grading is complete, generate feedback paragraphs that follow the specified tone, voice, grade level, and level of detail.
 
 Submission: $submissionText
 Rubric: $fetchedRubric
