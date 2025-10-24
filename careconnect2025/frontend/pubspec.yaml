@@ -148,6 +148,7 @@ dependencies:
   ##EVV Dependencies
   connectivity_plus: ^6.0.5
   device_info_plus: ^12.1.0
+  flutter_local_notifications: ^17.2.1
   # Team D - Dependencies End
 dependency_overrides:
   # llama_cpp_dart:
@@ -164,6 +165,7 @@ dev_dependencies:
   mockito: ^5.5.1
   build_runner: ^2.4.9
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -178,6 +180,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter: 
   generate: true  # enables gen-l10n on build
+  uses-material-design: true
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
@@ -188,11 +191,25 @@ flutter:
     - assets/images/CareConnectLogo.png
     - assets/images/CareConnectLogo.svg
     - assets/images/default_avatar.svg
-
+ 
+# -------------------------------------------------------------------
+# Splash Screen configuration
+# flutter_native_splash generates native splash screens for your Flutter app on Android, iOS, and web.
+# A splash screen is the image or logo you see immediately when the app opens — before Flutter finishes loading and renders your first frame.
+# -------------------------------------------------------------------
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/images/app_icon.png
+  android: true
+  web: true
+  ios: true
+  android_12:
+    image: assets/images/app_icon.png
+    icon_background_color: "#ffffff"
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -227,9 +244,12 @@ flutter:
 
 # Flutter Launcher Icons Configuration
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
+  android: true
+  ios: true 
   image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
+  remove_alpha_ios: true
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true

@@ -207,3 +207,13 @@ flutter build web --base-href "/"
 11. Done!
 
 
+
+
+
+## Generating app icons based on  assets/images/app_icon.png
+
+```bash
+dart run  flutter_launcher_icons 
+dart run  flutter_native_splash:create
+
+```
