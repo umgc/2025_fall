@@ -41,8 +41,6 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
       allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
       type: FileType.custom,
       withReadStream: false,
-      // On web there is no file path, so we need bytes
-      withData: kIsWeb,
     );
     if (picked == null) return;
 
