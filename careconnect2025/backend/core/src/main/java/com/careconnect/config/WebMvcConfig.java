@@ -19,7 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         // CORS Configuration
         registry.addMapping("/**")
-                 .allowedOrigins(
+                 .allowedOriginPatterns(
                     "http://localhost:50030",
                     "http://localhost:3000",
                     "https://care-connect-develop.d26kqsucj1bwc1.amplifyapp.com", 
