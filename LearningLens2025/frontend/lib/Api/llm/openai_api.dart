@@ -25,7 +25,7 @@ class OpenAiLLM implements LLM {
     this.apiKey, {
     int? contextSize,
     int? maxOutputTokens,
-  })  : contextSize = contextSize ?? 4000,
+  })  : contextSize = contextSize ?? 16000,
         maxOutputTokens = maxOutputTokens ?? 1000;
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
@@ -329,5 +329,98 @@ class OpenAiLLM implements LLM {
 
   Future<String> generateFlashcardsFromText(String prompt) async {
     return await generate(prompt);
+  }
+
+  /// Methiod used to enable Streaming responses from the AI model.
+  @override
+  Stream<String> chatStream({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+    double temperature = 0.7,
+    double topP = 1.0,
+    double frequencyPenalty = 0.0,
+    double presencePenalty = 0.0,
+  }) async* {
+    final hasContext = context != null && context.isNotEmpty;
+    final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
+    if (!hasContext && !singlePrompt) {
+      throw ArgumentError('Either messages or prompt must be provided.');
+    }
+    if (hasContext && singlePrompt) {
+      throw ArgumentError('Provide either messages or prompt, not both.');
+    }
+
+    final headers = {
+      'Authorization': 'Bearer $apiKey',
+      'Content-Type': 'application/json',
+    };
+
+    final body = {
+      'model': model,
+      'messages': singlePrompt
+          ? [
+              {
+                'role': 'system',
+                'content':
+                    'You are a helpful assistant. Be precise and concise.'
+              },
+              {'role': 'user', 'content': prompt}
+            ]
+          : context,
+      'temperature': temperature,
+      'top_p': topP,
+      'frequency_penalty': frequencyPenalty,
+      'presence_penalty': presencePenalty,
+      'max_tokens': maxOutputTokens,
+      'stream': true, // critical for SSE
+    };
+
+    final client = http.Client();
+    try {
+      final req = http.Request('POST', parsedUrl)
+        ..headers.addAll(headers)
+        ..body = jsonEncode(body);
+
+      final streamedResponse = await client.send(req);
+      if (streamedResponse.statusCode != 200) {
+        final errBody = await streamedResponse.stream.bytesToString();
+        throw Exception(
+            'API stream error: ${streamedResponse.statusCode} - $errBody');
+      }
+
+      final lineStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in lineStream) {
+        if (line.isEmpty) continue;
+        if (!line.startsWith('data:')) continue;
+
+        final payload = line.substring(5).trim();
+        if (payload == '[DONE]') break;
+
+        dynamic jsonLine;
+        try {
+          jsonLine = jsonDecode(payload);
+        } catch (_) {
+          continue;
+        }
+
+        final choices = jsonLine['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final choice = choices[0];
+          final delta = choice['delta'];
+          if (delta is Map && delta.containsKey('content')) {
+            final token = (delta['content'] ?? '').toString();
+            if (token.isNotEmpty) yield token;
+          } else if (choice['message'] is Map &&
+              (choice['message']['content'] ?? '').toString().isNotEmpty) {
+            yield choice['message']['content'].toString();
+          }
+        }
+      }
+    } finally {
+      client.close();
+    }
   }
 }
