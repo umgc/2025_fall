@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
 import 'package:camera/camera.dart';
 
-//TODO: Connect VideoWidget to this class via a button
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
 
@@ -18,6 +17,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   late Future<VideoWidget> videoWidget;
   late bool showVideoCall = false;
   late bool currentlyRecording = false;
+  late bool recordingStarted = false;
   late Future<CameraDescription> targetCamera;
   late CameraController controller;
   final List<Map<String, dynamic>> moodOptions = [
@@ -52,19 +52,42 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   Future<void> startRecording() async
   {
-    controller.startVideoRecording();
-    currentlyRecording = true;
+    if(!recordingStarted)
+      {
+        controller.startVideoRecording();
+      }
+    else
+      {
+        controller.resumeVideoRecording();
+      }
+    recordingStarted = true;
+    setState(() {
+      currentlyRecording = true;
+    });
   }
 
   Future<void> pauseRecording() async
   {
-    controller.stopVideoRecording();
-    currentlyRecording = false;
+    controller.pauseVideoRecording();
+    setState(() {
+      currentlyRecording = false;
+    });
   }
 
   void submitVideo() async {
     // TODO: Implement video submission logic
     // This is where you would upload/save the video recording
+    if(!recordingStarted)
+      {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Cannot submit, no video recorded."),
+            backgroundColor: Colors.grey,
+          ),
+        );
+        return;
+      }
+
     currentlyRecording = false;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -82,8 +105,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   void discardVideo() async {
     // Close the video recording without saving
-    currentlyRecording = false;
     setState(() {
+      currentlyRecording = false;
       showVideoCall = false;
       videoCallActive = false;
     });
@@ -96,7 +119,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     );
   }
 
-  ///TODO: Add a pause/start functionality
+  ///Done: Add a pause/start functionality
   ///TODO: Add a preview
   ///TODO: Control the camera with code
   ///TODO: Submit video file
