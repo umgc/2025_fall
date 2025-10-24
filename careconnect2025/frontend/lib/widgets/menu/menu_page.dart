@@ -131,6 +131,11 @@ class _MenuPageState extends State<MenuPage> {
         section: _Section.settings,
       ),
       _MenuItem(
+        icon: Icons.devices,
+        label: 'Smart Devices',
+        route: '/smart-devices',
+      ),
+      _MenuItem(
         icon: Icons.folder,
         label: 'File Management',
         route: '/file-management',
