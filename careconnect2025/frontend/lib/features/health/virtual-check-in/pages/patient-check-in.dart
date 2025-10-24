@@ -17,7 +17,9 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   final TextEditingController _notesController = TextEditingController();
   late Future<VideoWidget> videoWidget;
   late bool showVideoCall = false;
+  late bool currentlyRecording = false;
   late Future<CameraDescription> targetCamera;
+  late CameraController controller;
   final List<Map<String, dynamic>> moodOptions = [
     {"value": 1, "emoji": "😢", "label": "Very Sad"},
     {"value": 2, "emoji": "😞", "label": "Sad"},
@@ -42,14 +44,28 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
         targetCamera = setUpCamera();
         showVideoCall = true;
         videoCallActive = true;
+        controller = CameraController(await targetCamera, ResolutionPreset.medium);
         setState(() {
         });
       }
   }
 
+  Future<void> startRecording() async
+  {
+    controller.startVideoRecording();
+    currentlyRecording = true;
+  }
+
+  Future<void> pauseRecording() async
+  {
+    controller.stopVideoRecording();
+    currentlyRecording = false;
+  }
+
   void submitVideo() async {
     // TODO: Implement video submission logic
     // This is where you would upload/save the video recording
+    currentlyRecording = false;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Video submitted successfully! (placeholder)"),
@@ -66,6 +82,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   void discardVideo() async {
     // Close the video recording without saving
+    currentlyRecording = false;
     setState(() {
       showVideoCall = false;
       videoCallActive = false;
@@ -78,6 +95,11 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
       ),
     );
   }
+
+  ///TODO: Add a pause/start functionality
+  ///TODO: Add a preview
+  ///TODO: Control the camera with code
+  ///TODO: Submit video file
 
   @override
   Widget build(BuildContext context)  {
@@ -159,7 +181,32 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                                 ),
                               ),
                             ),
-                          ],
+                            if(!currentlyRecording)
+                              Expanded(
+                              child: ElevatedButton.icon(
+                              label: Text("Start"),
+                              onPressed: startRecording,
+                              icon: const Icon(Icons.square),
+                              style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              ),
+                              ),
+                            if(currentlyRecording)
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  label: Text("Pause"),
+                                  onPressed: startRecording,
+                                  icon: const Icon(Icons.pause),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),],
                         ),
                       ],
                     ),
