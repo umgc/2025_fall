@@ -26,7 +26,9 @@ class _QuizGameState extends State<QuizGame> {
 
   void checkAnswer(String selected) {
     final correctAnswerIndex = widget.questions[currentIndex]['answer'] as int;
-    final correctAnswerText = widget.questions[currentIndex]['options'][correctAnswerIndex].toString();
+    final correctAnswerText = widget.questions[currentIndex]['options']
+            [correctAnswerIndex]
+        .toString();
     final correct = correctAnswerText == selected;
 
     userAnswers.add({
@@ -122,7 +124,10 @@ class _QuizGameState extends State<QuizGame> {
                 value: option,
                 groupValue: widget.previewMode
                     ? previewSelected
-                    : (showResult ? question['options'][question['answer'] as int].toString() : null),
+                    : (showResult
+                        ? question['options'][question['answer'] as int]
+                            .toString()
+                        : null),
                 onChanged: showResult ? null : (_) => checkAnswer(option),
               ),
             );

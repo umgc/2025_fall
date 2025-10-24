@@ -273,7 +273,9 @@ class _GamificationViewState extends State<GamificationView> {
                 onPressed: () {
                   if (_gameNeedsRefresh || _generatedGameData == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please click "Create Game" before previewing.')),
+                      SnackBar(
+                          content: Text(
+                              'Please click "Create Game" before previewing.')),
                     );
                     return;
                   }
