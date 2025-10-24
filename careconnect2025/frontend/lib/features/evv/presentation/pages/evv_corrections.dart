@@ -280,7 +280,7 @@ class _EvvCorrectionsPageState extends State<EvvCorrectionsPage> with TickerProv
             _buildDetailRow('Time Out', _formatTime(record.timeOut)),
             _buildDetailRow('State', record.stateCode),
             _buildDetailRow('Status', record.status),
-            _buildDetailRow('MA Number', record.participant.maNumber),
+            _buildDetailRow('MA Number', record.patient?.maNumber ?? 'N/A'),
           ],
         ),
       ),

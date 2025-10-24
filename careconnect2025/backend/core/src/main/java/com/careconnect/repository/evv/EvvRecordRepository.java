@@ -13,19 +13,19 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
-public interface EvvRecordRepository extends JpaRepository<EvvRecord, Long> {
-
-    @Query("SELECT DISTINCT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.caregiverId = :caregiverId AND e.status = :status")
+public interface EvvRecordRepository extends JpaRepository<EvvRecord,Long> {
+    
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.caregiverId = :caregiverId AND e.status = :status")
     List<EvvRecord> findByCaregiverIdAndStatus(@Param("caregiverId") Long caregiverId, @Param("status") String status);
-
-    @Query("SELECT DISTINCT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.status = :status")
+    
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.status = :status")
     List<EvvRecord> findByStatus(@Param("status") String status);
-
-    @Query("SELECT DISTINCT e FROM EvvRecord e JOIN FETCH e.participant WHERE e.id = :id")
-    java.util.Optional<EvvRecord> findByIdWithParticipant(@Param("id") Long id);
-
-    List<EvvRecord> findByParticipantMaNumber(String maNumber);
-
+    
+    @Query("SELECT e FROM EvvRecord e JOIN FETCH e.patient WHERE e.id = :id")
+    java.util.Optional<EvvRecord> findByIdWithPatient(@Param("id") Long id);
+    
+    List<EvvRecord> findByPatientMaNumber(String maNumber);
+    
     List<EvvRecord> findByServiceType(String serviceType);
 
     List<EvvRecord> findByDateOfServiceBetween(LocalDate startDate, LocalDate endDate);
@@ -39,36 +39,23 @@ public interface EvvRecordRepository extends JpaRepository<EvvRecord, Long> {
     List<EvvRecord> findByIsCorrectedTrue();
 
     List<EvvRecord> findByOriginalRecordId(Long originalRecordId);
-
-     @Query(
-            value = """
-            SELECT e.*
-            FROM evv_record e
-            LEFT JOIN participant p ON p.id = e.participant_id
-            WHERE
-                (:patientName IS NULL OR p.patient_name ILIKE CONCAT('%', :patientName, '%')) AND
-                (:serviceType IS NULL OR e.service_type ILIKE CONCAT('%', :serviceType, '%')) AND
-                (:caregiverId IS NULL OR e.caregiver_id = :caregiverId) AND
-                (:startDate IS NULL OR e.date_of_service >= :startDate) AND
-                (:endDate IS NULL OR e.date_of_service <= :endDate) AND
-                (:stateCode IS NULL OR e.state_code = :stateCode) AND
-                (:status IS NULL OR e.status = :status)
-            """,
-            countQuery = """
-            SELECT COUNT(*)
-            FROM evv_record e
-            LEFT JOIN participant p ON p.id = e.participant_id
-            WHERE
-                (:patientName IS NULL OR p.patient_name ILIKE CONCAT('%', :patientName, '%')) AND
-                (:serviceType IS NULL OR e.service_type ILIKE CONCAT('%', :serviceType, '%')) AND
-                (:caregiverId IS NULL OR e.caregiver_id = :caregiverId) AND
-                (:startDate IS NULL OR e.date_of_service >= :startDate) AND
-                (:endDate IS NULL OR e.date_of_service <= :endDate) AND
-                (:stateCode IS NULL OR e.state_code = :stateCode) AND
-                (:status IS NULL OR e.status = :status)
-            """,
-            nativeQuery = true
-    )
+    
+    @Query(value = "SELECT DISTINCT e FROM EvvRecord e LEFT JOIN FETCH e.patient p WHERE " +
+           "(:patientName IS NULL OR :patientName = '' OR LOWER(CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, ''))) LIKE LOWER(CONCAT('%', :patientName, '%'))) AND " +
+           "(:serviceType IS NULL OR :serviceType = '' OR LOWER(e.serviceType) LIKE LOWER(CONCAT('%', :serviceType, '%'))) AND " +
+           "(:caregiverId IS NULL OR e.caregiverId = :caregiverId) AND " +
+           "(:startDate IS NULL OR e.dateOfService >= :startDate) AND " +
+           "(:endDate IS NULL OR e.dateOfService <= :endDate) AND " +
+           "(:stateCode IS NULL OR :stateCode = '' OR e.stateCode = :stateCode) AND " +
+           "(:status IS NULL OR :status = '' OR e.status = :status)",
+           countQuery = "SELECT COUNT(DISTINCT e) FROM EvvRecord e LEFT JOIN e.patient p WHERE " +
+           "(:patientName IS NULL OR :patientName = '' OR LOWER(CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, ''))) LIKE LOWER(CONCAT('%', :patientName, '%'))) AND " +
+           "(:serviceType IS NULL OR :serviceType = '' OR LOWER(e.serviceType) LIKE LOWER(CONCAT('%', :serviceType, '%'))) AND " +
+           "(:caregiverId IS NULL OR e.caregiverId = :caregiverId) AND " +
+           "(:startDate IS NULL OR e.dateOfService >= :startDate) AND " +
+           "(:endDate IS NULL OR e.dateOfService <= :endDate) AND " +
+           "(:stateCode IS NULL OR :stateCode = '' OR e.stateCode = :stateCode) AND " +
+           "(:status IS NULL OR :status = '' OR e.status = :status)")
     Page<EvvRecord> searchRecords(@Param("patientName") String patientName,
                                   @Param("serviceType") String serviceType,
                                   @Param("caregiverId") Long caregiverId,

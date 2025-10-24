@@ -207,13 +207,87 @@ flutter build web --base-href "/"
 11. Done!
 
 
+---
+## App Icons
 
-
-
-## Generating app icons based on  assets/images/app_icon.png
+* Generating app icons based on  assets/images/app_icon.png
 
 ```bash
 dart run  flutter_launcher_icons 
 dart run  flutter_native_splash:create
 
+```
+
+ 
+
+---
+
+## Language Localization
+
+Follow these steps to add or update text translations:
+
+1. **Add new text keys**
+
+   * Open the appropriate `.arb` files located in:
+     `lib/l10n/`
+   * Example file:
+     `lib/l10n/app_am.arb`
+   * Use a **clear prefix** to indicate where the text is used.
+     Example:
+
+     ```json
+     {
+       "login_tagline": "Welcome back!"
+     }
+     ```
+
+2. **Add translations**
+
+   * Add the same key to other language files (for example `app_en.arb`, `app_es.arb`) with the translated text.
+
+3. **Generate localization files**
+
+   * After updating `.arb` files, run:
+
+     ```bash
+     flutter gen-l10n
+     ```
+
+4. **Check untranslated messages**
+
+   * Optionally, update your `l10n.yaml` to generate a list of untranslated messages:
+
+     ```yaml
+     untranslated-messages-file: untranslated.json
+     ```
+   * Then run:
+
+     ```bash
+     flutter gen-l10n
+     ```
+   * The file `untranslated.json` will list any missing translations.
+
+ 
+
+
+Here’s the updated version with your section and a new one added for localization, written in the same style and tone:
+
+---
+
+## Sample Launch Settings for VS Code
+
+* Copy the `sample.launch.json` file to your `.vscode` folder.
+* You can pass environment variables to the build using `--dart-define`.
+
+Example:
+
+```json
+   {
+      "name": "frontend (dev)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=BACKEND_URL=http://192.168.1.155:8080"
+      ]
+    },
 ```

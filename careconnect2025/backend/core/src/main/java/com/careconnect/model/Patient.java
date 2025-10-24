@@ -44,6 +44,9 @@ public class Patient {
 
     private String relationship; // e.g. "daughter", "client", etc.
 
+    @Column(name = "ma_number", unique = true, length = 64)
+    private String maNumber; // Medical Assistance Number for EVV compliance
+
     @Column(name = "is_alexa_linked", nullable = true) // ← Database column
     private Boolean alexaLinked; // ← Java field name
 
