@@ -18,7 +18,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import javax.sql.DataSource;
 
 @Configuration
-@ConditionalOnProperty(name = "careconnect.database.use-aws-config", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(name = "careconnect.database.use-aws-config", havingValue = "true", matchIfMissing = true)
 public class DatabaseConfig {
 
     @Value("${careconnect.db.url}")

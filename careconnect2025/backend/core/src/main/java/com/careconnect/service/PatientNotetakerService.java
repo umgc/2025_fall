@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +42,7 @@ public class PatientNotetakerService {
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
         PatientService patientService,
-        @Autowired(required = false) OpenRouterService openRouterService,
+        OpenRouterService openRouterService,
         TaskServiceV2 taskService
         ) {
         this.patientNoteRepository = patientNoteRepository;
@@ -190,10 +189,6 @@ public class PatientNotetakerService {
 
             OpenRouterResponse response; 
             try {
-                if (openRouterService == null) {
-                    log.warn("OpenRouter service is not available. Skipping AI task generation for keyword: {}", keyword.getKeyword());
-                    return;
-                }
                 response = openRouterService.sendChatRequest(request);
             } catch (Exception e) {
                 log.error("Unable to reach OpenRouter service: {}", e.getMessage());
