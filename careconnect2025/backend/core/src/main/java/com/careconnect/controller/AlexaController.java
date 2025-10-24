@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/alexa")
+@RequestMapping("/v1/api/alexa")
 public class AlexaController {
 
     @Autowired
