@@ -228,6 +228,53 @@ class LocalStorageService {
     _prefs.remove('deepseekKey');
   }
 
+  // saves path to the selected local llm model
+  static void saveLocalLLMPath(String path) {
+    _prefs.setString('LOCAL_LLM_PATH', path);
+  }
+
+  // Retrieves the path to the selected local llm model from storage or dotenv
+  static String getLocalLLMPath() {
+    return _prefs.getString('LOCAL_LLM_PATH') ??
+        dotenv.env['LOCAL_LLM_PATH'] ??
+        '';
+  }
+
+  // Retrieves the url where the csv file with the models/download urls are located.
+  static String getLocalLLMDownloadURLPath() {
+    return dotenv.env['LOCAL_MODEL_DOWNLOAD_URL_PATH'] ?? '';
+  }
+
+  // returns whether or not the local LLM has a path
+  static hasLocalLLMPath() {
+    return getLocalLLMPath().isNotEmpty;
+  }
+
+  // Retrieves the GPU Name from the storage
+  static String getGPUInfo() {
+    return _prefs.getString('GPU_NAME') ?? "";
+  }
+
+  static hasGPUInfo() {
+    return getGPUInfo().isNotEmpty;
+  }
+
+  static void saveGPUInfo(String name) {
+    _prefs.setString('GPU_NAME', name);
+  }
+
+  static String getGPUVRam() {
+    return _prefs.getString('GPU_VRAM') ?? "";
+  }
+
+  static hasGPUVRam() {
+    return getGPUVRam().isNotEmpty;
+  }
+
+  static void saveGPUVRam(String size) {
+    _prefs.setString('GPU_VRAM', size);
+  }
+
   static String getGoogleClientId() {
     return _prefs.getString('GOOGLE_CLIENT_ID') ??
         dotenv.env['GOOGLE_CLIENT_ID'] ??

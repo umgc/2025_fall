@@ -626,6 +626,9 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         final key = LocalStorageService.getDeepseekKey();
         if (key.isEmpty) return _appendError('Deepseek key missing');
         aiModel = DeepseekLLM(key);
+      case LlmType.LOCAL:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
     final fullContext = generateContext(
       permTokens: permContext,

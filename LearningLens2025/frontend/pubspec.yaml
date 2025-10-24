@@ -12,6 +12,11 @@ dependencies:
   flutter:
     sdk: flutter
 
+  fllama:
+    git:
+      url: https://github.com/Telosnex/fllama.git
+      ref: main
+
   editable: ^2.0.0  
   flutter_dotenv: ^5.1.0
   xml: ^6.2.2
