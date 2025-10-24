@@ -4,7 +4,7 @@ import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 class SymptomInputForm extends StatefulWidget {
   final Function(Map<String, dynamic>)? onSymptomAdded;
 
-  const SymptomInputForm({super.key, this.onSymptomAdded});
+  const SymptomInputForm({Key? key, this.onSymptomAdded}) : super(key: key);
 
   @override
   State<SymptomInputForm> createState() => _SymptomInputFormState();
@@ -89,7 +89,7 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
           const Text('Severity', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: _selectedSeverity,
+            value: _selectedSeverity,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),

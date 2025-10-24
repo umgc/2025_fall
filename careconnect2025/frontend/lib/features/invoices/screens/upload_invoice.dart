@@ -26,13 +26,11 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
   Future<void> _watchConnectivity() async {
     final status = await Connectivity().checkConnectivity();
-    if (mounted) {
+    if (mounted)
       setState(() => offline = status.contains(ConnectivityResult.none));
-    }
     Connectivity().onConnectivityChanged.listen((result) {
-      if (mounted) {
+      if (mounted)
         setState(() => offline = result.contains(ConnectivityResult.none));
-      }
     });
   }
 

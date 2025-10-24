@@ -58,7 +58,7 @@ class PaymentSection extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 DropdownButtonFormField<PaymentStatus>(
-                  initialValue: value.paymentStatus,
+                  value: value.paymentStatus,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Payment Status',
@@ -677,7 +677,7 @@ class _RecordPaymentDialogState extends State<_RecordPaymentDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              initialValue: _methodKey,
+              value: _methodKey,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
@@ -733,7 +733,7 @@ class _RecordPaymentDialogState extends State<_RecordPaymentDialog> {
             ),
             if (_plan)
               DropdownButtonFormField<int>(
-                initialValue: _months,
+                value: _months,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Payment Plan Frequency',

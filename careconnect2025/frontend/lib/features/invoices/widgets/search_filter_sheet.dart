@@ -103,7 +103,7 @@ LayoutBuilder(
     final stacked = constraints.maxWidth < 480; // stack on phones
 
     final sortField = DropdownButtonFormField<String>(
-      initialValue: sort,
+      value: sort,
       isExpanded: true,
       decoration: const InputDecoration(labelText: 'Sort by'),
       items: const [
@@ -179,7 +179,7 @@ LayoutBuilder(
                     child: Column(
                       children: [
                         DropdownButtonFormField<String>(
-                          initialValue: provider,
+                          value: provider,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Provider'),
                           items: providers.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
@@ -187,7 +187,7 @@ LayoutBuilder(
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
-                          initialValue: patient,
+                          value: patient,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Patient'),
                           items: patients.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),

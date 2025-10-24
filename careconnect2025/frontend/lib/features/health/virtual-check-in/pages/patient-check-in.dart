@@ -1,5 +1,6 @@
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:care_connect_app/pages/patient_check_in.dart';
 
 
 class PatientVirtualCheckIn extends StatefulWidget {

@@ -10,11 +10,11 @@ class MedicationCard extends StatefulWidget {
   final VoidCallback? onMedicationRemoved;
 
   const MedicationCard({
-    super.key,
+    Key? key,
     required this.medication,
     required this.onStatusChanged,
     this.onMedicationRemoved,
-  });
+  }) : super(key: key);
 
   @override
   State<MedicationCard> createState() => _MedicationCardState();

@@ -161,7 +161,7 @@ extension TaskCopyWith on Task {
       timeOfDay: timeOfDay ?? this.timeOfDay,
       assignedPatientId: assignedPatientId ?? this.assignedPatientId,
       isComplete: isComplete ?? this.isComplete,
-      notifications: notifications, // keep existing notifications
+      notifications: this.notifications, // keep existing notifications
       frequency: frequency ?? this.frequency,
       interval: interval ?? this.interval,
       count: count ?? this.count,

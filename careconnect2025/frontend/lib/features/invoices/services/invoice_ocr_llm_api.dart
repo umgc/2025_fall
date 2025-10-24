@@ -146,9 +146,7 @@ bool _looksLikeHeic(Uint8List bytes, String? ext, String? mime) {
         sig.startsWith('ftypheix') ||
         sig.startsWith('ftyphevc') ||
         sig.startsWith('ftypmif1') ||
-        sig.startsWith('ftypmsf1')) {
-      return true;
-    }
+        sig.startsWith('ftypmsf1')) return true;
   }
   return false;
 }
@@ -165,7 +163,7 @@ Future<Uint8List> _heicBytesToPng(Uint8List heic) async {
 
 // Maps server InvoiceDto -> client Invoice model
 Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
-  T? m<T>(String k) => j[k] as T?;
+  T? _m<T>(String k) => j[k] as T?;
 
   final providerMap = j['provider'] as Map<String, dynamic>?;
   final patientMap = j['patient'] as Map<String, dynamic>?;
@@ -262,25 +260,25 @@ Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
   final recActions = _stringList(j['recommendedActions']);
 
   return Invoice(
-    id: m<String>('id') ?? '',
-    invoiceNumber: m<String>('invoiceNumber') ?? '',
+    id: _m<String>('id') ?? '',
+    invoiceNumber: _m<String>('invoiceNumber') ?? '',
     provider: provider,
     patient: patient,
     dates: dates,
     services: services,
-    paymentStatus: _paymentStatusFromWire(m<String>('paymentStatus')),
+    paymentStatus: _paymentStatusFromWire(_m<String>('paymentStatus')),
     billedToInsurance: j['billedToInsurance'] as bool? ?? false,
     amounts: amounts,
     paymentReferences: refs,
     checkPayableTo: check,
-    createdAt: m<String>('createdAt') ?? nowIso,
-    updatedAt: m<String>('updatedAt') ?? nowIso,
-    createdBy: m<String>('createdBy') ?? 'system',
-    updatedBy: m<String>('updatedBy') ?? 'system',
-    documentLink: m<String>('documentLink'),
+    createdAt: _m<String>('createdAt') ?? nowIso,
+    updatedAt: _m<String>('updatedAt') ?? nowIso,
+    createdBy: _m<String>('createdBy') ?? 'system',
+    updatedBy: _m<String>('updatedBy') ?? 'system',
+    documentLink: _m<String>('documentLink'),
     history: history,
     payments: payments,
-    aiSummary: m<String>('aiSummary'),
+    aiSummary: _m<String>('aiSummary'),
     recommendedActions: recActions,
   );
 }

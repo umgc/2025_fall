@@ -114,7 +114,7 @@ class _StreamingAsrAndDiarizationScreenState
   sherpa_onnx.OnlineRecognizer? _recognizer;
   sherpa_onnx.OfflineRecognizer? _offlineRecognizer;
   sherpa_onnx.OnlineStream? _stream;
-  final int _sampleRate = 16000;
+  int _sampleRate = 16000;
 
   StreamSubscription<RecordState>? _recordSub;
   RecordState _recordState = RecordState.stop;
@@ -628,27 +628,32 @@ class _StreamingAsrAndDiarizationScreenState
                     builder: (BuildContext context) {
                       return Expanded(
                         child: SimpleDialog(
-                        title: Text("Swap Speaker Names"),
-                        children: <Widget> [
-                          Padding(
-                            padding: EdgeInsets.all(10.0),
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _selectedSpeaker,
-                              decoration: InputDecoration(labelText: 'Select A Speaker'),
-                              items: _speakerList
-                                  .map((option) => DropdownMenuItem(
-                              value: option,
-                              child: Text(option),
-                              )).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedSpeaker = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null) {
-                                  return 'Please select an option';
-                                }
+                          title: Text("Swap Speaker Names"),
+                          children: <Widget>[
+                            Padding(
+                              padding: EdgeInsets.all(10.0),
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedSpeaker,
+                                decoration: InputDecoration(
+                                  labelText: 'Select A Speaker',
+                                ),
+                                items: _speakerList
+                                    .map(
+                                      (option) => DropdownMenuItem(
+                                        value: option,
+                                        child: Text(option),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedSpeaker = value;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null) {
+                                    return 'Please select an option';
+                                  }
                                   return null;
                                 },
                               ),
