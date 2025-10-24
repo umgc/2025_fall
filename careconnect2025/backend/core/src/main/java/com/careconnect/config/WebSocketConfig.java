@@ -45,25 +45,33 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private String allowedOrigins;
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         log.info("Registering WebSocket handlers for local development mode");
         log.info("CareConnect WebSocket endpoint: {}", careConnectEndpoint);
         log.info("Allowed origins: {}", allowedOrigins);
 
+        // Allow all localhost origins for dev mode
+        String[] devAllowedOrigins = new String[] {
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "*"
+        };
+
         // Call/SMS notification WebSocket endpoint
         registry.addHandler(callNotificationHandler, "/ws/calls")
-                .setAllowedOrigins(allowedOrigins)
+                .setAllowedOrigins(devAllowedOrigins)
                 .withSockJS();
 
         // General CareConnect WebSocket endpoint for real-time updates
-        registry.addHandler(careConnectWebSocketHandler, careConnectEndpoint)
-                .setAllowedOrigins(allowedOrigins)
+        registry.addHandler(careConnectWebSocketHandler, "/ws/careconnect")
+                .setAllowedOrigins(devAllowedOrigins)
                 .withSockJS();
 
         // Notification WebSocket endpoint (no SockJS fallback)
         registry.addHandler(notificationWebSocketHandler, "/ws/notifications")
-                .setAllowedOrigins(allowedOrigins);
+                .setAllowedOrigins(devAllowedOrigins);
 
         log.info("WebSocket handlers registered successfully in LOCAL mode");
-    }
+        }
+
 }

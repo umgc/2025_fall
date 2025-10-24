@@ -764,6 +764,14 @@ class ApiService {
     );
   }
 
+
+  static Future<http.Response> getPatientDetails(int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final url = Uri.parse('${ApiConstants._host}/v1/api/patients/$patientId');
+    return await http.get(url, headers: headers);
+  }
+
+
   static Future<http.Response> addFamilyMember(
     int patientId,
     Map<String, dynamic> familyMemberData,

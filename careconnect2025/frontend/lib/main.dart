@@ -23,6 +23,9 @@ import 'providers/theme_provider.dart';
 import 'providers/user_provider.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
+import 'features/dashboard/caregiver-dashboard/pages/evv_session_screen.dart';
+
+const bool kEvvDebug = false; // ← set to false when done testing
 
 Future<void> main() async {
   // Global error handling for unhandled Dart errors
@@ -93,14 +96,13 @@ class _CareConnectAppWithErrorBoundaryState
   void initState() {
     super.initState();
     ErrorWidget.builder = (FlutterErrorDetails details) {
-      // You can customize this error UI as needed
+      // Minimal, safe error UI (no navigation here)
       return MaterialApp(
         home: Scaffold(
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(32.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.error, color: Colors.red, size: 64),
@@ -108,21 +110,12 @@ class _CareConnectAppWithErrorBoundaryState
                   const Text(
                     'Something went wrong',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     details.exceptionAsString(),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Navigate to home instead of calling runApp again
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/', (route) => false);
-                    },
-                    child: const Text('Go Home'),
                   ),
                 ],
               ),
@@ -255,6 +248,74 @@ class _CareConnectAppState extends State<CareConnectApp> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final localeProvider = Provider.of<LocaleProvider>(context);
+
+    if (kEvvDebug) {
+      // Debug path: launch EVV screen directly, bypass router/login
+      return MaterialApp(
+        title: 'CareConnect',
+        debugShowCheckedModeBanner: false,
+        themeMode: themeProvider.themeMode,
+        theme: AppTheme.lightTheme.copyWith(
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+              TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+              TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+            },
+          ),
+          cardTheme: CardThemeData(
+            elevation: kIsWeb ? 2 : (ResponsiveUtils.isIOS ? 1 : 2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
+            ),
+          ),
+        ),
+        darkTheme: AppTheme.darkTheme.copyWith(
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+              TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+              TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+            },
+          ),
+          cardTheme: CardThemeData(
+            elevation: kIsWeb ? 3 : (ResponsiveUtils.isIOS ? 2 : 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
+            ),
+          ),
+        ),
+        home: const EVVSessionScreen(),
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+          final textScaleFactor = mediaQuery.textScaleFactor.clamp(0.8, 1.2);
+          Widget updatedChild = child!;
+          updatedChild = SafeArea(
+            bottom: !ResponsiveUtils.isWeb,
+            child: updatedChild,
+          );
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: TextScaler.linear(textScaleFactor),
+              devicePixelRatio: ResponsiveUtils.isWeb
+                  ? mediaQuery.devicePixelRatio
+                  : mediaQuery.devicePixelRatio.clamp(1.0, 3.0),
+            ),
+            child: updatedChild,
+          );
+        },
+      );
+    }
 
     return MaterialApp.router(
       title: 'CareConnect',

@@ -3,14 +3,14 @@ import 'package:care_connect_app/features/streaming_asr_with_diarization/streami
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import '../services/comprehensive_file_service.dart';
-import '../services/enhanced_file_service.dart';
-import '../providers/user_provider.dart';
-import '../config/theme/app_theme.dart';
-import '../widgets/file_upload_widget.dart';
-import '../widgets/common_drawer.dart';
-import '../widgets/manual_text_entry_upload.dart';
-import '../widgets/speech_to_text_widget.dart';
+import '../../../services/comprehensive_file_service.dart';
+import '../../../services/enhanced_file_service.dart';
+import '../../../providers/user_provider.dart';
+import '../../../config/theme/app_theme.dart';
+import '../../../widgets/file_upload_widget.dart';
+import '../../../widgets/common_drawer.dart';
+import '../../../widgets/manual_text_entry_upload.dart';
+import '../../../widgets/speech_to_text_widget.dart';
 
 /// Comprehensive file management page
 class FileManagementPage extends StatefulWidget {

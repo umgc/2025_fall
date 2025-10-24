@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../widgets/patient-stat-card.dart';
+import 'evv_session_screen.dart';
 
 class CaregiverDashboard extends StatelessWidget {
   const CaregiverDashboard({super.key});
@@ -37,6 +38,26 @@ class CaregiverDashboard extends StatelessWidget {
               // Statistics Cards
               const PatientStatisticsCards(),
               const SizedBox(height: 20),
+
+
+              // Start EVV Session Button
+              ElevatedButton.icon(
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Start EVV Session'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EVVSessionScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
+
 
               // Upcoming Check-ins
               const UpcomingCheckins(),

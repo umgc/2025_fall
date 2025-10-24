@@ -6,6 +6,14 @@ class MedicationReminder {
   final DateTime scheduledTime;
   final String status;
 
+  factory MedicationReminder.fromJson(Map<String, dynamic> json) {
+    return MedicationReminder(
+      medicationName: json['medicationName'] ?? '',
+      scheduledTime: DateTime.tryParse(json['scheduledTime'] ?? '') ?? DateTime.now(),
+      status: json['status'] ?? '',
+    );
+  }
+
   MedicationReminder({
     required this.medicationName,
     required this.scheduledTime,

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/alter_notification_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/current_mood_widget.dart';
+import 'package:care_connect_app/features/vial_of_life/landing_screen.dart';
+import 'package:care_connect_app/features/vial_of_life/vial_models.dart';
 import 'package:care_connect_app/shared/widgets/dashboard_appheader_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/medication_reminder_widget.dart';
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/offline_notification_widget.dart';
@@ -66,6 +68,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     _initializeCallNotifications();
     _checkConnectivity();
     _loadRecentMoodData();
+    _loadFamilyMembers();
     _loadMedicationReminders();
     _loadPrimaryCareProvider();
   }
@@ -91,6 +94,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
       final user = Provider.of<UserProvider>(context, listen: false).user;
       final int? id = user?.id;
 
+      // stop if no user
       if (id == null) {
         setState(() {
           error = 'User not logged in.';
@@ -99,12 +103,33 @@ class _PatientDashboardState extends State<PatientDashboard> {
         return;
       }
 
-      // Check for alerts
-      _checkForAlerts();
+      // 🔹 1) get patient details
+      final response = await ApiService.getPatientDetails(id);
 
-      setState(() {
-        loading = false;
-      });
+      // 🔹 2) convert result to usable map
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // 🔹 3) save to memory for dashboard + vial
+        setState(() {
+          patient = data['patient'];
+          caregivers = List<Map<String, dynamic>>.from(data['caregivers'] ?? []);
+          familyMembers = List<Map<String, dynamic>>.from(data['familyMembers'] ?? []);
+          primaryCareProvider = data['provider'];
+          upcomingReminder = data['reminder'] != null
+              ? MedicationReminder.fromJson(data['reminder'])
+              : null;
+
+          // turn off the loader
+          loading = false;
+        });
+      } else {
+        setState(() {
+          error = 'Failed to load patient data.';
+          loading = false;
+        });
+      }
+
     } catch (e) {
       setState(() {
         error = 'Error loading dashboard: ${e.toString()}';
@@ -383,8 +408,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: DashboardAppHeader(
-        userName: user?.name ?? '',
-        role: user?.role as String,
+        userName: patient?['name'] ?? user?.name ?? 'Patient',
+        role: (patient?['gender'] ?? user?.role ?? 'Unknown').toString(),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).primaryColor,
@@ -529,30 +554,34 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                     if (upcomingReminder != null)
                                       MedicationRemindersWidget(
                                         reminder: upcomingReminder!,
-                                        onMarkTaken: () =>
-                                            _handleMedicationAction(true),
-                                        onMarkMissed: () =>
-                                            _handleMedicationAction(false),
+                                        onMarkTaken: () => _handleMedicationAction(true),
+                                        onMarkMissed: () => _handleMedicationAction(false),
+                                      )
+                                    else
+                                      Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Text(
+                                          'No medication reminders found.',
+                                          style: TextStyle(color: Colors.grey.shade700),
+                                        ),
                                       ),
+
 
                                     // Primary Care Provider
                                     if (primaryCareProvider != null)
                                       PrimaryCareProviderWidget(
-                                        providerName:
-                                            primaryCareProvider!['name'],
-                                        specialty:
-                                            primaryCareProvider!['specialty'],
-                                        organization:
-                                            primaryCareProvider!['organization'],
-                                        phone: primaryCareProvider!['phone'],
-                                        email: primaryCareProvider!['email'],
-                                        nextAppointment:
-                                            primaryCareProvider!['nextAppointment'],
-                                        appointmentType:
-                                            primaryCareProvider!['appointmentType'],
-                                        onContactProvider:
-                                            _handleContactProvider,
+                                        providerName: primaryCareProvider?['name'] ?? 'N/A',
+                                        specialty: primaryCareProvider?['specialty'] ?? 'N/A',
+                                        organization: primaryCareProvider?['organization'] ?? 'N/A',
+                                        phone: primaryCareProvider?['phone'] ?? 'N/A',
+                                        email: primaryCareProvider?['email'] ?? 'N/A',
+                                        nextAppointment: primaryCareProvider?['nextAppointment'],
+                                        appointmentType: primaryCareProvider?['appointmentType'] ?? 'Checkup',
+                                        onContactProvider: _handleContactProvider,
                                       ),
+
+
+                                      
                                   ],
                                 ),
                               ),
@@ -604,22 +633,30 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             reminder: upcomingReminder!,
                             onMarkTaken: () => _handleMedicationAction(true),
                             onMarkMissed: () => _handleMedicationAction(false),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              'No medication reminders found.',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
                           ),
+
 
                         // Primary Care Provider
                         if (primaryCareProvider != null)
                           PrimaryCareProviderWidget(
-                            providerName: primaryCareProvider!['name'],
-                            specialty: primaryCareProvider!['specialty'],
-                            organization: primaryCareProvider!['organization'],
-                            phone: primaryCareProvider!['phone'],
-                            email: primaryCareProvider!['email'],
-                            nextAppointment:
-                                primaryCareProvider!['nextAppointment'],
-                            appointmentType:
-                                primaryCareProvider!['appointmentType'],
+                            providerName: primaryCareProvider?['name'] ?? 'N/A',
+                            specialty: primaryCareProvider?['specialty'] ?? 'N/A',
+                            organization: primaryCareProvider?['organization'] ?? 'N/A',
+                            phone: primaryCareProvider?['phone'] ?? 'N/A',
+                            email: primaryCareProvider?['email'] ?? 'N/A',
+                            nextAppointment: primaryCareProvider?['nextAppointment'],
+                            appointmentType: primaryCareProvider?['appointmentType'] ?? 'Checkup',
                             onContactProvider: _handleContactProvider,
                           ),
+
                       ],
 
                       // Emergency Actions
@@ -630,6 +667,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                         ),
                         child: Column(
                           children: [
+                            
                             // SOS Emergency Button
                             ElevatedButton.icon(
                               icon: const Icon(Icons.sos),
@@ -650,6 +688,80 @@ class _PatientDashboardState extends State<PatientDashboard> {
                               },
                             ),
                             const SizedBox(height: 12),
+                            
+                            // Vial of Life Button
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.medical_information),
+                              label: const Text('View Vial of Life'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                minimumSize: const Size.fromHeight(48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () {
+                              
+                              // current user
+                              final u = Provider.of<UserProvider>(context, listen: false).user;
+
+                              // digits-only helper for phone (keeps +)
+                              String _digits(String s) => s.replaceAll(RegExp(r'[^+\d]'), '');
+
+                              // build contacts from the live family list
+                              final contacts = familyMembers.map((m) => Contact(
+                                name: '${m['firstName'] ?? ''} ${m['lastName'] ?? ''}'.trim(),
+                                role: (m['relation'] ?? 'Emergency Contact').toString(),
+                                phone: _digits((m['phone'] ?? '').toString()),
+                                isPrimary: false,
+                              )).toList();
+
+                              // mark first as primary if any exist
+                              if (contacts.isNotEmpty) {
+                                contacts[0] = Contact(
+                                  name: contacts[0].name,
+                                  role: contacts[0].role,
+                                  phone: contacts[0].phone,
+                                  isPrimary: true,
+                                );
+                              }
+
+                              // split the user's display name
+                              final parts = (u?.name ?? 'Patient').split(' ');
+                              final first = parts.isNotEmpty ? parts.first : 'Patient';
+                              final last  = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+                              // live profile
+                              final profile = Profile(
+                                firstName: first,
+                                lastName: last,
+                                gender: (patient?['gender'] ?? 'Unknown').toString(),
+                                dob: DateTime.tryParse((patient?['dob'] ?? '').toString()) ?? DateTime(1970, 1, 1),
+                                id: (u?.patientId?.toString() ?? 'VL-${u?.id ?? 'NA'}'),
+                                bloodType: (patient?['bloodType'] ?? 'Unknown').toString(),
+                                allergiesCritical: const [],
+                                allergiesCaution: const [],
+                                medications: const [],
+                                conditions: const [],
+                                contacts: contacts.isNotEmpty
+                                    ? contacts
+                                    : [Contact(name: 'Primary Contact', role: 'Emergency', phone: '+0000000000', isPrimary: true)],
+                                lastUpdated: DateTime.now().toIso8601String().substring(0, 10),
+                              );
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => LandingScreen(profile: profile)),
+                              );
+                            },
+
+
+
+
+                            ),
+
+
                             // Send SMS Notification Button
                             OutlinedButton.icon(
                               icon: const Icon(Icons.sms),
