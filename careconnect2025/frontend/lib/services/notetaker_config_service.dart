@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import 'api_service.dart';
 import '../config/env_constant.dart';
 

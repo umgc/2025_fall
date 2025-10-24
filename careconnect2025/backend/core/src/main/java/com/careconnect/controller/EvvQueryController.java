@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
-@RestController @RequestMapping("/api/evv/records") @RequiredArgsConstructor
+@RestController @RequestMapping("v1/api/evv/records") @RequiredArgsConstructor
 public class EvvQueryController {
     private final EvvRecordRepository evvRecordRepository;
 
