@@ -94,16 +94,6 @@ class _FlashcardGameState extends State<FlashcardGame> {
                   : null,
               child: const Text('Next'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (widget.onComplete != null) {
-                  widget.onComplete();
-                } else {
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Close'),
-            ),
           ],
         ),
       ],
