@@ -22,6 +22,12 @@ class AILoggingSingleton {
     await http.post(url);
   }
 
+  Future<void> clearOldDatabaseEntries() async {
+    final url =
+        Uri.parse("${LocalStorageService.getAILoggingUrl()}/?command=clearDb");
+    await http.post(url);
+  }
+
   Future<List<AiLog>> getLogs(
       Course course,
       Assignment? assignment,
