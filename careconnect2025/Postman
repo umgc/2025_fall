@@ -1,0 +1,8 @@
+POST http://localhost:8080/v1/asl/translate
+Content-Type: application/json
+
+{
+  "text": "Your appointment is Tuesday at 3pm",
+  "locale": "en-US",
+  "preferVideo": true
+}
