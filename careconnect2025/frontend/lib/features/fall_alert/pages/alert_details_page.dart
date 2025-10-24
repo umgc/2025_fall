@@ -1,0 +1,479 @@
+import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
+import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient_header_card.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/fall_alert.dart';
+
+class AlertDetailsPage extends StatelessWidget {
+  static const routeName = '/alert-details';
+  final FallAlert alert;
+
+  const AlertDetailsPage({super.key, required this.alert});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now().toUtc();
+    final timeAgo = _formatTimeAgo(now.difference(alert.detectedAtUtc));
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('Fall Alert'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Patient may need help.',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+           
+           // Patient card
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: const Color(0xFF111827),
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(color: Colors.white10),
+  ),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      CircleAvatar(
+        radius: 28,
+        backgroundColor: const Color(0xFF334155),
+        child: Text(
+          _initials(alert.patientName),
+          style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+      ),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              alert.patientName,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.videocam_outlined, size: 16, color: Colors.white54),
+                const SizedBox(width: 6),
+                Text(alert.source, style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 16, color: Colors.white54),
+                const SizedBox(width: 6),
+                Text('Detected $timeAgo', style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(width: 8),
+      OutlinedButton.icon(
+        onPressed: () => _openPatientDetails(context),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.white24),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        icon: const Icon(Icons.person_outline, size: 18),
+        label: const Text('View Details'),
+      ),
+    ],
+  ),
+),
+
+            const SizedBox(height: 12),
+
+            // Status chip (shows if the alert is older than 2 minutes)
+            if (now.difference(alert.detectedAtUtc) > const Duration(minutes: 2))
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade400,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'No response from patient',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+              ),
+            if (now.difference(alert.detectedAtUtc) > const Duration(minutes: 2))
+              const SizedBox(height: 16),
+
+            // Primary actions
+            _ActionButton(
+              icon: alert.hasLiveVideo && alert.liveVideoUrl != null ? Icons.videocam : Icons.videocam_off,
+              label: alert.hasLiveVideo && alert.liveVideoUrl != null ? 'View Fall Detection Video' : 'Live Feed Unavailable',
+              onPressed: (alert.hasLiveVideo && alert.liveVideoUrl != null)
+                  ? () => _openLiveVideo(context)
+                  : null,
+              background: Colors.transparent,
+              border: const Color(0xFF22D3EE),
+              textColor: const Color(0xFF22D3EE),
+              trailing: (alert.hasLiveVideo && alert.liveVideoUrl != null) ? Icons.open_in_new_rounded : null,
+            ),
+            const SizedBox(height: 10),
+            _ActionButton(
+              icon: Icons.call,
+              label: 'Call Patient',
+              onPressed: () => _callPatient(context),
+              background: const Color(0xFF4F46E5),
+            ),
+            const SizedBox(height: 10),
+            _ActionButton(
+              icon: Icons.message_outlined,
+              label: 'Send Message',
+              onPressed: () => _messagePatient(context),
+              background: const Color(0xFF111827),
+              border: Colors.white24,
+              textColor: Colors.white,
+            ),
+            const SizedBox(height: 10),
+            _ActionButton(
+              icon: Icons.emergency_share_rounded,
+              label: 'Contact Emergency Services',
+              onPressed: () => _alertEmergency(context),
+              background: const Color(0xFFEF4444),
+            ),
+            const SizedBox(height: 18),
+            
+
+            // Metadata section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionTitle('Details'),
+                  _MetaRow('Detected at', alert.detectedAtUtc.toLocal().toString()),
+                  _MetaRow('Source', alert.source),
+                  _MetaRow('Patient phone', alert.patientPhone ?? 'Not available'),
+                  if (alert.hasLiveVideo)
+                    _MetaRow('Live video', alert.liveVideoUrl?.toString() ?? 'Available'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Optional footer items: show when data exists
+            if ((alert.patientPhone?.isNotEmpty ?? false)) ...[
+              const Divider(color: Colors.white12, height: 24),
+              const _SectionTitle('Emergency Tip'),
+              const Text(
+                'If you cannot reach the patient, contact emergency services immediately.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Actions ---
+
+  Future<void> _openLiveVideo(BuildContext context) async {
+    final url = alert.liveVideoUrl!;
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      _toast(context, 'Could not open live feed');
+    }
+  }
+
+  Future<void> _callPatient(BuildContext context) async {
+    final phone = alert.patientPhone;
+    if (phone == null || phone.isEmpty) {
+      _toast(context, 'No phone number available');
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (!await launchUrl(uri)) {
+      _toast(context, 'Call failed to start');
+    }
+  }
+
+  Future<void> _messagePatient(BuildContext context) async {
+    final phone = alert.patientPhone;
+    final message = 'I got an alert that you may have fallen. Are you okay? Please reply or call me if you need help.' ;
+    if (phone == null || phone.isEmpty) {
+      _toast(context, 'No phone number available');
+      return;
+    }
+    final uri = Uri(scheme: 'sms', path: phone, queryParameters: {'body': message},);
+    if (!await launchUrl(uri)) {
+      _toast(context, 'Message failed to start');
+    }
+  }
+Future<void> _openPatientDetails(BuildContext context) async {
+  final id = alert.patientId;
+  if (id.isEmpty) {
+    _toast(context, 'Patient ID not available');
+    return;
+  }
+
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => PatientDetailsPage(patientId: id),
+      settings: const RouteSettings(name: '/patient-details'),
+    ),
+  );
+}
+Future<void> _alertEmergency(BuildContext context) async {
+  final emergencyNumber = '911'; // consider making this region-aware
+  final contactName = alert.emergencyContactName ?? 'Emergency Contact';
+  final contactPhone = alert.emergencyContactPhone;
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF111827),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Emergency actions',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  'Choose how you want to escalate',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              const SizedBox(height: 4),
+              _EmergencyTile(
+                icon: Icons.local_phone_rounded,
+                label: 'Call 911',
+                subtitle: 'Connect to local emergency services',
+                onTap: () async {
+                  Navigator.pop(context);
+                  final uri = Uri(scheme: 'tel', path: emergencyNumber);
+                  if (!await launchUrl(uri)) {
+                    _toast(context, 'Could not start call to 911');
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              _EmergencyTile(
+                icon: Icons.contact_phone_rounded,
+                label: 'Call $contactName',
+                subtitle: contactPhone ?? 'No phone on file',
+                enabled: contactPhone != null && contactPhone.isNotEmpty,
+                onTap: () async {
+                  Navigator.pop(context);
+                  final uri = Uri(scheme: 'tel', path: contactPhone);
+                  if (!await launchUrl(uri)) {
+                    _toast(context, 'Could not start call to $contactName');
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              const Divider(color: Colors.white12),
+              const SizedBox(height: 8),
+              Text(
+                'If you cannot reach the patient, contact emergency services immediately.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+  void _toast(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // --- Helpers ---
+
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts.last[0]).toUpperCase();
+    }
+
+  static String _formatTimeAgo(Duration d) {
+    if (d.inSeconds < 60) return '${d.inSeconds}s ago';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    return '${d.inDays}d ago';
+  }
+}
+class _EmergencyTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  const _EmergencyTile({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.onTap,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      enabled: enabled,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tileColor: const Color(0xFF0B1220),
+      leading: CircleAvatar(
+        backgroundColor: enabled ? const Color(0xFF334155) : const Color(0xFF263043),
+        child: Icon(icon, color: Colors.white),
+      ),
+      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      subtitle: subtitle != null ? Text(subtitle!, style: const TextStyle(color: Colors.white70)) : null,
+      onTap: enabled ? onTap : null,
+    );
+  }
+}
+
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final Color background;
+  final Color? border;
+  final Color? textColor;
+  final IconData? trailing;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.background,
+    this.border,
+    this.textColor,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveText = textColor ?? Colors.white;
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: background,
+          foregroundColor: effectiveText,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: border != null ? BorderSide(color: border!) : BorderSide.none,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: effectiveText),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(label, style: TextStyle(color: effectiveText, fontWeight: FontWeight.w600)),
+            ),
+            if (trailing != null) Icon(trailing, color: effectiveText),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MetaRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(color: Colors.white54)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}

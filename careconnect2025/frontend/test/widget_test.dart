@@ -5,8 +5,7 @@ import 'package:care_connect_app/features/dashboard/patient_dashboard/pages/pati
 import 'package:care_connect_app/shared/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart'; 
 import 'package:go_router/go_router.dart';
 
 // Core imports
@@ -48,17 +47,13 @@ void main() {
   // Set up test environment
   setUpAll(() async {
     // Initialize DotEnv for tests
-    dotenv.loadFromString(
-      envString: '''
-CC_BASE_URL_WEB=http://localhost:8080/v1/api/
-CC_BASE_URL_ANDROID=http://10.0.2.2:8080/v1/api/
-CC_BASE_URL_OTHER=http://localhost:8080/v1/api/
-CC_BACKEND_TOKEN=test_token
-deepSeek_uri=https://api.deepseek.com/v1/chat/completions
-deepSeek_key=test_key
-STRIPE_PUBLISHABLE_KEY=test_key
-    ''',
-    );
+const ccBaseUrlWeb = String.fromEnvironment('CC_BASE_URL_WEB', defaultValue: 'http://localhost:8080/v1/api/');
+const ccBaseUrlAndroid = String.fromEnvironment('CC_BASE_URL_ANDROID', defaultValue: 'http://10.0.2.2:8080/v1/api/');
+const ccBaseUrlOther = String.fromEnvironment('CC_BASE_URL_OTHER', defaultValue: 'http://localhost:8080/v1/api/');
+const ccBackendToken = String.fromEnvironment('CC_BACKEND_TOKEN', defaultValue: 'test_token');
+const deepSeekUri = String.fromEnvironment('deepSeek_uri', defaultValue: 'https://api.deepseek.com/v1/chat/completions');
+const deepSeekKey = String.fromEnvironment('deepSeek_key', defaultValue: 'test_key');
+const stripePublishableKey = String.fromEnvironment('STRIPE_PUBLISHABLE_KEY', defaultValue: 'test_key');
   });
 
   group('Core App Tests', () {
