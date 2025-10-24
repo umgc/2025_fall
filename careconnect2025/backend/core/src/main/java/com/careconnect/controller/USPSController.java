@@ -9,7 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/usps")
+@RequestMapping("/v1/api/usps")
 @RequiredArgsConstructor
 public class USPSController {
 
