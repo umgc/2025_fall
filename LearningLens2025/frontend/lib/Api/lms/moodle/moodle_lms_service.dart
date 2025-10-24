@@ -961,7 +961,10 @@ class MoodleLmsService implements LmsInterface {
       return null;
     }
 
-    final List<dynamic> responseData = jsonDecode(response.body);
+    final responseData = jsonDecode(response.body);
+    if (responseData is! List<dynamic>) {
+      return null;
+    }
     if (responseData.isEmpty || responseData.first is! Map<String, dynamic>) {
       return null;
     }

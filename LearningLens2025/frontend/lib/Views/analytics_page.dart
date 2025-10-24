@@ -8,6 +8,7 @@ import 'package:flutter_to_pdf/flutter_to_pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/lms/constants/learning_lens.constants.dart';
 import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/ai_log.dart';
@@ -2654,7 +2655,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Future<List<Map<String, dynamic>>> _doAiQuery(String prompt) async {
     // Select the AI model based on the available credentials.
-    dynamic aiModel;
+    LLM aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     } else if (selectedLLM == LlmType.GROK) {
@@ -2666,7 +2667,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
 
     try {
-      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt) ?? "");
       String normalizedResult = result.trim();
       // Remove markdown code block wrappers if present.
       if (normalizedResult.startsWith("```json")) {

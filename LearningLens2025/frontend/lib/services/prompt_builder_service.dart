@@ -4,6 +4,7 @@ String buildLlmPrompt({
   required String tone,
   required String voice,
   required String detailLevel,
+  required String gradeLevel,
 }) {
   return '''
 I am building a program that generates essay rubric assignments that teachers can distribute to students,
@@ -19,15 +20,16 @@ These two parts must NEVER influence each other.
 
 Grade the following submission strictly based on the rubric below. 
 The grading (scores) must be completely independent of tone, voice, or detail settings.
-After the grading is complete, generate feedback paragraphs that follow the specified tone, voice, and level of detail.
+After the grading is complete, generate feedback paragraphs that follow the specified tone, voice, grade level, and level of detail.
 
 Submission: $submissionText
 Rubric: $fetchedRubric
+Grade Level: $gradeLevel
 
 ---
 
 ### Part 1: Grading (Objective and Fixed)
-- Assign a score for each rubric criterion **based only** on the rubric definitions and the submission content.
+- Assign a score for each rubric criterion **based only** on the rubric definitions, grade level, and the submission content.
 - DO NOT use or consider tone, voice, or level of detail when assigning scores.
 - You must determine the score **before** writing any feedback and must not change it afterward.
 - Once the scores are determined, lock them in and proceed to Part 2.
@@ -56,6 +58,7 @@ Follow these exact stylistic settings:
 
 Each paragraph:
 - Must directly justify the assigned score using examples from the submission.
+- Must be appropriate for the student's grade level.
 - Must be **3 to 5 complete sentences** long.  
 - Must remain consistent with the selected tone and voice.  
 - Must not mention the rubric or meta-instructions.  

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
@@ -794,7 +795,7 @@ class _IepPageState extends State<IepPage> {
     setState(() {
       _isAIRecommending = true;
     });
-    dynamic aiModel;
+    LLM aiModel;
     if (selectedLLM == LlmType.CHATGPT) {
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     } else if (selectedLLM == LlmType.GROK) {
@@ -840,7 +841,7 @@ class _IepPageState extends State<IepPage> {
     int? newAttempts;
 
     try {
-      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt));
+      var result = await aiModel.postToLlm(HtmlConverter.convert(prompt) ?? "");
       String normalizedResult = result.trim();
       // Remove markdown code block wrappers if present.
       if (normalizedResult.startsWith("```json")) {
