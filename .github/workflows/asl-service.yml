@@ -1,0 +1,21 @@
+name: asl-service
+on:
+  pull_request:
+    branches: [ SadinaTeamA ]
+    paths:
+      - 'careconnect2025/backend/asl-service/**'
+      - '.github/workflows/asl-service.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build (Maven)
+        run: |
+          cd careconnect2025/backend/asl-service
+          mvn -B -DskipTests package
