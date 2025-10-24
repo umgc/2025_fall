@@ -1,0 +1,14 @@
+com/careconnect/util/TaskMapperTest.class
+com/careconnect/evv/EvvOutboxServiceTest.class
+com/careconnect/config/CareconnectTestConfig.class
+com/careconnect/controller/TaskControllerV2Test.class
+com/careconnect/careconnect_backend/CareconnectBackendApplicationTests.class
+com/careconnect/service/NotetakerServiceTests.class
+com/careconnect/evv/EvvControllerTest.class
+com/careconnect/evv/StateSpecificIntegrationSelectionTest.class
+com/careconnect/database/DatabaseConnectionTest.class
+com/careconnect/evv/DtoConstraintTest.class
+com/careconnect/evv/AuditTrailBehaviorTest.class
+com/careconnect/service/TaskServiceV2Test.class
+com/careconnect/evv/EvvSubmissionServiceTest.class
+com/careconnect/evv/EvvServiceTest.class

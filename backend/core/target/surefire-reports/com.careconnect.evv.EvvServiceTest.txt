@@ -1,0 +1,22 @@
+-------------------------------------------------------------------------------
+Test set: com.careconnect.evv.EvvServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.106 s <<< FAILURE! -- in com.careconnect.evv.EvvServiceTest
+com.careconnect.evv.EvvServiceTest.review_approve_transitionsToConfirmed_andAudits -- Time elapsed: 0.002 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.careconnect.service.evv.EvvService.review(EvvService.java:74)
+	at com.careconnect.evv.EvvServiceTest.review_approve_transitionsToConfirmed_andAudits(EvvServiceTest.java:85)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+
+com.careconnect.evv.EvvServiceTest.review_reject_staysPendingReview_andAuditsReviewed -- Time elapsed: 0.001 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.careconnect.service.evv.EvvService.review(EvvService.java:74)
+	at com.careconnect.evv.EvvServiceTest.review_reject_staysPendingReview_andAuditsReviewed(EvvServiceTest.java:97)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+

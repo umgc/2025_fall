@@ -1,0 +1,16 @@
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/careconnect_backend/CareconnectBackendApplicationTests.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/config/CareconnectTestConfig.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/config/TestConfiguration.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/controller/PatientControllerTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/controller/TaskControllerV2Test.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/database/DatabaseConnectionTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/AuditTrailBehaviorTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/DtoConstraintTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/EvvControllerTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/EvvOutboxServiceTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/EvvServiceTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/EvvSubmissionServiceTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/evv/StateSpecificIntegrationSelectionTest.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/service/NotetakerServiceTests.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/service/TaskServiceV2Test.java
+/Users/user/2025_fall/careconnect2025/backend/core/src/test/java/com/careconnect/util/TaskMapperTest.java
