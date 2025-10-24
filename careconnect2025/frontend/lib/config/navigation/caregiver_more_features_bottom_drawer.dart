@@ -1,5 +1,7 @@
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
+import 'package:care_connect_app/pages/file_management_page.dart';
+import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
