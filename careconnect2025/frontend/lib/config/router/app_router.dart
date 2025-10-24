@@ -61,7 +61,7 @@ import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_das
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_list_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
-
+import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
 Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
@@ -595,7 +595,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/smart-devices',
-      builder: (_, __) => const SmartDevicesScreen(),
+      builder: (_, __) => const SmartDevicesPage(),
     ),
     GoRoute(
       path: '/medication',
@@ -683,7 +683,11 @@ final GoRouter appRouter = GoRouter(
       path: '/virtual-checkin',
       builder: (context, state) => const PatientVirtualCheckIn(),
     ),
-    
+        //Adding Calendar Assistant route
+    GoRoute(
+      path: '/alexaLogin',
+      builder: (_, __) => const AlexaLoginPage(),
+    ),
 
     // Handle routes from legacy menus
     GoRoute(
