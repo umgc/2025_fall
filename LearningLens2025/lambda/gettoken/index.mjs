@@ -47,6 +47,10 @@ export const handler = async (event, context) => {
       await buildDatabase(client);
       return "Database created successfully.";
     }
+    if (command === "clearDb") {
+      await clearOldDatabaseEntries(client);
+      return "Database entries older than two years deleted successfully.";
+    }
     if (command === "addLog") {
       console.log(event);
       await addLog(client, event["body"]);
@@ -72,6 +76,16 @@ export const handler = async (event, context) => {
     }
     catch (error) {
       console.error("Failed to create database table: ", error);
+      throw error;
+    }
+};
+
+  async function clearOldDatabaseEntries(client) {
+    try {
+    await client`DELETE FROM AI_LOGS WHERE time AT TIME ZONE 'UTC' < (current_timestamp - interval '2 years') AT TIME ZONE 'UTC';`;
+    }
+    catch (error) {
+      console.error("Failed to clear old database entries: ", error);
       throw error;
     }
 };
@@ -106,7 +120,7 @@ export const handler = async (event, context) => {
       ${log.reflection},
       ${log.model},
       ${log.lms},
-      current_timestamp
+      current_timestamp AT TIME ZONE 'UTC'
       );`;
     }
     catch (error) {
