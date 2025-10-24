@@ -120,6 +120,11 @@ class _MenuPageState extends State<MenuPage> {
         visibleFor: const {'CAREGIVER'},
       ),
       _MenuItem(
+        icon: Icons.mail,
+        label: 'Informed Delivery',
+        route: '/informed-delivery',
+      ),
+      _MenuItem(
         icon: Icons.settings,
         label: t.settings,
         route: '/settings',
