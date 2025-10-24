@@ -113,7 +113,7 @@ class _AllergyInputFormState extends State<AllergyInputForm> {
           const Text('Severity', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: _selectedSeverity,
+            value: _selectedSeverity,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
