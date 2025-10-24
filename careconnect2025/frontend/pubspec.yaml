@@ -41,6 +41,9 @@ dependencies:
   crypto: ^3.0.6  # For generating state parameter
   pointycastle: ^4.0.0  # For RSA key operations
   app_links: ^6.4.1  # For handling deep links from OAuth callback (replaced uni_links)
+http: ^1.2.0
+video_player: ^2.7.0
+flutter_svg: ^2.0.9
 
 # -- Astha - start
   path_provider: ^2.1.5
