@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
@@ -203,7 +205,13 @@ class _GamificationViewState extends State<GamificationView> {
                 showLoadingDialog(context);
 
                 try {
-                  final bytes = _selectedFile!.bytes;
+                  final Uint8List? bytes;
+                  if (kIsWeb) {
+                    bytes = _selectedFile!.bytes;
+                  } else {
+                    bytes = File(_selectedFile!.path!).readAsBytesSync();
+                  }
+
                   if (bytes == null) throw Exception("No file content found");
 
                   final text = await AIFileService.extractTextFromPDF(bytes);
@@ -510,7 +518,17 @@ $text
   }
 
   List<T> _parseJsonList<T>(String content, T Function(dynamic) mapper) {
-    final decoded = jsonDecode(content);
+    String normalizedResult = content.trim();
+    // Remove markdown code block wrappers if present.
+    if (normalizedResult.startsWith("```json")) {
+      normalizedResult = normalizedResult.substring(7);
+    }
+    if (normalizedResult.endsWith("```")) {
+      normalizedResult =
+          normalizedResult.substring(0, normalizedResult.length - 3);
+    }
+    normalizedResult = normalizedResult.trim();
+    final decoded = jsonDecode(normalizedResult);
     if (decoded is List) {
       return decoded.map(mapper).toList();
     }
