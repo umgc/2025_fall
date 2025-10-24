@@ -1,36 +1,81 @@
-import 'dart:io' show Platform;
 import 'dart:developer' show log;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart'; // <-- REMOVED
 
-// Agora configuration accessors
-String getAgoraAppId() {
-  final appId = dotenv.env['AGORA_APP_ID'];
-  if (appId == null || appId.isEmpty) {
-    throw Exception('AGORA_APP_ID not set in .env');
+// --- Raw values from --dart-define ---
+// We define all the compile-time variables here
+
+const String _agoraAppId = String.fromEnvironment('AGORA_APP_ID');
+const String _agoraAppCertificate = String.fromEnvironment(
+  'AGORA_APP_CERTIFICATE',
+);
+
+// This is the new, unified backend URL.
+// Set your local dev URL in defaultValue
+const String _backendBaseUrl = String.fromEnvironment(
+  'BACKEND_URL',
+  defaultValue: 'http://localhost:8080',
+);
+
+const String _wsOverrideUrl = String.fromEnvironment('WEBSOCKET_SERVER_URL');
+const String _backendToken = String.fromEnvironment('CC_BACKEND_TOKEN');
+const String _jwtSecret = String.fromEnvironment('JWT_SECRET');
+const String _deepSeekUri = String.fromEnvironment('DEEPSEEK_URI');
+const String _openAIKey = String.fromEnvironment('OPENAI_API_KEY');
+const String _deepSeekKey = String.fromEnvironment('DEEPSEEK_API_KEY');
+const String _googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+const String _appDomain = String.fromEnvironment(
+  'APP_DOMAIN',
+  defaultValue: 'localhost',
+);
+const String _appPort = String.fromEnvironment(
+  'APP_PORT',
+  defaultValue: '50030',
+);
+const String _fitbitClientId = String.fromEnvironment('FITBIT_CLIENT_ID');
+const String _fitbitClientSecret = String.fromEnvironment(
+  'FITBIT_CLIENT_SECRET',
+);
+
+String getFitbitClientId() {
+  final clientId = _fitbitClientId;
+  if (clientId.isEmpty) {
+    throw Exception('FITBIT_CLIENT_ID is not defined via --dart-define');
   }
-  return appId;
+  return clientId;
+}
+
+String getFitbitClientSecret() {
+  final secret = _fitbitClientSecret;
+  if (secret.isEmpty) {
+    throw Exception('FITBIT_CLIENT_SECRET is not defined via --dart-define');
+  }
+  return secret;
+}
+
+/// Agora configuration accessors
+String getAgoraAppId() {
+  // Now reads from the _agoraAppId const
+  if (_agoraAppId.isEmpty) {
+    throw Exception('AGORA_APP_ID not set via --dart-define');
+  }
+  return _agoraAppId;
 }
 
 String getAgoraAppCertificate() {
-  // Optional for development
-  return dotenv.env['AGORA_APP_CERTIFICATE'] ?? '';
+  // Optional, so no check
+  return _agoraAppCertificate;
 }
 
 /// Returns the unified WebSocket server base URL for both signaling and notifications
 ///
-/// Set WEBSOCKET_SERVER_URL in your .env file to override the default WebSocket URL.
-/// Example:
-///   WEBSOCKET_SERVER_URL=wss://your-backend-domain/ws
-///
-/// If not set, it will be derived from the backend base URL.
+/// Set WEBSOCKET_SERVER_URL via --dart-define to override.
 String _getUnifiedWebSocketBaseUrl() {
   // Prefer explicit environment variable
-  final url = dotenv.env['WEBSOCKET_SERVER_URL'];
-  if (url != null && url.isNotEmpty) {
-    return url;
+  if (_wsOverrideUrl.isNotEmpty) {
+    return _wsOverrideUrl;
   }
-  // Otherwise, build from backend base URL
+
   final base = getBackendBaseUrl();
   if (base.startsWith('https://')) {
     return base.replaceFirst('https://', 'wss://');
@@ -51,31 +96,30 @@ String getWebSocketNotificationUrl() {
   return '${_getUnifiedWebSocketBaseUrl()}/ws/notifications';
 }
 
+/// Returns the Backend Base URL
+///
+/// This is now controlled by a single --dart-define=BACKEND_URL variable.
 String getBackendBaseUrl() {
-  if (kIsWeb) {
-    // For web builds
-    return dotenv.env['CC_BASE_URL_WEB']!;
-  } else if (Platform.isAndroid) {
-    // For Android emulator
-    return dotenv.env['CC_BASE_URL_ANDROID']!;
-  } else {
-    // For Windows, Mac, iOS simulators, etc.
-    return dotenv.env['CC_BASE_URL_OTHER']!;
+  // The old platform-specific logic is no longer needed,
+  // as the build command now defines the correct URL.
+  // We just return the value passed in.
+  if (_backendBaseUrl.isEmpty) {
+    throw Exception('BACKEND_URL not set via --dart-define');
   }
+  return _backendBaseUrl;
 }
 
 String getBackendToken() {
-  final token =
-      dotenv.env['CC_BACKEND_TOKEN'] ??
-      Platform.environment['CC_BACKEND_TOKEN'];
+  // Replaced dotenv.env and Platform.environment
+  final token = _backendToken;
 
-  if (token == null || token.isEmpty || token == 'your_backend_token_here') {
+  if (token.isEmpty || token == 'your_backend_token_here') {
     if (kDebugMode) {
       print('⚠️ Backend token not configured. Some API calls may fail.');
       return '';
     }
     throw Exception(
-      'CC_BACKEND_TOKEN is not configured. Please set it in .env.local or environment variables.',
+      'CC_BACKEND_TOKEN is not configured. Please set it via --dart-define.',
     );
   }
 
@@ -86,21 +130,19 @@ String getBackendToken() {
 }
 
 String getJWTSecret() {
-  final secret = dotenv.env['JWT_SECRET'] ?? Platform.environment['JWT_SECRET'];
+  final secret = _jwtSecret;
 
-  if (secret == null ||
-      secret.isEmpty ||
-      secret == 'your_jwt_secret_key_here') {
+  if (secret.isEmpty || secret == 'your_jwt_secret_key_here') {
     if (kDebugMode) {
       print('⚠️ JWT secret not configured. Token validation may fail.');
       return '';
     }
     throw Exception(
-      'JWT_SECRET is not configured. Please set it in .env.local or environment variables.',
+      'JWT_SECRET is not configured. Please set it via --dart-define.',
     );
   }
 
-  // Validate JWT secret length (should be at least 32 characters for security)
+  // Validate JWT secret length
   if (secret.length < 32) {
     throw Exception(
       'JWT_SECRET must be at least 32 characters long for security.',
@@ -114,31 +156,26 @@ String getJWTSecret() {
 }
 
 String getDeepSeekUri() {
-  final uri = dotenv.env['deepSeek_uri'];
-  if (uri == null) {
-    throw Exception('deepSeek_uri is not defined in .env');
+  final uri = _deepSeekUri;
+  if (uri.isEmpty) {
+    throw Exception('DEEPSEEK_URI is not defined via --dart-define');
   }
   return uri;
 }
 
 String getOpenAIKey() {
-  // Try multiple environment sources for the API key
-  final key =
-      dotenv.env['OPENAI_API_KEY'] ??
-      dotenv.env['openai_key'] ??
-      Platform.environment['OPENAI_API_KEY'];
+  final key = _openAIKey;
 
-  if (key == null || key.isEmpty || key == 'your_openai_api_key_here') {
+  if (key.isEmpty || key == 'your_openai_api_key_here') {
     if (kDebugMode) {
       print('⚠️ OpenAI API key not configured. AI features will be disabled.');
       return '';
     }
     throw Exception(
-      'OPENAI_API_KEY is not configured. Please set it in .env.local or environment variables.',
+      'OPENAI_API_KEY is not configured. Please set it via --dart-define.',
     );
   }
 
-  // Validate key format (OpenAI keys start with 'sk-')
   if (!key.startsWith('sk-')) {
     throw Exception(
       'Invalid OpenAI API key format. Key should start with "sk-".',
@@ -152,13 +189,9 @@ String getOpenAIKey() {
 }
 
 String getDeepSeekKey() {
-  // Try multiple environment sources for the API key
-  final key =
-      dotenv.env['DEEPSEEK_API_KEY'] ??
-      dotenv.env['deepSeek_key']?.replaceFirst('Bearer ', '') ??
-      Platform.environment['DEEPSEEK_API_KEY'];
+  final key = _deepSeekKey;
 
-  if (key == null || key.isEmpty || key == 'your_deepseek_api_key_here') {
+  if (key.isEmpty || key == 'your_deepseek_api_key_here') {
     if (kDebugMode) {
       log(
         '⚠️ DeepSeek API key not configured. DeepSeek AI features will be disabled.',
@@ -166,11 +199,10 @@ String getDeepSeekKey() {
       return '';
     }
     throw Exception(
-      'DEEPSEEK_API_KEY is not configured. Please set it in .env.local or environment variables.',
+      'DEEPSEEK_API_KEY is not configured. Please set it via --dart-define.',
     );
   }
 
-  // Validate key format (DeepSeek keys start with 'sk-')
   if (!key.startsWith('sk-')) {
     throw Exception(
       'Invalid DeepSeek API key format. Key should start with "sk-".',
@@ -184,26 +216,27 @@ String getDeepSeekKey() {
 }
 
 String getGoogleClientId() {
-  final clientId = dotenv.env['GOOGLE_CLIENT_ID'];
-  if (clientId == null) {
-    throw Exception('GOOGLE_CLIENT_ID is not defined in .env');
+  final clientId = _googleClientId;
+  if (clientId.isEmpty) {
+    throw Exception('GOOGLE_CLIENT_ID is not defined via --dart-define');
   }
   return clientId;
 }
 
 String getAppDomain() {
-  return dotenv.env['APP_DOMAIN'] ?? 'localhost';
+  // Now uses the const _appDomain (which has its own defaultValue)
+  return _appDomain;
 }
 
 String getAppPort() {
-  return dotenv.env['APP_PORT'] ?? '50030';
+  // Now uses the const _appPort (which has its own defaultValue)
+  return _appPort;
 }
 
 String getOAuthRedirectUri() {
   final domain = getAppDomain();
   final port = getAppPort();
 
-  // For localhost, include port. For production domains, don't include port
   if (domain == 'localhost' || domain.startsWith('127.0.0.1')) {
     return 'http://$domain:$port/oauth2/callback/google';
   } else {
@@ -215,11 +248,9 @@ String getWebBaseUrl() {
   final domain = getAppDomain();
   final port = getAppPort();
 
-  // For development/localhost
   if (domain == 'localhost' || domain.startsWith('127.0.0.1')) {
     return 'http://$domain:$port';
   }
 
-  // For production
   return 'https://$domain';
 }

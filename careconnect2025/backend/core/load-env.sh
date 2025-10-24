@@ -25,7 +25,7 @@ echo "Database: $JDBC_URI"
 # Verify critical variables are set
 required_vars=(
     "JDBC_URI"
-    "DB_USER" 
+    "DB_USER"
     "DB_PASSWORD"
     "SECURITY_JWT_SECRET"
     "FIREBASE_PROJECT_ID"
@@ -44,6 +44,35 @@ if [ ${#missing_vars[@]} -ne 0 ]; then
     printf '%s\n' "${missing_vars[@]}"
     echo "Please update your .env file with the required values"
 fi
+
+# Check optional environment variables and report which ones are using defaults
+echo ""
+echo "Optional environment variables (not set, using defaults from application-dev.properties):"
+optional_vars=(
+    "STRIPE_SECRET_KEY"
+    "DEEPSEEK_API_KEY"
+    "OPENAI_API_KEY"
+    "AWS_ACCESS_KEY_ID"
+    "AWS_SECRET_ACCESS_KEY"
+    "S3_BUCKET_NAME"
+    "FITBIT_AUTHORIZATION_URI"
+    "FITBIT_TOKEN_URI"
+    "FITBIT_USERINFO_URI"
+    "STRIPE_API_URL"
+)
+
+unset_count=0
+for var in "${optional_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "  - $var"
+        ((unset_count++))
+    fi
+done
+
+if [ $unset_count -eq 0 ]; then
+    echo "  (All optional variables are set)"
+fi
+echo ""
 
 # Start the application if all critical vars are present
 if [ ${#missing_vars[@]} -eq 0 ]; then
