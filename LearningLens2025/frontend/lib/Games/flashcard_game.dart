@@ -49,6 +49,15 @@ class _FlashcardGameState extends State<FlashcardGame> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
+        if (widget.previewMode)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              'Tap the card to flip and view the definition.',
+              style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center,
+            ),
+          ),
         GestureDetector(
           onTap: () => setState(() => _showAnswer = !_showAnswer),
           child: Card(
@@ -84,10 +93,6 @@ class _FlashcardGameState extends State<FlashcardGame> {
                   ? () => _goTo(_currentIndex + 1)
                   : null,
               child: const Text('Next'),
-            ),
-            ElevatedButton(
-              onPressed: widget.onComplete,
-              child: const Text('Close'),
             ),
           ],
         ),
