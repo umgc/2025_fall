@@ -6,6 +6,7 @@ import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/moodle_rubric.dart';
 import 'package:learninglens_app/Views/essays_view.dart';
 import 'dart:math';
+import 'package:learninglens_app/Views/view_reflection_page.dart';
 
 import 'package:learninglens_app/beans/submission_with_grade.dart';
 
@@ -207,6 +208,27 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                                 'Rubric:',
                                 style: TextStyle(
                                     fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ViewReflectionPage(
+                                        participant: widget.participant,
+                                        submission: widget.submission,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(Icons.note_alt_outlined),
+                                label: Text('View Reflection'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
                               ),
                               SizedBox(height: 8),
 
