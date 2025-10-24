@@ -236,6 +236,83 @@ class _CommonDrawerState extends State<CommonDrawer> {
             route: '/gamification',
             isActive: widget.currentRoute == '/gamification',
           ),
+      
+          ExpansionTile(
+            leading: Icon(
+              Icons.receipt_long,           color: widget.currentRoute.startsWith('/invoice-assistant')
+                  ? Theme.of(context).primaryColor
+                  : Theme.of(context).iconTheme.color,
+            ),
+            title: Text(
+              'Invoice Assistant',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: widget.currentRoute.startsWith('/invoice-assistant')
+                    ? Theme.of(context).primaryColor
+                    : Theme.of(context).textTheme.bodyLarge?.color,
+                fontWeight: widget.currentRoute.startsWith('/invoice-assistant')
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+              ),
+            ),
+            initiallyExpanded: widget.currentRoute.startsWith(
+              '/invoice-assistant',
+            ),
+            children: [
+              _buildDrawerItem(
+                context,
+                icon: Icons.dashboard_customize,
+                title: 'Dashboard',
+                route: '/invoice-assistant/dashboard',
+                isActive: widget.currentRoute == '/invoice-assistant/dashboard',
+              ),
+
+              // _buildDrawerItem(
+              //   context,
+              //   icon: Icons.cloud_upload,
+              //   title: 'Upload Invoice',
+              //   route: '/invoice-assistant/upload',
+              //   isActive: widget.currentRoute == '/invoice-assistant/upload',
+              // ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.cloud_upload,
+                title: 'Upload Invoice',
+                route: '/invoice-assistant/upload',
+                isActive: widget.currentRoute == '/invoice-assistant/upload',
+              ),
+              _buildDrawerItem(
+                context,
+                icon: Icons.list,
+                title: 'Invoice List',
+                route: '/invoice-assistant/list',
+                isActive: widget.currentRoute == '/invoice-assistant/list',
+              ),
+              // _buildDrawerItem(
+              //   context,
+              //   icon: Icons.filter_alt,
+              //   title: 'Pending',
+              //   route: '/invoice-assistant/list/pending',
+              //   isActive:
+              //       widget.currentRoute == '/invoice-assistant/list/pending',
+              // ),
+              // _buildDrawerItem(
+              //   context,
+              //   icon: Icons.report,
+              //   title: 'Overdue',
+              //   route: '/invoice-assistant/list/overdue',
+              //   isActive:
+              //       widget.currentRoute == '/invoice-assistant/list/overdue',
+              // ),
+              // _buildDrawerItem(
+              //   context,
+              //   icon: Icons.block,
+              //   title: 'Rejected Insurance',
+              //   route: '/invoice-assistant/list/rejected',
+              //   isActive:
+              //       widget.currentRoute == '/invoice-assistant/list/rejected',
+              // ),
+            ],
+          ),
 
           const Divider(),
 

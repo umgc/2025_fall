@@ -28,13 +28,21 @@ class TaskListDay extends StatelessWidget {
   /// Callback when the user taps the delete button on a task.
   final void Function(Task) onDelete;
 
-  const TaskListDay({
-    super.key,
+  /// injectable completion updater for testing
+  final Future<void> Function(int taskId, bool complete) updateCompletion;
+
+  TaskListDay({
+    Key? key,
     required this.events,
     required this.patientNames,
     required this.onEdit,
     required this.onDelete,
-  });
+    Future<void> Function(int, bool)? updateCompletion,
+  }) : updateCompletion =
+           updateCompletion ??
+           ((int id, bool complete) =>
+               ApiService.updateTaskCompletionV2(id, complete)),
+       super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -136,10 +144,7 @@ class TaskListDay extends StatelessWidget {
 
                           // Optional backend sync
                           try {
-                            await ApiService.updateTaskCompletionV2(
-                              task.id!,
-                              newStatus,
-                            );
+                            await updateCompletion(task.id!, newStatus);
                           } catch (e) {
                             // Roll back the change if API failed
                             setState(() => task.isComplete = !newStatus);

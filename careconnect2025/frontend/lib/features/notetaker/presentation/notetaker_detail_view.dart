@@ -150,7 +150,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Note deleted successfully')),
           );
-          context.go('/notetaker-search');
+          context.pop();
         }
       } catch (e) {
         if (mounted) {
@@ -221,7 +221,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               if (await _onWillPop()) {
-                context.go('/notetaker-search');
+                context.pop();
               }
             },
           ),
