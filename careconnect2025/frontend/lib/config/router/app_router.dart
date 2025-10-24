@@ -726,7 +726,7 @@ final GoRouter appRouter = GoRouter(
             body: Center(child: Text('Invalid note ID or missing note data')),
           );
         }
-        final note = extra;
+        final note = extra as PatientNote;
         return NotetakerDetailView();
       },
     ),
