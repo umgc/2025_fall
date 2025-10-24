@@ -1,4 +1,3 @@
-// enum for different buld setting/mode
 import 'dart:convert';
 
 import 'package:learninglens_app/Views/essay_assistant.dart';
@@ -42,6 +41,7 @@ class EssaySession {
         'courseId': essay.courseId,
         'mode': mode.name,
         'chatLog': chatLog.map((turn) => turn.toJson()).toList(),
+        'status': EssayStatus.notStarted,
         'finalText': finalText,
         'notesText': notesText,
         'draftDeltaOps': draftDeltaOps,

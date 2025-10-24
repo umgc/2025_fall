@@ -22,9 +22,11 @@
  * Keep framework → domain → UI → 3rd-party consistent and grouped.
  * ──────────────────────────────────────────────────────────────────────────── */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 // Third-party
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -172,6 +174,14 @@ class _EssayAssistantState extends State<EssayAssistant> {
   EssaySession? _currentSession; // currently active session (if any)
   final Map<String, EssaySession> _sessions =
       {}; // key: essayId (String), value: EssaySession
+  // ignore: unused_field
+  bool _isBusy = false; // loading/saving state
+
+  // --- Streaming control ---
+  bool _isStreaming = false;
+  StreamSubscription<String>? _streamSub;
+  int? _activeAssistantIndex; // which ChatTurn is streaming
+  final StringBuffer _streamBuffer = StringBuffer(); // live text
   String? _activeAssistantMsgId; // for tracking streaming assistant message
 
   Future<Course?> get _currentCourse =>
@@ -245,6 +255,44 @@ class _EssayAssistantState extends State<EssayAssistant> {
         const SnackBar(content: Text('Start or continue a session first.')),
       );
     }
+  }
+
+  /// Cancel any ongoing streaming LLM response.
+  void _cancelStreaming() async {
+    if (!_isStreaming) return;
+
+    _isStreaming = false;
+    await _streamSub?.cancel();
+    _streamSub = null;
+
+    // Whatever generated so far becomes the final message
+    final partial = _streamBuffer.toString();
+    final idx = _activeAssistantIndex;
+    if (idx != null) {
+      _finishAssistantStream(idx, partial.trim());
+    }
+    setState(() {}); // update UI (Stop→Send)
+  }
+
+  Future<void> _cancelActiveStreamsAndRequestsSafely() async {
+    try {
+      if (_isStreaming) {
+        await Future<void>.microtask(_cancelStreaming);
+      }
+    } catch (_) {
+      // swallow
+    }
+  }
+
+// Select the active essay in the sidebar if any
+  void _selectActiveEssayIfAny() {
+    if (_currentSession == null) {
+      setState(() => _selectedSidebarIndex = null);
+      return;
+    }
+    final activeId = _currentSession!.essay.id;
+    final idx = _essays.indexWhere((e) => e.id == activeId);
+    setState(() => _selectedSidebarIndex = idx >= 0 ? idx : null);
   }
 
   // ---------------- Chat state ----------------
@@ -359,6 +407,8 @@ class _EssayAssistantState extends State<EssayAssistant> {
   @override
   void dispose() {
     // Clean up controllers/focus to avoid leaks
+    _streamSub?.cancel();
+    _streamSub = null;
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _draftFocus.dispose();
@@ -382,6 +432,7 @@ This space is designed to help you plan, write, and refine your essay from start
 
 ## Modes:\n
 Each mode changes how the assistant responds:\n
+• **Assistant** – a general-purpose mode for open discussion, quick questions, or feedback that doesn’t fit a specific phase of writing. *Good for more models with smaller context windows.*\n
 • **Brainstorm** – generate ideas and clarify your topic.\n
 • **Outline** – build structure with main points and supporting details.\n
 • **Revise** – improve clarity, grammar, and flow in your draft.\n
@@ -398,6 +449,10 @@ This is your main writing space. You can write freely, review feedback from the 
 **Select an essay from the left sidebar to get started!**
 
 Tip: The assistant adapts to your mode and notes, so the more context you provide, the better it can help.
+
+⚠️ **Important Notice** ⚠️
+
+**The Essay Assistant provides AI-generated feedback and content suggestions. While it strives for accuracy and quality, it is your responsibility to verify all information, citations, and factual claims before submission. Always review and edit the final essay to ensure it meets your academic standards and requirements.**
       ''');
   }
 
@@ -549,7 +604,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
     final chatLog = _currentSession!.chatLog;
 
-    // ----- Pick model (unchanged) -----
+    // ----- Pick model -----
     LLM? aiModel;
     switch (_selectedLLM) {
       case LlmType.CHATGPT:
@@ -584,59 +639,81 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     // Log the user's turn immediately
     _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
 
-    // Create a placeholder assistant message that we'll fill as tokens arrive
-    final int assistantIndex =
-        _beginAssistantStream(); // returns index in chatLog
-
-    // Also create the UI placeholder bubble and track its id
-    _activeAssistantMsgId = _beginAssistantUiMessage();
-
-    final buffer = StringBuffer();
+    final buffer = _streamBuffer..clear();
     try {
-      // ---- Preferred: streaming path (Option B) ----
-      // Requires: aiModel.chatStream(...) implemented OpenAI/DeepSeek compatible
-      await for (final token in aiModel.chatStream(
+      // Create the assistant placeholders
+      final int assistantIndex = _beginAssistantStream();
+      _activeAssistantIndex = assistantIndex;
+
+      // Start streaming
+      _isStreaming = true;
+      setState(() {}); // to flip the Send→Stop button
+
+      final stream = aiModel.chatStream(
         context: fullContext,
         temperature: temperature,
-      )) {
-        buffer.write(token);
-        _appendAssistantStream(assistantIndex, token); // UI: update bubble text
-      }
-
-      final fullText = buffer.toString().trim();
-      _finishAssistantStream(assistantIndex, fullText);
-
-      //Log interaction
-      await _logAiInteraction(
-        userMsg: userPrompt,
-        systemResponse: fullText,
       );
 
-      // Persist after each round
-      await _saveCurrentSessionToPrefs();
-      return fullText;
+      _streamSub = stream.listen(
+        (token) {
+          buffer.write(token);
+          if (_activeAssistantMsgId == null) {
+            _activeAssistantMsgId = _beginAssistantUiMessage();
+            _appendAssistantUiChunk(_activeAssistantMsgId!, token);
+          }
+          _appendAssistantStream(
+              assistantIndex, token); // updates log + UI bubble
+        },
+        onError: (e, st) async {
+          _isStreaming = false;
+          await _streamSub?.cancel();
+          _streamSub = null;
+
+          final err = '[Error: $e]';
+          _finishAssistantStream(assistantIndex, err);
+          _appendError(e.toString());
+          await _saveCurrentSessionToPrefs();
+          setState(() {}); // button state
+        },
+        onDone: () async {
+          _isStreaming = false;
+          _streamSub = null;
+
+          final fullText = buffer.toString().trim();
+          _finishAssistantStream(assistantIndex, fullText);
+
+          await _logAiInteraction(
+            userMsg: userPrompt,
+            systemResponse: fullText,
+          );
+          await _saveCurrentSessionToPrefs();
+          setState(() {}); // button state
+        },
+        cancelOnError: true,
+      );
+
+      // NOTE: don’t await here; subscription will call onDone/onError.
+      return null;
     } catch (e) {
-      // ---- Fallback: non-streaming call (if streaming not supported) ----
+      // ---- Fallback: non-streaming call (not cancellable) ----
       try {
         final fallback = await aiModel.chat(
           context: fullContext,
           temperature: temperature,
-          // stream: false by default in your LLMs
         );
-        // Complete the streaming UI with the full fallback text
-        final fullText = (fallback).trim();
-        _finishAssistantStream(assistantIndex, fullText);
-        //Log interaction
-        await _logAiInteraction(
-          userMsg: userPrompt,
-          systemResponse: fullText,
-        );
+        final fullText = fallback.trim();
+
+        // Make sure placeholders exist if we didn’t start them yet
+        final idx = _activeAssistantIndex ?? _beginAssistantStream();
+        _activeAssistantMsgId ??= _beginAssistantUiMessage();
+        _finishAssistantStream(idx, fullText);
+
+        await _logAiInteraction(userMsg: userPrompt, systemResponse: fullText);
         await _saveCurrentSessionToPrefs();
         return fullText.isEmpty ? null : fullText;
       } catch (inner) {
-        _finishAssistantStream(assistantIndex, '[Error: ${inner.toString()}]');
-        await _saveCurrentSessionToPrefs();
         _appendError(inner.toString());
+        await _saveCurrentSessionToPrefs();
         return null;
       }
     }
@@ -1188,9 +1265,13 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                             ),
                             subtitle: Text('Due: $dueText'),
                             trailing: _statusChip(status),
-                            onTap: () {
+                            onTap: () async {
                               setState(() => _selectedSidebarIndex = i);
-                              _openEssayDialog(context, assignment);
+                              final started =
+                                  await _openEssayDialog(context, assignment);
+                              if (!started && mounted) {
+                                _selectActiveEssayIfAny();
+                              }
                             },
                           );
                         },
@@ -1359,32 +1440,68 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12),
-                                    child: TextField(
-                                      controller: _inputCtrl,
-                                      enabled: _sessionActive,
-                                      minLines: 1,
-                                      maxLines: 6,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Type a message…',
-                                        border: InputBorder.none,
+                                    child: Focus(
+                                      onKeyEvent: (node, event) {
+                                        // Only intercept physical keyboard presses
+                                        if (event is KeyDownEvent &&
+                                            event.logicalKey ==
+                                                LogicalKeyboardKey.enter &&
+                                            // Allow Shift+Enter for newline
+                                            !HardwareKeyboard
+                                                .instance.isShiftPressed &&
+                                            // Avoid sending if Ctrl/Cmd/Alt are pressed
+                                            !HardwareKeyboard
+                                                .instance.isControlPressed &&
+                                            !HardwareKeyboard
+                                                .instance.isMetaPressed &&
+                                            !HardwareKeyboard
+                                                .instance.isAltPressed &&
+                                            // Don’t trigger while streaming
+                                            !_isStreaming) {
+                                          _sendFromField(); // calls your existing handler
+                                          return KeyEventResult
+                                              .handled; // prevent newline insertion
+                                        }
+                                        return KeyEventResult
+                                            .ignored; // let TextField handle others
+                                      },
+                                      child: TextField(
+                                        controller: _inputCtrl,
+                                        enabled: _sessionActive,
+                                        minLines: 1,
+                                        maxLines: 6,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Type a message…',
+                                          border: InputBorder.none,
+                                        ),
+                                        onSubmitted: (_) => _sendFromField(),
                                       ),
-                                      onSubmitted: (_) => _sendFromField(),
                                     ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 8),
 
-                              // Send button
-                              ElevatedButton(
-                                onPressed: _sessionActive
-                                    ? _sendFromField
-                                    : _guardNoSession,
-                                style: ElevatedButton.styleFrom(
-                                  shape: const StadiumBorder(),
+                              // Send OR Stop button (depending on streaming state)
+                              if (_isStreaming)
+                                ElevatedButton.icon(
+                                  onPressed: _cancelStreaming,
+                                  icon: const Icon(Icons.stop),
+                                  label: const Text('Stop'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.redAccent,
+                                    shape: const StadiumBorder(),
+                                  ),
+                                )
+                              else
+                                ElevatedButton(
+                                  onPressed: _sessionActive
+                                      ? _sendFromField
+                                      : _guardNoSession,
+                                  style: ElevatedButton.styleFrom(
+                                      shape: const StadiumBorder()),
+                                  child: const Text('Send'),
                                 ),
-                                child: const Text('Send'),
-                              ),
                             ],
                           ),
                         ),
@@ -1509,7 +1626,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
                     // --- Button to submit Pre-built prompt as user message.
                     FilledButton.icon(
-                      onPressed: (!_sessionActive || _mode == AiMode.assistant)
+                      onPressed: (!_sessionActive ||
+                              _mode == AiMode.assistant ||
+                              _selectedPrompt == null ||
+                              _isStreaming)
                           ? null
                           : () {
                               final submittedPrompt = types.PartialText(
@@ -1663,6 +1783,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     );
   }
 
+  // status chip widget for essay list items
   Widget _statusChip(EssayStatus s) {
     switch (s) {
       case EssayStatus.notStarted:
@@ -1695,8 +1816,12 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
   /// Show a read-only details dialog for a given assignment with actions:
   ///   - Start/Continue session (posts system message to chat)
   ///   - Submit (requires saved draft, confirms, then snackbar)
-  void _openEssayDialog(BuildContext context, Assignment essay) {
-    showDialog(
+  Future<bool> _openEssayDialog(BuildContext context, Assignment essay) {
+    final course = LmsFactory.getLmsService().courses?.firstWhere(
+        (c) => c.id == essay.courseId,
+        orElse: () => Course.empty());
+
+    return showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (ctx) {
@@ -1714,32 +1839,35 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: maxW, // Cap width for readability
-              maxHeight: mq.height * .85, // Allow scrolling for tall content
-            ),
+            constraints:
+                BoxConstraints(maxWidth: maxW, maxHeight: mq.height * .85),
             child: _EssayModalContent(
               essay: essay,
+              course: course,
               statusText: _statusTextFor(essay),
-
-              // Start/Continue session → posts a system message to the chat
+              primaryLabel: primaryLabel,
+              hasSession: hasSession,
+              onReset: hasSession
+                  ? () async {
+                      await _confirmClearSessionFor(essay);
+                      if (ctx.mounted) {
+                        Navigator.of(ctx).pop(true); // session restarted
+                      }
+                    }
+                  : null,
               onPrimary: () {
-                Navigator.of(ctx).pop();
-
-                // normalize/get session
+                Navigator.of(ctx).pop(true); // <-- user chose start/continue
                 final session = _sessions[key] ??
                     EssaySession(essay: essay, id: key, chatLog: []);
                 _sessions[key] = session;
-
                 _startSessionFor(essay);
                 _scrollToBottom();
               },
-              primaryLabel: primaryLabel,
             ),
           ),
         );
       },
-    );
+    ).then((value) => value ?? false); // barrier dismiss => false
   }
 
   /// Small confirmation dialog for Submit.
@@ -1772,6 +1900,104 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         false;
   }
 
+  Future<void> _confirmClearSessionFor(Assignment essay) async {
+    // 1st confirm
+    final ok1 = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm reset'),
+        content: const Text(
+            'This will permanently wipe all messages, notes, and drafts for this session. Continue?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continue')),
+        ],
+      ),
+    );
+    if (ok1 != true) return;
+
+    // 2nd confirm (type RESET)
+    final controller = TextEditingController();
+    final ok2 = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Type to confirm'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Type RESET to permanently erase this session.'),
+            const SizedBox(height: 12),
+            TextField(
+                autofocus: true,
+                controller: controller,
+                decoration: const InputDecoration(hintText: 'RESET')),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(
+                context, controller.text.trim().toUpperCase() == 'RESET'),
+            child: const Text('Erase'),
+          ),
+        ],
+      ),
+    );
+    if (ok2 != true) return;
+
+    // Wipe + restart
+    await _clearAndRestartSessionFor(essay);
+  }
+
+  Future<void> _clearAndRestartSessionFor(Assignment essay) async {
+    setState(() => _isBusy = true);
+    try {
+      await _cancelActiveStreamsAndRequestsSafely();
+
+      final sessionId = _essayKeyOf(essay);
+
+      _sessions.remove(sessionId);
+      _statusCache[sessionId] = EssayStatus.notStarted;
+      await _saveAllSessionToPrefs();
+
+      _messages.clear();
+      _streamBuffer.clear();
+      _activeAssistantIndex = null;
+      _activeAssistantMsgId = null;
+
+      // reset editors
+      _quillDraftController.document = quill.Document();
+      _quillNotesController.document = quill.Document();
+
+      _currentSession = null;
+
+      _postIntroMsg();
+      await _startSessionFor(essay);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Session cleared. Started a fresh session.')),
+        );
+      }
+    } catch (e, st) {
+      debugPrint('Reset failed: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reset failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
   /// Open the Quill editor dialog for a given essay (or "general draft" if null).
   /// Saves the draft (Quill delta JSON) locally in `_drafts` and via stubbed backend.
   void _openQuillEditorDialogFor(Assignment? essay) async {
@@ -1789,6 +2015,14 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
+        final mq = MediaQuery.of(ctx).size;
+
+        const double kMaxDocWidth = 960;
+        const double kMaxDocHeight = 900;
+
+        final double w = (mq.width * 0.90).clamp(480.0, kMaxDocWidth);
+        final double h = (mq.height * 0.90).clamp(520.0, kMaxDocHeight);
+
         return Dialog(
           insetPadding: const EdgeInsets.all(24),
           shape:
@@ -1796,6 +2030,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           child: Builder(
             builder: (ctx) {
               return SizedBox(
+                width: w,
+                height: h,
                 child: Column(
                   children: [
                     // ----- Header -----
@@ -1827,7 +2063,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                       child: quill.QuillSimpleToolbar(
                         controller: _quillDraftController,
                         config: const quill.QuillSimpleToolbarConfig(
-                          multiRowsDisplay: false,
+                          multiRowsDisplay: true,
                           showDividers: true,
                           showClipboardPaste: true,
                         ),
@@ -1835,22 +2071,35 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     ),
                     const Divider(height: 1),
 
-                    // ----- Editor -----
+                    // ----- Editor area (unchanged logic; nicer "page" feel) -----
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(8),
-                        child: quill.QuillEditor(
-                          focusNode: _draftFocus,
-                          scrollController: _quillDraftScrollController,
-                          controller: _quillDraftController,
-                          config: const quill.QuillEditorConfig(
-                            placeholder: 'Write your essay here…',
-                            padding: EdgeInsets.all(8),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: quill.QuillEditor(
+                            focusNode: _notesFocus,
+                            scrollController: _quillNotesScrollController,
+                            controller: _quillNotesController,
+                            config: const quill.QuillEditorConfig(
+                              // feels like page margins
+                              padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
+                              placeholder: 'Write your essay here…',
+                            ),
                           ),
                         ),
                       ),
                     ),
-
                     // ----- Footer (Save / Cancel) -----
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -1992,7 +2241,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                       IconButton(
                         tooltip: 'Close',
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(ctx).pop(),
+                        onPressed: () => Navigator.of(ctx).pop(false),
                       ),
                     ],
                   ),
@@ -2005,7 +2254,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                   child: quill.QuillSimpleToolbar(
                     controller: _quillNotesController,
                     config: const quill.QuillSimpleToolbarConfig(
-                      multiRowsDisplay: false,
+                      multiRowsDisplay: true,
                       showDividers: true,
                       showClipboardPaste: true,
                     ),
@@ -2017,13 +2266,27 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8),
-                    child: quill.QuillEditor(
-                      focusNode: _notesFocus,
-                      scrollController: _quillNotesScrollController,
-                      controller: _quillNotesController,
-                      config: const quill.QuillEditorConfig(
-                        placeholder: 'Your private notes (not submitted)…',
-                        padding: EdgeInsets.all(8),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: quill.QuillEditor(
+                        focusNode: _draftFocus,
+                        scrollController: _quillDraftScrollController,
+                        controller: _quillDraftController,
+                        config: const quill.QuillEditorConfig(
+                          // feels like page margins
+                          padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
+                          placeholder: 'Write your notes here…',
+                        ),
                       ),
                     ),
                   ),
@@ -2072,6 +2335,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
   // Convenience: send from input field
   void _sendFromField() {
+    if (_isStreaming) return; // ignore while the model is talking
     final txt = _inputCtrl.text;
     _handleSendPressed(types.PartialText(text: txt));
   }
@@ -2087,15 +2351,22 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 class _EssayModalContent extends StatelessWidget {
   const _EssayModalContent({
     required this.essay,
+    required this.course,
     required this.statusText,
     required this.onPrimary,
     required this.primaryLabel,
+    this.hasSession = false,
+    this.onReset,
   });
 
   final Assignment essay;
+  final Course? course;
   final VoidCallback onPrimary;
   final String primaryLabel;
   final String statusText;
+
+  final bool hasSession;
+  final Future<void> Function()? onReset;
 
   @override
   Widget build(BuildContext context) {
@@ -2140,6 +2411,10 @@ class _EssayModalContent extends StatelessWidget {
               children: [
                 _LabeledRow(label: 'Status', value: statusText),
                 const SizedBox(height: 8),
+                _LabeledRow(
+                    label: 'Course',
+                    value: course?.fullName ?? 'Unknown Course'),
+                const SizedBox(height: 8),
                 _LabeledRow(label: 'Due', value: dueText),
                 const SizedBox(height: 8),
                 Text(
@@ -2159,11 +2434,27 @@ class _EssayModalContent extends StatelessWidget {
           ),
         ),
 
-        // Footer with ONE dynamic primary button
+        // Footer: primary + optional destructive reset button
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           child: Row(
             children: [
+              if (hasSession && onReset != null) ...[
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.delete_forever),
+                  label: const Text('Reset Session'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                  ),
+                  onPressed: () async {
+                    await onReset!(); // parent handles 2-step confirm + wipe + restart
+                    // if parent also restarts, it's fine to close the dialog here:
+                    // Navigator.of(context).pop();
+                  },
+                ),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: FilledButton(
                   onPressed: onPrimary,

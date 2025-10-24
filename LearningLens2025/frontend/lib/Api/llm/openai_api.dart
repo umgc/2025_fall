@@ -25,7 +25,7 @@ class OpenAiLLM implements LLM {
     this.apiKey, {
     int? contextSize,
     int? maxOutputTokens,
-  })  : contextSize = contextSize ?? 4000,
+  })  : contextSize = contextSize ?? 16000,
         maxOutputTokens = maxOutputTokens ?? 1000;
 
   Map<String, dynamic> convertHttpRespToJson(String httpResponseString) {
