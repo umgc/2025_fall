@@ -3,6 +3,7 @@ package com.careconnect.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import lombok.*;
 
@@ -13,7 +14,8 @@ import lombok.*;
 @Builder
 @Entity
 public class Patient {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String firstName;
@@ -44,7 +46,59 @@ public class Patient {
 
     @Column(name = "ma_number", unique = true, length = 64)
     private String maNumber; // Medical Assistance Number for EVV compliance
+  
+    @Column(name = "is_alexa_linked", nullable = true) // ← Database column
+    private Boolean alexaLinked; // ← Java field name
 
     // Explicit getter for compatibility if Lombok is not processed
     public User getUser() { return user; }
+
+    public boolean isAlexaLinked() {
+        return Boolean.TRUE.equals(alexaLinked);
+    }
+
+    public void setAlexaLinked(Boolean alexaLinked) {
+        this.alexaLinked = alexaLinked;
+    }
+
+    @Column(name = "alexa_refresh_token", length = 500, nullable = true)
+    private String alexaRefreshToken;
+
+    @Column(name = "alexa_refresh_token_expires_at", nullable = true)
+    private LocalDateTime alexaRefreshTokenExpiresAt;
+
+    @Column(name = "alexa_refresh_token_created_at", nullable = true)
+    private LocalDateTime alexaRefreshTokenCreatedAt;
+
+    public String getAlexaRefreshToken() {
+        return alexaRefreshToken;
+    }
+
+    public void setAlexaRefreshToken(String alexaRefreshToken) {
+        this.alexaRefreshToken = alexaRefreshToken;
+    }
+
+    public LocalDateTime getAlexaRefreshTokenExpiresAt() {
+        return alexaRefreshTokenExpiresAt;
+    }
+
+    public void setAlexaRefreshTokenExpiresAt(LocalDateTime expiresAt) {
+        this.alexaRefreshTokenExpiresAt = expiresAt;
+    }
+
+    public LocalDateTime getAlexaRefreshTokenCreatedAt() {
+        return alexaRefreshTokenCreatedAt;
+    }
+
+    public void setAlexaRefreshTokenCreatedAt(LocalDateTime createdAt) {
+        this.alexaRefreshTokenCreatedAt = createdAt;
+    }
+
+    // Helper method to check if refresh token is expired
+    public boolean isAlexaRefreshTokenExpired() {
+        if (alexaRefreshTokenExpiresAt == null) {
+            return true;
+        }
+        return LocalDateTime.now().isAfter(alexaRefreshTokenExpiresAt);
+    }
 }

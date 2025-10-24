@@ -17,6 +17,22 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    /**
+     * ✅ 1️⃣ Alexa-specific chain
+     * This chain ONLY applies to /v1/api/auth/sso/alexa/**
+     * It disables JWT + BasicAuth filters entirely.
+     */
+    @Bean
+    SecurityFilterChain alexaSecurityChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/v1/api/auth/sso/alexa/**") // match these URLs only
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .httpBasic(basic -> basic.disable()); // disable BasicAuth only for Alexa
+
+        return http.build();
+    }
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,

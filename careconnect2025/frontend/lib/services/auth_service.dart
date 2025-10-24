@@ -14,6 +14,7 @@ import '../providers/user_provider.dart';
 import 'messaging_service.dart';
 import 'auth_token_manager.dart';
 import 'user_role_storage_service.dart';
+import 'dart:io';
 
 class ApiConstants {
   static final String _host = getBackendBaseUrl();
@@ -632,4 +633,66 @@ class AuthService {
       print('Patient ID updated in UserRoleStorageService: $patientId');
     }
   }
+
+    /// Get Alexa authorization code for OAuth flow
+  /// 
+  /// Calls the backend endpoint: POST /v1/api/auth/sso/alexa/code
+  /// Requires Bearer token in Authorization header
+  /// Returns the temporary authorization code to redirect to Alexa
+  static Future<Map<String, dynamic>> getAlexaAuthorizationCode({
+    required String token,
+  }) async {
+    try {
+      final endpoint = '${ApiConstants.auth}/sso/alexa/code';
+
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw SocketException('Request timeout'),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Success: {"code": "temp-code-123"}
+        return {
+          'isSuccess': true,
+          'code': data['code'],
+          'message': 'Authorization code generated successfully',
+        };
+      } else if (response.statusCode == 401) {
+        // Unauthorized: {"error": "missing_token"} or {"error": "invalid_token"}
+        return {
+          'isSuccess': false,
+          'code': null,
+          'message': data['error'] ?? 'Unauthorized: Invalid or expired token',
+        };
+      } else {
+        // Other errors
+        return {
+          'isSuccess': false,
+          'code': null,
+          'message': data['error'] ?? 'Failed to generate authorization code',
+        };
+      }
+    } on SocketException catch (e) {
+      return {
+        'isSuccess': false,
+        'code': null,
+        'message': 'Network error: ${e.message}',
+      };
+    } catch (e) {
+      return {
+        'isSuccess': false,
+        'code': null,
+        'message': 'Error: ${e.toString()}',
+      };
+    }
+  }
+
 }
