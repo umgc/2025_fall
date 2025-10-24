@@ -282,6 +282,34 @@ class DeepseekLLM implements LLM {
     return data['choices'][0]['message']['content'].toString().trim();
   }
 
+  /// Game generation method (similar to OpenAI's)
+  Future<String> generateGameFromText(String inputText) async {
+    final prompt = '''
+You are an AI that generates educational quiz games for students. Based on the input text below, return a quiz formatted in XML using the following structure:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question>
+    <text>What is the capital of France?</text>
+    <options>
+      <option>A. Berlin</option>
+      <option>B. Paris</option>
+      <option>C. Madrid</option>
+      <option>D. Rome</option>
+    </options>
+    <answer>B</answer>
+  </question>
+</quiz>
+
+The quiz must be related to the content provided and follow this XML format strictly. Here is the input:
+
+$inputText
+''';
+
+    final result = await generate(prompt);
+    return result;
+  }
+
   /// Methiod used to enable Streaming responses from the AI model.
   @override
   Stream<String> chatStream({

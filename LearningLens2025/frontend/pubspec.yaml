@@ -30,7 +30,6 @@ dependencies:
   path_provider: ^2.1.5
   url_launcher: ^6.3.2
   logging: ^1.3.0
-  dio: ^5.4.0
   syncfusion_flutter_pdf: ^24.1.41
 
   flutter_quill: ^11.0.0
