@@ -1,5 +1,6 @@
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
+import 'package:care_connect_app/features/fall_alert/pages/mock_alert_lab_page.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/smart_devices.dart';
@@ -846,5 +847,10 @@ final GoRouter appRouter = GoRouter(
           name: 'menupage',
           builder: (context, state) => const MenuPage(),
         ),
+        GoRoute(
+          path: '/alertpage',
+          builder: (context, state) => const MockAlertLabPage(),
+        ),
+
   ],
 );
