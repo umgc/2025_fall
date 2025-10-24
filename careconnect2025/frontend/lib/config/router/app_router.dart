@@ -7,6 +7,8 @@ import 'package:care_connect_app/features/integrations/presentation/pages/wearab
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
+import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/informed_delivery/informed_delivery_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -745,6 +747,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/virtual-checkin',
       builder: (context, state) => const PatientVirtualCheckIn(),
+    ),
+
+
+    //Adding Informed Delivery route
+    GoRoute(
+      path: '/informed-delivery',
+      builder: (_, __) => const InformedDeliveryScreen(),
     ),
     
 

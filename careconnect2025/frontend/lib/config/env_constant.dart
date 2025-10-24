@@ -228,6 +228,17 @@ String getAppDomain() {
   return _appDomain;
 }
 
+String getEnableUSPSDigest() {
+  return String.fromEnvironment('ENABLE_USPS_DIGEST', defaultValue: 'false');
+}
+
+String getEnableMockUSPSDigest() {
+  return String.fromEnvironment(
+    'ENABLE_MOCK_USPS_DIGEST',
+    defaultValue: 'false',
+  );
+}
+
 String getAppPort() {
   // Now uses the const _appPort (which has its own defaultValue)
   return _appPort;
