@@ -729,16 +729,31 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       final Assignment essay = _currentSession!.essay;
       final Participant? student = await _currentStudent;
 
+      final microReflectionChoices = [
+        "Stop and think…",
+        "Ask yourself…",
+        "Take a moment to reflect…"
+      ];
+
       if (course == null || student == null) return;
 
-      // 🔍 Create regex to find the "**Micro-Reflection:**" marker
-      final RegExp regex = RegExp(
-        r'\*\*Micro-Reflection:\*\*', // matches the literal bold markdown
-        caseSensitive: false, // makes it case-insensitive
-      );
+      RegExpMatch? match;
+      for (String c in microReflectionChoices) {
+        // 🔍 Create regex to find the "**Micro-Reflection:**" marker
 
-      // Find the marker in the system response
-      final match = regex.firstMatch(systemResponse);
+        final RegExp regex = RegExp(
+          r'\*\*'
+          '$c'
+          r'\*\*', // matches the literal bold markdown
+          caseSensitive: false, // makes it case-insensitive
+        );
+
+        // Find the marker in the system response
+        match = regex.firstMatch(systemResponse);
+        if (match != null) {
+          break;
+        }
+      }
 
       String mainResponse = systemResponse;
       String? microReflection;

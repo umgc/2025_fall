@@ -204,6 +204,7 @@ class create_assignment extends external_api {
             $criterion_array['description'] = $criterion_data['description'];
             $criterion_array['sortorder'] = $criterion_id; // Sort order starts at 0
             $criterion_array['levels'] = array();
+            $weight = $criterion_data['weight'];
 
             // Validate that the levels field exists
             if (!isset($criterion_data['levels']) || !is_array($criterion_data['levels'])) {
@@ -219,7 +220,7 @@ class create_assignment extends external_api {
                 $level_array = array();
                 $level_array['id'] = $level_id; // ID is integer
                 $level_array['definition'] = $level_data['definition'];
-                $level_array['score'] = $level_data['score'];
+                $level_array['score'] = (String) ((int) $level_data['score'] * $weight);
 
                 // Assign the level array to the criterion's levels array with 'NEWID' keys
                 // This is required for the update_definition method to see them as new levels
