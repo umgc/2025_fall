@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 
@@ -189,14 +188,26 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
 
   void _readyToCheckOut() {
     // Navigate to Check-Out Location page
-    context.go('/evv/checkout-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(widget.serviceType)}&locationType=${widget.locationType}&notes=${Uri.encodeComponent(_notesController.text)}&duration=${_elapsedTime.inSeconds}');
+    context.push('/evv/checkout-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(widget.serviceType)}&locationType=${widget.locationType}&notes=${Uri.encodeComponent(_notesController.text)}&duration=${_elapsedTime.inSeconds}');
   }
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Visit in Progress',
-      currentRoute: '/evv/visit-progress',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Visit in Progress'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }

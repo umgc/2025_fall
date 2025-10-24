@@ -1,5 +1,6 @@
 package com.careconnect.model.evv;
 
+import com.careconnect.model.Patient;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;

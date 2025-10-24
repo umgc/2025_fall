@@ -5,6 +5,7 @@ import com.careconnect.model.evv.EvvCorrection;
 import com.careconnect.model.evv.EvvOfflineQueue;
 import com.careconnect.model.evv.EvvParticipant;
 import com.careconnect.model.evv.EvvRecord;
+import com.careconnect.repository.PatientRepository;
 import com.careconnect.repository.evv.EvvCorrectionRepository;
 import com.careconnect.repository.evv.EvvOfflineQueueRepository;
 import com.careconnect.repository.evv.EvvParticipantRepository;

@@ -5,7 +5,6 @@ import 'dart:convert';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../services/auth_token_manager.dart';
-import '../../../../widgets/responsive_page_wrapper.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 import 'package:http/http.dart' as http;
@@ -89,14 +88,26 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
 
   void _selectPatient(Patient patient) {
     // Navigate to Start Visit page with selected patient
-    context.go('/evv/start-visit?patientId=${patient.id}');
+    context.push('/evv/start-visit?patientId=${patient.id}');
   }
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveScaffold(
-      title: 'Select Patient',
-      currentRoute: '/evv/select-patient',
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: const Text('Select Patient'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
       body: _buildContent(),
     );
   }
