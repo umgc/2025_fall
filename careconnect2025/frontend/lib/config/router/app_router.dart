@@ -8,6 +8,7 @@ import 'package:care_connect_app/features/notetaker/models/patient_note_model.da
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_detail_view.dart';
 import 'package:care_connect_app/features/notetaker/presentation/notetaker_search.dart';
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
+import 'package:care_connect_app/features/informed_delivery/informed_delivery_screen.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 import 'package:care_connect_app/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/assign_task_screen.dart';
@@ -683,12 +684,16 @@ final GoRouter appRouter = GoRouter(
       path: '/virtual-checkin',
       builder: (context, state) => const PatientVirtualCheckIn(),
     ),
-        //Adding Calendar Assistant route
+        //Adding Alexa login route
     GoRoute(
       path: '/alexaLogin',
       builder: (_, __) => const AlexaLoginPage(),
     ),
-
+    //Adding Informed Delivery route
+    GoRoute(
+      path: '/informed-delivery',
+      builder: (_, __) => const InformedDeliveryScreen(),
+    ),
     // Handle routes from legacy menus
     GoRoute(
       path: '/taskscheduling',
