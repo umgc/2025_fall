@@ -2,24 +2,47 @@
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Development Environment Setup](#development-environment-setup)
-3. [Frontend Development (Flutter)](#frontend-development-flutter)
-4. [Backend Development (Spring Boot)](#backend-development-spring-boot)
-5. [Database Design](#database-design)
-6. [API Documentation](#api-documentation)
-7. [Authentication & Security](#authentication--security)
-8. [Real-time Communication](#real-time-communication)
-9. [AI Integration](#ai-integration)
-10. [Device Integration](#device-integration)
-11. [File Upload & Management](#file-upload--management)
-12. [Testing Strategies](#testing-strategies)
-13. [Performance Optimization](#performance-optimization)
-14. [Deployment Pipeline](#deployment-pipeline)
-15. [Monitoring & Logging](#monitoring--logging)
-16. [Code Standards & Best Practices](#code-standards--best-practices)
-17. [Contributing Guidelines](#contributing-guidelines)
-18. [Troubleshooting](#troubleshooting)
+1. [Introduction](#introduction)
+2. [Architecture Overview](#architecture-overview)
+3. [Development Environment Setup](#development-environment-setup)
+4. [Frontend Development (Flutter)](#frontend-development-flutter)
+5. [Backend Development (Spring Boot)](#backend-development-spring-boot)
+6. [Database Design](#database-design)
+7. [API Documentation](#api-documentation)
+8. [Authentication & Security](#authentication--security)
+9. [Real-time Communication](#real-time-communication)
+10. [AI Integration](#ai-integration)
+11. [Device Integration](#device-integration)
+12. [File Upload & Management](#file-upload--management)
+13. [Testing Strategies](#testing-strategies)
+14. [Performance Optimization](#performance-optimization)
+15. [Deployment Pipeline](#deployment-pipeline)
+16. [Monitoring & Logging](#monitoring--logging)
+17. [Code Standards & Best Practices](#code-standards--best-practices)
+18. [Contributing Guidelines](#contributing-guidelines)
+19. [Known Issues & Workarounds](#known-issues--workarounds)
+20. [Troubleshooting](#troubleshooting)
+
+## Introduction
+
+### Purpose
+
+This Programmer Guide provides comprehensive documentation for developing, maintaining, and troubleshooting the CareConnect system. It covers all technical aspects, including development setup, coding standards, system integrations, and development lifecycle tools.
+
+### Intended Audience
+
+This document is for developers, engineers, and system administrators working on the CareConnect project. It serves as both an onboarding guide for new team members and a reference manual for existing developers.
+
+### Technology Overview
+
+CareConnect is built with modern, scalable technologies:
+- **Frontend**: Flutter (cross-platform mobile/web)
+- **Backend**: Spring Boot 3.4.5 with Java 17
+- **Database**: PostgreSQL with JPA/Hibernate
+- **AI Integration**: Spring AI + DeepSeek/LangChain4j
+- **Security**: JWT-based authentication
+- **Real-time**: WebSocket communication
+- **Cloud**: AWS infrastructure
 
 ## Architecture Overview
 
@@ -78,7 +101,7 @@ CareConnect follows a microservices-inspired architecture with clear separation 
 - **Framework**: Spring Boot 3.4.5
 - **Security**: Spring Security + JWT
 - **Data Access**: Spring Data JPA
-- **Database**: MySQL 8.0+
+- **Database**: PostgreSQL 15+
 - **WebSocket**: Spring WebSocket
 - **Documentation**: OpenAPI 3
 
@@ -768,49 +791,370 @@ public class OpenApiConfig {
 }
 ```
 
-### API Endpoints
+### RESTful API Endpoints
 
-#### Authentication Endpoints
+The CareConnect backend provides a comprehensive RESTful API with over 100 endpoints organized by functional domains. All endpoints follow consistent patterns with proper HTTP methods, status codes, and JSON responses.
 
-```
-POST   /api/auth/login          # User login
-POST   /api/auth/register       # User registration
-POST   /api/auth/refresh        # Refresh JWT token
-POST   /api/auth/logout         # User logout
-POST   /api/auth/forgot         # Password reset request
-POST   /api/auth/reset          # Password reset confirmation
-```
+#### Base URL and Versioning
 
-#### Health Management Endpoints
+All API endpoints are prefixed with `/v1/api/` (with some legacy endpoints at `/api/`). The backend runs on Spring Boot with embedded Tomcat.
 
 ```
-GET    /api/health/vitals       # Get user's vital signs
-POST   /api/health/vitals       # Record new vital sign
-GET    /api/health/vitals/{type} # Get vital signs by type
-DELETE /api/health/vitals/{id}   # Delete vital sign
-
-GET    /api/health/medications  # Get medications
-POST   /api/health/medications  # Add medication
-PUT    /api/health/medications/{id} # Update medication
-DELETE /api/health/medications/{id} # Delete medication
-
-GET    /api/health/allergies    # Get allergies
-POST   /api/health/allergies    # Add allergy
-DELETE /api/health/allergies/{id} # Delete allergy
+Base URL: http://localhost:8080/v1/api
+Production: https://your-domain.com/v1/api
 ```
 
-#### Communication Endpoints
+#### Authentication & Authorization
 
-```
-GET    /api/messages            # Get user messages
-POST   /api/messages            # Send message
-GET    /api/messages/{id}       # Get specific message
-DELETE /api/messages/{id}       # Delete message
+Most endpoints require Bearer token authentication obtained through the login process:
 
-GET    /api/conversations       # Get conversations
-POST   /api/conversations       # Start new conversation
-GET    /api/conversations/{id}  # Get conversation details
+```http
+Authorization: Bearer <jwt-token>
 ```
+
+**Public Endpoints (No Authentication Required):**
+- All `/v1/api/auth/**` endpoints (registration, login, password reset)
+- `/v1/api/emergency/**` endpoints (emergency PDF access)
+- `/v1/api/public/**` endpoints
+- Email verification and OAuth callbacks
+
+#### Core API Endpoints by Domain
+
+##### 1. Authentication (`/v1/api/auth`)
+
+**Registration & Login**
+```http
+POST /v1/api/auth/register
+Content-Type: application/json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "name": "John Doe",
+  "role": "PATIENT"
+}
+
+POST /v1/api/auth/login
+Content-Type: application/json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+Response: {
+  "token": "jwt-token",
+  "user": {...},
+  "patientId": 123,
+  "caregiverId": null
+}
+```
+
+**Password Management**
+```http
+POST /v1/api/auth/password/forgot
+POST /v1/api/auth/password/change
+GET /v1/api/auth/password/reset?token=abc123
+```
+
+**OAuth & Third-Party Integration**
+```http
+GET /v1/api/auth/sso/google
+POST /v1/api/auth/sso/alexa/code
+POST /v1/api/auth/sso/alexa/token
+```
+
+##### 2. Patient Management (`/v1/api/patients`)
+
+**Patient Profile**
+```http
+GET /v1/api/patients/{patientId}
+PUT /v1/api/patients/{patientId}
+GET /v1/api/patients/me  # Current patient's profile
+GET /v1/api/patients/{patientId}/profile/enhanced  # With medical data
+```
+
+**Mood & Pain Tracking**
+```http
+POST /v1/api/patients/mood-pain-log
+{
+  "mood": 7,
+  "pain": 3,
+  "timestamp": "2024-01-15T10:30:00Z",
+  "notes": "Feeling better today"
+}
+
+GET /v1/api/patients/mood-pain-log/range?startDate=2024-01-01&endDate=2024-01-31
+GET /v1/api/patients/mood-pain-log/analytics?startDate=2024-01-01&endDate=2024-01-31
+```
+
+**Medication Management**
+```http
+GET /v1/api/patients/{patientId}/medications
+POST /v1/api/patients/{patientId}/medications
+DELETE /v1/api/patients/{patientId}/medications/{medicationId}  # Soft delete
+```
+
+**Family Member Relations**
+```http
+GET /v1/api/patients/{patientId}/family-members
+POST /v1/api/patients/{patientId}/family-members
+{
+  "email": "family@example.com",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "relationship": "daughter",
+  "permissions": ["VIEW_PROFILE", "VIEW_VITALS"]
+}
+```
+
+##### 3. Caregiver Operations (`/v1/api/caregivers`)
+
+```http
+GET /v1/api/caregivers/{caregiverId}/patients?email=patient@example.com&name=John
+POST /v1/api/caregivers/{caregiverId}/patients
+{
+  "email": "newpatient@example.com",
+  "firstName": "New",
+  "lastName": "Patient",
+  "dateOfBirth": "1990-01-01",
+  "emergencyContactName": "Contact Name",
+  "emergencyContactPhone": "555-0123"
+}
+
+POST /v1/api/caregivers/{caregiverId}/patients/add
+{
+  "email": "existing@example.com"
+}
+```
+
+##### 4. Analytics & Vital Signs (`/v1/api/analytics`)
+
+**Dashboard & Vitals**
+```http
+GET /v1/api/analytics/dashboard?patientId=123&days=30
+GET /v1/api/analytics/vitals?patientId=123&days=7
+
+POST /v1/api/analytics/vitals
+{
+  "patientId": 123,
+  "vitalType": "BLOOD_PRESSURE",
+  "systolic": 120,
+  "diastolic": 80,
+  "timestamp": "2024-01-15T10:30:00Z",
+  "notes": "Morning reading"
+}
+```
+
+**Data Export**
+```http
+GET /v1/api/analytics/export/vitals/csv?patientId=123&days=30
+GET /v1/api/analytics/export/vitals/pdf?patientId=123&days=30
+```
+
+**Live Data Streaming**
+```http
+GET /v1/api/analytics/live?patientId=123
+Accept: text/event-stream
+# Returns Server-Sent Events stream
+```
+
+##### 5. Task Management
+
+**Version 2 (Current)**
+```http
+GET /v2/api/tasks/patient/{patientId}
+POST /v2/api/tasks/patient/{patientId}
+{
+  "title": "Take medication",
+  "description": "Take morning pills",
+  "dueDate": "2024-01-15T09:00:00Z",
+  "priority": "HIGH",
+  "completed": false
+}
+
+PUT /v2/api/tasks/{id}/complete
+{
+  "isComplete": true
+}
+
+DELETE /v2/api/tasks/{id}?deleteSeries=true  # For recurring tasks
+```
+
+##### 6. Messaging & Communication (`/v1/api/messages`)
+
+```http
+POST /v1/api/messages/send
+{
+  "senderId": 123,
+  "receiverId": 456,
+  "content": "How are you feeling today?",
+  "messageType": "TEXT"
+}
+
+GET /v1/api/messages/conversation?user1=123&user2=456
+GET /v1/api/messages/inbox/{userId}
+```
+
+##### 7. Notifications (`/v1/api/notifications`)
+
+**Push Notifications**
+```http
+POST /v1/api/notifications/send
+{
+  "title": "Medication Reminder",
+  "body": "Time to take your morning medication",
+  "fcmTokens": ["fcm-token-1", "fcm-token-2"],
+  "notificationType": "MEDICATION_REMINDER",
+  "data": {
+    "medicationId": "123",
+    "patientId": "456"
+  }
+}
+```
+
+**Specialized Alerts**
+```http
+POST /v1/api/notifications/vital-alert/{patientId}?vitalType=BLOOD_PRESSURE&vitalValue=180/120&alertLevel=HIGH
+POST /v1/api/notifications/emergency-alert/{patientId}?emergencyType=FALL_DETECTED&location=Living Room
+POST /v1/api/notifications/medication-reminder/{patientId}?medicationName=Aspirin&dosage=100mg&scheduledTime=09:00
+```
+
+##### 8. File Management (`/v1/api/files`)
+
+```http
+POST /v1/api/files/upload
+Content-Type: multipart/form-data
+file: <binary-data>
+category: "MEDICAL_RECORDS"
+description: "Lab results from 2024-01-15"
+patientId: 123
+
+GET /v1/api/files/{fileId}/download
+GET /v1/api/files/my-files?category=MEDICAL_RECORDS
+GET /v1/api/files/patient/{patientId}?category=PRESCRIPTIONS
+DELETE /v1/api/files/{fileId}
+```
+
+##### 9. Emergency Services (`/v1/api/emergency`)
+
+**Public Emergency Access (No Authentication)**
+```http
+GET /v1/api/emergency/{emergencyId}.pdf
+# Returns Vial of Life PDF with patient emergency information
+# emergencyId format: VIAL123456
+
+GET /v1/api/emergency/download/{emergencyId}.pdf
+# Forces download instead of browser viewing
+```
+
+##### 10. Electronic Visit Verification (EVV) (`/v1/api/evv`)
+
+```http
+POST /v1/api/evv/participants
+{
+  "participantName": "John Doe",
+  "participantId": "P123456",
+  "serviceType": "PERSONAL_CARE",
+  "authorizedHours": 40
+}
+
+POST /v1/api/evv/records
+{
+  "participantId": "P123456",
+  "providerId": "PRV789",
+  "serviceDate": "2024-01-15",
+  "clockInTime": "09:00:00",
+  "clockOutTime": "17:00:00",
+  "serviceLocation": "123 Main St",
+  "servicesProvided": ["PERSONAL_CARE", "MEAL_PREPARATION"],
+  "gpsCoordinates": {
+    "latitude": 38.9072,
+    "longitude": -77.0369
+  }
+}
+
+GET /v1/api/evv/records/search?participantId=P123456&startDate=2024-01-01&endDate=2024-01-31
+```
+
+##### 11. Alexa Integration (`/v1/api/alexa`)
+
+```http
+GET /v1/api/alexa/calendarTasks/get?filter=week
+Authorization: Bearer <alexa-access-token>
+
+POST /v1/api/alexa/calendarTasks/add
+Authorization: Bearer <alexa-access-token>
+{
+  "name": "Doctor appointment",
+  "description": "Annual checkup with Dr. Smith",
+  "date": "2024-01-20",
+  "timeOfDay": "MORNING",
+  "priority": "HIGH"
+}
+```
+
+##### 12. Subscription Management (`/v1/api/subscriptions`)
+
+```http
+GET /v1/api/subscriptions/plans
+POST /v1/api/subscriptions/create?plan=premium&userId=123&amount=2999
+GET /v1/api/subscriptions/user/{userId}/active
+POST /v1/api/subscriptions/{id}/cancel
+POST /v1/api/subscriptions/upgrade-or-downgrade?oldSubscriptionId=sub_123&newPriceId=price_456
+```
+
+#### Error Handling
+
+All endpoints return consistent error responses:
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed for field 'email'",
+  "path": "/v1/api/auth/register"
+}
+```
+
+**Common HTTP Status Codes:**
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request (validation errors)
+- `401` - Unauthorized (missing/invalid token)
+- `403` - Forbidden (insufficient permissions)
+- `404` - Not Found
+- `409` - Conflict (duplicate resource)
+- `500` - Internal Server Error
+
+#### Rate Limiting
+
+API endpoints implement rate limiting based on user role:
+- **Public endpoints**: 100 requests per hour per IP
+- **Authenticated users**: 1000 requests per hour per user
+- **Emergency endpoints**: No rate limiting
+
+#### Data Formats
+
+**Date/Time**: ISO 8601 format (`2024-01-15T10:30:00Z`)
+**Pagination**:
+```json
+{
+  "content": [...],
+  "pageable": {
+    "page": 0,
+    "size": 20,
+    "sort": "createdAt,desc"
+  },
+  "totalElements": 100,
+  "totalPages": 5
+}
+```
+
+#### WebSocket Integration
+
+Real-time communication endpoints at `/ws`:
+- `/ws/notifications` - Real-time notifications
+- `/ws/vitals` - Live vital signs updates
+- `/ws/chat` - Messaging system
 
 ## Authentication & Security
 
@@ -854,6 +1198,138 @@ public class JwtUtil {
 }
 ```
 
+### JWT Authentication Filter
+
+The CareConnect backend uses a custom JWT authentication filter that provides comprehensive token-based authentication with automatic token renewal and multi-source token resolution.
+
+#### JwtAuthenticationFilter Implementation
+
+```java
+// security/JwtAuthenticationFilter.java
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final String COOKIE_NAME = "AUTH";
+
+    // Paths excluded from JWT authentication
+    private static final List<String> EXCLUDED_PATHS = Arrays.asList(
+        "/swagger-ui",
+        "/v3/api-docs",
+        "/swagger-resources",
+        "/webjars",
+        "/v1/api/auth",           // Authentication endpoints
+        "/api/v1/auth",
+        "/v1/api/test",           // Test endpoints
+        "/v1/api/caregivers",     // Public caregiver registration
+        "/v1/api/subscriptions",  // Public subscription info
+        "/v1/api/email-test",     // Email testing
+        "/v1/api/emergency"       // Emergency PDF access (no auth required)
+    );
+
+    private final JwtTokenProvider jwt;
+    private final UserDetailsService uds;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return EXCLUDED_PATHS.stream().anyMatch(path::startsWith);
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req,
+                                    HttpServletResponse res,
+                                    FilterChain chain)
+            throws ServletException, IOException {
+
+        String requestURI = req.getRequestURI();
+        log.debug("Processing JWT authentication for: {}", requestURI);
+
+        // 1. Resolve token from header or cookie
+        String token = resolveToken(req);
+
+        // 2. Validate token and build authentication
+        if (token != null && jwt.validateToken(token)) {
+            Claims claims = jwt.getClaims(token);
+            String email = claims.getSubject();
+            String role = claims.get("role", String.class);
+
+            // Role-specific user loading for precise authentication
+            UserDetails userDetails;
+            if (role != null && uds instanceof UserDetailsServiceImpl) {
+                userDetails = ((UserDetailsServiceImpl) uds)
+                    .loadUserByEmailAndRole(email, role);
+            } else {
+                userDetails = uds.loadUserByUsername(email);
+            }
+
+            UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            // 3. Silent token renewal (if < 5 minutes remaining)
+            if (jwt.needsRenewal(claims)) {
+                String renewed = jwt.refresh(claims);
+                ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, renewed)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Lax")
+                    .path("/")
+                    .maxAge(Duration.ofHours(3))  // 3-hour sliding window
+                    .build();
+                res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+                log.debug("Token renewed for user: {}", email);
+            }
+        }
+
+        chain.doFilter(req, res);
+    }
+
+    private String resolveToken(HttpServletRequest req) {
+        // Check Bearer header first
+        String header = req.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+
+        // Fallback to HttpOnly cookie
+        if (req.getCookies() != null) {
+            return Arrays.stream(req.getCookies())
+                .filter(c -> COOKIE_NAME.equals(c.getName()))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
+        }
+        return null;
+    }
+}
+```
+
+#### Key Features
+
+**Multi-Source Token Resolution:**
+- Primary: `Authorization: Bearer <token>` header
+- Fallback: HttpOnly `AUTH` cookie for web clients
+- Secure cookie configuration (HttpOnly, Secure, SameSite)
+
+**Path-Based Exclusions:**
+- Public authentication endpoints (`/v1/api/auth/**`)
+- Emergency access endpoints (`/v1/api/emergency/**`)
+- API documentation (`/swagger-ui/**`, `/v3/api-docs/**`)
+- Public registration endpoints
+
+**Automatic Token Renewal:**
+- Silent renewal when < 5 minutes remaining
+- 3-hour sliding window maximum
+- Maintains user session without interruption
+
+**Role-Based Authentication:**
+- Extracts role from JWT claims
+- Role-specific user loading for multi-role scenarios
+- Prevents authentication ambiguity
+
 ### Security Configuration
 
 ```java
@@ -863,8 +1339,8 @@ public class JwtUtil {
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    private final JwtRequestFilter jwtRequestFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -872,190 +1348,1423 @@ public class SecurityConfig {
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
+                // Public endpoints
+                .requestMatchers("/v1/api/auth/**").permitAll()
+                .requestMatchers("/v1/api/emergency/**").permitAll()
+                .requestMatchers("/v1/api/public/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/health/**").hasAnyRole("PATIENT", "CAREGIVER")
-                .requestMatchers(HttpMethod.POST, "/api/health/**").hasAnyRole("PATIENT", "CAREGIVER")
+
+                // Role-based endpoints
+                .requestMatchers("/v1/api/patients/**").hasAnyRole("PATIENT", "CAREGIVER", "FAMILY_MEMBER")
+                .requestMatchers("/v1/api/caregivers/**").hasAnyRole("CAREGIVER", "ADMIN")
+                .requestMatchers("/v1/api/family-members/**").hasRole("FAMILY_MEMBER")
+                .requestMatchers("/v1/api/admin/**").hasRole("ADMIN")
+
+                // Default authentication required
                 .anyRequest().authenticated())
-            .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)
+            .exceptionHandling()
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
             .and()
-            .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
 ```
 
-## Real-time Communication
-
-### WebSocket Configuration
+### JWT Token Provider
 
 ```java
-// config/WebSocketConfig.java
-@Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+// security/JwtTokenProvider.java
+@Component
+public class JwtTokenProvider {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration:3600000}") // 1 hour default
+    private long jwtExpiration;
+
+    private static final long RENEWAL_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
+    public String generateToken(UserDetails userDetails, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
+        claims.put("authorities", userDetails.getAuthorities());
+
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+            .setClaims(claims)
+            .setSubject(subject)
+            .setIssuedAt(now)
+            .setExpiration(validity)
+            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+            .compact();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid JWT token: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
+    }
+
+    public boolean needsRenewal(Claims claims) {
+        Date expiration = claims.getExpiration();
+        long timeUntilExpiry = expiration.getTime() - System.currentTimeMillis();
+        return timeUntilExpiry < RENEWAL_THRESHOLD;
+    }
+
+    public String refresh(Claims claims) {
+        // Create new token with extended expiration
+        Map<String, Object> newClaims = new HashMap<>(claims);
+        return createToken(newClaims, claims.getSubject());
+    }
+
+    private Key getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+}
+```
+
+### User Details Service Implementation
+
+```java
+// security/UserDetailsServiceImpl.java
+@Service
+@RequiredArgsConstructor
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    private final UserRepository userRepository;
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new ChatWebSocketHandler(), "/ws/chat")
-                .setAllowedOrigins("*");
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+
+        return UserPrincipal.create(user);
+    }
+
+    // Role-specific loading for multi-role scenarios
+    public UserDetails loadUserByEmailAndRole(String email, String role)
+            throws UsernameNotFoundException {
+        User user = userRepository.findByEmailAndRole(email, UserRole.valueOf(role))
+            .orElseThrow(() -> new UsernameNotFoundException(
+                "User not found with email: " + email + " and role: " + role));
+
+        return UserPrincipal.create(user);
     }
 }
 
-// handler/ChatWebSocketHandler.java
-@Component
-public class ChatWebSocketHandler extends TextWebSocketHandler {
+// security/UserPrincipal.java
+@Getter
+@AllArgsConstructor
+public class UserPrincipal implements UserDetails {
 
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private Long id;
+    private String email;
+    private String password;
+    private Collection<? extends GrantedAuthority> authorities;
+    private boolean enabled;
+
+    public static UserPrincipal create(User user) {
+        List<GrantedAuthority> authorities = List.of(
+            new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+        );
+
+        return new UserPrincipal(
+            user.getId(),
+            user.getEmail(),
+            user.getPassword(),
+            authorities,
+            user.getActive()
+        );
+    }
+
+    @Override
+    public String getUsername() { return email; }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override
+    public boolean isEnabled() { return enabled; }
+}
+```
+
+### Security Features
+
+**Password Security:**
+- BCrypt hashing with strength 12
+- Minimum 8 characters with complexity requirements
+- Password history prevention (last 5 passwords)
+
+**Session Management:**
+- Stateless JWT-based authentication
+- Automatic token renewal for active sessions
+- Secure cookie storage for web clients
+
+**CORS Configuration:**
+```java
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOriginPatterns(List.of("*"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
+```
+
+**Rate Limiting:**
+- API rate limiting based on user role and endpoint
+- Brute force protection for authentication endpoints
+- Emergency endpoint exemption from rate limits
+
+## Real-time Communication
+
+CareConnect implements a comprehensive WebSocket-based real-time communication system specifically designed for healthcare applications. The system uses a **dual-mode architecture** that automatically switches between local development and AWS production environments.
+
+### Architecture Overview
+
+The WebSocket system provides three main communication channels:
+- **`/ws/careconnect`** - General healthcare updates (AI notifications, vital signs, medication reminders)
+- **`/ws/calls`** - Video/audio call management and SMS notifications
+- **`/ws/notifications`** - Basic notification delivery
+
+### WebSocket Configuration
+
+#### Dual-Mode Configuration
+
+```java
+// config/WebSocketModeConfig.java
+@Configuration
+@ConditionalOnProperty(name = "careconnect.websocket.enabled", havingValue = "true", matchIfMissing = true)
+public class WebSocketModeConfig {
+
+    @Bean
+    @ConditionalOnMissingBean(name = "awsWebSocketApiEndpoint")
+    public WebSocketConfig localWebSocketConfig() {
+        return new WebSocketConfig(); // Local development mode
+    }
+
+    @Bean
+    @ConditionalOnBean(name = "awsWebSocketApiEndpoint")
+    public AwsWebSocketService awsWebSocketService() {
+        return new AwsWebSocketService(); // AWS production mode
+    }
+}
+
+// config/WebSocketConfig.java
+@Configuration
+@EnableWebSocket
+@Slf4j
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    @Value("${careconnect.websocket.allowed-origins}")
+    private String allowedOrigins;
+
+    private final CareConnectWebSocketHandler careConnectHandler;
+    private final CallNotificationHandler callHandler;
+    private final NotificationWebSocketHandler notificationHandler;
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        String[] origins = allowedOrigins.split(",");
+
+        // Main healthcare WebSocket with SockJS fallback
+        registry.addHandler(careConnectHandler, "/ws/careconnect")
+                .setAllowedOrigins(origins)
+                .withSockJS();
+
+        // Call management WebSocket with SockJS fallback
+        registry.addHandler(callHandler, "/ws/calls")
+                .setAllowedOrigins(origins)
+                .withSockJS();
+
+        // Basic notifications (no SockJS)
+        registry.addHandler(notificationHandler, "/ws/notifications")
+                .setAllowedOrigins(origins);
+    }
+}
+```
+
+### WebSocket Handlers
+
+#### CareConnectWebSocketHandler - Healthcare Communications
+
+```java
+@Component
+@Slf4j
+public class CareConnectWebSocketHandler extends TextWebSocketHandler {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final WebSocketConnectionService connectionService;
+    private final Map<Long, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String userId = getUserIdFromSession(session);
-        sessions.put(userId, session);
+        log.info("WebSocket connection established: {}", session.getId());
+        session.getAttributes().put("connectionTime", System.currentTimeMillis());
+
+        // Send initial connection message
+        sendMessage(session, Map.of(
+            "type", "connection-established",
+            "message", "WebSocket connection successful",
+            "sessionId", session.getId()
+        ));
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        String userId = getUserIdFromSession(session);
-        ChatMessage chatMessage = objectMapper.readValue(message.getPayload(), ChatMessage.class);
+        try {
+            Map<String, Object> payload = objectMapper.readValue(message.getPayload(), Map.class);
+            String messageType = (String) payload.get("type");
 
-        // Save message to database
-        chatMessageService.saveMessage(chatMessage);
-
-        // Send to recipient if online
-        WebSocketSession recipientSession = sessions.get(chatMessage.getRecipientId());
-        if (recipientSession != null && recipientSession.isOpen()) {
-            recipientSession.sendMessage(message);
+            switch (messageType) {
+                case "authenticate":
+                    handleAuthentication(session, payload);
+                    break;
+                case "heartbeat":
+                    handleHeartbeat(session);
+                    break;
+                case "ai-chat-notification":
+                    handleAIChatNotification(session, payload);
+                    break;
+                case "mood-pain-log-update":
+                    handleMoodPainLogUpdate(session, payload);
+                    break;
+                case "medication-reminder":
+                    handleMedicationReminder(session, payload);
+                    break;
+                case "vital-signs-alert":
+                    handleVitalSignsAlert(session, payload);
+                    break;
+                case "emergency-alert":
+                    handleEmergencyAlert(session, payload);
+                    break;
+                default:
+                    log.warn("Unknown message type: {}", messageType);
+            }
+        } catch (Exception e) {
+            log.error("Error handling WebSocket message", e);
+            sendErrorMessage(session, "Invalid message format");
         }
+    }
+
+    private void handleAuthentication(WebSocketSession session, Map<String, Object> payload) {
+        try {
+            String token = (String) payload.get("token");
+            Long userId = getLongValue(payload, "userId");
+
+            if (jwtTokenProvider.validateToken(token)) {
+                Claims claims = jwtTokenProvider.getClaims(token);
+                String email = claims.getSubject();
+                String role = claims.get("role", String.class);
+
+                // Store user info in session
+                session.getAttributes().put("userId", userId);
+                session.getAttributes().put("email", email);
+                session.getAttributes().put("role", role);
+                session.getAttributes().put("authenticated", true);
+
+                // Map user to session
+                userSessions.put(userId, session);
+
+                // Persist connection
+                connectionService.saveConnection(session.getId(), email, userId, "authenticated");
+
+                sendMessage(session, Map.of(
+                    "type", "authentication-success",
+                    "userId", userId,
+                    "email", email,
+                    "role", role
+                ));
+
+                log.info("User {} authenticated via WebSocket", email);
+            } else {
+                sendMessage(session, Map.of(
+                    "type", "authentication-error",
+                    "message", "Invalid token"
+                ));
+            }
+        } catch (Exception e) {
+            log.error("Authentication error", e);
+            sendErrorMessage(session, "Authentication failed");
+        }
+    }
+
+    private void handleEmergencyAlert(WebSocketSession session, Map<String, Object> payload) {
+        // High-priority emergency handling
+        Long patientId = getLongValue(payload, "patientId");
+        String alertType = (String) payload.get("alertType");
+        String message = (String) payload.get("message");
+
+        // Notify all caregivers and family members
+        broadcastToUsersByRole(patientId, "emergency-alert", Map.of(
+            "patientId", patientId,
+            "alertType", alertType,
+            "message", message,
+            "timestamp", System.currentTimeMillis(),
+            "priority", "HIGH"
+        ), List.of("CAREGIVER", "FAMILY_MEMBER"));
+
+        log.warn("Emergency alert sent for patient {}: {}", patientId, alertType);
     }
 }
 ```
 
-### Real-time Notifications
+#### CallNotificationHandler - Video/Audio Calls
 
 ```java
-// service/NotificationService.java
-@Service
-public class NotificationService {
+@Component
+@Slf4j
+public class CallNotificationHandler extends TextWebSocketHandler {
 
-    private final SimpMessagingTemplate messagingTemplate;
-    private final FirebaseMessaging firebaseMessaging;
+    @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        Map<String, Object> payload = objectMapper.readValue(message.getPayload(), Map.class);
+        String messageType = (String) payload.get("type");
 
-    public void sendNotification(String userId, NotificationDTO notification) {
-        // Send via WebSocket if user is online
-        messagingTemplate.convertAndSendToUser(
-            userId, "/queue/notifications", notification);
-
-        // Send push notification
-        sendPushNotification(userId, notification);
+        switch (messageType) {
+            case "send-video-call-invitation":
+                handleVideoCallInvitation(session, payload);
+                break;
+            case "accept-call":
+                handleAcceptCall(session, payload);
+                break;
+            case "decline-call":
+                handleDeclineCall(session, payload);
+                break;
+            case "end-call":
+                handleEndCall(session, payload);
+                break;
+            case "send-sms-notification":
+                handleSMSNotification(session, payload);
+                break;
+        }
     }
 
-    private void sendPushNotification(String userId, NotificationDTO notification) {
-        try {
-            Message message = Message.builder()
-                .putData("title", notification.getTitle())
-                .putData("body", notification.getBody())
-                .putData("type", notification.getType())
-                .setToken(getUserDeviceToken(userId))
-                .build();
+    private void handleVideoCallInvitation(WebSocketSession session, Map<String, Object> payload) {
+        String fromUserId = (String) payload.get("fromUserId");
+        String toUserId = (String) payload.get("toUserId");
+        String callType = (String) payload.get("callType"); // "video" or "audio"
+        String roomId = (String) payload.get("roomId");
 
-            firebaseMessaging.send(message);
-        } catch (Exception e) {
-            log.error("Failed to send push notification", e);
+        // Find recipient session and send invitation
+        WebSocketSession recipientSession = findSessionByUserId(toUserId);
+        if (recipientSession != null && recipientSession.isOpen()) {
+            sendMessage(recipientSession, Map.of(
+                "type", "incoming-call",
+                "fromUserId", fromUserId,
+                "callType", callType,
+                "roomId", roomId,
+                "timestamp", System.currentTimeMillis()
+            ));
+            log.info("Call invitation sent from {} to {}", fromUserId, toUserId);
         }
     }
 }
 ```
+
+### Security Implementation
+
+#### JWT Authentication
+
+```java
+// WebSocket authentication check
+private void handleAuthentication(WebSocketSession session, Map<String, Object> payload) {
+    String token = (String) payload.get("token");
+    if (jwtTokenProvider.validateToken(token)) {
+        Claims claims = jwtTokenProvider.getClaims(token);
+        String email = claims.getSubject();
+        String role = claims.get("role", String.class);
+
+        // Store authenticated user info
+        session.getAttributes().put("authenticated", true);
+        session.getAttributes().put("email", email);
+        session.getAttributes().put("role", role);
+
+        userSessions.put(userId, session);
+        connectionService.saveConnection(session.getId(), email, userId, "authenticated");
+    }
+}
+```
+
+#### CORS Configuration
+
+```properties
+# application.properties
+careconnect.websocket.allowed-origins=http://localhost:*,https://*.careconnect.com
+careconnect.websocket.connection-ttl-minutes=30
+```
+
+### Connection Management
+
+#### WebSocket Connection Entity
+
+```java
+// model/WebSocketConnection.java
+@Entity
+@Table(name = "websocket_connections")
+public class WebSocketConnection {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    private String connectionId;
+
+    @Column(nullable = false)
+    private String userEmail;
+
+    private Long userId;
+
+    @Enumerated(EnumType.STRING)
+    private SubscriptionType subscriptionType; // email-verification, authenticated, notifications
+
+    @Enumerated(EnumType.STRING)
+    private ConnectionType connectionType; // LOCAL, AWS
+
+    private LocalDateTime connectedAt;
+    private LocalDateTime lastActivityAt;
+    private LocalDateTime expiresAt;
+    private Boolean isActive = true;
+}
+```
+
+#### Connection Service
+
+```java
+// service/WebSocketConnectionService.java
+@Service
+@Transactional
+public class WebSocketConnectionService {
+
+    public void saveConnection(String connectionId, String email, Long userId, String subscriptionType) {
+        WebSocketConnection connection = new WebSocketConnection();
+        connection.setConnectionId(connectionId);
+        connection.setUserEmail(email);
+        connection.setUserId(userId);
+        connection.setSubscriptionType(SubscriptionType.valueOf(subscriptionType.toUpperCase()));
+        connection.setConnectionType(detectConnectionType());
+        connection.setConnectedAt(LocalDateTime.now());
+        connection.setExpiresAt(LocalDateTime.now().plusMinutes(getConnectionTTL()));
+        connection.setIsActive(true);
+
+        repository.save(connection);
+    }
+
+    @Scheduled(fixedRate = 300000) // Every 5 minutes
+    public void cleanupExpiredConnections() {
+        List<WebSocketConnection> expired = repository.findExpiredConnections(LocalDateTime.now());
+        expired.forEach(conn -> {
+            conn.setIsActive(false);
+            repository.save(conn);
+        });
+        log.info("Cleaned up {} expired WebSocket connections", expired.size());
+    }
+}
+```
+
+### REST API Integration
+
+#### WebSocket Controller
+
+```java
+// controller/WebSocketController.java
+@RestController
+@RequestMapping("/api/websocket")
+@PreAuthorize("hasAnyRole('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER', 'ADMIN')")
+public class WebSocketController {
+
+    @PostMapping("/call-invitation")
+    public ResponseEntity<String> sendCallInvitation(@RequestBody CallInvitationRequest request) {
+        WebSocketSession recipientSession = webSocketHandler.getSessionByUserId(request.getToUserId());
+        if (recipientSession != null && recipientSession.isOpen()) {
+            webSocketHandler.sendMessage(recipientSession, Map.of(
+                "type", "incoming-call",
+                "fromUserId", request.getFromUserId(),
+                "callType", request.getCallType(),
+                "roomId", request.getRoomId()
+            ));
+            return ResponseEntity.ok("Call invitation sent");
+        }
+        return ResponseEntity.status(404).body("User not online");
+    }
+
+    @PostMapping("/medication-reminder")
+    @PreAuthorize("hasAnyRole('CAREGIVER', 'ADMIN')")
+    public ResponseEntity<String> sendMedicationReminder(@RequestBody MedicationReminderRequest request) {
+        broadcastToPatient(request.getPatientId(), "medication-reminder", Map.of(
+            "medicationName", request.getMedicationName(),
+            "dosage", request.getDosage(),
+            "timeToTake", request.getTimeToTake(),
+            "instructions", request.getInstructions()
+        ));
+        return ResponseEntity.ok("Medication reminder sent");
+    }
+
+    @PostMapping("/emergency-alert")
+    @PreAuthorize("hasAnyRole('PATIENT', 'CAREGIVER', 'ADMIN')")
+    public ResponseEntity<String> sendEmergencyAlert(@RequestBody EmergencyAlertRequest request) {
+        // High-priority emergency broadcast
+        broadcastToUsersByRole(request.getPatientId(), "emergency-alert", Map.of(
+            "alertType", request.getAlertType(),
+            "message", request.getMessage(),
+            "location", request.getLocation(),
+            "priority", "CRITICAL"
+        ), List.of("CAREGIVER", "FAMILY_MEMBER", "ADMIN"));
+
+        return ResponseEntity.ok("Emergency alert broadcasted");
+    }
+
+    @GetMapping("/online-users")
+    @PreAuthorize("hasAnyRole('CAREGIVER', 'ADMIN')")
+    public ResponseEntity<List<OnlineUserInfo>> getOnlineUsers() {
+        List<OnlineUserInfo> onlineUsers = webSocketHandler.getOnlineUsers();
+        return ResponseEntity.ok(onlineUsers);
+    }
+}
+```
+
+### Client-Side Integration (Flutter)
+
+#### WebSocket Service
+
+```dart
+// services/websocket_backend_service.dart
+class CareConnectWebSocketService {
+  WebSocketChannel? _channel;
+  StreamSubscription? _streamSubscription;
+  final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
+
+  Stream<Map<String, dynamic>> get messageStream => _messageController.stream;
+
+  Future<void> connect() async {
+    try {
+      final wsUrl = _getWebSocketUrl();
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+      _streamSubscription = _channel!.stream.listen(
+        (message) {
+          final data = jsonDecode(message);
+          _messageController.add(data);
+          _handleMessage(data);
+        },
+        onError: (error) => _handleError(error),
+        onDone: () => _handleDisconnection(),
+      );
+
+      // Authenticate after connection
+      await _authenticate();
+
+    } catch (e) {
+      throw WebSocketException('Connection failed: $e');
+    }
+  }
+
+  Future<void> _authenticate() async {
+    final token = await _getAuthToken();
+    final userId = await _getCurrentUserId();
+
+    final authMessage = {
+      'type': 'authenticate',
+      'token': token,
+      'userId': userId,
+    };
+
+    _channel?.sink.add(jsonEncode(authMessage));
+  }
+
+  void sendMoodPainLog(int mood, int pain, String notes) {
+    final message = {
+      'type': 'mood-pain-log-update',
+      'mood': mood,
+      'pain': pain,
+      'notes': notes,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    _channel?.sink.add(jsonEncode(message));
+  }
+
+  void _handleMessage(Map<String, dynamic> data) {
+    switch (data['type']) {
+      case 'authentication-success':
+        _onAuthenticationSuccess(data);
+        break;
+      case 'incoming-call':
+        _showIncomingCallDialog(data);
+        break;
+      case 'medication-reminder':
+        _showMedicationReminder(data);
+        break;
+      case 'emergency-alert':
+        _showEmergencyAlert(data);
+        break;
+      case 'ai-chat-notification':
+        _handleAIChatResponse(data);
+        break;
+    }
+  }
+}
+```
+
+### AWS Integration
+
+#### AWS WebSocket Service
+
+```java
+// service/AwsWebSocketService.java
+@Service
+@ConditionalOnProperty(name = "careconnect.websocket.mode", havingValue = "aws")
+public class AwsWebSocketService {
+
+    @Value("${careconnect.websocket.aws.api-gateway-endpoint}")
+    private String apiGatewayEndpoint;
+
+    private final AmazonApiGatewayManagementApiClientBuilder clientBuilder;
+
+    public void sendMessageToConnection(String connectionId, Object message) {
+        try {
+            AmazonApiGatewayManagementApi client = clientBuilder
+                .withEndpointConfiguration(new EndpointConfiguration(apiGatewayEndpoint, "us-east-1"))
+                .build();
+
+            PostToConnectionRequest request = new PostToConnectionRequest()
+                .withConnectionId(connectionId)
+                .withData(ByteBuffer.wrap(objectMapper.writeValueAsBytes(message)));
+
+            client.postToConnection(request);
+        } catch (Exception e) {
+            log.error("Failed to send message to AWS WebSocket connection {}", connectionId, e);
+        }
+    }
+
+    public void broadcastToAllConnections(Object message) {
+        List<WebSocketConnection> activeConnections = connectionRepository.findActiveAWSConnections();
+
+        activeConnections.parallelStream().forEach(conn ->
+            sendMessageToConnection(conn.getConnectionId(), message)
+        );
+    }
+}
+```
+
+### Healthcare-Specific Message Types
+
+The system supports specialized healthcare message types:
+
+```java
+// Healthcare-specific WebSocket messages
+public enum HealthcareMessageType {
+    AI_CHAT_NOTIFICATION,           // AI assistant responses
+    MOOD_PAIN_LOG_UPDATE,          // Patient mood/pain tracking
+    MEDICATION_REMINDER,           // Medication schedules
+    VITAL_SIGNS_ALERT,            // Critical health alerts
+    EMERGENCY_ALERT,              // Emergency SOS calls
+    FAMILY_MEMBER_REQUEST,        // Family connection requests
+    APPOINTMENT_REMINDER,         // Healthcare appointments
+    FALL_DETECTION_ALERT,         // Fall detection from IoT devices
+    MEDICATION_ADHERENCE_UPDATE,  // Medication compliance tracking
+    HEALTH_GOAL_PROGRESS,         // Patient health goal updates
+}
+```
+
+This comprehensive WebSocket implementation provides real-time communication capabilities specifically tailored for healthcare applications, with robust security, scalable architecture, and seamless integration between development and production environments.
 
 ## AI Integration
 
-### AI Service Integration
+CareConnect integrates advanced AI capabilities using **DeepSeek** as the primary AI provider through **LangChain4j** and **Spring AI** frameworks. The system provides healthcare-focused AI chat assistance, document processing, and medical data analysis.
 
-```dart
-// services/ai_service.dart
-class AIService {
-  final Dio _dio;
-  final String _apiKey;
+### Architecture Overview
 
-  AIService(this._dio, this._apiKey);
+The AI integration follows a dual-framework approach:
+- **LangChain4j**: Primary AI framework for chat functionality and memory management
+- **Spring AI**: Structured data extraction and document processing
+- **DeepSeek**: Cost-effective AI provider with OpenAI-compatible API
+- **Security Layer**: Comprehensive input/output sanitization and governance controls
 
-  Future<String> processVoiceCommand(String command) async {
-    try {
-      final response = await _dio.post('/api/ai/voice-command', data: {
-        'command': command,
-        'context': await _getContextData(),
-      });
+### AI Configuration
 
-      return response.data['response'];
-    } catch (e) {
-      throw AIException('Failed to process voice command: $e');
+#### Main Configuration Class
+
+```java
+// config/AIChatServiceConfig.java
+@Configuration
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+public class AIChatServiceConfig {
+
+    @Value("${deepseek.api.key}")
+    private String deepSeekApiKey;
+
+    @Value("${deepseek.api.url:https://api.deepseek.com/v1}")
+    private String deepSeekApiUrl;
+
+    @Bean
+    public ChatModel chatModel() {
+        return OpenAiChatModel.builder()
+            .apiKey(deepSeekApiKey)
+            .baseUrl(deepSeekApiUrl)
+            .modelName("deepseek-chat")
+            .temperature(0.7)
+            .maxTokens(2048)
+            .build();
     }
-  }
 
-  Future<List<String>> getHealthRecommendations() async {
-    try {
-      final response = await _dio.get('/api/ai/recommendations');
-      return List<String>.from(response.data['recommendations']);
-    } catch (e) {
-      throw AIException('Failed to get recommendations: $e');
+    @Bean
+    public SpringAIChatModel springAIChatModel() {
+        return new OpenAiChatModel(
+            OpenAiApi.builder()
+                .apiKey(deepSeekApiKey)
+                .baseUrl(deepSeekApiUrl)
+                .build()
+        );
     }
-  }
-
-  Future<Map<String, dynamic>> _getContextData() async {
-    // Gather context data for AI processing
-    return {
-      'recent_vitals': await _getRecentVitals(),
-      'medications': await _getCurrentMedications(),
-      'mood_history': await _getRecentMoodData(),
-    };
-  }
 }
 ```
 
-### Voice Command Processing
+#### Configuration Properties
+
+```properties
+# AI Service Configuration
+ai.model.provider=deepseek
+deepseek.api.key=${DEEPSEEK_API_KEY:your-api-key}
+deepseek.api.url=https://api.deepseek.com/v1
+careconnect.deepseek.enabled=true
+
+# Spring AI Configuration
+spring.ai.openai.api-key=${DEEPSEEK_API_KEY}
+spring.ai.openai.base-url=https://api.deepseek.com
+spring.ai.openai.chat.options.model=deepseek-chat
+spring.ai.openai.chat.options.temperature=0.7
+spring.ai.openai.chat.options.max-tokens=2048
+```
+
+### Core AI Services
+
+#### DefaultAIChatService - Main Chat Implementation
 
 ```java
-// service/AIService.java
+// service/DefaultAIChatService.java
 @Service
-public class AIService {
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+public class DefaultAIChatService implements AIChatService {
 
-    private final OpenAIClient openAIClient;
-    private final HealthService healthService;
+    private final ChatModel chatModel;
+    private final ChatMemoryFactory chatMemoryFactory;
+    private final InputSanitizationService inputSanitizationService;
+    private final ResponseSanitizationService responseSanitizationService;
+    private final LangChainGovernanceService governanceService;
 
-    public AICommandResponse processVoiceCommand(String userId, String command) {
-        // Analyze command intent
-        CommandIntent intent = analyzeIntent(command);
+    public AiChatResponse sendMessage(Long userId, String message, Long patientId) {
+        // Governance checks
+        governanceService.checkRateLimit(userId);
+        governanceService.validateMessageLength(message);
 
-        switch (intent.getType()) {
-            case RECORD_VITALS:
-                return processVitalRecording(userId, intent);
-            case SCHEDULE_APPOINTMENT:
-                return processAppointmentScheduling(userId, intent);
-            case GET_HEALTH_SUMMARY:
-                return processHealthSummary(userId);
-            default:
-                return new AICommandResponse("I didn't understand that command.");
+        // Sanitize input
+        String sanitizedMessage = inputSanitizationService.sanitize(message);
+
+        // Build context with medical data
+        String medicalContext = buildMedicalContext(patientId);
+
+        // Create AI chain with memory
+        ConversationalRetrievalChain chain = ConversationalRetrievalChain.builder()
+            .chatModel(chatModel)
+            .chatMemory(chatMemoryFactory.createMemory(userId))
+            .systemPrompt(buildSystemPrompt(medicalContext))
+            .build();
+
+        // Generate response
+        String aiResponse = chain.execute(sanitizedMessage);
+
+        // Sanitize response
+        String sanitizedResponse = responseSanitizationService.sanitize(aiResponse);
+
+        // Save conversation
+        return saveChatMessage(userId, patientId, sanitizedMessage, sanitizedResponse);
+    }
+
+    private String buildMedicalContext(Long patientId) {
+        PatientMedicalData medicalData = medicalDataService.getPatientData(patientId);
+
+        StringBuilder context = new StringBuilder();
+        context.append("Patient Medical Context:\n");
+
+        if (medicalData.hasVitals()) {
+            context.append("Recent Vitals: ").append(medicalData.getVitalsSummary()).append("\n");
+        }
+
+        if (medicalData.hasMedications()) {
+            context.append("Current Medications: ").append(medicalData.getMedicationsList()).append("\n");
+        }
+
+        if (medicalData.hasAllergies()) {
+            context.append("Known Allergies: ").append(medicalData.getAllergiesList()).append("\n");
+        }
+
+        return context.toString();
+    }
+
+    private String buildSystemPrompt(String medicalContext) {
+        return """
+            You are a healthcare assistant for CareConnect. Guidelines:
+            1. Provide information and support, never diagnose or prescribe
+            2. Encourage users to consult healthcare professionals for medical decisions
+            3. Use the provided medical context to give relevant, personalized responses
+            4. Be empathetic, professional, and clear
+            5. If unsure about medical information, recommend consulting a doctor
+
+            %s
+            """.formatted(medicalContext);
+    }
+}
+```
+
+#### LlmExtractionService - Document Processing
+
+```java
+// service/invoice/LlmExtractionService.java
+@Service
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "true", matchIfMissing = true)
+public class LlmExtractionService {
+
+    private final ChatModel chatModel; // Spring AI ChatModel
+
+    public InvoiceData extractInvoiceData(String rawInvoiceText) {
+        String extractionPrompt = """
+            Extract structured data from this healthcare invoice. Return JSON with:
+            - provider: {name, address, phone, email, taxId}
+            - patient: {name, address, phone, email, dateOfBirth, patientId}
+            - services: [{code, description, quantity, unitPrice, totalPrice, date}]
+            - payments: [{method, amount, date, confirmationNumber}]
+            - totals: {subtotal, tax, discount, totalAmount, amountDue}
+            - dates: {serviceDate, dueDate, issueDate}
+            - aiSummary: Brief summary of the invoice
+            - recommendedActions: Array of patient action recommendations
+
+            Invoice text:
+            %s
+            """.formatted(rawInvoiceText);
+
+        ChatResponse response = chatModel.call(new Prompt(extractionPrompt));
+        String jsonResponse = response.getResult().getOutput().getContent();
+
+        try {
+            return objectMapper.readValue(jsonResponse, InvoiceData.class);
+        } catch (JsonProcessingException e) {
+            throw new AIProcessingException("Failed to parse AI response: " + e.getMessage());
         }
     }
 
-    private CommandIntent analyzeIntent(String command) {
-        // Use NLP to analyze command intent
-        String prompt = "Analyze the following command and extract intent and parameters: " + command;
+    public String generateInvoiceSummary(InvoiceData invoiceData) {
+        String summaryPrompt = """
+            Create a patient-friendly summary of this healthcare invoice:
 
-        ChatCompletionRequest request = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(List.of(new ChatMessage("user", prompt)))
-            .build();
+            Provider: %s
+            Services: %s
+            Total Amount: $%.2f
+            Due Date: %s
 
-        ChatCompletionResult result = openAIClient.createChatCompletion(request);
+            Include:
+            1. What services were provided
+            2. Payment amount and due date
+            3. Any action items for the patient
+            4. Payment options if applicable
+            """.formatted(
+                invoiceData.getProvider().getName(),
+                invoiceData.getServicesDescription(),
+                invoiceData.getTotals().getTotalAmount(),
+                invoiceData.getDates().getDueDate()
+            );
 
-        // Parse response to extract intent
-        return parseIntentFromResponse(result.getChoices().get(0).getMessage().getContent());
+        ChatResponse response = chatModel.call(new Prompt(summaryPrompt));
+        return response.getResult().getOutput().getContent();
     }
 }
 ```
+
+### Chat Memory Management
+
+#### ChatMemoryFactory
+
+```java
+// service/memory/ChatMemoryFactory.java
+@Service
+public class ChatMemoryFactory {
+
+    @Value("${ai.chat.memory.timeout:900}") // 15 minutes
+    private long memoryTimeoutSeconds;
+
+    @Value("${ai.chat.memory.max-messages:15}")
+    private int maxMessages;
+
+    public ChatMemory createMemory(Long userId) {
+        return MessageWindowChatMemory.builder()
+            .id(userId)
+            .maxMessages(maxMessages)
+            .chatMemoryStore(createMemoryStore(userId))
+            .build();
+    }
+
+    private ChatMemoryStore createMemoryStore(Long userId) {
+        return new DatabaseChatMemoryStore(userId, memoryTimeoutSeconds);
+    }
+}
+
+// Custom database-backed memory store
+public class DatabaseChatMemoryStore implements ChatMemoryStore {
+
+    private final ChatMessageRepository chatMessageRepository;
+    private final Long userId;
+    private final long timeoutSeconds;
+
+    @Override
+    public List<ChatMessage> getMessages(Object memoryId) {
+        LocalDateTime cutoff = LocalDateTime.now().minusSeconds(timeoutSeconds);
+
+        return chatMessageRepository
+            .findByUserIdAndCreatedAtAfterOrderByCreatedAt(userId, cutoff)
+            .stream()
+            .map(this::convertToLangChainMessage)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+        // Save new messages to database
+        messages.forEach(message -> {
+            if (!messageExists(message)) {
+                saveChatMessage(message);
+            }
+        });
+    }
+}
+```
+
+### Security and Governance
+
+#### LangChainGovernanceService
+
+```java
+// service/LangChainGovernanceService.java
+@Service
+public class LangChainGovernanceService {
+
+    private static final int MAX_REQUESTS_PER_MINUTE = 10;
+    private static final int MAX_REQUESTS_PER_HOUR = 60;
+    private static final int MAX_MESSAGE_LENGTH = 4000;
+
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    public void checkRateLimit(Long userId) {
+        String minuteKey = "rate_limit:user:" + userId + ":minute:" +
+                          (System.currentTimeMillis() / 60000);
+        String hourKey = "rate_limit:user:" + userId + ":hour:" +
+                        (System.currentTimeMillis() / 3600000);
+
+        Long minuteCount = redisTemplate.opsForValue().increment(minuteKey);
+        if (minuteCount == 1) {
+            redisTemplate.expire(minuteKey, Duration.ofMinutes(1));
+        }
+
+        Long hourCount = redisTemplate.opsForValue().increment(hourKey);
+        if (hourCount == 1) {
+            redisTemplate.expire(hourKey, Duration.ofHours(1));
+        }
+
+        if (minuteCount > MAX_REQUESTS_PER_MINUTE) {
+            throw new RateLimitExceededException("Too many requests per minute");
+        }
+
+        if (hourCount > MAX_REQUESTS_PER_HOUR) {
+            throw new RateLimitExceededException("Too many requests per hour");
+        }
+    }
+
+    public void validateMessageLength(String message) {
+        if (message.length() > MAX_MESSAGE_LENGTH) {
+            throw new MessageTooLongException(
+                "Message exceeds maximum length of " + MAX_MESSAGE_LENGTH + " characters"
+            );
+        }
+    }
+
+    public void auditAIInteraction(Long userId, String input, String output,
+                                  String model, Long tokens) {
+        AiInteractionAudit audit = AiInteractionAudit.builder()
+            .userId(userId)
+            .input(input)
+            .output(output)
+            .model(model)
+            .tokensUsed(tokens)
+            .timestamp(LocalDateTime.now())
+            .build();
+
+        auditRepository.save(audit);
+    }
+}
+```
+
+#### Input/Output Sanitization
+
+```java
+// service/InputSanitizationService.java
+@Service
+public class InputSanitizationService {
+
+    private static final List<String> BLOCKED_PATTERNS = List.of(
+        "(?i).*diagnose.*",
+        "(?i).*prescribe.*medication.*",
+        "(?i).*medical advice.*",
+        "(?i).*ignore.*previous.*instructions.*"
+    );
+
+    public String sanitize(String input) {
+        // Remove potentially harmful patterns
+        String sanitized = input;
+
+        for (String pattern : BLOCKED_PATTERNS) {
+            sanitized = sanitized.replaceAll(pattern, "[FILTERED]");
+        }
+
+        // Limit length
+        if (sanitized.length() > 4000) {
+            sanitized = sanitized.substring(0, 4000) + "...";
+        }
+
+        // Basic XSS protection
+        sanitized = StringEscapeUtils.escapeHtml4(sanitized);
+
+        return sanitized;
+    }
+}
+
+// service/ResponseSanitizationService.java
+@Service
+public class ResponseSanitizationService {
+
+    private static final List<String> MEDICAL_DISCLAIMERS = List.of(
+        "Please consult with your healthcare provider",
+        "This is not medical advice",
+        "Always verify with a medical professional"
+    );
+
+    public String sanitize(String aiResponse) {
+        // Add medical disclaimers if response contains medical terms
+        if (containsMedicalTerms(aiResponse)) {
+            aiResponse += "\n\n⚠️ " + getRandomDisclaimer();
+        }
+
+        // Remove any potential harmful content
+        aiResponse = removePotentiallyHarmfulContent(aiResponse);
+
+        return aiResponse;
+    }
+
+    private boolean containsMedicalTerms(String response) {
+        return response.toLowerCase().matches(
+            ".*(symptom|treatment|medication|diagnosis|dosage|prescription).*"
+        );
+    }
+}
+```
+
+### User AI Configuration
+
+#### UserAIConfig Entity
+
+```java
+// model/UserAIConfig.java
+@Entity
+@Table(name = "user_ai_config")
+public class UserAIConfig {
+
+    @Id
+    private Long userId;
+
+    @Column(name = "ai_provider")
+    @Enumerated(EnumType.STRING)
+    private AIProvider aiProvider = AIProvider.DEEPSEEK;
+
+    @Column(name = "model_name")
+    private String modelName = "deepseek-chat";
+
+    @Column(name = "include_vitals")
+    private Boolean includeVitals = true;
+
+    @Column(name = "include_medications")
+    private Boolean includeMedications = true;
+
+    @Column(name = "include_notes")
+    private Boolean includeNotes = false;
+
+    @Column(name = "include_allergies")
+    private Boolean includeAllergies = true;
+
+    @Column(name = "max_tokens")
+    private Integer maxTokens = 2048;
+
+    @Column(name = "temperature")
+    private Double temperature = 0.7;
+
+    @Column(name = "conversation_history_limit")
+    private Integer conversationHistoryLimit = 10;
+
+    @Column(name = "custom_system_prompt")
+    private String customSystemPrompt;
+
+    // Default configurations for different user types
+    public static UserAIConfig defaultPatientConfig(Long userId) {
+        UserAIConfig config = new UserAIConfig();
+        config.setUserId(userId);
+        config.setCustomSystemPrompt(DEFAULT_PATIENT_PROMPT);
+        return config;
+    }
+
+    public static UserAIConfig defaultCaregiverConfig(Long userId) {
+        UserAIConfig config = new UserAIConfig();
+        config.setUserId(userId);
+        config.setIncludeNotes(true);
+        config.setConversationHistoryLimit(20);
+        config.setCustomSystemPrompt(DEFAULT_CAREGIVER_PROMPT);
+        return config;
+    }
+
+    private static final String DEFAULT_PATIENT_PROMPT = """
+        You are a helpful healthcare assistant. Provide information and support
+        while encouraging consultation with healthcare professionals for medical decisions.
+        Be empathetic, clear, and never provide diagnostic or prescriptive advice.
+        """;
+
+    private static final String DEFAULT_CAREGIVER_PROMPT = """
+        You are an AI assistant for healthcare professionals. Provide clinical
+        insights and information while emphasizing professional judgment.
+        Include relevant patient data context in your responses.
+        """;
+}
+```
+
+### API Endpoints
+
+#### AIChatController
+
+```java
+// controller/AIChatController.java
+@RestController
+@RequestMapping("/v1/api/ai-chat")
+@PreAuthorize("hasRole('PATIENT') or hasRole('CAREGIVER')")
+public class AIChatController {
+
+    private final AIChatService aiChatService;
+    private final UserAIConfigService configService;
+
+    @PostMapping("/chat")
+    @Operation(summary = "Send message to AI assistant")
+    public ResponseEntity<AiChatResponse> sendMessage(
+            @Valid @RequestBody AiChatRequest request,
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+        AiChatResponse response = aiChatService.sendMessage(
+            userId, request.getMessage(), request.getPatientId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/conversations/{patientId}")
+    @Operation(summary = "Get patient conversations")
+    public ResponseEntity<List<ChatConversationResponse>> getConversations(
+            @PathVariable Long patientId,
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+        // Verify access to patient data
+        patientAccessService.verifyAccess(userId, patientId);
+
+        List<ChatConversationResponse> conversations =
+            aiChatService.getConversations(patientId);
+
+        return ResponseEntity.ok(conversations);
+    }
+
+    @GetMapping("/config")
+    @Operation(summary = "Get AI configuration")
+    public ResponseEntity<UserAIConfig> getConfig(Authentication authentication) {
+        Long userId = getUserId(authentication);
+        UserAIConfig config = configService.getUserConfig(userId);
+        return ResponseEntity.ok(config);
+    }
+
+    @PostMapping("/config")
+    @Operation(summary = "Update AI configuration")
+    public ResponseEntity<UserAIConfig> updateConfig(
+            @Valid @RequestBody UserAIConfig config,
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+        config.setUserId(userId);
+        UserAIConfig savedConfig = configService.saveConfig(config);
+
+        return ResponseEntity.ok(savedConfig);
+    }
+}
+```
+
+### Database Schema
+
+#### AI-Related Tables
+
+```sql
+-- User AI Configuration
+CREATE TABLE user_ai_config (
+    user_id BIGINT PRIMARY KEY,
+    ai_provider VARCHAR(50) DEFAULT 'DEEPSEEK',
+    model_name VARCHAR(100) DEFAULT 'deepseek-chat',
+    include_vitals BOOLEAN DEFAULT TRUE,
+    include_medications BOOLEAN DEFAULT TRUE,
+    include_notes BOOLEAN DEFAULT FALSE,
+    include_allergies BOOLEAN DEFAULT TRUE,
+    max_tokens INTEGER DEFAULT 2048,
+    temperature DECIMAL(3,2) DEFAULT 0.70,
+    conversation_history_limit INTEGER DEFAULT 10,
+    custom_system_prompt TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Chat Conversations
+CREATE TABLE chat_conversations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    patient_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Chat Messages
+CREATE TABLE chat_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id BIGINT NOT NULL,
+    message_type ENUM('USER', 'AI') NOT NULL,
+    content TEXT NOT NULL,
+    tokens_used INTEGER,
+    model_used VARCHAR(100),
+    processing_time_ms INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+);
+
+-- AI Interaction Audit
+CREATE TABLE ai_interaction_audit (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    input_text TEXT,
+    output_text TEXT,
+    model_used VARCHAR(100),
+    tokens_used INTEGER,
+    processing_time_ms INTEGER,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX idx_chat_conversations_patient_user ON chat_conversations(patient_id, user_id);
+CREATE INDEX idx_chat_messages_conversation_created ON chat_messages(conversation_id, created_at);
+CREATE INDEX idx_ai_audit_user_timestamp ON ai_interaction_audit(user_id, timestamp);
+```
+
+### Development and Testing
+
+#### Mock AI Service for Development
+
+```java
+// service/MockAIChatService.java
+@Service
+@Profile("dev")
+@ConditionalOnProperty(name = "careconnect.deepseek.enabled", havingValue = "false")
+public class MockAIChatService implements AIChatService {
+
+    @Override
+    public AiChatResponse sendMessage(Long userId, String message, Long patientId) {
+        // Simulate processing time
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        String mockResponse = generateMockResponse(message);
+
+        return AiChatResponse.builder()
+            .response(mockResponse)
+            .tokensUsed(calculateMockTokens(message, mockResponse))
+            .model("mock-model")
+            .processingTimeMs(1000L)
+            .build();
+    }
+
+    private String generateMockResponse(String message) {
+        if (message.toLowerCase().contains("pain")) {
+            return "I understand you're experiencing pain. Please describe your pain level on a scale of 1-10 and consider speaking with your healthcare provider if it persists.";
+        } else if (message.toLowerCase().contains("medication")) {
+            return "For medication questions, please consult with your pharmacist or healthcare provider. They can provide the most accurate and safe guidance for your specific situation.";
+        } else {
+            return "Thank you for your message. I'm here to provide general health information and support. For specific medical advice, please consult with your healthcare provider.";
+        }
+    }
+}
+```
+
+The CareConnect AI integration provides a comprehensive, healthcare-focused AI solution with robust security, flexible configuration, and production-ready features for both patient support and clinical assistance.
 
 ## Device Integration
 
@@ -1946,13 +3655,56 @@ flutter test  # Frontend
 
 ### Common Development Issues
 
+#### Configuration Problems
+
+**Environment Variable Issues**
+```bash
+# Check required environment variables
+echo $SECURITY_JWT_SECRET      # Required for JWT authentication
+echo $DEEPSEEK_API_KEY         # Required for AI features
+echo $STRIPE_SECRET_KEY        # Required for subscriptions
+echo $JDBC_URI                 # Database connection
+
+# Set missing variables
+export SECURITY_JWT_SECRET="your-jwt-secret-key"
+export DEEPSEEK_API_KEY="your-deepseek-api-key"
+```
+
+**Profile-Specific Configuration Issues**
+```properties
+# application-dev.properties - Common issues:
+spring.jpa.hibernate.ddl-auto=update  # Risky for production
+spring.flyway.enabled=false           # Disabled due to circular dependencies
+
+# Fix for production:
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+```
+
+**Database Migration Problems**
+```bash
+# Flyway is currently disabled due to circular dependency issues
+# Temporary workaround uses JPA DDL auto-update
+
+# Check current database schema
+psql -h localhost -U careconnect -d careconnect -c "\dt"
+
+# Manual migration approach
+psql -h localhost -U careconnect -d careconnect -f src/main/resources/db/migration/V22__create_ai_chat_tables.sql
+```
+
 #### Flutter Build Issues
 
+**Cache and Dependencies**
 ```bash
 # Clear Flutter cache
 flutter clean
 flutter pub cache clean
 flutter pub get
+
+# Fix version conflicts
+flutter pub deps
+flutter pub upgrade
 
 # Reset Flutter installation
 flutter channel stable
@@ -1960,86 +3712,452 @@ flutter upgrade
 flutter doctor -v
 ```
 
+**Build Failures**
+```bash
+# Android build issues
+cd android && ./gradlew clean
+flutter build apk --debug
+
+# iOS build issues
+cd ios && pod install
+flutter build ios --debug
+```
+
 #### Backend Compilation Issues
 
+**Maven Dependencies**
 ```bash
-# Clean Maven cache
+# Clean Maven cache and resolve dependencies
 ./mvnw clean
 rm -rf ~/.m2/repository
-
-# Reinstall dependencies
 ./mvnw dependency:resolve
 ./mvnw clean compile
+
+# Spring Boot 3.4.5 with Java 17 requirement
+java -version  # Must be Java 17+
+```
+
+**Spring Boot Issues**
+```bash
+# Check for circular dependencies
+./mvnw compile 2>&1 | grep -i circular
+
+# Resolve Spring AI milestone version conflicts
+./mvnw dependency:tree | grep spring-ai
 ```
 
 #### Database Connection Issues
 
+**PostgreSQL Connection Problems**
 ```sql
--- Check MySQL status
-SHOW PROCESSLIST;
-SHOW VARIABLES LIKE '%timeout%';
+-- Check PostgreSQL status
+SELECT version();
+SHOW max_connections;
+SHOW shared_preload_libraries;
+
+-- Connection pool issues
+SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
 
 -- Reset connections
-FLUSH PRIVILEGES;
-RESTART;
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle';
 ```
 
-### Performance Debugging
+**HikariCP Connection Pool**
+```properties
+# Tune connection pool settings
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.minimum-idle=5
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.idle-timeout=300000
+```
 
-#### Frontend Performance
+### Authentication & Security Issues
 
-```dart
-// Enable performance overlay
-import 'package:flutter/rendering.dart';
+#### JWT Token Problems
 
-void main() {
-  debugPaintSizeEnabled = true; // Shows widget boundaries
-  runApp(MyApp());
+**Invalid Token Handling**
+```java
+// Common JWT issues in JwtAuthenticationFilter
+if (token != null && jwt.validateToken(token)) {
+    // Token is valid
+} else {
+    if (token != null) {
+        log.warn("Invalid token provided");  // Check token expiration
+    } else {
+        log.debug("No token found in request");  // Missing Authorization header
+    }
 }
+```
 
-// Profile widget rebuilds
-class PerformanceWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    print('PerformanceWidget rebuilt at ${DateTime.now()}');
-    return Container();
+**Token Debugging**
+```bash
+# Decode JWT token (for debugging only)
+echo "your-jwt-token" | cut -d. -f2 | base64 --decode | jq .
+
+# Check token expiration
+curl -H "Authorization: Bearer your-token" http://localhost:8080/v1/api/auth/validate
+```
+
+#### Password Reset Issues
+
+**Reset Token Problems**
+```java
+// From UserPasswordService - token validation
+boolean validateToken(String token, String email) {
+    // Check both raw token and Base64 encoded versions
+    // Common issue: Base64 encoding mismatches
+}
+```
+
+#### OAuth Integration Issues
+
+**Google OAuth Configuration**
+```properties
+# Development uses mock credentials - update for production
+spring.security.oauth2.client.registration.google.client-id=your-real-client-id
+spring.security.oauth2.client.registration.google.client-secret=your-real-client-secret
+```
+
+### WebSocket Connection Issues
+
+#### Connection Management Problems
+
+**Authentication Failures**
+```java
+// Common WebSocket authentication issues
+private void handleAuthentication(WebSocketSession session, Map<String, Object> payload) {
+    String token = (String) payload.get("token");
+    if (jwtTokenProvider.validateToken(token)) {
+        // Store authenticated user info
+        session.getAttributes().put("authenticated", true);
+    } else {
+        // Authentication failed - connection will be closed
+        sendMessage(session, Map.of("type", "authentication-error", "message", "Invalid token"));
+    }
+}
+```
+
+**Connection Cleanup Issues**
+```java
+// WebSocket transport errors may not properly clean up sessions
+@Scheduled(fixedRate = 300000) // Every 5 minutes
+public void cleanupExpiredConnections() {
+    List<WebSocketConnection> expired = repository.findExpiredConnections(LocalDateTime.now());
+    expired.forEach(conn -> conn.setIsActive(false));
+}
+```
+
+**Client-Side Connection Issues**
+```dart
+// Flutter WebSocket reconnection logic
+Future<void> _handleDisconnection() async {
+  // Implement exponential backoff
+  int retryCount = 0;
+  while (retryCount < 5) {
+    await Future.delayed(Duration(seconds: math.pow(2, retryCount).toInt()));
+    try {
+      await connect();
+      break;
+    } catch (e) {
+      retryCount++;
+    }
   }
 }
 ```
 
-#### Backend Performance
+### AI Service Integration Issues
 
+#### DeepSeek API Problems
+
+**API Key Configuration**
 ```java
-// Enable JVM profiling
-java -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=profile.jfr -jar app.jar
-
-// SQL query logging
-logging.level.org.hibernate.SQL=DEBUG
-logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+// DeepSeekService initialization
+if (apiKey == null || apiKey.trim().isEmpty()) {
+    throw new IllegalStateException("DeepSeek API key is not configured");
+}
 ```
 
-### Memory Management
+**Network Timeout Issues**
+```properties
+# Increase timeout for AI API calls
+careconnect.ai.timeout.connection=30000
+careconnect.ai.timeout.read=60000
+```
 
+**JSON Parsing Failures**
+```java
+// AI response parsing errors
+try {
+    TaskDtoV2 aiTask = objectMapper.readValue(aiContent, TaskDtoV2.class);
+    if (aiTask == null || aiTask.getName() == null) {
+        log.error("Invalid AI Task generated: {}", aiTask);
+        return; // Skip invalid AI responses
+    }
+} catch (JsonProcessingException e) {
+    log.error("Error parsing AI response: {}", e.getMessage());
+}
+```
+
+#### LangChain4j Integration Issues
+
+**Memory Management Problems**
+```properties
+# Chat memory configuration issues
+careconnect.chat.memory.default-max-messages=20
+careconnect.chat.memory.premium-max-messages=50
+careconnect.chat.memory.auto-cleanup=true
+```
+
+**Model Configuration Errors**
+```java
+// Model initialization
+@Bean
+public ChatLanguageModel deepSeekChatModel() {
+    return OpenAiChatModel.builder()
+        .baseUrl("https://api.deepseek.com/v1")
+        .apiKey(deepSeekApiKey)
+        .modelName("deepseek-chat")
+        .temperature(0.7)
+        .timeout(Duration.ofSeconds(60))
+        .maxRetries(3)  // Add retry logic
+        .build();
+}
+```
+
+### Third-Party Integration Issues
+
+#### Stripe Integration Problems
+
+**Price ID Conversion Issues**
+```java
+// Common Stripe issues in StripeService
+private String convertPlanIdToPriceId(String planId) {
+    // Complex price ID mapping - ensure all plans are configured
+    switch (planId.toLowerCase()) {
+        case "basic": return "price_basic_monthly";
+        case "premium": return "price_premium_monthly";
+        default:
+            log.error("Unknown plan ID: {}", planId);
+            throw new AppException(HttpStatus.BAD_REQUEST, "Invalid plan ID");
+    }
+}
+```
+
+**Webhook Validation**
+```java
+// Stripe webhook signature validation
+try {
+    Webhook.constructEvent(payload, sigHeader, endpointSecret);
+} catch (SignatureVerificationException e) {
+    log.error("Invalid Stripe webhook signature");
+    throw new AppException(HttpStatus.BAD_REQUEST, "Invalid signature");
+}
+```
+
+#### AWS Integration Issues
+
+**S3 Configuration Problems**
+```properties
+# Environment-specific S3 configuration
+cloud.aws.s3.bucket=${AWS_S3_BUCKET_NAME:careconnect-dev}
+cloud.aws.credentials.access-key=${AWS_ACCESS_KEY_ID}
+cloud.aws.credentials.secret-key=${AWS_SECRET_ACCESS_KEY}
+```
+
+**WebSocket API Gateway Issues**
+```java
+// AWS WebSocket connection management
+public void sendMessageToConnection(String connectionId, Object message) {
+    try {
+        AmazonApiGatewayManagementApi client = clientBuilder
+            .withEndpointConfiguration(new EndpointConfiguration(apiGatewayEndpoint, "us-east-1"))
+            .build();
+        // Handle ConnectionGoneException for disconnected clients
+    } catch (GoneException e) {
+        log.info("Connection {} is no longer available", connectionId);
+        connectionService.markConnectionInactive(connectionId);
+    }
+}
+```
+
+### Performance Issues
+
+#### Database Performance Problems
+
+**Slow Queries**
+```sql
+-- Enable PostgreSQL query logging
+ALTER SYSTEM SET log_statement = 'all';
+ALTER SYSTEM SET log_min_duration_statement = 1000; -- Log queries > 1 second
+
+-- Check slow queries
+SELECT query, mean_exec_time, total_exec_time, calls
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC LIMIT 10;
+```
+
+**Connection Pool Exhaustion**
+```properties
+# Monitor and tune HikariCP settings
+spring.datasource.hikari.maximum-pool-size=20
+spring.datasource.hikari.leak-detection-threshold=60000
+logging.level.com.zaxxer.hikari=DEBUG
+```
+
+#### Memory Issues
+
+**JVM Memory Tuning**
+```bash
+# Production JVM settings
+java -Xms2g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 \
+     -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/app/ \
+     -jar careconnect-backend.jar
+```
+
+**Flutter Memory Optimization**
 ```dart
-// Flutter memory optimization
+// Optimize image loading and caching
 class OptimizedImageWidget extends StatelessWidget {
   final String imageUrl;
 
-  const OptimizedImageWidget({required this.imageUrl});
-
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      imageUrl,
-      cacheWidth: 200, // Limit cache size
-      cacheHeight: 200,
-      errorBuilder: (context, error, stackTrace) {
-        return Icon(Icons.error);
-      },
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      memCacheWidth: 300,
+      memCacheHeight: 300,
+      placeholder: (context, url) => CircularProgressIndicator(),
+      errorWidget: (context, url, error) => Icon(Icons.error),
+      // Implement image compression
+      imageBuilder: (context, imageProvider) => Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: imageProvider,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
     );
   }
 }
 ```
+
+### Development Environment Issues
+
+#### Docker and Containerization
+
+**Database Container Issues**
+```bash
+# PostgreSQL container troubleshooting
+docker logs careconnect-postgres
+docker exec -it careconnect-postgres psql -U careconnect -d careconnect
+
+# Reset database container
+docker-compose down -v
+docker-compose up -d postgres
+```
+
+**Port Conflicts**
+```bash
+# Check for port conflicts
+lsof -i :8080  # Backend port
+lsof -i :3000  # Frontend port
+lsof -i :5432  # PostgreSQL port
+
+# Kill conflicting processes
+kill -9 <PID>
+```
+
+#### IDE and Tooling Issues
+
+**IntelliJ IDEA Configuration**
+```bash
+# Clear IntelliJ caches
+rm -rf ~/.IntelliJIdea*/system/caches
+rm -rf ~/.IntelliJIdea*/system/index
+
+# Reimport Maven project
+mvn idea:idea
+```
+
+**VS Code Flutter Issues**
+```json
+// .vscode/settings.json
+{
+  "dart.flutterSdkPath": "/path/to/flutter",
+  "dart.debugExternalPackageLibraries": true,
+  "dart.debugSdkLibraries": true
+}
+```
+
+### Deployment Issues
+
+#### Production Deployment Problems
+
+**Environment Configuration**
+```bash
+# Check all required environment variables for production
+required_vars=(
+  "SECURITY_JWT_SECRET"
+  "DEEPSEEK_API_KEY"
+  "STRIPE_SECRET_KEY"
+  "AWS_ACCESS_KEY_ID"
+  "AWS_SECRET_ACCESS_KEY"
+  "DATABASE_URL"
+)
+
+for var in "${required_vars[@]}"; do
+  if [[ -z "${!var}" ]]; then
+    echo "Missing required environment variable: $var"
+  fi
+done
+```
+
+**Health Check Failures**
+```bash
+# Test application health endpoints
+curl -f http://localhost:8080/actuator/health || exit 1
+curl -f http://localhost:8080/actuator/db || exit 1
+```
+
+#### Monitoring and Debugging
+
+**Application Metrics**
+```properties
+# Enable actuator endpoints for monitoring
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.show-details=always
+```
+
+**Logging Configuration**
+```properties
+# Production logging configuration
+logging.level.org.springframework.security=INFO
+logging.level.com.careconnect=INFO
+logging.level.org.hibernate.SQL=WARN
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+```
+
+**Error Tracking**
+```java
+// Structured error logging
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception e) {
+        log.error("Unhandled exception occurred", e);
+        ErrorResponse error = new ErrorResponse(
+            "INTERNAL_ERROR",
+            "An unexpected error occurred",
+            System.currentTimeMillis()
+        );
+        return ResponseEntity.status(500).body(error);
+    }
+}
+```
+
+This comprehensive troubleshooting guide covers the most common issues encountered in the CareConnect platform, providing practical solutions and debugging strategies for developers.
 
 ---
 

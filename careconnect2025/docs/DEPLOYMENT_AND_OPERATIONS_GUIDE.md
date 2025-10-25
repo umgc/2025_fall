@@ -51,7 +51,7 @@
         │                 │                 │
 ┌───────▼────┐    ┌──────▼──────┐    ┌─────▼──────┐
 │    RDS     │    │  ElastiCache│    │   Lambda   │
-│   MySQL    │    │    Redis    │    │ Functions  │
+│ PostgreSQL │    │    Redis    │    │ Functions  │
 └────────────┘    └─────────────┘    └────────────┘
         │
 ┌───────▼────┐
@@ -78,7 +78,7 @@
 - **Admin**: EC2 instances for administrative tasks
 
 **Storage:**
-- **Database**: RDS MySQL (Multi-AZ)
+- **Database**: RDS PostgreSQL (Multi-AZ)
 - **Cache**: ElastiCache Redis
 - **Files**: S3 buckets
 - **Backup**: S3 with lifecycle policies
@@ -107,7 +107,7 @@ CareConnect uses four distinct environments:
 ```bash
 # Local development configuration
 export ENVIRONMENT=dev
-export DATABASE_URL=jdbc:mysql://localhost:3306/careconnect_dev
+export DATABASE_URL=jdbc:postgresql://localhost:5432/careconnect_dev
 export REDIS_URL=redis://localhost:6379
 export JWT_SECRET=dev_jwt_secret_key_32_characters
 export AWS_REGION=us-east-1
@@ -119,7 +119,7 @@ export S3_BUCKET=careconnect-dev-files
 ```bash
 # Staging environment configuration
 export ENVIRONMENT=staging
-export DATABASE_URL=jdbc:mysql://staging-db.region.rds.amazonaws.com:3306/careconnect
+export DATABASE_URL=jdbc:postgresql://staging-db.region.rds.amazonaws.com:5432/careconnect
 export REDIS_URL=staging-cache.region.cache.amazonaws.com:6379
 export JWT_SECRET=${JWT_SECRET_STAGING}  # From AWS Secrets Manager
 export AWS_REGION=us-east-1
@@ -131,7 +131,7 @@ export S3_BUCKET=careconnect-staging-files
 ```bash
 # Production environment configuration
 export ENVIRONMENT=prod
-export DATABASE_URL=jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect
+export DATABASE_URL=jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect
 export REDIS_URL=prod-cache.region.cache.amazonaws.com:6379
 export JWT_SECRET=${JWT_SECRET_PROD}  # From AWS Secrets Manager
 export AWS_REGION=us-east-1
@@ -911,36 +911,38 @@ echo "Blue-green deployment completed successfully!"
 -- scripts/init-prod-db.sql
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS careconnect
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE careconnect
+    WITH ENCODING 'UTF8'
+    LC_COLLATE 'en_US.UTF-8'
+    LC_CTYPE 'en_US.UTF-8';
 
 -- Create application user
-CREATE USER 'careconnect_app'@'%' IDENTIFIED BY 'secure_password_here';
-GRANT SELECT, INSERT, UPDATE, DELETE ON careconnect.* TO 'careconnect_app'@'%';
+CREATE USER careconnect_app WITH ENCRYPTED PASSWORD 'secure_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_app;
+GRANT USAGE ON SCHEMA public TO careconnect_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO careconnect_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO careconnect_app;
 
 -- Create read-only user for reporting
-CREATE USER 'careconnect_readonly'@'%' IDENTIFIED BY 'readonly_password_here';
-GRANT SELECT ON careconnect.* TO 'careconnect_readonly'@'%';
+CREATE USER careconnect_readonly WITH ENCRYPTED PASSWORD 'readonly_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_readonly;
+GRANT USAGE ON SCHEMA public TO careconnect_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO careconnect_readonly;
 
 -- Create backup user
-CREATE USER 'careconnect_backup'@'%' IDENTIFIED BY 'backup_password_here';
-GRANT SELECT, LOCK TABLES ON careconnect.* TO 'careconnect_backup'@'%';
+CREATE USER careconnect_backup WITH ENCRYPTED PASSWORD 'backup_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_backup;
+GRANT USAGE ON SCHEMA public TO careconnect_backup;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO careconnect_backup;
 
-FLUSH PRIVILEGES;
-
--- Create initial tables (will be managed by Flyway migrations)
-USE careconnect;
-
--- Enable binary logging for replication
-SET GLOBAL log_bin = 1;
-SET GLOBAL binlog_format = 'ROW';
+-- Connect to the database
+\c careconnect;
 
 -- Configure performance parameters
-SET GLOBAL innodb_buffer_pool_size = 1024 * 1024 * 1024; -- 1GB
-SET GLOBAL max_connections = 200;
-SET GLOBAL slow_query_log = 1;
-SET GLOBAL long_query_time = 2;
+ALTER SYSTEM SET shared_buffers = '1GB';
+ALTER SYSTEM SET max_connections = 200;
+ALTER SYSTEM SET log_min_duration_statement = 2000; -- Log queries taking > 2s
+SELECT pg_reload_conf();
 ```
 
 ### Database Migration Strategy
@@ -954,7 +956,7 @@ SET GLOBAL long_query_time = 2;
     <artifactId>flyway-maven-plugin</artifactId>
     <version>9.16.0</version>
     <configuration>
-        <url>jdbc:mysql://${db.host}:${db.port}/${db.name}</url>
+        <url>jdbc:postgresql://${db.host}:${db.port}/${db.name}</url>
         <user>${db.username}</user>
         <password>${db.password}</password>
         <locations>
@@ -971,45 +973,58 @@ SET GLOBAL long_query_time = 2;
 ```sql
 -- src/main/resources/db/migration/V001__Create_initial_schema.sql
 CREATE TABLE users (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    role ENUM('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER') NOT NULL,
+    role VARCHAR(20) CHECK (role IN ('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER')) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    INDEX idx_users_email (email),
-    INDEX idx_users_role (role),
-    INDEX idx_users_active (active)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_active ON users(active);
+
+-- Create trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = CURRENT_TIMESTAMP;
+   RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- src/main/resources/db/migration/V002__Create_vital_signs_table.sql
 CREATE TABLE vital_signs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     value DECIMAL(10,2) NOT NULL,
     unit VARCHAR(20) NOT NULL,
     notes TEXT,
-    measurement_time DATETIME NOT NULL,
+    measurement_time TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-
-    INDEX idx_vital_signs_user_id (user_id),
-    INDEX idx_vital_signs_type (type),
-    INDEX idx_vital_signs_measurement_time (measurement_time),
-    INDEX idx_vital_signs_user_type_time (user_id, type, measurement_time DESC)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_vital_signs_user_id ON vital_signs(user_id);
+CREATE INDEX idx_vital_signs_type ON vital_signs(type);
+CREATE INDEX idx_vital_signs_measurement_time ON vital_signs(measurement_time);
+CREATE INDEX idx_vital_signs_user_type_time ON vital_signs(user_id, type, measurement_time DESC);
+
+CREATE TRIGGER update_vital_signs_updated_at BEFORE UPDATE ON vital_signs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- src/main/resources/db/migration/V003__Add_health_monitoring_tables.sql
 CREATE TABLE medications (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     dosage VARCHAR(100),
     frequency VARCHAR(100),
@@ -1017,25 +1032,29 @@ CREATE TABLE medications (
     end_date DATE,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_medications_user_id (user_id),
-    INDEX idx_medications_active (active)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_medications_user_id ON medications(user_id);
+CREATE INDEX idx_medications_active ON medications(active);
+
+CREATE TRIGGER update_medications_updated_at BEFORE UPDATE ON medications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE allergies (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     allergen VARCHAR(255) NOT NULL,
-    severity ENUM('MILD', 'MODERATE', 'SEVERE') NOT NULL,
+    severity VARCHAR(20) CHECK (severity IN ('MILD', 'MODERATE', 'SEVERE')) NOT NULL,
     reaction TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_allergies_user_id (user_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_allergies_user_id ON allergies(user_id);
+
+CREATE TRIGGER update_allergies_updated_at BEFORE UPDATE ON allergies
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ### Database Backup Strategy
@@ -1064,16 +1083,17 @@ BACKUP_FILENAME="${BACKUP_PREFIX}_${TIMESTAMP}.sql.gz"
 echo "Starting database backup: $BACKUP_FILENAME"
 
 # Create backup
-mysqldump \
+pg_dump \
     --host=$DB_HOST \
-    --user=$DB_USER \
-    --password=$DB_PASSWORD \
-    --single-transaction \
-    --routines \
-    --triggers \
-    --add-drop-database \
-    --databases $DB_NAME | \
-    gzip > /tmp/$BACKUP_FILENAME
+    --username=$DB_USER \
+    --no-password \
+    --format=custom \
+    --compress=9 \
+    --clean \
+    --create \
+    --dbname=$DB_NAME \
+    --file=/tmp/$BACKUP_FILENAME
+export PGPASSWORD=$DB_PASSWORD
 
 # Upload to S3
 aws s3 cp /tmp/$BACKUP_FILENAME s3://$S3_BUCKET/database/
@@ -1172,14 +1192,14 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15
         env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: careconnect_test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: careconnect_test
         ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - name: Checkout code
@@ -1202,8 +1222,8 @@ jobs:
       working-directory: backend/core
       run: ./mvnw test
       env:
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/careconnect_test
-        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/careconnect_test
+        SPRING_DATASOURCE_USERNAME: postgres
         SPRING_DATASOURCE_PASSWORD: test
 
     - name: Set up Flutter
@@ -1335,7 +1355,7 @@ jobs:
         DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id careconnect/prod/db-password --query SecretString --output text)
 
         ./mvnw flyway:migrate \
-          -Dflyway.url=jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect \
+          -Dflyway.url=jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect \
           -Dflyway.user=careconnect_app \
           -Dflyway.password=$DB_PASSWORD
 
@@ -1729,8 +1749,8 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 3306
-    to_port         = 3306
+    from_port       = 5432
+    to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs.id]
   }
@@ -2335,34 +2355,37 @@ echo "DR test completed successfully"
 ```sql
 -- Analyze slow queries
 SELECT
-    query_time,
-    lock_time,
-    rows_sent,
-    rows_examined,
-    sql_text
-FROM mysql.slow_log
-WHERE start_time >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-ORDER BY query_time DESC
+    query,
+    calls,
+    total_exec_time,
+    mean_exec_time,
+    rows
+FROM pg_stat_statements
+WHERE total_exec_time > 1000  -- queries taking more than 1 second total
+ORDER BY total_exec_time DESC
 LIMIT 20;
 
 -- Optimize frequently accessed tables
-ANALYZE TABLE users, vital_signs, medications;
+ANALYZE users, vital_signs, medications;
 
 -- Add missing indexes
-CREATE INDEX idx_vital_signs_user_type_date
+CREATE INDEX CONCURRENTLY idx_vital_signs_user_type_date
 ON vital_signs(user_id, type, measurement_time DESC);
 
-CREATE INDEX idx_messages_conversation_unread
+CREATE INDEX CONCURRENTLY idx_messages_conversation_unread
 ON messages(conversation_id, is_read, created_at DESC);
 
--- Partition large tables
-ALTER TABLE vital_signs
-PARTITION BY RANGE (YEAR(measurement_time)) (
-    PARTITION p2023 VALUES LESS THAN (2024),
-    PARTITION p2024 VALUES LESS THAN (2025),
-    PARTITION p2025 VALUES LESS THAN (2026),
-    PARTITION p2026 VALUES LESS THAN MAXVALUE
-);
+-- Partition large tables (PostgreSQL 12+ declarative partitioning)
+CREATE TABLE vital_signs_partitioned (
+    LIKE vital_signs INCLUDING ALL
+) PARTITION BY RANGE (measurement_time);
+
+CREATE TABLE vital_signs_2023 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+CREATE TABLE vital_signs_2024 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+CREATE TABLE vital_signs_2025 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 ```
 
 #### Connection Pooling
@@ -2652,7 +2675,7 @@ public class DatabaseConfig {
     @Primary
     public DataSource primaryDataSource() {
         return DataSourceBuilder.create()
-            .url("jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect")
+            .url("jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect")
             .username("careconnect_app")
             .password("${spring.datasource.password}")
             .build();
@@ -2661,7 +2684,7 @@ public class DatabaseConfig {
     @Bean
     public DataSource readOnlyDataSource() {
         return DataSourceBuilder.create()
-            .url("jdbc:mysql://prod-db-read-replica.region.rds.amazonaws.com:3306/careconnect")
+            .url("jdbc:postgresql://prod-db-read-replica.region.rds.amazonaws.com:5432/careconnect")
             .username("careconnect_readonly")
             .password("${spring.datasource.readonly.password}")
             .build();
@@ -2725,9 +2748,12 @@ if [ "$UPGRADE_DB_INSTANCE" = "true" ]; then
 fi
 
 # Run database maintenance
-mysql -h prod-db.region.rds.amazonaws.com -u admin -p << EOF
-OPTIMIZE TABLE users, vital_signs, medications, allergies;
-ANALYZE TABLE users, vital_signs, medications, allergies;
+psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect << EOF
+VACUUM ANALYZE users;
+VACUUM ANALYZE vital_signs;
+VACUUM ANALYZE medications;
+VACUUM ANALYZE allergies;
+REINDEX DATABASE careconnect;
 EOF
 
 # 4. Update infrastructure if needed
@@ -2805,7 +2831,7 @@ echo "Checking for security updates..."
 
 # Update base Docker images
 docker pull openjdk:17-jdk-slim
-docker pull mysql:8.0
+docker pull postgres:15
 
 # Check for OS-level patches (for EC2 instances if any)
 yum list-security --security 2>/dev/null || true
@@ -2880,15 +2906,15 @@ aws ec2 describe-security-groups \
 
 ```bash
 # Test database connectivity
-mysql -h prod-db.region.rds.amazonaws.com \
-      -u careconnect_app \
-      -p careconnect \
-      -e "SELECT 1"
+psql -h prod-db.region.rds.amazonaws.com \
+     -U careconnect_app \
+     -d careconnect \
+     -c "SELECT 1"
 
 # Check database performance
-mysql -h prod-db.region.rds.amazonaws.com \
-      -u admin -p \
-      -e "SHOW PROCESSLIST; SHOW ENGINE INNODB STATUS;"
+psql -h prod-db.region.rds.amazonaws.com \
+     -U admin -d careconnect \
+     -c "SELECT * FROM pg_stat_activity; SELECT * FROM pg_stat_database;"
 
 # Check RDS metrics
 aws cloudwatch get-metric-statistics \
@@ -2955,11 +2981,10 @@ fi
 
 # 2. Database Health Check
 echo "Checking database connectivity..."
-DB_CHECK=$(mysql -h prod-db.region.rds.amazonaws.com \
-               -u careconnect_app \
-               -p$DB_PASSWORD \
-               careconnect \
-               -e "SELECT 1" 2>&1)
+DB_CHECK=$(PGPASSWORD=$DB_PASSWORD psql -h prod-db.region.rds.amazonaws.com \
+               -U careconnect_app \
+               -d careconnect \
+               -c "SELECT 1" 2>&1)
 if [ $? -eq 0 ]; then
     echo "✅ Database is accessible"
 else
