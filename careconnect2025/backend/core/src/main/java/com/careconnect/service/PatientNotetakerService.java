@@ -38,6 +38,8 @@ public class PatientNotetakerService {
     private final PatientNoteRepository patientNoteRepository;
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
+    private final String model = "deepseek/deepseek-chat-v3.1:free";
+
 
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
@@ -107,6 +109,7 @@ public class PatientNotetakerService {
         newNote.setUpdatedAt(LocalDateTime.now());
         PatientNoteDTO result = new PatientNoteDTO(patientNoteRepository.save(newNote));
         detectKeyWords(patientId, newNote.getNote());
+        newNote.setAiSummary(processAiSummary(noteDTO.getNote()));
         return result;
     }
 
@@ -119,6 +122,7 @@ public class PatientNotetakerService {
         PatientNote existingNote = patientNoteRepository.findById(noteId).orElseThrow();
         existingNote.setPatientId(patientId);
         existingNote.setNote(noteDTO.getNote());
+        existingNote.setAiSummary(noteDTO.getAiSummary());
         existingNote.setUpdatedAt(LocalDateTime.now());
         return new PatientNoteDTO(patientNoteRepository.save(existingNote));
     }
@@ -182,7 +186,7 @@ public class PatientNotetakerService {
                     + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object beginning with { and ending with }.";
             System.out.println("Sending OpenRouter request...");
             OpenRouterChatRequest request = new OpenRouterChatRequest(
-                    "deepseek/deepseek-chat-v3.1:free",
+                    model,
                     Arrays.asList(new Message("system", "You are an expert language interpreter and software engineer"),new Message("user", prompt)),
                     0.2,
                     256);
@@ -217,6 +221,35 @@ public class PatientNotetakerService {
             aiTask.setDate(date.withYear(LocalDate.now().getYear()).toString());
             taskService.createTask(patientId, aiTask);
         }
+    }
+
+    @Async
+    private String processAiSummary(String noteContent) {
+        String prompt = "Summarize the following conversation transcription in a 2-3 concise sentences, focusing on key health information and any action items or takeaways: '"
+                + noteContent + "'";
+
+        OpenRouterChatRequest request = new OpenRouterChatRequest(
+                model,
+                Arrays.asList(new Message("system", "You are a helpful assistant. "),new Message("user", prompt)),
+                0.2,
+                256);
+
+        OpenRouterResponse response; 
+        try {
+            response = openRouterService.sendChatRequest(request);
+        } catch (Exception e) {
+            log.error("Unable to reach OpenRouter service: {}", e.getMessage());
+            return "AI summary generation Failed.";
+        }
+        String aiSummary = null;
+        if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()
+                && response.getChoices().get(0).getMessage() != null) {
+            aiSummary = response.getChoices().get(0).getMessage().getContent();
+        } else {
+            aiSummary = "";
+        }
+        log.info("AI Summary generated: {}", aiSummary);
+        return aiSummary;
     }
 
     private <T> T mapJson(String json, Class<T> object) {
