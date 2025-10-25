@@ -69,6 +69,13 @@ class AiLog {
     }
   }
 
+  static bool isMarkdown(int column) {
+    if (column == 4 || column == 5) {
+      return true;
+    }
+    return false;
+  }
+
   String getStringForColumn(int column) {
     if (column == 7) {
       return DateFormat.yMd().add_jms().format(created.toLocal());

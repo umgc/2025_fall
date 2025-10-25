@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
@@ -425,7 +426,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                           showCheckboxColumn: false,
                           sortColumnIndex: sortIndex,
                           sortAscending: sortAsc,
-                          dataRowMaxHeight: double.infinity,
+                          dataRowMaxHeight: 70,
                           columns: [
                             DataColumn(
                                 columnWidth: FixedColumnWidth(150),
@@ -536,7 +537,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         color: Colors.deepPurple,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
+                       child: Text(
                         logSource.sortedData[selected!].getStringForColumn(3),
                         style: TextStyle(
                           color: Colors.white,
@@ -552,17 +553,29 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
-                        logSource.sortedData[selected!].getStringForColumn(4),
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 16,
-                        ),
+                      child: MarkdownBody(
+                        data: logSource.sortedData[selected!].getStringForColumn(4),
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet.fromTheme(
+                                            Theme.of(context))
+                                        .copyWith(
+                                      p: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black87,),
+                                      strong: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                      em: const TextStyle(
+                                          fontStyle: FontStyle.italic),
+                                      a: const TextStyle(
+                                        color: Colors.blueAccent,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
                       ))),
               Align(
                   alignment: Alignment.centerRight,
                   child: Container(
-                      margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
+                       margin: const EdgeInsets.fromLTRB(0, 6, 20, 6),
                       padding: const EdgeInsets.all(14),
                       decoration: logSource.sortedData[selected!]
                               .getStringForColumn(5)
@@ -572,25 +585,38 @@ class _AiLogScreenState extends State<AiLogScreen> {
                               color: Colors.blue,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                      child: Text(
-                        logSource.sortedData[selected!]
+                      child: MarkdownBody(
+                        data: logSource.sortedData[selected!]
                                 .getStringForColumn(5)
                                 .isEmpty
                             ? "There was no micro-reflection for this AI prompt."
                             : logSource.sortedData[selected!]
                                 .getStringForColumn(5),
-                        style: TextStyle(
-                            color: logSource.sortedData[selected!]
+                                selectable: true,
+                              styleSheet: MarkdownStyleSheet.fromTheme(
+                                            Theme.of(context))
+                                        .copyWith(
+                                      p: TextStyle(
+                                          fontSize: 16,
+                                          color: logSource.sortedData[selected!]
                                     .getStringForColumn(5)
                                     .isEmpty
                                 ? Colors.grey
                                 : Colors.white,
-                            fontSize: 16,
-                            fontStyle: logSource.sortedData[selected!]
+                                fontStyle: logSource.sortedData[selected!]
                                     .getStringForColumn(5)
                                     .isEmpty
                                 ? FontStyle.italic
                                 : FontStyle.normal),
+                                      strong: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                      em: const TextStyle(
+                                          fontStyle: FontStyle.italic),
+                                      a: const TextStyle(
+                                        color: Colors.blueAccent,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
                       )))
             ])),
             actions: [
@@ -627,7 +653,25 @@ class _AiLogSource extends DataTableSource {
   }
 
   DataCell cellFor(int row, int column) {
-    return DataCell(Text(
+    return DataCell(AiLog.isMarkdown(column) ?
+      Wrap(clipBehavior: Clip.hardEdge, direction: Axis.horizontal, children: [MarkdownBody(data: sortedData[row].getStringForColumn(column),
+      shrinkWrap: true,
+      softLineBreak: true,
+      styleSheet: MarkdownStyleSheet.fromTheme(
+                                            Theme.of(parentState.context))
+                                        .copyWith(
+                                      p: const TextStyle(
+                                          color: Colors.black87,
+                                          overflow: TextOverflow.ellipsis),
+                                      strong: const TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                      em: const TextStyle(
+                                          fontStyle: FontStyle.italic),
+                                      a: const TextStyle(
+                                        color: Colors.blueAccent,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),)]) : Text(
       sortedData[row].getStringForColumn(column),
       softWrap: true,
       textAlign: TextAlign.start,
