@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
@@ -16,23 +17,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-    /**
-     * ✅ 1️⃣ Alexa-specific chain
-     * This chain ONLY applies to /v1/api/auth/sso/alexa/**
-     * It disables JWT + BasicAuth filters entirely.
-     */
-    @Bean
-    SecurityFilterChain alexaSecurityChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/v1/api/auth/sso/alexa/**") // match these URLs only
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .httpBasic(basic -> basic.disable()); // disable BasicAuth only for Alexa
-
-        return http.build();
-    }
-
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
                                     JwtTokenProvider jwt,
@@ -42,7 +26,7 @@ public class SecurityConfig {
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwt, uds);
 
         return http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(basic -> basic.authenticationEntryPoint(

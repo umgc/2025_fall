@@ -8,11 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 
 @Slf4j
@@ -27,7 +26,7 @@ public class DeepSeekService {
     @Value("${deepseek.api.url:https://api.deepseek.com/v1}")
     private String apiUrl;
 
-    private final WebClient webClient;
+    private final RestClient restClient;
 
     public DeepSeekService(
             @Value("${deepseek.api.key:}") String apiKey,
@@ -35,7 +34,7 @@ public class DeepSeekService {
     ) {
         this.apiKey = apiKey;
         this.apiUrl = apiUrl;
-        this.webClient = WebClient.builder()
+        this.restClient = RestClient.builder()
                 .baseUrl(apiUrl)
                 .defaultHeader("Authorization", "Bearer " + (apiKey == null ? "" : apiKey))
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
@@ -50,16 +49,14 @@ public class DeepSeekService {
         try {
             log.info("DeepSeek: POST {}/chat/completions model={}", apiUrl, request.getModel());
 
-            return webClient.post()
+            return restClient.post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(DeepSeekResponse.class)
-                    .block(Duration.ofSeconds(30));
+                    .body(DeepSeekResponse.class);
 
-        } catch (WebClientResponseException e) {
-            // fix deprecated getRawStatusCode(); also decode body safely
+        } catch (RestClientResponseException e) {
             final int code = e.getStatusCode().value();
             final String body = e.getResponseBodyAsString(StandardCharsets.UTF_8);
             log.error("DeepSeek HTTP {}: {}", code, body);
