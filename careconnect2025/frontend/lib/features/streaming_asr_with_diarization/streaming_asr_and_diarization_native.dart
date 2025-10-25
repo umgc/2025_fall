@@ -579,6 +579,7 @@ class _StreamingAsrAndDiarizationScreenState
       id: '',
       patientId: widget.patientId!,
       note: _textToDisplay,
+      aiSummary: '',
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     );

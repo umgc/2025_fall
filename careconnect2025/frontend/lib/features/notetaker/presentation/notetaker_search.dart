@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:collection/collection.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
@@ -286,9 +285,12 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     });
   }
 
-  void _onNoteSelected(PatientNote note) {
+  void _onNoteSelected(PatientNote note) async {
     // Navigate to detail view with note
-    context.push('/notetaker/detail/${note.id}', extra: note);
+    final result = await context.push('/notetaker/detail/${note.id}', extra: note);
+    if (result == true) {
+      await _fetchPatientData(int.parse(_selectedPatientId!));
+    }
   }
 
   Widget _buildNotesSection(ThemeData theme) {
