@@ -1,4 +1,5 @@
 import 'package:care_connect_app/features/ai/presentation/pages/voice_command_ai.dart';
+import 'package:care_connect_app/widgets/ai_chat_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/services/deepseek_service.dart';
@@ -158,6 +159,28 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
                   ),
                 ),
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const AIChatModal(role: 'patient'),
+                    );
+                  },
+                  icon: const Icon(Icons.smart_toy, size: 16),
+                  label: const Text('Use AI Service'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -269,7 +292,20 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
 
                     if (!mounted) return;
 
-                    widget.onSymptomAdded?.call(saved);
+                    // Transform API response to UI format for SymptomCard
+                    final String severityLabel = _selectedSeverity.toLowerCase();
+                    final uiSymptom = {
+                      'title': display,
+                      'severity': severityLabel,
+                      'time': 'Just now',
+                      'description': _notesController.text.trim().isNotEmpty
+                          ? _notesController.text.trim()
+                          : 'No additional notes',
+                      'requiresAttention': _selectedSeverity == 'Severe',
+                      'caregiverAlert': _selectedSeverity == 'Severe',
+                    };
+
+                    widget.onSymptomAdded?.call(uiSymptom);
                     _symptomController.clear();
                     _notesController.clear();
                     _symptomKeyField = null;

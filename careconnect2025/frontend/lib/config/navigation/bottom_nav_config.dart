@@ -101,7 +101,7 @@ class BottomNavConfig {
         screen: const PatientHomeTab(),
       ),
       BottomNavItem(
-        label: 'Symptoms',
+        label: 'Symptoms and Allergies',
         labelKey: 'nav_symptoms',
         icon: Icons.medical_information_outlined,
         activeIcon: Icons.medical_information,
@@ -109,7 +109,7 @@ class BottomNavConfig {
         screen: const SymptomsAllergiesPage(),
       ),
       BottomNavItem(
-        label: 'Check-In',
+        label: 'Virtual Check-In',
         labelKey: 'nav_health',
         icon: Icons.health_and_safety_outlined,
         activeIcon: Icons.health_and_safety,

@@ -180,7 +180,7 @@ class _SymptomsAllergiesPageState extends State<SymptomsAllergiesPage>
                           ),
                         ),
                       )
-                    else
+                    else if (_patientId != null)
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
