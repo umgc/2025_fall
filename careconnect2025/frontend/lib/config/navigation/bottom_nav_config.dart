@@ -125,9 +125,9 @@ class BottomNavConfig {
         screen: MessagesListPage(),
       ),
       BottomNavItem(
-        label: 'More',
+        label: 'Menu',
         labelKey: 'nav_more',
-        icon: Icons.more_horiz_outlined,
+        icon: Icons.menu_outlined,
         activeIcon: Icons.menu,
         routeName: 'menupage',
         screen: const MenuPage(),
