@@ -248,7 +248,7 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
     final searchText = _searchController.text.toLowerCase();
     if (searchText.isNotEmpty) {
       notes = notes.where((note) {
-        return note.note.toLowerCase().contains(searchText);
+        return note.aiSummary.toLowerCase().contains(searchText);
       }).toList();
     }
 
@@ -287,7 +287,10 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
 
   void _onNoteSelected(PatientNote note) async {
     // Navigate to detail view with note
-    final result = await context.push('/notetaker/detail/${note.id}', extra: note);
+    final result = await context.push(
+      '/notetaker/detail/${note.id}',
+      extra: note,
+    );
     if (result == true) {
       await _fetchPatientData(int.parse(_selectedPatientId!));
     }
@@ -392,9 +395,9 @@ class _NotetakerSearchPageState extends State<NotetakerSearchPage> {
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 title: Text(
-                  note.note.length > 100
-                      ? '${note.note.substring(0, 100)}...'
-                      : note.note,
+                  note.aiSummary.length > 100
+                      ? '${note.aiSummary.substring(0, 100)}...'
+                      : note.aiSummary,
                   style: TextStyle(
                     fontSize: 14,
                     color: theme.colorScheme.onSurface,

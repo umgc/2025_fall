@@ -107,9 +107,10 @@ public class PatientNotetakerService {
         newNote.setPatientId(patientId);
         newNote.setCreatedAt(LocalDateTime.now());
         newNote.setUpdatedAt(LocalDateTime.now());
+        newNote.setAiSummary(processAiSummary(noteDTO.getNote()));
         PatientNoteDTO result = new PatientNoteDTO(patientNoteRepository.save(newNote));
         detectKeyWords(patientId, newNote.getNote());
-        newNote.setAiSummary(processAiSummary(noteDTO.getNote()));
+       
         return result;
     }
 
@@ -122,7 +123,11 @@ public class PatientNotetakerService {
         PatientNote existingNote = patientNoteRepository.findById(noteId).orElseThrow();
         existingNote.setPatientId(patientId);
         existingNote.setNote(noteDTO.getNote());
-        existingNote.setAiSummary(noteDTO.getAiSummary());
+        if(!noteDTO.getAiSummary().isBlank() || !noteDTO.getAiSummary().isEmpty()) {
+            existingNote.setAiSummary(noteDTO.getAiSummary());
+        } else {
+            existingNote.setAiSummary(processAiSummary(noteDTO.getNote()));
+        }
         existingNote.setUpdatedAt(LocalDateTime.now());
         return new PatientNoteDTO(patientNoteRepository.save(existingNote));
     }
@@ -224,12 +229,12 @@ public class PatientNotetakerService {
 
     @Async
     private String processAiSummary(String noteContent) {
-        String prompt = "Summarize the following conversation transcription in concise sentences, focusing on key health information and any action items or takeaways: '"
+        String prompt = "Given the following converation transcription, summarize the following into a maximum of 1-2 concise sentences, focusing on key health information and any action items or takeaways. Specify which individual identified in the conversation each item pertains to: '"
                 + noteContent + "'";
 
         OpenRouterChatRequest request = new OpenRouterChatRequest(
                 model,
-                Arrays.asList(new Message("system", "You are a helpful assistant. "),new Message("user", prompt)),
+                Arrays.asList(new Message("system", "You are a helpful assistant who's main focus is to summarize detailed conversations into simple, concise takeways. do not use verbose language or symbols."),new Message("user", prompt)),
                 0.2,
                 256);
 
@@ -238,12 +243,13 @@ public class PatientNotetakerService {
             response = openRouterService.sendChatRequest(request);
         } catch (Exception e) {
             log.error("Unable to reach OpenRouter service: {}", e.getMessage());
-            return "AI summary generation Failed.";
+            return "Failed to generate AI Summary";
         }
         String aiSummary = null;
         if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()
                 && response.getChoices().get(0).getMessage() != null) {
             aiSummary = response.getChoices().get(0).getMessage().getContent();
+            aiSummary = aiSummary.split("<")[0].trim();
         } else {
             aiSummary = "";
         }
