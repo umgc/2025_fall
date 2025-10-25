@@ -1,11 +1,16 @@
 import 'dart:io';
 
+import 'package:care_connect_app/core/services/api_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
 import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+
+import '../../../../config/env_constant.dart';
+import '../../../../providers/user_provider.dart';
 
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
@@ -17,7 +22,12 @@ class PatientVirtualCheckIn extends StatefulWidget {
 class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   int? selectedMood;
   final TextEditingController _notesController = TextEditingController();
-  final String apiURL = "placeholder";
+  late final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+  static final String root = getBackendBaseUrl();
+  final String apiURL = '$root/v1/api/checkins/';
+  late final String userID = userProvider.user!.patientId! as String;
+
   late Future<VideoWidget> videoWidget;
   late bool showVideoCall = false;
   late bool currentlyRecording = false;
@@ -79,7 +89,6 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   }
 
   void submitVideo() async {
-    // TODO: Implement video submission logic
     // This is where you would upload/save the video recording
     if(!recordingStarted)
       {
@@ -93,11 +102,14 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
       }
 
     XFile video = await controller.stopVideoRecording();
-    await http.post(Uri.parse(apiURL)); ///TODO: Add a proper body that includes XFile Video
+
+    final response = await http.post(Uri.parse('$apiURL/$userID/video'),
+    body: video);
+    String responseString = response.body;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Video submitted successfully! (placeholder)"),
+        content: Text("Video Submitted"),
         backgroundColor: Colors.green,
       ),
     );
