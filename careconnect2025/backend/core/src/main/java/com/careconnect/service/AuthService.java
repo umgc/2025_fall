@@ -434,11 +434,11 @@ public LoginResponse loginV2(LoginRequest req,
 
     switch (user.getRole()) {
         case PATIENT -> {
-            Patient p = patients.findByUser(user).orElse(null);
+            Patient p = patients.findByUserId(user.getId()).orElse(null);
             if (p != null) { patientId = p.getId(); name = p.getFirstName()+" "+p.getLastName(); }
         }
         case CAREGIVER -> {
-            Caregiver c = caregivers.findByUser(user).orElse(null);
+            Caregiver c = caregivers.findByUserId(user.getId()).orElse(null);
             if (c != null) { caregiverId = c.getId(); name = c.getFirstName()+" "+c.getLastName(); }
         }
         case FAMILY_MEMBER -> {

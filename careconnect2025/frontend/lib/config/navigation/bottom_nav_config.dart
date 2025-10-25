@@ -2,7 +2,6 @@ import 'package:care_connect_app/config/navigation/caregiver_more_features_botto
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
-import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
@@ -184,10 +183,9 @@ static List<BottomNavItem> getCaregiverNavItems() {
         screen: const CaregiverMessagesTab(),
       ),
       BottomNavItem(
-        label: 'More',
-        labelKey: 'nav_more',
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more,
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu_open,
         routeName: 'profile',
         onPress: (context, builder) {
           showModalBottomSheet<void>(

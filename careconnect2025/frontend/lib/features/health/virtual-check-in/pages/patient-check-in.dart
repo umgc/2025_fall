@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/default_app_header.dart';
+import 'package:care_connect_app/widgets/video_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
-
+import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
 
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
@@ -14,7 +18,13 @@ class PatientVirtualCheckIn extends StatefulWidget {
 class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   int? selectedMood;
   final TextEditingController _notesController = TextEditingController();
-
+  final String apiURL = "placeholder";
+  late Future<VideoWidget> videoWidget;
+  late bool showVideoCall = false;
+  late bool currentlyRecording = false;
+  late bool recordingStarted = false;
+  late Future<CameraDescription> targetCamera;
+  late CameraController controller;
   final List<Map<String, dynamic>> moodOptions = [
     {"value": 1, "emoji": "😢", "label": "Very Sad"},
     {"value": 2, "emoji": "😞", "label": "Sad"},
@@ -23,10 +33,116 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     {"value": 5, "emoji": "😊", "label": "Great"},
   ];
 
+  late bool videoCallActive = false;
+
+  Future<CameraDescription> setUpCamera() async
+  {
+    WidgetsFlutterBinding.ensureInitialized();
+    final cameras = await availableCameras();
+    return cameras.first;
+  }
+
+  void cameraHandler() async
+  {
+    if(!videoCallActive)
+      {
+        targetCamera = setUpCamera();
+        showVideoCall = true;
+        videoCallActive = true;
+        controller = CameraController(await targetCamera, ResolutionPreset.medium);
+        setState(() {
+        });
+      }
+  }
+
+  Future<void> startRecording() async
+  {
+    if(!recordingStarted)
+      {
+        controller.startVideoRecording();
+      }
+    else
+      {
+        controller.resumeVideoRecording();
+      }
+    recordingStarted = true;
+    setState(() {
+      currentlyRecording = true;
+    });
+  }
+
+  Future<void> pauseRecording() async
+  {
+    controller.pauseVideoRecording();
+    setState(() {
+      currentlyRecording = false;
+    });
+  }
+
+  void submitVideo() async {
+    // TODO: Implement video submission logic
+    // This is where you would upload/save the video recording
+    if(!recordingStarted)
+      {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Cannot submit, no video recorded."),
+            backgroundColor: Colors.grey,
+          ),
+        );
+        return;
+      }
+
+    XFile video = await controller.stopVideoRecording();
+    await http.post(Uri.parse(apiURL)); ///TODO: Add a proper body that includes XFile Video
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Video submitted successfully! (placeholder)"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // Close the video recording
+    setState(() {
+      currentlyRecording = false;
+      showVideoCall = false;
+      videoCallActive = false;
+    });
+  }
+
+  void discardVideo() async {
+    // Close the video recording without saving
+    setState(() {
+      currentlyRecording = false;
+      showVideoCall = false;
+      videoCallActive = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Video discarded"),
+        backgroundColor: Colors.grey,
+      ),
+    );
+  }
+
+  ///Done: Add a pause/start functionality
+  ///TODO: Add a preview
+  ///Done: Control the camera with code
+  ///TODO: Submit video file
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)  {
     return Scaffold(
       appBar: DefaultAppHeader(),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        onPressed: () => cameraHandler(),
+        tooltip: 'Start Video Call',
+        child: const Icon(Icons.video_call),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -52,6 +168,80 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                   const SizedBox(height: 16),
                 ],
               ),
+
+              // Video call widget
+              if(showVideoCall)
+                Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        const VideoWidget(),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: discardVideo,
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Discard'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey[600],
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: submitVideo,
+                                icon: const Icon(Icons.check_circle_outline),
+                                label: const Text('Submit'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            if(!currentlyRecording)
+                              Expanded(
+                              child: ElevatedButton.icon(
+                              label: Text("Start"),
+                              onPressed: startRecording,
+                              icon: const Icon(Icons.square),
+                              style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              ),
+                              ),
+                            if(currentlyRecording)
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  label: Text("Pause"),
+                                  onPressed: startRecording,
+                                  icon: const Icon(Icons.pause),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if(showVideoCall)
+                const SizedBox(height: 16),
 
               // Mood selection card
               Card(
@@ -196,7 +386,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                     style: TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
-                )
+                ),
             ],
           ),
         ),

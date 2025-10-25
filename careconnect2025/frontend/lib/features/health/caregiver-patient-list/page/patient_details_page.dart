@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 // Header
 import '../widgets/patient_header_card.dart';
@@ -13,7 +16,6 @@ import '../widgets/mood_history_card.dart';
 // Health tab
 import '../models/symptom_entry.dart';
 import '../widgets/recent_symptom_card.dart';
-import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
 // Virtual Check-in history
@@ -22,10 +24,127 @@ import '../widgets/virtual_check_in_config_sheet.dart';
 import '../widgets/virtual_check_in_history_card.dart';
 import '../models/virtual_check_in_question.dart';
 
-class PatientDetailsPage extends StatelessWidget {
+// API and models
+import '../../../../services/api_service.dart';
+import '../../../health/medication-tracker/models/medication-model.dart';
+import '../../../../providers/user_provider.dart';
+
+class PatientDetailsPage extends StatefulWidget {
   final String patientId;
 
   const PatientDetailsPage({super.key, required this.patientId});
+
+  @override
+  State<PatientDetailsPage> createState() => _PatientDetailsPageState();
+}
+
+class _PatientDetailsPageState extends State<PatientDetailsPage> {
+  List<Medication> medications = [];
+  bool _isLoadingMedications = false;
+  String? _medicationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedications();
+  }
+
+  /// Fetch medications from the backend API
+  Future<void> _fetchMedications() async {
+    setState(() {
+      _isLoadingMedications = true;
+      _medicationError = null;
+    });
+
+    try {
+      // Parse patientId from String to int
+      final patientIdInt = int.tryParse(widget.patientId);
+
+      if (patientIdInt == null) {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Invalid patient ID';
+        });
+        return;
+      }
+
+      final http.Response resp = await ApiService.getPatientMedicationsForPatient(patientIdInt);
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+
+        setState(() {
+          medications = data.map((json) => Medication.fromJson(json)).toList();
+          _isLoadingMedications = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Failed to load medications: ${resp.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingMedications = false;
+        _medicationError = 'Error loading medications: $e';
+      });
+    }
+  }
+
+  /// Build the medications section with loading/error handling
+  Widget _buildMedicationsSection() {
+    if (_isLoadingMedications) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_medicationError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.error,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _medicationError!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _fetchMedications,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Get caregiverId from user provider
+    final caregiverId = Provider.of<UserProvider>(context, listen: false).user?.caregiverId;
+
+    return CurrentMedicationsSection(
+      entries: medications,
+      onMedicationUpdated: _fetchMedications, // Refresh medications after delete/approve
+      caregiverId: caregiverId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,39 +220,6 @@ class PatientDetailsPage extends StatelessWidget {
         name: 'No symptoms reported',
         severity: 'Mild',
         note: 'Feeling much better, no symptoms reported',
-      ),
-    ];
-
-    final medicationEntries = <MedicationEntry>[
-      MedicationEntry(
-        id: 'm1',
-        name: 'Metformin',
-        dosage: '500mg',
-        frequency: 'Twice daily',
-        startedOn: DateTime(2024, 1, 15),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 95,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm2',
-        name: 'Lisinopril',
-        dosage: '10mg',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 3, 10),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 92,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm3',
-        name: 'Vitamin D3',
-        dosage: '2000 IU',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 2, 1),
-        lastTakenAt: DateTime(2024, 12, 26, 8, 0),
-        compliancePct: 87,
-        status: MedicationStatus.active,
       ),
     ];
 
@@ -261,7 +347,7 @@ class PatientDetailsPage extends StatelessWidget {
                     children: [
                       RecentSymptomsSection(entries: symptomEntries),
                       const SizedBox(height: 8),
-                      CurrentMedicationsSection(entries: medicationEntries),
+                      _buildMedicationsSection(),
                     ],
                   ),
 
