@@ -537,13 +537,14 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         color: Colors.deepPurple,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(
+                      child: SelectionArea(
+                          child: Text(
                         logSource.sortedData[selected!].getStringForColumn(3),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                         ),
-                      ))),
+                      )))),
               Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
