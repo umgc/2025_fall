@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/evv_service.dart';
 import '../../../../widgets/common_drawer.dart';
@@ -75,7 +76,14 @@ class _EvvDashboardState extends State<EvvDashboard> {
     if (_isLoading) {
       return Scaffold(
         drawer: const CommonDrawer(currentRoute: '/evv/dashboard'),
-        appBar: AppBarHelper.createAppBar(context, title: 'EVV Dashboard'),
+        appBar: AppBarHelper.createAppBar(
+          context,
+          title: 'EVV Dashboard',
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/dashboard'),
+          ),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -85,6 +93,10 @@ class _EvvDashboardState extends State<EvvDashboard> {
       appBar: AppBarHelper.createAppBar(
         context,
         title: 'EVV Dashboard',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/dashboard'),
+        ),
         additionalActions: [
           if (_offlineQueue.isNotEmpty)
             IconButton(

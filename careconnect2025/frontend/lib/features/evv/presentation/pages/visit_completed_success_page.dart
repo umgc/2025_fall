@@ -174,7 +174,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
   }
 
   void _goToDashboard() {
-    context.go('/dashboard?role=CAREGIVER');
+    context.go('/evv');
   }
 
   void _exportVisitData() {
@@ -313,9 +313,9 @@ IEA*1*$controlNumber~
         title: const Text('Visit Completed'),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            onPressed: () => context.go('/evv'),
             icon: const Icon(Icons.cancel, color: Colors.red),
-            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            label: const Text('Close', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
