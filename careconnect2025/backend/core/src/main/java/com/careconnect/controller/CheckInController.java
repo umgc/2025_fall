@@ -23,6 +23,13 @@ public class CheckInController {
         return ResponseEntity.ok(new CheckIn());
     }
 
+   @PostMapping("/{patientID}/video")
+    public ResponseEntity<String> videoCheckIn(@PathVariable Long id)
+    {
+
+        return ResponseEntity.ok("Placeholder");
+    }
+
     @GetMapping()
     public ResponseEntity<List<CheckIn>> getCheckIns() {
         // Fetch all check-ins (placeholder)
