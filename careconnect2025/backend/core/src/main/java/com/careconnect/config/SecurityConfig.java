@@ -85,6 +85,7 @@ public class SecurityConfig {
 
                         /* ---------- Require JWT for these APIs ------------------------ */
                         .requestMatchers("/v1/api/patients/**").authenticated()
+                        .requestMatchers("/v1/api/caregivers/**").authenticated()
                         .requestMatchers("/v1/api/allergies/**").authenticated()
                         .requestMatchers("/v1/api/symptoms/**").authenticated()
                         .requestMatchers("/v1/api/ai/**", "/api/ai/**").authenticated()

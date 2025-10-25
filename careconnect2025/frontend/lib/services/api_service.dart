@@ -967,10 +967,15 @@ class ApiService {
 
     print('🔍 addExistingPatientToCaregiver caregiverId: $caregiverId');
     print('🔍 patientEmail: $patientEmail');
+    print('🔍 Headers: $headers');
+    print('🔍 Has Authorization header: ${headers.containsKey('Authorization')}');
+
+    final url = '${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add';
+    print('🔍 URL: $url');
 
     return await _httpClient
         .post(
-          Uri.parse('${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add'),
+          Uri.parse(url),
           headers: headers,
           body: jsonEncode({'email': patientEmail}),
         )

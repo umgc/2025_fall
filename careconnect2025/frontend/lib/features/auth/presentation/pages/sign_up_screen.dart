@@ -14,7 +14,15 @@ class RegistrationPage extends StatefulWidget {
   /// When true, the role selector is disabled and remains fixed to [initialRole]
   final bool lockRole;
 
-  const RegistrationPage({super.key, this.initialRole, this.lockRole = false});
+  /// When true, skip the email verification dialog and just close the modal
+  final bool skipEmailVerification;
+
+  const RegistrationPage({
+    super.key,
+    this.initialRole,
+    this.lockRole = false,
+    this.skipEmailVerification = false,
+  });
 
   @override
   State<RegistrationPage> createState() => _RegistrationPageState();
@@ -233,19 +241,25 @@ class _RegistrationPageState extends State<RegistrationPage> {
         await _submitCaregiverRegistration();
       }
 
-      if (mounted) {
-        // Show email verification dialog and wait for result
-        final verified = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) =>
-              EmailVerificationDialog(email: _emailController.text),
-        );
+      if (!mounted) return;
 
-        // If email was verified, navigate to login screen
-        if (verified == true && mounted) {
-          context.go('/login');
-        }
+      // If skipEmailVerification is true, just close the modal and return true
+      if (widget.skipEmailVerification) {
+        Navigator.of(context).pop(true);
+        return;
+      }
+
+      // Show email verification dialog and wait for result
+      final verified = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) =>
+            EmailVerificationDialog(email: _emailController.text),
+      );
+
+      // If email was verified, navigate to login screen
+      if (verified == true && mounted) {
+        context.go('/login');
       }
     } catch (e) {
       if (mounted) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/models/patient-info.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient-info-card.dart';
 import 'package:care_connect_app/widgets/default_app_header.dart';
@@ -352,17 +353,48 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   ///
   /// Opens a dialog or navigates to a screen where caregivers can register
   /// new patients who don't have accounts yet. This creates a new patient account.
-  void _onRegisterPatient() {
-    // TODO: Implement register patient functionality
-    // Navigate to patient registration screen or show dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Register Patient functionality coming soon!'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        behavior: SnackBarBehavior.floating,
-      ),
+  Future<void> _onRegisterPatient() async {
+    final theme = Theme.of(context);
+
+    // Open the registration page as a modal, preconfigured for a Patient
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.95,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: const RegistrationPage(
+            initialRole: 'Patient',
+            lockRole: true,
+            skipEmailVerification: true,
+          ),
+        );
+      },
     );
+
+    // If registration was submitted, show a confirmation message
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Patient should receive a registration email.'),
+          backgroundColor: theme.colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Optionally refresh the list after closing the modal
+      await _loadPatients();
+    }
   }
+
 
   /// Builds the main UI for the caregiver patient list screen.
   ///
