@@ -47,11 +47,17 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     if(!videoCallActive)
       {
         targetCamera = setUpCamera();
-        showVideoCall = true;
         videoCallActive = true;
         controller = CameraController(await targetCamera, ResolutionPreset.medium);
-        setState(() {
-        });
+
+        // Initialize the camera controller
+        await controller.initialize();
+
+        if (mounted) {
+          setState(() {
+            showVideoCall = true;
+          });
+        }
       }
   }
 
@@ -225,8 +231,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                             if(currentlyRecording)
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  label: Text("Pause"),
-                                  onPressed: startRecording,
+                                  label: const Text("Pause"),
+                                  onPressed: pauseRecording,
                                   icon: const Icon(Icons.pause),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blueAccent,
