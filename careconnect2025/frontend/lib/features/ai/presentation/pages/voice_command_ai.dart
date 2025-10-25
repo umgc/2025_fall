@@ -6,7 +6,12 @@ import 'package:porcupine_flutter/porcupine.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class VoiceCommandAI extends StatefulWidget {
-  const VoiceCommandAI({super.key});
+  final bool singleShot;
+
+  const VoiceCommandAI({
+    super.key,
+    this.singleShot = false,
+  });
 
   @override
   State<VoiceCommandAI> createState() => _VoiceCommandAIState();
@@ -20,6 +25,8 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   bool _wakeDetected = false;
   Timer? _timeoutTimer;
 
+  String _buffer = '';
+
   @override
   void initState() {
     super.initState();
@@ -28,22 +35,27 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   }
 
   Future<void> _initPorcupine() async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     try {
-      _porcupine = await PorcupineManager.fromBuiltInKeywords(
+      final mgr = await PorcupineManager.fromBuiltInKeywords(
         'Qxjb+VJuMnPDRseioWb9czxnyKe7EWFMdNNMbIWrJiARG2q9Tvo5XA==',
         [BuiltInKeyword.PORCUPINE],
         _onWakeDetected,
       );
+
+      if (!mounted) return;
+      _porcupine = mgr;
+
       await _porcupine?.start();
     } on PorcupineException catch (e) {
-      // Log and show the full error message
       debugPrint('Porcupine init failed: ${e.message}');
-      ScaffoldMessenger.of(context).showSnackBar(
+
+      messenger?.showSnackBar(
         SnackBar(content: Text('Wake word init error: ${e.message}')),
       );
-    } catch (e) {
-      // Fallback for other error types
-      debugPrint('Unexpected init error: $e');
+    } catch (e, st) {
+      debugPrint('Unexpected init error: $e\n$st');
     }
   }
 
@@ -60,16 +72,20 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
       setState(() => _isListening = true);
 
       _speech.listen(
-        listenFor: const Duration(seconds: 3),
+        listenFor: const Duration(seconds: 12),
+        pauseFor: const Duration(seconds: 2),
         onResult: (r) {
+          if (r.recognizedWords.isNotEmpty) {
+            _buffer = r.recognizedWords;
+          }
           if (r.finalResult) {
             _timeoutTimer?.cancel();
-            _process(r.recognizedWords);
+            _process(_buffer.isNotEmpty ? _buffer : r.recognizedWords);
           }
         },
         listenOptions: stt.SpeechListenOptions(
           cancelOnError: true,
-          partialResults: false,
+          partialResults: true,
           listenMode: stt.ListenMode.dictation,
           onDevice: false,
           autoPunctuation: true,
@@ -77,7 +93,7 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
         ),
       );
 
-      _timeoutTimer = Timer(const Duration(seconds: 3), _onTimeout);
+      _timeoutTimer = Timer(const Duration(seconds: 12), _onTimeout);
     } else {
       _showError('Mic permission denied');
       _reset();
@@ -87,6 +103,12 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   void _process(String words) {
     final cmd = words.toLowerCase().trim();
     debugPrint('Heard: $cmd');
+
+    if (widget.singleShot) {
+      Navigator.of(context).pop<String>(words);
+      _reset();
+      return;
+    }
 
     if (cmd.contains('take me home')) {
       Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
@@ -102,8 +124,16 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
 
   void _onTimeout() {
     if (_isListening) {
-      _showError('Listening timed out — please say the command faster.');
-      _reset();
+      final txt = _buffer.trim().isNotEmpty
+          ? _buffer
+          : _speech.lastRecognizedWords; // fallback just in case
+
+      if (txt.trim().isNotEmpty) {
+        _process(txt);
+      } else {
+        _showError('Listening timed out.');
+        _reset();
+      }
     }
   }
 
@@ -114,6 +144,7 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   void _reset() {
     _timeoutTimer?.cancel();
     _speech.stop();
+    _buffer = '';
     setState(() {
       _isListening = false;
       _wakeDetected = false;
@@ -121,8 +152,25 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   }
 
   void _onMicPressed() {
-    setState(() => _wakeDetected = true);
-    _startListening();
+    if (_isListening) {
+      // Stop listening and process what we have
+      _timeoutTimer?.cancel();
+      _speech.stop();
+
+      final text = _buffer.trim().isNotEmpty
+          ? _buffer
+          : _speech.lastRecognizedWords;
+
+      if (text.trim().isNotEmpty) {
+        _process(text);
+      } else {
+        _showError('No speech detected.');
+        _reset();
+      }
+    } else {
+      setState(() => _wakeDetected = true);
+      _startListening();
+    }
   }
 
   @override

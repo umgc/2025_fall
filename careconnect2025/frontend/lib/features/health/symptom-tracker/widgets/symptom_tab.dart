@@ -3,7 +3,9 @@ import 'symptom_input_form.dart';
 import 'symptom_card.dart';
 
 class SymptomTab extends StatefulWidget {
-  const SymptomTab({Key? key}) : super(key: key);
+  final String patientId;
+
+  const SymptomTab({super.key, required this.patientId});
 
   @override
   State<SymptomTab> createState() => _SymptomTabState();
@@ -73,7 +75,10 @@ class _SymptomTabState extends State<SymptomTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SymptomInputForm(onSymptomAdded: _addSymptom),
+          SymptomInputForm(
+            patientId: widget.patientId,
+            onSymptomAdded: _addSymptom,
+          ),
           const SizedBox(height: 24),
           Text(
             'Recent Mental Health Symptoms',

@@ -1,4 +1,5 @@
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
+import 'package:care_connect_app/widgets/default_app_header.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/pages/patient_check_in.dart';
 
@@ -25,10 +26,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBarHelper.createAppBar(
-        context,
-        title: 'Daily Check-In',
-      ),
+      appBar: DefaultAppHeader(),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

@@ -4,6 +4,8 @@ import 'package:care_connect_app/features/health/symptom-tracker/widgets/allergi
 import 'package:care_connect_app/widgets/default_app_header.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/widgets/symptom_tab.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
 
 class SymptomsAllergiesPage extends StatefulWidget {
   const SymptomsAllergiesPage({super.key});
@@ -16,10 +18,45 @@ class _SymptomsAllergiesPageState extends State<SymptomsAllergiesPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  String? _patientId;
+  bool _isResolving = true;
+  String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _resolvePatientId();
+  }
+
+  Future<void> _resolvePatientId() async {
+    setState(() {
+      _isResolving = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final pid = userProvider.user?.patientId;
+
+      if (pid == null || pid == 0) {
+        setState(() {
+          _errorMessage = 'Patient ID not found';
+          _isResolving = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _patientId = pid.toString();
+        _isResolving = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error resolving patient ID: $e';
+        _isResolving = false;
+      });
+    }
   }
 
   @override
@@ -108,10 +145,50 @@ class _SymptomsAllergiesPageState extends State<SymptomsAllergiesPage>
                         ],
                       ),
                     ),
+                    if (_isResolving)
+                      const Expanded(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_errorMessage != null)
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.error_outline,
+                                  color: Theme.of(context).colorScheme.error,
+                                  size: 48),
+                              const SizedBox(height: 12),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .error),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton.icon(
+                                onPressed: _resolvePatientId,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
-                        children: const [SymptomTab(), AllergiesTab()],
+                        children: [
+                          // pass it down here
+                          SymptomTab(patientId: _patientId!),
+                          AllergiesTab(patientId: _patientId!),
+                        ],
                       ),
                     ),
                   ],

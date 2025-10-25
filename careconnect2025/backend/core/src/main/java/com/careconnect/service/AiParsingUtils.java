@@ -1,0 +1,49 @@
+package com.careconnect.service;
+
+import com.careconnect.service.DeepSeekService.DeepSeekResponse;
+import com.careconnect.service.DeepSeekService.Message;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Locale;
+import java.util.Optional;
+
+final class AiParsingUtils {
+    private AiParsingUtils() {}
+
+    static String extractContent(DeepSeekResponse resp) {
+        try {
+            return Optional.ofNullable(resp.getChoices())
+                    .filter(c -> !c.isEmpty())
+                    .map(c -> c.get(0).getMessage())
+                    .map(Message::getContent)
+                    .orElse("");
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    static JsonNode tryParseJson(ObjectMapper om, String content) {
+        if (content == null || content.isBlank()) return null;
+        try {
+            return om.readTree(content);
+        } catch (Exception e) {
+            return null; // let caller fall back
+        }
+    }
+
+    static String asText(JsonNode node, String key) {
+        return node != null && node.has(key) && !node.get(key).isNull()
+                ? node.get(key).asText("")
+                : "";
+    }
+
+    static String normalizeSeverity(String raw) {
+        if (raw == null) return "";
+        String v = raw.trim().toUpperCase(Locale.ROOT);
+        if (v.contains("MILD")) return "MILD";
+        if (v.contains("MODERATE")) return "MODERATE";
+        if (v.contains("SEVERE")) return "SEVERE";
+        return "";
+    }
+}
