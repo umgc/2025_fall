@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.careconnect.dto.PatientNoteDTO;
 import com.careconnect.dto.PatientNotetakerConfigDTO;
 import com.careconnect.dto.v2.TaskDtoV2;
-import com.careconnect.model.Patient;
 import com.careconnect.model.PatientNote;
 import com.careconnect.model.PatientNotetakerConfig;
 import com.careconnect.model.PatientNotetakerKeyword;
@@ -39,7 +38,6 @@ public class PatientNotetakerService {
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
     private final String model = "deepseek/deepseek-chat-v3.1:free";
-
 
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
@@ -123,7 +121,7 @@ public class PatientNotetakerService {
         PatientNote existingNote = patientNoteRepository.findById(noteId).orElseThrow();
         existingNote.setPatientId(patientId);
         existingNote.setNote(noteDTO.getNote());
-        if(!noteDTO.getAiSummary().isBlank() || !noteDTO.getAiSummary().isEmpty()) {
+        if((!noteDTO.getAiSummary().isBlank() || !noteDTO.getAiSummary().isEmpty()) && noteDTO.getAiSummary() != "Failed to generate AI Summary") {
             existingNote.setAiSummary(noteDTO.getAiSummary());
         } else {
             existingNote.setAiSummary(processAiSummary(noteDTO.getNote()));
