@@ -148,7 +148,6 @@ public class PatientNotetakerService {
         List<String> foundKeywords = new ArrayList<>();
         //make lowercase for case insensitive comparisions
         fileData = fileData.toLowerCase();
-        //TODO add defaults and parse those out as well.
         for(PatientNotetakerKeyword keyword : keywords) {
             String lowercaseKeyword = keyword.getKeyword().toLowerCase();
             if(fileData.contains(lowercaseKeyword)) {
@@ -225,7 +224,7 @@ public class PatientNotetakerService {
 
     @Async
     private String processAiSummary(String noteContent) {
-        String prompt = "Summarize the following conversation transcription in a 2-3 concise sentences, focusing on key health information and any action items or takeaways: '"
+        String prompt = "Summarize the following conversation transcription in concise sentences, focusing on key health information and any action items or takeaways: '"
                 + noteContent + "'";
 
         OpenRouterChatRequest request = new OpenRouterChatRequest(
