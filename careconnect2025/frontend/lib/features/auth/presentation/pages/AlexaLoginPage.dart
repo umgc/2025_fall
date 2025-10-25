@@ -7,6 +7,8 @@ import '../../../../providers/user_provider.dart';
 import '../../../../services/enhanced_auth_service.dart';
 import '../../../../services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 
 class AlexaLoginPage extends StatefulWidget {
   const AlexaLoginPage({super.key});
@@ -59,7 +61,24 @@ class _AlexaLoginPageState extends State<AlexaLoginPage> {
       }
     });
   }
+Map<String, String> _mergedQueryParamsFromUriBase() {
+  final base = Uri.base; 
+  final preHash = base.queryParameters;
 
+
+  final frag = base.fragment.trim();
+  Map<String, String> postHash = const {};
+
+  if (frag.isNotEmpty) {
+    final normalized = frag.startsWith('/') ? frag : '/$frag';
+    final fragUri = Uri.tryParse(normalized);
+    if (fragUri != null) {
+      postHash = fragUri.queryParameters;
+    }
+  }
+
+  return {...preHash, ...postHash};
+}
   /// Check if this is an Alexa OAuth flow by looking at URL parameters
   void _checkForAlexaOAuthParams() {
     _log("🔍 Checking for Alexa OAuth parameters...");
@@ -68,17 +87,14 @@ class _AlexaLoginPageState extends State<AlexaLoginPage> {
       // Try to get URL query parameters from GoRouter
       final routeState = GoRouter.of(context).routerDelegate.currentConfiguration;
       final uri = routeState.uri;
-      
+      final qp = _mergedQueryParamsFromUriBase();
+
       _log("Current URI: $uri");
       _log("Query Parameters: ${uri.queryParameters}");
       
-      // Check URL query parameters first
-      if (uri.queryParameters.isNotEmpty) {
-        _redirectUri = uri.queryParameters['redirect_uri'];
-        _state = uri.queryParameters['state'];
-        _log("✓ Got params from URL query - redirect_uri: $_redirectUri, state: $_state");
-      }
-      
+      _redirectUri = qp['redirect_uri'];
+      _state = qp['state'];
+
       // Fall back to route extra if query params don't have it
       if (_redirectUri == null) {
         final extra = routeState.extra;
