@@ -15,6 +15,7 @@ public class PatientNoteDTO {
     private Long id;
     private Long patientId;
     private String note;
+    private String aiSummary;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -23,12 +24,14 @@ public class PatientNoteDTO {
         Long id,
         Long patientId,
         String note,
+        String aiSummary,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
     ) {
         this.id = id;
         this.patientId = patientId;
         this.note = note;
+        this.aiSummary = aiSummary;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -38,6 +41,7 @@ public class PatientNoteDTO {
             this.id = patientNote.getId();
             this.patientId = patientNote.getPatientId();
             this.note = patientNote.getNote();
+            this.aiSummary = patientNote.getAiSummary();
             this.createdAt = patientNote.getCreatedAt();
             this.updatedAt = patientNote.getUpdatedAt();
         }
@@ -45,6 +49,7 @@ public class PatientNoteDTO {
             this.id = null;
             this.patientId = null;
             this.note = null;
+            this.aiSummary = null;
             this.createdAt = null;
             this.updatedAt = null;
         }
@@ -55,6 +60,7 @@ public class PatientNoteDTO {
             .id(this.id)
             .patientId(this.patientId)
             .note(this.note)
+            .aiSummary(this.aiSummary)
             .createdAt(createdAt)
             .updatedAt(updatedAt)
             .build();
