@@ -1,23 +1,5 @@
 # CareConnect 2025 Deployment and Operations Guide
 
-## Table of Contents
-
-1. [Infrastructure Overview](#infrastructure-overview)
-2. [Environment Setup](#environment-setup)
-3. [AWS Infrastructure Deployment](#aws-infrastructure-deployment)
-4. [Application Deployment](#application-deployment)
-5. [Database Management](#database-management)
-6. [CI/CD Pipeline](#cicd-pipeline)
-7. [Monitoring and Logging](#monitoring-and-logging)
-8. [Security and Compliance](#security-and-compliance)
-9. [Backup and Disaster Recovery](#backup-and-disaster-recovery)
-10. [Performance Optimization](#performance-optimization)
-11. [Scaling Strategies](#scaling-strategies)
-12. [Maintenance Procedures](#maintenance-procedures)
-13. [Troubleshooting](#troubleshooting)
-14. [Security Incident Response](#security-incident-response)
-15. [Compliance and Auditing](#compliance-and-auditing)
-
 ## Infrastructure Overview
 
 ### Architecture Diagram

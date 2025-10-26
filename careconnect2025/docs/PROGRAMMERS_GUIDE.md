@@ -1,28 +1,5 @@
 # CareConnect 2025 Programmer's Guide
 
-## Table of Contents
-
-1. [Introduction](#introduction)
-2. [Architecture Overview](#architecture-overview)
-3. [Development Environment Setup](#development-environment-setup)
-4. [Frontend Development (Flutter)](#frontend-development-flutter)
-5. [Backend Development (Spring Boot)](#backend-development-spring-boot)
-6. [Database Design](#database-design)
-7. [API Documentation](#api-documentation)
-8. [Authentication & Security](#authentication--security)
-9. [Real-time Communication](#real-time-communication)
-10. [AI Integration](#ai-integration)
-11. [Device Integration](#device-integration)
-12. [File Upload & Management](#file-upload--management)
-13. [Testing Strategies](#testing-strategies)
-14. [Performance Optimization](#performance-optimization)
-15. [Deployment Pipeline](#deployment-pipeline)
-16. [Monitoring & Logging](#monitoring--logging)
-17. [Code Standards & Best Practices](#code-standards--best-practices)
-18. [Contributing Guidelines](#contributing-guidelines)
-19. [Known Issues & Workarounds](#known-issues--workarounds)
-20. [Troubleshooting](#troubleshooting)
-
 ## Introduction
 
 ### Purpose
@@ -2820,6 +2797,944 @@ class DeviceIntegrationService {
   }
 }
 ```
+
+## USPS Integration
+
+CareConnect integrates with the USPS Informed Delivery service to help patients and caregivers track incoming mail and packages. This feature is particularly valuable for elderly patients who may miss important medical correspondence or medication deliveries.
+
+### Architecture Overview
+
+The USPS integration provides:
+- **Mail Digest Retrieval**: Fetches daily mail summaries from USPS Informed Delivery
+- **Multi-Provider Support**: Works with Gmail and Outlook for USPS email parsing
+- **Caching Layer**: Reduces API calls with intelligent caching
+- **Mock Fallback**: Provides test data when email integration is unavailable
+
+**Note**: This integration currently requires Google OAuth authentication for Gmail access, which is still pending configuration.
+
+### Backend Implementation
+
+#### USPSDigestService - Core Service
+
+```java
+// service/USPSDigestService.java
+@Service
+@RequiredArgsConstructor
+public class USPSDigestService {
+    private final EmailCredentialRepo credRepo;
+    private final USPSDigestCacheRepo cacheRepo;
+    private final GmailClient gmailClient;
+    private final OutlookClient outlookClient;
+    private final GmailParser gmailParser;
+    private final OutlookParser outlookParser;
+
+    public Optional<USPSDigest> latestForUser(String userId) {
+        // 1. Check cache first (6-hour TTL)
+        var cached = cacheRepo.findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc(userId, Instant.now());
+        if (cached.isPresent()) {
+            try {
+                return Optional.of(objectMapper.readValue(cached.get().getPayloadJson(), USPSDigest.class));
+            } catch (Exception ignored) {}
+        }
+
+        // 2. Try Gmail integration
+        var gmail = credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.GMAIL);
+        if (gmail.isPresent()) {
+            var accessToken = decrypt(gmail.get().getAccessTokenEnc());
+            var rawDigest = gmailClient.fetchLatestDigest(accessToken);
+            if (rawDigest.isPresent()) {
+                var digest = gmailParser.toDomain(rawDigest.get());
+                cache(userId, digest);
+                return Optional.of(digest);
+            }
+        }
+
+        // 3. Try Outlook integration
+        var outlook = credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.OUTLOOK);
+        if (outlook.isPresent()) {
+            var accessToken = decrypt(outlook.get().getAccessTokenEnc());
+            var rawDigest = outlookClient.fetchLatestDigest(accessToken);
+            if (rawDigest.isPresent()) {
+                var digest = outlookParser.toDomain(rawDigest.get());
+                cache(userId, digest);
+                return Optional.of(digest);
+            }
+        }
+
+        // 4. Mock fallback for testing and demonstration
+        var mockDigest = mockDigest();
+        cache(userId, mockDigest);
+        return Optional.of(mockDigest);
+    }
+
+    private void cache(String userId, USPSDigest digest) {
+        try {
+            var cache = new USPSDigestCache();
+            cache.setUserId(userId);
+            cache.setDigestDate(digest.digestDate() != null ? digest.digestDate().toInstant() : Instant.now());
+            cache.setPayloadJson(objectMapper.writeValueAsString(digest));
+            cache.setExpiresAt(Instant.now().plus(Duration.ofHours(6))); // 6-hour cache
+            cacheRepo.save(cache);
+        } catch (Exception ignored) {
+            // Cache failure should not affect main functionality
+        }
+    }
+
+    private USPSDigest mockDigest() {
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        var packageItem = new PackageItem(
+            "9400100000000000000000",
+            now.plusDays(1).toString(),
+            ActionLinks.defaults("https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=9400100000000000000000")
+        );
+        var mailPiece = new MailPiece(
+            "m-1",
+            "ACME Bank",
+            "Monthly statement",
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNDAnIGhlaWdodD0nMjAnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzQwJyBoZWlnaHQ9JzIwJyBmaWxsPSIjZGRkIi8+PC9zdmc+",
+            now.toString(),
+            ActionLinks.defaults(null)
+        );
+        return new USPSDigest(now, List.of(mailPiece), List.of(packageItem));
+    }
+}
+```
+
+#### USPS REST Controller
+
+```java
+// controller/USPSController.java
+@RestController
+@RequestMapping("/v1/api/usps")
+@RequiredArgsConstructor
+public class USPSController {
+
+    private final USPSDigestService service;
+
+    @GetMapping("/mail")
+    public ResponseEntity<USPSDigest> getDigest(@AuthenticationPrincipal Jwt jwt) {
+        var userId = jwt != null ? jwt.getSubject() : "demo-user"; // Fallback for testing
+        var digest = service.latestForUser(userId)
+            .orElseGet(() -> new USPSDigest(null, List.of(), List.of()));
+        return ResponseEntity.ok(digest);
+    }
+}
+```
+
+#### Data Models
+
+```java
+// model/USPSDigest.java
+public record USPSDigest(
+    OffsetDateTime digestDate,
+    List<MailPiece> mailPieces,
+    List<PackageItem> packages
+) {}
+
+// model/MailPiece.java
+public record MailPiece(
+    String id,
+    String sender,
+    String subject,
+    String imageUrl,
+    String deliveryDate,
+    ActionLinks actionLinks
+) {}
+
+// model/PackageItem.java
+public record PackageItem(
+    String trackingNumber,
+    String expectedDelivery,
+    ActionLinks actionLinks
+) {}
+
+// model/ActionLinks.java
+public record ActionLinks(
+    String trackingUrl,
+    String detailsUrl
+) {
+    public static ActionLinks defaults(String trackingUrl) {
+        return new ActionLinks(trackingUrl, null);
+    }
+}
+```
+
+### Frontend Implementation
+
+#### InformedDeliveryService - API Client
+
+```dart
+// services/informed_delivery_service.dart
+class InformedDeliveryService {
+  static Future<Map<String, dynamic>> fetchInformedDelivery() async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+
+    final response = await http.get(
+      Uri.parse('${ApiConstants.informedDelivery}/mail'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200 && response.body.isNotEmpty) {
+      return jsonDecode(response.body);
+    } else if (response.statusCode == 401) {
+      throw Exception("Not authorized. Please log in again.");
+    } else {
+      throw Exception("Failed to fetch informed delivery data: ${response.statusCode}");
+    }
+  }
+}
+
+// API Constants
+class ApiConstants {
+  static final String _host = getBackendBaseUrl();
+  static final String informedDelivery = '$_host/v1/api/usps';
+}
+```
+
+#### Frontend Display Integration
+
+```dart
+// features/informed_delivery/informed_delivery_screen.dart
+class InformedDeliveryScreen extends StatefulWidget {
+  @override
+  _InformedDeliveryScreenState createState() => _InformedDeliveryScreenState();
+}
+
+class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
+  Map<String, dynamic>? digestData;
+  bool isLoading = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadInformedDelivery();
+  }
+
+  Future<void> loadInformedDelivery() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      final data = await InformedDeliveryService.fetchInformedDelivery();
+      setState(() {
+        digestData = data;
+      });
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Mail & Packages'),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
+      body: isLoading
+        ? Center(child: CircularProgressIndicator())
+        : error != null
+          ? Center(child: Text('Error: $error'))
+          : buildDigestContent(),
+    );
+  }
+
+  Widget buildDigestContent() {
+    if (digestData == null) return Center(child: Text('No data available'));
+
+    return RefreshIndicator(
+      onRefresh: loadInformedDelivery,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildMailPiecesSection(),
+              SizedBox(height: 20),
+              buildPackagesSection(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildMailPiecesSection() {
+    final mailPieces = digestData!['mailPieces'] as List<dynamic>? ?? [];
+
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Today\'s Mail', style: Theme.of(context).textTheme.headline6),
+            SizedBox(height: 10),
+            ...mailPieces.map((mail) => buildMailItem(mail)).toList(),
+            if (mailPieces.isEmpty) Text('No mail expected today'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildPackagesSection() {
+    final packages = digestData!['packages'] as List<dynamic>? ?? [];
+
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Package Tracking', style: Theme.of(context).textTheme.headline6),
+            SizedBox(height: 10),
+            ...packages.map((pkg) => buildPackageItem(pkg)).toList(),
+            if (packages.isEmpty) Text('No packages being tracked'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+### Database Schema
+
+```sql
+-- USPS Digest Cache Table
+CREATE TABLE usps_digest_cache (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id VARCHAR(255) NOT NULL,
+    digest_date TIMESTAMP NOT NULL,
+    payload_json TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_user_expires (user_id, expires_at),
+    INDEX idx_user_digest_date (user_id, digest_date DESC)
+);
+
+-- Email Credentials for OAuth Integration
+CREATE TABLE email_credentials (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id VARCHAR(255) NOT NULL,
+    provider ENUM('GMAIL', 'OUTLOOK') NOT NULL,
+    access_token_enc TEXT NOT NULL,
+    refresh_token_enc TEXT,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_user_provider (user_id, provider),
+    INDEX idx_expires_at (expires_at)
+);
+```
+
+### Configuration
+
+#### Application Properties
+
+```properties
+# USPS Integration Settings
+careconnect.usps.enabled=true
+careconnect.usps.cache.ttl-hours=6
+careconnect.usps.mock.enabled=${USPS_MOCK_MODE:true}
+
+# Email Integration (Pending Google OAuth Setup)
+careconnect.email.gmail.client-id=${GMAIL_CLIENT_ID:}
+careconnect.email.gmail.client-secret=${GMAIL_CLIENT_SECRET:}
+careconnect.email.outlook.client-id=${OUTLOOK_CLIENT_ID:}
+careconnect.email.outlook.client-secret=${OUTLOOK_CLIENT_SECRET:}
+
+# Encryption for stored credentials
+careconnect.encryption.key=${ENCRYPTION_KEY:default-dev-key}
+```
+
+### Security Considerations
+
+- **OAuth Integration**: Requires secure storage of email access tokens
+- **Token Encryption**: Email credentials are encrypted at rest
+- **Cache Security**: Digest data cached with user-specific keys
+- **Rate Limiting**: Prevents excessive API calls to email providers
+
+### Known Limitations
+
+1. **Google OAuth Pending**: Gmail integration requires Google OAuth 2.0 setup
+2. **Mock Data**: Currently uses mock data when email integration unavailable
+3. **Email Parsing**: Depends on USPS email format consistency
+4. **Cache Invalidation**: Manual refresh required for real-time updates
+
+### Future Enhancements
+
+- **Push Notifications**: Alert users of important mail/packages
+- **OCR Integration**: Extract text from mail piece images
+- **Smart Filtering**: Categorize mail by medical/financial importance
+- **Medication Delivery Tracking**: Special handling for pharmacy deliveries
+
+## Vial of Life Integration
+
+CareConnect includes a comprehensive Vial of Life PDF generation system designed for emergency medical situations. The system creates professionally formatted emergency information documents that can be accessed by first responders via QR codes or emergency IDs.
+
+### Architecture Overview
+
+The Vial of Life integration provides:
+- **Emergency PDF Generation**: Creates standardized emergency medical information forms
+- **Patient Data Integration**: Automatically populates patient medical data
+- **QR Code Access**: Public emergency access without authentication
+- **Professional Formatting**: Medical-grade PDF layouts with clear typography
+- **Emergency Contact Integration**: Includes family member and caregiver contacts
+
+### Backend Implementation
+
+#### VialOfLifePdfService - Core PDF Generation
+
+```java
+// service/VialOfLifePdfService.java
+@Service
+public class VialOfLifePdfService {
+
+    private static final Logger logger = LoggerFactory.getLogger(VialOfLifePdfService.class);
+
+    @Autowired
+    private PatientService patientService;
+
+    @Autowired
+    private MedicationService medicationService;
+
+    @Autowired
+    private FamilyMemberService familyMemberService;
+
+    /**
+     * Generate a pre-filled Vial of Life PDF for a patient
+     */
+    public byte[] generateVialOfLifePdf(String emergencyId) throws Exception {
+        logger.info("Generating Vial of Life PDF for emergency ID: {}", emergencyId);
+
+        // Extract patient ID from emergency ID format: VIAL123456
+        Long patientId = extractPatientIdFromEmergencyId(emergencyId);
+
+        // Gather patient information
+        Optional<PatientProfileDTO> patientProfile = patientService.getPatientProfile(patientId);
+        if (patientProfile.isEmpty()) {
+            throw new IllegalArgumentException("Patient not found for emergency ID: " + emergencyId);
+        }
+
+        // Get additional medical data
+        List<MedicationDTO> medications = medicationService.getAllMedicationsForPatient(patientId);
+        List<FamilyMemberLinkResponse> emergencyContacts = familyMemberService.getFamilyMembersByPatientId(patientId);
+
+        return createProfessionalEmergencyPdf(patientProfile.get(), medications, emergencyContacts);
+    }
+
+    /**
+     * Create professional emergency PDF document using Apache PDFBox
+     */
+    private byte[] createProfessionalEmergencyPdf(PatientProfileDTO patient,
+                                                 List<MedicationDTO> medications,
+                                                 List<FamilyMemberLinkResponse> emergencyContacts) throws IOException {
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                float pageWidth = page.getMediaBox().getWidth();
+                float pageHeight = page.getMediaBox().getHeight();
+                float margin = 50;
+                float yPosition = pageHeight - margin;
+
+                // Draw medical cross header
+                drawRedCrossHeader(contentStream, pageWidth, yPosition);
+                yPosition -= 80;
+
+                // Document title
+                drawTitle(contentStream, pageWidth, yPosition);
+                yPosition -= 50;
+
+                // Patient Information Section
+                yPosition = drawPatientInfoSection(contentStream, patient, margin, yPosition);
+                yPosition -= 30;
+
+                // Critical Medical Information Section
+                yPosition = drawMedicalInfoSection(contentStream, patient, medications, margin, yPosition);
+                yPosition -= 30;
+
+                // Emergency Contacts Section
+                yPosition = drawEmergencyContactsSection(contentStream, emergencyContacts, margin, yPosition);
+                yPosition -= 40;
+
+                // Professional footer
+                drawFooter(contentStream, pageWidth, yPosition);
+            }
+
+            document.save(baos);
+        }
+
+        return baos.toByteArray();
+    }
+
+    /**
+     * Draw red cross medical symbol header
+     */
+    private void drawRedCrossHeader(PDPageContentStream contentStream, float pageWidth, float yPosition) throws IOException {
+        float crossSize = 40;
+        float crossX = pageWidth / 2 - crossSize / 2;
+        float crossY = yPosition - crossSize;
+
+        // Draw red medical cross
+        contentStream.setNonStrokingColor(Color.RED);
+        contentStream.addRect(crossX - 5, crossY + crossSize/3, crossSize + 10, crossSize/3);
+        contentStream.fill();
+        contentStream.addRect(crossX + crossSize/3, crossY - 5, crossSize/3, crossSize + 10);
+        contentStream.fill();
+        contentStream.setNonStrokingColor(Color.BLACK);
+
+        // Header text
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+        String headerText = "EMERGENCY MEDICAL INFORMATION";
+        float textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth(headerText) / 1000 * 18;
+        contentStream.newLineAtOffset((pageWidth - textWidth) / 2, crossY - 25);
+        contentStream.showText(headerText);
+        contentStream.endText();
+    }
+
+    /**
+     * Draw patient information section with clean formatting
+     */
+    private float drawPatientInfoSection(PDPageContentStream contentStream, PatientProfileDTO patient, float margin, float yPosition) throws IOException {
+        drawSectionTitle(contentStream, "PATIENT INFORMATION", margin, yPosition);
+        yPosition -= 25;
+
+        yPosition = drawInfoLine(contentStream, "Name:", patient.firstName() + " " + patient.lastName(), margin, yPosition);
+
+        if (patient.dob() != null) {
+            try {
+                LocalDate dobDate = LocalDate.parse(patient.dob());
+                int age = Period.between(dobDate, LocalDate.now()).getYears();
+                yPosition = drawInfoLine(contentStream, "Date of Birth:", patient.dob() + " (Age: " + age + ")", margin, yPosition);
+            } catch (Exception e) {
+                yPosition = drawInfoLine(contentStream, "Date of Birth:", patient.dob(), margin, yPosition);
+            }
+        }
+
+        if (patient.gender() != null) {
+            yPosition = drawInfoLine(contentStream, "Gender:", patient.gender().toString(), margin, yPosition);
+        }
+
+        if (patient.phone() != null) {
+            yPosition = drawInfoLine(contentStream, "Phone:", patient.phone(), margin, yPosition);
+        }
+
+        return yPosition;
+    }
+
+    /**
+     * Draw critical medical information with highlighted allergies
+     */
+    private float drawMedicalInfoSection(PDPageContentStream contentStream, PatientProfileDTO patient, List<MedicationDTO> medications, float margin, float yPosition) throws IOException {
+        drawSectionTitle(contentStream, "CRITICAL MEDICAL INFORMATION", margin, yPosition);
+        yPosition -= 25;
+
+        // Critical Allergies (highlighted in red)
+        if (patient.allergies() != null && !patient.allergies().isEmpty()) {
+            contentStream.beginText();
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 11);
+            contentStream.setNonStrokingColor(Color.RED);
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("CRITICAL ALLERGIES:");
+            contentStream.endText();
+            contentStream.setNonStrokingColor(Color.BLACK);
+            yPosition -= 18;
+
+            for (var allergy : patient.allergies()) {
+                String allergyText = "• " + allergy.allergen();
+                if (allergy.severity() != null) {
+                    allergyText += " [" + allergy.severity().toString() + "]";
+                }
+                if (allergy.reaction() != null) {
+                    allergyText += " - " + allergy.reaction();
+                }
+                yPosition = drawBulletPoint(contentStream, allergyText, margin + 10, yPosition);
+            }
+            yPosition -= 10;
+        }
+
+        // Current Active Medications
+        if (medications != null && !medications.isEmpty()) {
+            List<MedicationDTO> activeMeds = medications.stream()
+                .filter(MedicationDTO::isActive)
+                .toList();
+
+            if (!activeMeds.isEmpty()) {
+                yPosition = drawInfoLine(contentStream, "Current Medications:", "", margin, yPosition);
+                yPosition -= 5;
+
+                for (MedicationDTO med : activeMeds) {
+                    String medText = "• " + med.medicationName();
+                    if (med.dosage() != null) {
+                        medText += " - " + med.dosage();
+                    }
+                    if (med.frequency() != null) {
+                        medText += " (" + med.frequency() + ")";
+                    }
+                    yPosition = drawBulletPoint(contentStream, medText, margin + 10, yPosition);
+                }
+            }
+        }
+
+        return yPosition;
+    }
+
+    /**
+     * Draw emergency contacts section
+     */
+    private float drawEmergencyContactsSection(PDPageContentStream contentStream, List<FamilyMemberLinkResponse> emergencyContacts, float margin, float yPosition) throws IOException {
+        drawSectionTitle(contentStream, "EMERGENCY CONTACTS", margin, yPosition);
+        yPosition -= 25;
+
+        if (emergencyContacts != null && !emergencyContacts.isEmpty()) {
+            for (FamilyMemberLinkResponse contact : emergencyContacts) {
+                String contactText = contact.familyMemberName();
+                if (contact.relationship() != null) {
+                    contactText += " (" + contact.relationship() + ")";
+                }
+                yPosition = drawInfoLine(contentStream, "Contact:", contactText, margin, yPosition);
+
+                if (contact.familyMemberEmail() != null) {
+                    yPosition = drawInfoLine(contentStream, "Email:", contact.familyMemberEmail(), margin, yPosition);
+                }
+                yPosition -= 5;
+            }
+        } else {
+            yPosition = drawInfoLine(contentStream, "", "No emergency contacts on file", margin, yPosition);
+        }
+
+        return yPosition;
+    }
+
+    /**
+     * Draw professional footer with generation info
+     */
+    private void drawFooter(PDPageContentStream contentStream, float pageWidth, float yPosition) throws IOException {
+        // Draw separator line
+        contentStream.setStrokingColor(Color.GRAY);
+        contentStream.moveTo(50, yPosition + 10);
+        contentStream.lineTo(pageWidth - 50, yPosition + 10);
+        contentStream.stroke();
+
+        // Footer information
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+        contentStream.setNonStrokingColor(Color.GRAY);
+        contentStream.newLineAtOffset(50, yPosition - 10);
+        contentStream.showText("This document contains confidential medical information.");
+        contentStream.endText();
+
+        contentStream.beginText();
+        contentStream.newLineAtOffset(50, yPosition - 25);
+        contentStream.showText("Generated by CareConnect Emergency Information System - For medical emergencies, contact 911 immediately.");
+        contentStream.endText();
+
+        // Generation timestamp
+        contentStream.beginText();
+        contentStream.newLineAtOffset(pageWidth - 200, yPosition - 10);
+        contentStream.showText("Generated: " + LocalDate.now().format(DateTimeFormatter.ofPattern("MM/dd/yyyy")));
+        contentStream.endText();
+
+        contentStream.setNonStrokingColor(Color.BLACK);
+    }
+
+    /**
+     * Helper method to draw section titles with background
+     */
+    private void drawSectionTitle(PDPageContentStream contentStream, String title, float margin, float yPosition) throws IOException {
+        // Background rectangle for section title
+        contentStream.setNonStrokingColor(new Color(240, 240, 240));
+        contentStream.addRect(margin - 5, yPosition - 15, 500, 20);
+        contentStream.fill();
+
+        // Title text
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+        contentStream.setNonStrokingColor(Color.BLACK);
+        contentStream.newLineAtOffset(margin, yPosition - 12);
+        contentStream.showText(title);
+        contentStream.endText();
+    }
+
+    /**
+     * Helper method for formatting information lines
+     */
+    private float drawInfoLine(PDPageContentStream contentStream, String label, String value, float margin, float yPosition) throws IOException {
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+        contentStream.newLineAtOffset(margin, yPosition);
+        contentStream.showText(label);
+        contentStream.endText();
+
+        if (!value.isEmpty()) {
+            contentStream.beginText();
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+            contentStream.newLineAtOffset(margin + 100, yPosition);
+            contentStream.showText(value);
+            contentStream.endText();
+        }
+
+        return yPosition - 18;
+    }
+
+    /**
+     * Helper method for bullet point formatting
+     */
+    private float drawBulletPoint(PDPageContentStream contentStream, String text, float margin, float yPosition) throws IOException {
+        contentStream.beginText();
+        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+        contentStream.newLineAtOffset(margin, yPosition);
+        contentStream.showText(text);
+        contentStream.endText();
+
+        return yPosition - 15;
+    }
+
+    /**
+     * Extract patient ID from emergency ID format: VIAL123456
+     */
+    private Long extractPatientIdFromEmergencyId(String emergencyId) {
+        try {
+            if (emergencyId.startsWith("VIAL")) {
+                String idPart = emergencyId.substring(4);
+                return Long.parseLong(idPart);
+            }
+        } catch (NumberFormatException e) {
+            logger.error("Could not parse patient ID from emergency ID: {}", emergencyId);
+        }
+
+        throw new IllegalArgumentException("Invalid emergency ID format: " + emergencyId);
+    }
+}
+```
+
+#### Emergency Controller - Public Access
+
+```java
+// controller/EmergencyController.java
+@RestController
+@RequestMapping("/v1/api/emergency")
+@Tag(name = "Emergency Information", description = "Emergency medical information and Vial of Life PDF generation")
+public class EmergencyController {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmergencyController.class);
+
+    @Autowired
+    private VialOfLifePdfService vialOfLifePdfService;
+
+    /**
+     * Generate and serve Vial of Life PDF for emergency use (PUBLIC ACCESS)
+     */
+    @GetMapping("/{emergencyId}.pdf")
+    @Operation(
+        summary = "🚨 Get Emergency PDF",
+        description = """
+            Generate a pre-filled Vial of Life PDF document for emergency responders.
+
+            This endpoint is designed to be accessed via QR codes in emergency situations.
+            It returns an official Vial of Life form pre-populated with the patient's:
+            - Basic information (name, DOB, blood type)
+            - Critical allergies and medical conditions
+            - Current medications
+            - Emergency contact information
+
+            **Security Note:** This endpoint uses emergency ID tokens for access control.
+            """,
+        tags = {"Emergency Information", "🚨 Emergency Response"}
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "PDF generated and returned successfully"),
+        @ApiResponse(responseCode = "404", description = "Patient not found for emergency ID"),
+        @ApiResponse(responseCode = "500", description = "Error generating PDF")
+    })
+    public ResponseEntity<byte[]> getEmergencyPdf(
+            @Parameter(description = "Emergency ID (format: VIAL123456)", example = "VIAL123456")
+            @PathVariable String emergencyId) {
+
+        try {
+            logger.info("🚨 Emergency PDF request for ID: {}", emergencyId);
+
+            // Generate PDF
+            byte[] pdfBytes = vialOfLifePdfService.generateVialOfLifePdf(emergencyId);
+
+            // Set response headers for PDF
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDisposition(ContentDisposition.inline()
+                .filename("vial_of_life_" + emergencyId + ".pdf")
+                .build());
+            headers.setContentLength(pdfBytes.length);
+            headers.setCacheControl("no-cache, no-store, must-revalidate");
+
+            logger.info("✅ Emergency PDF generated successfully for: {}", emergencyId);
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Invalid emergency ID: {}", emergencyId);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            logger.error("💥 Error generating emergency PDF for ID: {}", emergencyId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Force download version of emergency PDF
+     */
+    @GetMapping("/download/{emergencyId}.pdf")
+    @Operation(summary = "Download Emergency PDF", description = "Force download of Vial of Life PDF")
+    public ResponseEntity<byte[]> downloadEmergencyPdf(@PathVariable String emergencyId) {
+
+        try {
+            byte[] pdfBytes = vialOfLifePdfService.generateVialOfLifePdf(emergencyId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("vial_of_life_" + emergencyId + ".pdf")
+                .build());
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            logger.error("Error generating downloadable emergency PDF", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+}
+```
+
+### Security Configuration
+
+#### Public Emergency Access
+
+```java
+// Emergency endpoints are configured as permitAll() in SecurityConfig
+.requestMatchers("/v1/api/emergency/**").permitAll()  // No authentication required
+
+// JWT Authentication Filter excludes emergency endpoints
+private static final List<String> EXCLUDED_PATHS = Arrays.asList(
+    "/v1/api/emergency"  // Emergency PDF access (no auth required)
+);
+```
+
+### Emergency ID Format
+
+- **Format**: `VIAL{patientId}` (e.g., `VIAL123456`)
+- **Usage**: Embedded in QR codes for first responder access
+- **Security**: Emergency IDs are not sensitive but provide controlled access
+
+### QR Code Integration
+
+```java
+// QR Code generation for emergency access
+public String generateEmergencyQRCode(Long patientId) {
+    String emergencyId = "VIAL" + patientId;
+    String emergencyUrl = baseUrl + "/v1/api/emergency/" + emergencyId + ".pdf";
+
+    // Generate QR code pointing to emergency PDF
+    return qrCodeService.generateQRCode(emergencyUrl);
+}
+```
+
+### PDF Features
+
+#### Professional Medical Formatting
+- **Red Cross Header**: Medical symbol for easy identification
+- **Clear Typography**: High-contrast fonts for readability
+- **Structured Sections**: Patient info, medical data, emergency contacts
+- **Critical Allergies**: Highlighted in red for immediate attention
+- **Generation Timestamp**: Shows when document was created
+
+#### Information Included
+- **Patient Demographics**: Name, DOB, age, gender, phone
+- **Critical Medical Data**: Allergies with severity levels
+- **Current Medications**: Active medications with dosage and frequency
+- **Emergency Contacts**: Family members and caregivers with contact info
+- **Legal Footer**: Confidentiality notice and system attribution
+
+### Dependencies
+
+#### Maven Dependencies
+```xml
+<!-- Apache PDFBox for PDF generation -->
+<dependency>
+    <groupId>org.apache.pdfbox</groupId>
+    <artifactId>pdfbox</artifactId>
+    <version>3.0.0</version>
+</dependency>
+```
+
+### Configuration Properties
+
+```properties
+# Vial of Life Configuration
+careconnect.vial.enabled=true
+careconnect.vial.base-url=${BASE_URL:http://localhost:8080}
+
+# PDF Generation Settings
+careconnect.pdf.cache.enabled=false  # Always generate fresh for emergencies
+careconnect.pdf.quality=high
+```
+
+### Error Handling
+
+```java
+// Comprehensive error handling for emergency situations
+@ExceptionHandler(IllegalArgumentException.class)
+public ResponseEntity<String> handleInvalidEmergencyId(IllegalArgumentException e) {
+    logger.warn("Invalid emergency ID provided: {}", e.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body("Emergency information not found");
+}
+
+@ExceptionHandler(Exception.class)
+public ResponseEntity<String> handlePdfGenerationError(Exception e) {
+    logger.error("PDF generation failed", e);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body("Emergency PDF temporarily unavailable");
+}
+```
+
+### Usage Example
+
+#### Emergency Access URL
+```
+https://careconnect.example.com/v1/api/emergency/VIAL123456.pdf
+```
+
+#### QR Code Integration
+First responders scan QR code → Instantly access patient's critical medical information → Make informed emergency decisions
+
+### Future Enhancements
+
+- **Multi-language Support**: Emergency PDFs in multiple languages
+- **Photo Integration**: Include patient photo for identification
+- **Medical Conditions**: Add chronic conditions and recent procedures
+- **Insurance Information**: Include insurance details for billing
+- **Advanced Care Directives**: Include DNR and other care preferences
+- **Digital Signature**: Cryptographic verification of document authenticity
 
 ## File Upload & Management
 
