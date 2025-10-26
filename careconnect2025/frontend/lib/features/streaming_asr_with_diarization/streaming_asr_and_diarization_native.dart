@@ -130,7 +130,6 @@ class _StreamingAsrAndDiarizationScreenState
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
-    // Ensure state is reset on initial load
     _noteSaved = false;
     _savedNote = null;
     _textToDisplay = '';
@@ -199,7 +198,7 @@ class _StreamingAsrAndDiarizationScreenState
               if (_last == '') {
                 textToDisplay = 'Line $_index: $text';
               } else {
-                textToDisplay = 'Line $_index: $text\n$_last';
+                textToDisplay = 'Line $_index: $_last\n$text';
               }
             }
 
@@ -750,7 +749,6 @@ class _StreamingAsrAndDiarizationScreenState
                     '/notetaker/detail/${_savedNote!.id}',
                     extra: _savedNote,
                   );
-                  // Reset state when returning from detail view
                   setState(() {
                     _noteSaved = false;
                     _savedNote = null;
@@ -820,7 +818,15 @@ class _StreamingAsrAndDiarizationScreenState
         child: InkWell(
           child: SizedBox(width: 56, height: 56, child: icon),
           onTap: () {
-            (_recordState != RecordState.stop) ? _stop() : _start();
+            if (_recordState != RecordState.stop) {
+              _stop();
+            } else {
+              setState(() {
+                _textToDisplay = '';
+                _controller.clear();
+              });
+              _start();
+            }
           },
         ),
       ),
