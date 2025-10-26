@@ -130,6 +130,12 @@ class _StreamingAsrAndDiarizationScreenState
     _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
       _updateRecordState(recordState);
     });
+    // Ensure state is reset on initial load
+    _noteSaved = false;
+    _savedNote = null;
+    _textToDisplay = '';
+    _speakerList = [];
+    _selectedSpeaker = null;
     super.initState();
   }
 
@@ -739,8 +745,21 @@ class _StreamingAsrAndDiarizationScreenState
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: () {
-                  context.push('/notetaker-detail', extra: _savedNote);
+                onPressed: () async {
+                  await context.push(
+                    '/notetaker/detail/${_savedNote!.id}',
+                    extra: _savedNote,
+                  );
+                  // Reset state when returning from detail view
+                  setState(() {
+                    _noteSaved = false;
+                    _savedNote = null;
+                    _textToDisplay = '';
+                    _controller.clear();
+                    _speakerList = [];
+                    _selectedSpeaker = null;
+                    _newSpeakerName.clear();
+                  });
                 },
                 child: const Text('View Summary'),
               ),
@@ -757,7 +776,14 @@ class _StreamingAsrAndDiarizationScreenState
                     _newSpeakerName.clear();
                   });
                 },
-                child: const Text('Record Another Note'),
+                style: ElevatedButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                ),
+                child: const Text('Listen Again'),
               ),
             ],
           ),
