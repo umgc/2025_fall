@@ -587,25 +587,34 @@ class _StreamingAsrAndDiarizationScreenState
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
-    PatientNote newNote = await NotetakerConfigService.createPatientNote(
-      createdNote,
-    );
+    try {
+      PatientNote newNote = await NotetakerConfigService.createPatientNote(
+        createdNote,
+      );
 
-    setState(() {
-      _noteSaved = true;
-      _savedNote = newNote;
-    });
+      setState(() {
+        _noteSaved = true;
+        _savedNote = newNote;
+      });
 
-    if (widget.onUploadSuccess != null) {
-      widget.onUploadSuccess!(newNote);
+      if (widget.onUploadSuccess != null) {
+        widget.onUploadSuccess!(newNote);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Note saved'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save note: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Note saved'),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
   @override
@@ -720,11 +729,9 @@ class _StreamingAsrAndDiarizationScreenState
               : SizedBox.shrink(),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              if (_textToDisplay.isNotEmpty) {
-                _saveRecognizedText();
-              }
-            },
+            onPressed: _isLoading || _textToDisplay.isEmpty
+                ? null
+                : () => _saveRecognizedText(),
             child: const Text('Save Note'),
           ),
         ] else ...[
