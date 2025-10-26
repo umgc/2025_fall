@@ -68,8 +68,13 @@ class TaskListDay extends StatelessWidget {
         return a.name.compareTo(b.name);
       });
 
-    return Column(
-      children: tasks.map((task) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
         final assignedName = task.assignedPatientId != null
             ? patientNames[task.assignedPatientId] ?? "Unknown Patient"
             : "Unassigned";
@@ -92,7 +97,6 @@ class TaskListDay extends StatelessWidget {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Wrap prevents overflow on small screens
                   Wrap(
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 8,
@@ -141,15 +145,14 @@ class TaskListDay extends StatelessWidget {
                         onPressed: () async {
                           final newStatus = !task.isComplete;
                           setState(() => task.isComplete = newStatus);
-
-                          // Optional backend sync
                           try {
                             await updateCompletion(task.id!, newStatus);
                           } catch (e) {
-                            // Roll back the change if API failed
                             setState(() => task.isComplete = !newStatus);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Failed to update task")),
+                              const SnackBar(
+                                content: Text("Failed to update task"),
+                              ),
                             );
                           }
                         },
@@ -176,7 +179,7 @@ class TaskListDay extends StatelessWidget {
             );
           },
         );
-      }).toList(),
+      },
     );
   }
 }

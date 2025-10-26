@@ -664,32 +664,47 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
               const SizedBox(height: 16),
 
-              // Task list changes depending on view
+              // ------------------
+              // Task list section (scrollable)
+              // ------------------
               if (_selectedDay != null)
-                _currentView == CalendarViewType.week
-                    ? TaskListWeek(
-                        events: _eventController.events.where((e) {
-                          final weekStart = TaskUtils.getStartOfWeek(
-                            _selectedDay!,
-                          );
-                          final weekEnd = weekStart.add(
-                            const Duration(days: 7),
-                          );
-                          return e.date.isAfter(
-                                weekStart.subtract(const Duration(seconds: 1)),
-                              ) &&
-                              e.date.isBefore(weekEnd);
-                        }).toList(),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      )
-                    : TaskListDay(
-                        events: _eventController.getEventsOnDay(_selectedDay!),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      ),
+                Column(
+                  children: [
+                    const Divider(thickness: 1),
+                    SizedBox(
+                      // adjust this to control how tall the list area is
+                      height: MediaQuery.of(context).size.height * 0.25,
+                      child: _currentView == CalendarViewType.week
+                          ? TaskListWeek(
+                              events: _eventController.events.where((e) {
+                                final weekStart = TaskUtils.getStartOfWeek(
+                                  _selectedDay!,
+                                );
+                                final weekEnd = weekStart.add(
+                                  const Duration(days: 7),
+                                );
+                                return e.date.isAfter(
+                                      weekStart.subtract(
+                                        const Duration(seconds: 1),
+                                      ),
+                                    ) &&
+                                    e.date.isBefore(weekEnd);
+                              }).toList(),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            )
+                          : TaskListDay(
+                              events: _eventController.getEventsOnDay(
+                                _selectedDay!,
+                              ),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
