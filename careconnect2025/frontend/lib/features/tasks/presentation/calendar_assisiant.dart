@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import 'widgets/add_task_button.dart';
 import 'widgets/calendar_cell.dart';
 import 'widgets/event_tile.dart';
 import 'widgets/filters_panel.dart';
@@ -244,7 +245,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     return CalendarControllerProvider<Task>(
       controller: _eventController,
       child: Scaffold(
@@ -253,14 +253,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           context,
           title: 'Calendar Assistant',
           additionalActions: [
-            TextButton.icon(
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                "Add Task",
-                style: TextStyle(color: Colors.white),
-              ),
-              onPressed: _addTask,
-            ),
+            AddTaskButton(onPressed: _addTask),
             ImportIcsButton(
               onTasksImported: _loadTasksFromDb,
               patientNames: patientNames, //refresh calendar after import
