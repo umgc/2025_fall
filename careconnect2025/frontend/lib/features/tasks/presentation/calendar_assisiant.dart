@@ -673,7 +673,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                     const Divider(thickness: 1),
                     SizedBox(
                       // adjust this to control how tall the list area is
-                      height: MediaQuery.of(context).size.height * 0.25,
+                      height: MediaQuery.of(context).size.height * 0.20,
                       child: _currentView == CalendarViewType.week
                           ? TaskListWeek(
                               events: _eventController.events.where((e) {
