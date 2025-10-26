@@ -4,6 +4,7 @@ import com.careconnect.dto.QuestionDTO;
 import com.careconnect.dto.QuestionUpsertDTO;
 import com.careconnect.dto.QuestionMapper;
 import com.careconnect.repository.QuestionRepository;
+import com.careconnect.service.QuestionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -2,7 +2,7 @@ package com.careconnect.controller;
 
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.dto.QuestionUpsertDTO;
-import com.careconnect.model.QuestionService;
+import com.careconnect.service.QuestionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

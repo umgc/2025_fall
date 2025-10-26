@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in.dart';
+
 
 /// "Virtual Check-In History"
 class VirtualCheckInHistoryCard extends StatelessWidget {
@@ -12,7 +13,8 @@ class VirtualCheckInHistoryCard extends StatelessWidget {
     required this.entries,
     this.onConfigure,
     this.showConfigure = false, // patients default to false
-  });
+  }) : assert(!showConfigure || onConfigure != null,
+  'showConfigure=true requires onConfigure');
 
   @override
   Widget build(BuildContext context) {

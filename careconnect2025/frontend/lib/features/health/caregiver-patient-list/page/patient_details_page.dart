@@ -17,10 +17,18 @@ import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
 // Virtual Check-in history
-import '../models/virtual_check_in.dart';
-import '../widgets/virtual_check_in_config_sheet.dart';
-import '../widgets/virtual_check_in_history_card.dart';
-import '../models/virtual_check_in_question.dart';
+// Virtual Check-In domain entities
+import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
+
+// Virtual Check-In UI
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_config_sheet.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_history_card.dart';
+
+// (If this page calls the APIs, add:)
+import 'package:care_connect_app/features/health/virtual_check_in/data/services/checkin_api.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/data/services/questions_api.dart';
+
 
 class PatientDetailsPage extends StatelessWidget {
   final String patientId;
@@ -272,36 +280,48 @@ class PatientDetailsPage extends StatelessWidget {
                     ],
                   ),
 
-                  // ---- virtual check-in ----
+                  // ---- Virtual Check-In tab ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
                       VirtualCheckInHistoryCard(
                         entries: virtualCheckIns,
-                        showConfigure: true, // caregiver sees the button
-                        onConfigure: () async {
-                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>>(
+                        showConfigure: isCaregiver, // caregivers only
+                        onConfigure: isCaregiver
+                            ? () async {
+                          // Seed with your current config if you have it:
+                          final initialQuestions = <VirtualCheckInQuestion>[];
+                          // TODO: replace with your real ID source:
+                          final checkInId = 1; // TODO: replace with real patient id
+
+
+                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>?>(
                             context: context,
                             isScrollControlled: true,
                             useSafeArea: true,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                             ),
-                            builder: (_) => VirtualCheckInConfigSheet(initial: initialQuestions),
+                            builder: (_) => VirtualCheckInConfigSheet(
+                              checkInId: checkInId,          // ✅ required
+                              initial: initialQuestions,
+                            ),
                           );
 
                           if (!context.mounted) return;
                           if (updated != null) {
+                            // TODO: persist `updated` to backend and refresh UI
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Virtual check-in configuration saved')),
                             );
-                            // TODO: persist `updated` to backend and refresh UI
                           }
                         }
-                        // patients can't configure
+                            : null, // patients: no button
                       ),
                     ],
                   ),
+
+
                 ],
               ),
             ),

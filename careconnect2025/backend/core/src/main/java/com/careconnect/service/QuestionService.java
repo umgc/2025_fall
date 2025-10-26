@@ -1,4 +1,4 @@
-package com.careconnect.model;
+package com.careconnect.service;
 
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.dto.QuestionUpsertDTO;

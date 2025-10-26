@@ -549,7 +549,8 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => PatientDetailsPage(
-                                  patientId: patient.id,   // or patient: patient
+                                  patientId: patient.id,
+                                  isCaregiver: true,   // or patient: patient
                                 ),
                               ),
                             );
