@@ -101,6 +101,7 @@ class StreamingAsrAndDiarizationScreen extends StatefulWidget {
 class _StreamingAsrAndDiarizationScreenState
     extends State<StreamingAsrAndDiarizationScreen> {
   late final TextEditingController _controller;
+  final ScrollController _scrollController = ScrollController();
   late final AudioRecorder _audioRecorder;
   List<int> recordedData = [];
   String _textToDisplay = '';
@@ -142,6 +143,7 @@ class _StreamingAsrAndDiarizationScreenState
     setState(() {
       _controller.clear();
       _newSpeakerName.clear();
+      _last = '';
       recordedData = [];
       _textToDisplay = '';
       _speakerList = [];
@@ -196,9 +198,9 @@ class _StreamingAsrAndDiarizationScreenState
             String textToDisplay = _last;
             if (text != '') {
               if (_last == '') {
-                textToDisplay = 'Line $_index: $text';
+                textToDisplay = text;
               } else {
-                textToDisplay = 'Line $_index: $_last\n$text';
+                textToDisplay = '$_last\n$text';
               }
             }
 
@@ -213,6 +215,7 @@ class _StreamingAsrAndDiarizationScreenState
               text: textToDisplay,
               selection: TextSelection.collapsed(offset: textToDisplay.length),
             );
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
           },
           onDone: () {
             print('stream stopped.');
@@ -631,7 +634,7 @@ class _StreamingAsrAndDiarizationScreenState
             ? Column(
                 children: [CircularProgressIndicator(), Text("Processing")],
               )
-            : TextField(maxLines: 5, controller: _controller, readOnly: true),
+            : TextField(maxLines: 5, controller: _controller, readOnly: true, scrollController: _scrollController,),
         const SizedBox(height: 16),
         if (!_noteSaved) ...[
           Row(
@@ -726,7 +729,6 @@ class _StreamingAsrAndDiarizationScreenState
                             ],
                           ),
                         );
-                        //               Icon(Icons.swap_horiz,),
                       },
                     );
                   },
@@ -796,6 +798,8 @@ class _StreamingAsrAndDiarizationScreenState
     _audioRecorder.dispose();
     _stream?.free();
     _recognizer?.free();
+    _scrollController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -821,10 +825,6 @@ class _StreamingAsrAndDiarizationScreenState
             if (_recordState != RecordState.stop) {
               _stop();
             } else {
-              setState(() {
-                _textToDisplay = '';
-                _controller.clear();
-              });
               _start();
             }
           },
