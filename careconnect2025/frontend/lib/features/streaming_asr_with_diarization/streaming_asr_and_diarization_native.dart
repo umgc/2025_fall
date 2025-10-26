@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as Path;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -110,6 +111,8 @@ class _StreamingAsrAndDiarizationScreenState
   List<String> _speakerList = [];
   String? _selectedSpeaker;
   late final TextEditingController _newSpeakerName;
+  bool _noteSaved = false;
+  PatientNote? _savedNote;
 
   sherpa_onnx.OnlineRecognizer? _recognizer;
   sherpa_onnx.OfflineRecognizer? _offlineRecognizer;
@@ -588,6 +591,11 @@ class _StreamingAsrAndDiarizationScreenState
       createdNote,
     );
 
+    setState(() {
+      _noteSaved = true;
+      _savedNote = newNote;
+    });
+
     if (widget.onUploadSuccess != null) {
       widget.onUploadSuccess!(newNote);
     }
@@ -611,112 +619,142 @@ class _StreamingAsrAndDiarizationScreenState
               )
             : TextField(maxLines: 5, controller: _controller, readOnly: true),
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _buildRecordStopControl(),
-            const SizedBox(width: 16),
-            _buildText(),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _speakerList.isNotEmpty
-            ? ElevatedButton(
-                child: const Text('Swap Speaker Names'),
+        if (!_noteSaved) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _buildRecordStopControl(),
+              const SizedBox(width: 16),
+              _buildText(),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _speakerList.isNotEmpty
+              ? ElevatedButton(
+                  child: const Text('Swap Speaker Names'),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return Expanded(
+                          child: SimpleDialog(
+                            title: Text("Swap Speaker Names"),
+                            children: <Widget>[
+                              Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedSpeaker,
+                                  decoration: InputDecoration(
+                                    labelText: 'Select A Speaker',
+                                  ),
+                                  items: _speakerList
+                                      .map(
+                                        (option) => DropdownMenuItem(
+                                          value: option,
+                                          child: Text(option),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedSpeaker = value;
+                                    });
+                                  },
+                                  validator: (value) {
+                                    if (value == null) {
+                                      return 'Please select an option';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Icon(Icons.swap_vert),
+                              SizedBox(width: 12),
+                              Padding(
+                                padding: EdgeInsets.all(10.0),
+                                child: TextFormField(
+                                  controller: _newSpeakerName,
+                                  decoration: InputDecoration(
+                                    labelText: 'Enter Name',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'This field is required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              SimpleDialogOption(
+                                onPressed: () {
+                                  if (_selectedSpeaker != null &&
+                                      _newSpeakerName.text.isNotEmpty) {
+                                    setState(() {
+                                      _textToDisplay = _textToDisplay
+                                          .replaceAll(
+                                            _selectedSpeaker!,
+                                            _newSpeakerName.text,
+                                          );
+                                      _controller.value = TextEditingValue(
+                                        text: _textToDisplay,
+                                        selection: TextSelection.collapsed(
+                                          offset: _textToDisplay.length,
+                                        ),
+                                      );
+                                    });
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                                child: const Text('Swap'),
+                              ),
+                            ],
+                          ),
+                        );
+                        //               Icon(Icons.swap_horiz,),
+                      },
+                    );
+                  },
+                )
+              : SizedBox.shrink(),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              if (_textToDisplay.isNotEmpty) {
+                _saveRecognizedText();
+              }
+            },
+            child: const Text('Save Note'),
+          ),
+        ] else ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return Expanded(
-                        child: SimpleDialog(
-                          title: Text("Swap Speaker Names"),
-                          children: <Widget>[
-                            Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedSpeaker,
-                                decoration: InputDecoration(
-                                  labelText: 'Select A Speaker',
-                                ),
-                                items: _speakerList
-                                    .map(
-                                      (option) => DropdownMenuItem(
-                                        value: option,
-                                        child: Text(option),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedSpeaker = value;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select an option';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Icon(Icons.swap_vert),
-                            SizedBox(width: 12),
-                            Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: TextFormField(
-                                controller: _newSpeakerName,
-                                decoration: InputDecoration(
-                                  labelText: 'Enter Name',
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'This field is required';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            SimpleDialogOption(
-                              onPressed: () {
-                                if (_selectedSpeaker != null &&
-                                    _newSpeakerName.text.isNotEmpty) {
-                                  setState(() {
-                                    _textToDisplay = _textToDisplay.replaceAll(
-                                      _selectedSpeaker!,
-                                      _newSpeakerName.text,
-                                    );
-                                    _controller.value = TextEditingValue(
-                                      text: _textToDisplay,
-                                      selection: TextSelection.collapsed(
-                                        offset: _textToDisplay.length,
-                                      ),
-                                    );
-                                  });
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                              child: const Text('Swap'),
-                            ),
-                          ],
-                        ),
-                      );
-                      //               Icon(Icons.swap_horiz,),
-                    },
-                  );
+                  context.push('/notetaker-detail', extra: _savedNote);
                 },
-              )
-            : SizedBox.shrink(),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {
-            if (_textToDisplay.isNotEmpty) {
-              _saveRecognizedText();
-            }
-          },
-          child: const Text('Save Note'),
-        ),
+                child: const Text('View Summary'),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _noteSaved = false;
+                    _savedNote = null;
+                    _textToDisplay = '';
+                    _controller.clear();
+                    _speakerList = [];
+                    _selectedSpeaker = null;
+                    _newSpeakerName.clear();
+                  });
+                },
+                child: const Text('Record Another Note'),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
