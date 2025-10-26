@@ -13,6 +13,7 @@ import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'widgets/calendar_cell.dart';
@@ -411,6 +412,46 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                                 color: theme.colorScheme.onSurface,
                               ),
                             ),
+                            headerBuilder: (date) {
+                              final formatted = DateFormat(
+                                'MMM yyyy',
+                              ).format(date);
+
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Left arrow (previous month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.previousPage();
+                                    },
+                                  ),
+
+                                  // Month title
+                                  Text(
+                                    formatted,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: theme.colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+
+                                  // Right arrow (next month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.nextPage();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+
                             weekDayBuilder: (day) {
                               final labels = [
                                 "M",
