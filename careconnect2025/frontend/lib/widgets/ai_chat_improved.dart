@@ -729,7 +729,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       } else {
         // Success case - get AI response or provide helpful fallback
         aiText = response['aiResponse'];
-        if (aiText == null || aiText.isEmpty) {
+        if (aiText.isEmpty) {
           aiText = 'I apologize, but I was unable to generate a response. Please try rephrasing your question or check your connection.';
           errorMsg = 'Empty response received from AI service';
         }

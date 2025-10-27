@@ -8,7 +8,7 @@ class QuestionsApi {
   QuestionsApi(this.baseUrl);
   final String baseUrl; // e.g. http://192.168.1.155:8080
 
-  Future<List<BackendQuestionDTO>> listQuestions({bool? active}) async {
+  Future<List<BackendQuestionDto>> listQuestions({bool? active}) async {
     final uri = Uri.parse('$baseUrl/api/questions')
         .replace(queryParameters: {
       if (active != null) 'active': active.toString(),
@@ -18,6 +18,6 @@ class QuestionsApi {
       throw Exception('Failed to fetch questions: ${res.statusCode} ${res.body}');
     }
     final List<dynamic> arr = json.decode(res.body) as List<dynamic>;
-    return arr.map((e) => BackendQuestionDTO.fromJson(e as Map<String, dynamic>)).toList();
+    return arr.map((e) => BackendQuestionDto.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

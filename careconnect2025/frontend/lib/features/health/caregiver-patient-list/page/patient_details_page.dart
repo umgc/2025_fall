@@ -26,8 +26,6 @@ import 'package:care_connect_app/features/health/virtual_check_in/presentation/w
 import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_history_card.dart';
 
 // (If this page calls the APIs, add:)
-import 'package:care_connect_app/features/health/virtual_check_in/data/services/checkin_api.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/services/questions_api.dart';
 
 
 class PatientDetailsPage extends StatelessWidget {
@@ -334,7 +332,6 @@ class PatientDetailsPage extends StatelessWidget {
 /// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _DetailsAppBar({
-    super.key,                      // <-- add this
     required this.title,
     required this.subtitle,
   });
@@ -377,7 +374,7 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 /// The tab buttons row (Info • Mood • Health • Virtual Check-In)
 class _TabsStrip extends StatelessWidget {
-  const _TabsStrip({super.key});     // <-- add const + super.key
+  const _TabsStrip();     // <-- add const + super.key
 
   @override
   Widget build(BuildContext context) {

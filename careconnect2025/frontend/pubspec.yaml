@@ -149,6 +149,11 @@ dependencies:
   connectivity_plus: ^6.0.5
   device_info_plus: ^12.1.0
   # Team D - Dependencies End
+  collection: any
+  calendar_view: any
+  flutter_web_plugins: any
+  accordion: any
+  web_socket_channel: any
 dependency_overrides:
   # llama_cpp_dart:
   #   git:
@@ -176,6 +181,8 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
+  calendar_view: any
+  flutter_dotenv: any
 flutter: 
   generate: true  # enables gen-l10n on build
   assets:

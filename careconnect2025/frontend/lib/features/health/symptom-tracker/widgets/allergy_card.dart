@@ -7,12 +7,12 @@ class AllergyCard extends StatelessWidget {
   final String note;
 
   const AllergyCard({
-    Key? key,
+    super.key,
     required this.drug,
     required this.severity,
     required this.reaction,
     required this.note,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

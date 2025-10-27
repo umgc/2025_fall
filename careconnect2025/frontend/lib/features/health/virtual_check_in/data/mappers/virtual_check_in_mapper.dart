@@ -1,19 +1,17 @@
 import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
 import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
-
-
+import 'package:care_connect_app/features/health/virtual_check_in/data/dto/question_type.dart';
 
 CheckInQuestionType mapTypeToUi(BackendQuestionType t) {
   switch (t) {
-    case BackendQuestionType.NUMBER:
+    case BackendQuestionType.number:
       return CheckInQuestionType.numerical;
-    case BackendQuestionType.YES_NO:
-    case BackendQuestionType.TRUE_FALSE: // treat as yes/no for now
+    case BackendQuestionType.yesNo:
+    case BackendQuestionType.trueFalse:
       return CheckInQuestionType.yesNo;
-    case BackendQuestionType.TEXT:
+    case BackendQuestionType.text:
       return CheckInQuestionType.textInput;
   }
-  throw StateError('Unhandled BackendQuestionType: $t');
 }
 
 VirtualCheckInQuestion toUiQuestion(BackendQuestionDto dto) {

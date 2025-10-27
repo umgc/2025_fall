@@ -1,4 +1,3 @@
-import 'package:care_connect_app/config/navigation/caregiver_more_features_bottom_drawer.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
@@ -8,8 +7,6 @@ import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
-import 'patient_more_features_bottom_drawer.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_page.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
 
 

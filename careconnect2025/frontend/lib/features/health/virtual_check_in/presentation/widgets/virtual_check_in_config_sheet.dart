@@ -2,24 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/mappers/virtual_check_in_mapper.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/services/checkin_api.dart';
+
+import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/data/dto/question_type.dart'; // <-- BackendQuestionType lives here
+import 'package:care_connect_app/features/health/virtual_check_in/data/mappers/virtual_check_in_mapper.dart' as vmap;
+
+import 'package:care_connect_app/features/health/virtual_check_in/data/services/checkin_api.dart';    // if you fetch questions per check-in
 
 
 
-
-/// Map BackendQuestionDto -> your UI model
 VirtualCheckInQuestion _toUiQuestion(BackendQuestionDto dto) {
   late CheckInQuestionType uiType;
   switch (dto.type) {
-    case BackendQuestionType.NUMBER:
+    case BackendQuestionType.number:
       uiType = CheckInQuestionType.numerical;
       break;
-    case BackendQuestionType.YES_NO:
-    case BackendQuestionType.TRUE_FALSE:
+    case BackendQuestionType.yesNo:
+    case BackendQuestionType.trueFalse:
       uiType = CheckInQuestionType.yesNo;
       break;
-    case BackendQuestionType.TEXT:
+    case BackendQuestionType.text:
       uiType = CheckInQuestionType.textInput;
       break;
   }
@@ -77,14 +79,20 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
       _error = null;
     });
     try {
-      final backend = await _api.getQuestions(widget.checkInId); // type inferred
-      _items = backend.map(toUiQuestion).toList();               // mapper converts DTO -> UI
+      final List<BackendQuestionDto> backend =
+      await _api.getQuestions(widget.checkInId.toString()); // <-- convert to String
+
+      setState(() {
+        _items = backend.map(vmap.toUiQuestion).toList(growable: false);
+      });
     } catch (e) {
-      _error = e.toString();
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+
 
   @override
   void dispose() {

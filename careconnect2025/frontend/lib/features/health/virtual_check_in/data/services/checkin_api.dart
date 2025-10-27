@@ -1,10 +1,10 @@
-// lib/services/checkin_api.dart
+// lib/features/health/virtual_check_in/data/services/checkin_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// ✅ Correct relative path from /lib/services ➜ /lib/features/virtual-check-in/pages
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_dto.dart';
-
+import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_dto.dart'
+    show SubmitAnswersRequest;
 
 class CheckInApi {
   final String _base;
@@ -26,9 +26,6 @@ class CheckInApi {
     v = v.trim();
     if (v.endsWith('/')) v = v.substring(0, v.length - 1);
     return v;
-    // examples:
-    // "http://localhost:8080/" -> "http://localhost:8080"
-    // "http://10.0.2.2:8080"   -> "http://10.0.2.2:8080"
   }
 
   Map<String, String> _headers() {
@@ -41,7 +38,8 @@ class CheckInApi {
   }
 
   /// GET /api/checkins/{checkInId}/questions
-  Future<List<BackendQuestionDto>> getQuestions(int checkInId) async {
+  /// Return typed DTOs for mapping to UI.
+  Future<List<BackendQuestionDto>> getQuestions(String checkInId) async {
     final uri = Uri.parse('$_base/api/checkins/$checkInId/questions');
     final res = await _client.get(uri, headers: _headers()).timeout(_timeout);
 
@@ -51,11 +49,11 @@ class CheckInApi {
     final raw = jsonDecode(res.body) as List;
     return raw
         .map((e) => BackendQuestionDto.fromJson(e as Map<String, dynamic>))
-        .toList();
+        .toList(growable: false);
   }
 
   /// POST /api/checkins/{checkInId}/answers
-  Future<void> submitAnswers(int checkInId, SubmitAnswersRequest req) async {
+  Future<void> submitAnswers(String checkInId, SubmitAnswersRequest req) async {
     final uri = Uri.parse('$_base/api/checkins/$checkInId/answers');
     final res = await _client
         .post(uri, headers: _headers(), body: jsonEncode(req.toJson()))

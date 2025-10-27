@@ -1,7 +1,7 @@
 import 'package:care_connect_app/features/health/virtual_check_in/data/dto/question_type.dart';
 
 
-class BackendQuestionDTO {
+class BackendQuestionDto {
   final int? id;
   final String prompt;
   final BackendQuestionType type;
@@ -9,7 +9,7 @@ class BackendQuestionDTO {
   final bool active;
   final int ordinal;
 
-  const BackendQuestionDTO({
+  const BackendQuestionDto({
     this.id,
     required this.prompt,
     required this.type,
@@ -18,8 +18,8 @@ class BackendQuestionDTO {
     required this.ordinal,
   });
 
-  factory BackendQuestionDTO.fromJson(Map<String, dynamic> json) {
-    return BackendQuestionDTO(
+  factory BackendQuestionDto.fromJson(Map<String, dynamic> json) {
+    return BackendQuestionDto(
       id: json['id'] is int ? json['id'] as int : (json['id'] as num?)?.toInt(),
       prompt: (json['prompt'] ?? '') as String,
       type: BackendQuestionType.fromWire(json['type'] as String?),
@@ -42,7 +42,7 @@ class BackendQuestionDTO {
     };
   }
 
-  BackendQuestionDTO copyWith({
+  BackendQuestionDto copyWith({
     int? id,
     String? prompt,
     BackendQuestionType? type,
@@ -50,7 +50,7 @@ class BackendQuestionDTO {
     bool? active,
     int? ordinal,
   }) {
-    return BackendQuestionDTO(
+    return BackendQuestionDto(
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,
       type: type ?? this.type,

@@ -32,7 +32,7 @@ class TaskListDay extends StatelessWidget {
   final Future<void> Function(int taskId, bool complete) updateCompletion;
 
   TaskListDay({
-    Key? key,
+    super.key,
     required this.events,
     required this.patientNames,
     required this.onEdit,
@@ -41,8 +41,7 @@ class TaskListDay extends StatelessWidget {
   }) : updateCompletion =
            updateCompletion ??
            ((int id, bool complete) =>
-               ApiService.updateTaskCompletionV2(id, complete)),
-       super(key: key);
+               ApiService.updateTaskCompletionV2(id, complete));
 
   @override
   Widget build(BuildContext context) {

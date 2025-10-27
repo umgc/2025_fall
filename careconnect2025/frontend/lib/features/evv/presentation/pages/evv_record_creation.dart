@@ -282,7 +282,7 @@ class _EvvRecordCreationPageState extends State<EvvRecordCreationPage> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _selectedServiceType.isEmpty ? null : _selectedServiceType,
+                        initialValue: _selectedServiceType.isEmpty ? null : _selectedServiceType,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: 'Select service type',
@@ -597,7 +597,7 @@ class _EvvRecordCreationPageState extends State<EvvRecordCreationPage> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _selectedStateCode.isEmpty ? null : _selectedStateCode,
+                        initialValue: _selectedStateCode.isEmpty ? null : _selectedStateCode,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           hintText: 'Select state',

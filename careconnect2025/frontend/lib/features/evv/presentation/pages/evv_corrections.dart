@@ -259,7 +259,7 @@ class _EvvCorrectionsPageState extends State<EvvCorrectionsPage> with TickerProv
                 );
               }
               return const SizedBox.shrink();
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -194,7 +194,7 @@ class MockServer {
         'role': role,
         'patientId': role == 'patient' ? MockData.patients.length + 1 : null,
         'caregiverId': role == 'caregiver' ? MockData.caregivers.length + 1 : null,
-        'stripeCustomerId': 'cus_mock_${role}${MockData.users.length + 1}'
+        'stripeCustomerId': 'cus_mock_$role${MockData.users.length + 1}'
       };
 
       MockData.users.add(newUser);
@@ -641,7 +641,7 @@ class MockServer {
     });
 
     // Mount protected routes with auth middleware
-    router.mount('/v1/api/', Pipeline().addMiddleware(authMiddleware()).addHandler(protectedRoutes));
+    router.mount('/v1/api/', Pipeline().addMiddleware(authMiddleware()).addHandler(protectedRoutes.call));
 
     return router;
   }
@@ -652,7 +652,7 @@ class MockServer {
     final app = Router();
     final apiRouter = createRouter();
 
-    app.mount('/', apiRouter);
+    app.mount('/', apiRouter.call);
 
     final handler = Pipeline()
         .addMiddleware(logRequests())
@@ -661,7 +661,7 @@ class MockServer {
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
         }))
-        .addHandler(app);
+        .addHandler(app.call);
 
     final server = await shelf_io.serve(handler, InternetAddress.anyIPv4, port);
 

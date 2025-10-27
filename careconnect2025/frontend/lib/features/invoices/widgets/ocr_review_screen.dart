@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 class OcrReviewScreen extends StatefulWidget {
   final List<XFile> images;
 
-  const OcrReviewScreen({Key? key, required this.images}) : super(key: key);
+  const OcrReviewScreen({super.key, required this.images});
 
   @override
   State<OcrReviewScreen> createState() => _OcrReviewScreenState();
