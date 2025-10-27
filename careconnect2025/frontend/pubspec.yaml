@@ -130,6 +130,10 @@ dependencies:
   #OAuth2 Client + PKCE (Google and Microsoft)
   flutter_appauth: ^6.0.3
 
+  # UI Components
+  accordion: ^2.6.0
+  syncfusion_flutter_pdfviewer: ^31.2.3
+
   #speech to text, voice recognition, and diarization
   sherpa_onnx: ^1.12.14
   #for recording audio samples for speaker recognition

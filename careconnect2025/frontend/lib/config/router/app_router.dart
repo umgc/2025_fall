@@ -41,6 +41,7 @@ import '../../features/payments/presentation/pages/subscription_management_page.
 import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
 import '../../features/auth/presentation/pages/password_reset_page.dart';
 import '../../features/auth/presentation/pages/reset_password_screen.dart'; // ADD THIS IMPORT
+import '../../features/auth/presentation/pages/AlexaLoginPage.dart';
 import '../../features/payments/models/package_model.dart';
 import '../../features/social/presentation/pages/main_feed_screen.dart';
 import '../../features/gamification/presentation/pages/gamification_screen.dart';
