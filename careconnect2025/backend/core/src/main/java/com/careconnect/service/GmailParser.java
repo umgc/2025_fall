@@ -39,6 +39,8 @@ public class GmailParser {
             DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.US),
             DateTimeFormatter.ofPattern("M/d/yyyy", Locale.US)
     };
+    private static final String PLACEHOLDER_IMAGE =
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTIwJyBoZWlnaHQ9JzgwJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnPiAgPHJlY3QgeD0nMCcgeT0nMCcgd2lkdGg9JzEyMCcgaGVpZ2h0PSc4MCcgcng9JzgnIHJ5PSc4JyBmaWxsPSIjZTRlNGU0Ii8+ICA8cmVjdCB4PSc4JyB5PScxNScgd2lkdGg9JzEwNCcgaGVpZ2h0PSc1MCcgcng9JzYnIHJ5PSc2JyBmaWxsPSIjZmZmIi8+ICA8cGF0aCBkPSdNMTAgMjBsNDggMzAgNDgtMzAnIGZpbGw9JyNkZGQnIHN0cm9rZT0nI2NjYycgc3Ryb2tlLXdpZHRoPScyJyBzdHJva2UtbGluZWNhcD0ncm91bmQnIHJ4PSc2JyByeT0nNicvPiAgPHRleHQgeD0nNjAnIHk9JzQ2JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LXNpemU9JzEyJyBmb250LWZhbWlseT0nQXJpYWwnIGZpbGw9JyM2NjYnPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+";
 
     public UspsDigest toDomain(GmailDigestPayload payload) {
         if (payload == null) return null;
@@ -57,6 +59,10 @@ public class GmailParser {
         List<MailPiece> mailPieces = extractMailPieces(doc, payload, digestDate);
 
         mailPieces = deduplicateMailPieces(mailPieces);
+
+        if (expectedMailCount <= 0 && !mailPieces.isEmpty()) {
+            expectedMailCount = mailPieces.size();
+        }
 
         for (int i = 0; i < mailPieces.size(); i++) {
             MailPiece mp = mailPieces.get(i);
@@ -84,6 +90,15 @@ public class GmailParser {
             System.out.println("[GmailParser] Trimming packages from " + packages.size() + " to expected count " + expectedPackageCount);
             packages = new ArrayList<>(packages.subList(0, expectedPackageCount));
         }
+        if (expectedMailCount > 0 && mailPieces.size() < expectedMailCount) {
+            int missing = expectedMailCount - mailPieces.size();
+            System.out.println("[GmailParser] Adding " + missing + " placeholder mail pieces to match expected count");
+            OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : digestDate;
+            for (int i = 1; i <= missing; i++) {
+                String id = "mail-placeholder-" + (mailPieces.size() + 1);
+                mailPieces.add(createPlaceholderMailPiece(id, received));
+            }
+        }
 
         System.out.println("[GmailParser] Extracted " + packages.size() + " packages and " + mailPieces.size() + " mail pieces");
 
@@ -98,11 +113,30 @@ public class GmailParser {
                         Map.Entry::getValue,
                         (a, b) -> a));
 
-        for (Element img : doc.select("img[src^=cid:]")) {
-            String cid = normalizeCid(img.attr("src").substring(img.attr("src").indexOf(':') + 1));
+        for (Element img : doc.select("img[src^=cid:], img[data-src^=cid:], img[data-lazy-src^=cid:], img[data-original^=cid:]")) {
+            String raw = firstNonBlank(
+                    img.attr("src"),
+                    img.attr("data-src"),
+                    img.attr("data-lazy-src"),
+                    img.attr("data-original"));
+            if (isBlank(raw) || !raw.contains(":")) {
+                continue;
+            }
+            String cid = normalizeCid(raw.substring(raw.indexOf(':') + 1));
             String dataUrl = lookup.get(cid);
             if (dataUrl != null) {
-                img.attr("src", dataUrl);
+                if (!isBlank(img.attr("src")) && img.attr("src").startsWith("cid:")) {
+                    img.attr("src", dataUrl);
+                }
+                if (!isBlank(img.attr("data-src")) && img.attr("data-src").startsWith("cid:")) {
+                    img.attr("data-src", dataUrl);
+                }
+                if (!isBlank(img.attr("data-lazy-src")) && img.attr("data-lazy-src").startsWith("cid:")) {
+                    img.attr("data-lazy-src", dataUrl);
+                }
+                if (!isBlank(img.attr("data-original")) && img.attr("data-original").startsWith("cid:")) {
+                    img.attr("data-original", dataUrl);
+                }
             }
         }
     }
@@ -309,7 +343,12 @@ public class GmailParser {
 
         if (pieces.isEmpty()) {
             System.out.println("[GmailParser] No structured mail pieces found, looking for fallback images");
-            var imgElements = doc.select("#mailpieces img[src^=data:], #mailpieces img[src^=https], img[alt*=mailpiece]");
+            var imgElements = doc.select("#mailpieces img[src^=data:], #mailpieces img[src^=https], "
+                    + "#mailpieces img[src^=cid:], "
+                    + "#mailpieces img[data-src^=data:], #mailpieces img[data-src^=https], #mailpieces img[data-src^=cid:], "
+                    + "#mailpieces img[data-lazy-src^=data:], #mailpieces img[data-lazy-src^=https], #mailpieces img[data-lazy-src^=cid:], "
+                    + "#mailpieces img[data-original^=data:], #mailpieces img[data-original^=https], #mailpieces img[data-original^=cid:], "
+                    + "img[alt*=mailpiece]");
             System.out.println("[GmailParser] Found " + imgElements.size() + " potential mail piece images");
 
             // Look for any CID images that might be mail pieces
@@ -325,53 +364,6 @@ public class GmailParser {
                 MailPiece piece = toMailPieceFromImg(img, payload, defaultDate, cidIdx++);
                 if (piece != null) {
                     pieces.add(piece);
-                }
-            }
-
-            // Still no images found, look for mail summary text
-            if (pieces.isEmpty()) {
-                System.out.println("[GmailParser] No mail piece images found, looking for mail summary indicators");
-
-                // Look for elements that might indicate mail count
-                var mailSummaryElements = doc.select("*:matchesOwn((?i)mail.*\\d+)");
-                System.out.println("[GmailParser] Found " + mailSummaryElements.size() + " mail summary elements");
-
-                // Also look for elements containing numbers that might be mail counts
-                var numberElements = doc.select("*:matchesOwn(\\d+)");
-                System.out.println("[GmailParser] Found " + numberElements.size() + " elements with numbers");
-
-                // Look for simple numeric mail counts (like standalone "3" or "5")
-                for (Element element : numberElements) {
-                    String text = element.text().trim();
-
-                    // Skip if it's clearly not a mail count
-                    if (text.length() > 3 || text.contains(" ") ||
-                        element.text().toLowerCase().contains("package") ||
-                        element.text().toLowerCase().contains("tracking")) {
-                        continue;
-                    }
-
-                    try {
-                        int count = Integer.parseInt(text);
-                        if (count > 0 && count <= 10) { // Reasonable range for daily mail
-                            System.out.println("[GmailParser] Found potential mail count: " + count);
-
-                            // Create generic mail entries
-                            for (int i = 1; i <= count; i++) {
-                                pieces.add(new MailPiece(
-                                    "mail-summary-" + i,
-                                    "USPS Informed Delivery",
-                                    "Mail piece " + i,
-                                    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nNDAnIGhlaWdodD0nMjAnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zyc+PHJlY3Qgd2lkdGg9JzQwJyBoZWlnaHQ9JzIwJyBmaWxsPSIjZGRkIi8+PHRleHQgeD0nMjAnIHk9JzE1JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LWZhbWlseT0nQXJpYWwnIGZvbnQtc2l6ZT0nMTInIGZpbGw9JyM2NjYnPk1haWw8L3RleHQ+PC9zdmc+",
-                                    defaultDate,
-                                    ActionLinks.defaults("https://informeddelivery.usps.com/box/dashboard")
-                                ));
-                            }
-                            break; // Only process first reasonable count found
-                        }
-                    } catch (NumberFormatException ignored) {
-                        // Not a number, skip
-                    }
                 }
             }
 
@@ -403,10 +395,21 @@ public class GmailParser {
             }
 
             String id = piece.getId();
-            boolean placeholder = id != null && id.startsWith("mail-summary-");
-            String key = firstNonBlank(piece.getThumbnailUrl(), piece.getSubject(), piece.getSender(), id);
+            boolean placeholder = id != null && (id.startsWith("mail-summary-") || id.startsWith("mail-placeholder-"));
+            String key = null;
+            if (!isBlank(id)) {
+                key = "id:" + id.trim().toLowerCase(Locale.ROOT);
+            } else {
+                String thumb = piece.getThumbnailUrl();
+                String subject = piece.getSubject();
+                String sender = piece.getSender();
+                if (!isBlank(thumb) || !isBlank(subject) || !isBlank(sender)) {
+                    key = "content:" + safeLower(thumb) + "|" + safeLower(subject) + "|" + safeLower(sender);
+                }
+            }
+
             if (key == null) {
-                key = UUID.randomUUID().toString();
+                key = "rand:" + UUID.randomUUID();
             }
 
             if (!seen.add(key)) {
@@ -435,7 +438,12 @@ public class GmailParser {
         Element img = block.selectFirst("img");
         if (img == null) return null;
 
-        String src = resolveCidReference(img.attr("src"), payload.inlineCidData());
+        String rawSrc = firstNonBlank(
+                img.attr("src"),
+                img.attr("data-src"),
+                img.attr("data-lazy-src"),
+                img.attr("data-original"));
+        String src = resolveCidReference(rawSrc, payload.inlineCidData());
         if (isBlank(src)) return null;
 
         String id = block.hasAttr("data-mailpiece-id")
@@ -474,7 +482,12 @@ public class GmailParser {
 
     private MailPiece toMailPieceFromImg(Element img, GmailDigestPayload payload, OffsetDateTime defaultDate, int counter) {
         if (img == null) return null;
-        String src = resolveCidReference(img.attr("src"), payload.inlineCidData());
+        String rawSrc = firstNonBlank(
+                img.attr("src"),
+                img.attr("data-src"),
+                img.attr("data-lazy-src"),
+                img.attr("data-original"));
+        String src = resolveCidReference(rawSrc, payload.inlineCidData());
         if (isBlank(src)) return null;
 
         String id = "mailpiece-" + counter;
@@ -687,6 +700,22 @@ public class GmailParser {
         return null;
     }
 
+    private String safeLower(String value) {
+        return isBlank(value) ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private MailPiece createPlaceholderMailPiece(String id, OffsetDateTime receivedAt) {
+        OffsetDateTime timestamp = receivedAt != null ? receivedAt : OffsetDateTime.now(ZoneOffset.UTC);
+        return new MailPiece(
+                id,
+                "USPS Mail Piece",
+                "Image not available",
+                PLACEHOLDER_IMAGE,
+                timestamp,
+                ActionLinks.defaults("https://informeddelivery.usps.com/box/dashboard")
+        );
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
@@ -702,6 +731,13 @@ public class GmailParser {
         Element header = doc.selectFirst("p:matches(You have \\d+ mailpiece)");
         if (header != null) {
             Matcher matcher = Pattern.compile("You have \\s*(\\d+)").matcher(header.text());
+            if (matcher.find()) {
+                return parseIntSafe(matcher.group(1));
+            }
+        }
+        Element mailHeader = doc.selectFirst("*:matchesOwn((?i)mail ?pieces?.*\\d)");
+        if (mailHeader != null) {
+            Matcher matcher = Pattern.compile("(\\d+)").matcher(mailHeader.text());
             if (matcher.find()) {
                 return parseIntSafe(matcher.group(1));
             }
