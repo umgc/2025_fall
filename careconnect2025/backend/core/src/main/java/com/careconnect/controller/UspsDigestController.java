@@ -21,4 +21,12 @@ public class UspsDigestController {
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
+
+    @PostMapping("/clear-cache")
+    public ResponseEntity<String> clearCache(
+            @RequestParam(defaultValue = "demo-user") String userId) {
+
+        uspsDigestService.clearCacheForUser(userId);
+        return ResponseEntity.ok("Cache cleared successfully for user: " + userId);
+    }
 }

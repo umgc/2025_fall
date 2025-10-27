@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/config/env_constant.dart';
 import 'dart:html' as html;
 
 class _TrackingEvent {
@@ -183,7 +183,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       error = null;
       _isSearchActive = false;
     });
-    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final base = getBackendBaseUrl();
 
     // Get user ID to pass as parameter
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -192,7 +192,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
 
     // Format date as YYYY-MM-DD
     final dateString = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    final url = '$base/api/usps/digest?userId=$userId&date=$dateString';
+    final url = '$base/api/usps/latest?userId=$userId';
 
     try {
       final dio = Dio(BaseOptions(
@@ -264,7 +264,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       searchError = null;
     });
 
-    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final base = getBackendBaseUrl();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
     final userId = user?.id ?? 'demo-user';
@@ -310,7 +310,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
 
     if (user == null) return;
 
-    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final base = getBackendBaseUrl();
     try {
       final dio = Dio();
       final resp = await dio.get('$base/api/email-credentials/status?userId=${user.id}');
@@ -348,7 +348,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     final user = userProvider.user;
     final userId = user?.id ?? 'demo-user';
 
-    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final base = getBackendBaseUrl();
     try {
       final dio = Dio();
       await dio.post('$base/api/usps/clear-cache?userId=$userId');
@@ -386,7 +386,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       return;
     }
 
-    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final base = getBackendBaseUrl();
 
     // Get actual current page URL from browser window
     final currentUrl = html.window.location.href;

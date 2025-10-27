@@ -72,6 +72,19 @@ public class USPSDigestService {
         } catch (Exception ignored) {}
     }
 
+    public void clearCacheForUser(String userId) {
+        // Delete all cache entries for the user by setting their expiration to the past
+        var userCacheEntries = cacheRepo.findAll()
+                .stream()
+                .filter(cache -> userId.equals(cache.getUserId()))
+                .toList();
+
+        for (var entry : userCacheEntries) {
+            entry.setExpiresAt(Instant.now().minus(Duration.ofHours(1))); // Expire 1 hour ago
+            cacheRepo.save(entry);
+        }
+    }
+
     private String decrypt(String s) { return s; } // TODO: plug KMS/JCE
 
     private USPSDigest mockDigest() {
