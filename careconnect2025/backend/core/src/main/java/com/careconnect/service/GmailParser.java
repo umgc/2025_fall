@@ -9,6 +9,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -22,6 +23,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -41,6 +43,8 @@ public class GmailParser {
     };
     private static final String PLACEHOLDER_IMAGE =
             "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMTIwJyBoZWlnaHQ9JzgwJyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnPiAgPHJlY3QgeD0nMCcgeT0nMCcgd2lkdGg9JzEyMCcgaGVpZ2h0PSc4MCcgcng9JzgnIHJ5PSc4JyBmaWxsPSIjZTRlNGU0Ii8+ICA8cmVjdCB4PSc4JyB5PScxNScgd2lkdGg9JzEwNCcgaGVpZ2h0PSc1MCcgcng9JzYnIHJ5PSc2JyBmaWxsPSIjZmZmIi8+ICA8cGF0aCBkPSdNMTAgMjBsNDggMzAgNDgtMzAnIGZpbGw9JyNkZGQnIHN0cm9rZT0nI2NjYycgc3Ryb2tlLXdpZHRoPScyJyBzdHJva2UtbGluZWNhcD0ncm91bmQnIHJ4PSc2JyByeT0nNicvPiAgPHRleHQgeD0nNjAnIHk9JzQ2JyB0ZXh0LWFuY2hvcj0nbWlkZGxlJyBmb250LXNpemU9JzEyJyBmb250LWZhbWlseT0nQXJpYWwnIGZpbGw9JyM2NjYnPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+";
+    @Autowired(required = false)
+    private MailpieceOcrService mailpieceOcrService;
 
     public UspsDigest toDomain(GmailDigestPayload payload) {
         if (payload == null) return null;
@@ -472,10 +476,15 @@ public class GmailParser {
         if (isBlank(sender)) {
             sender = extractSender(block);
         }
+        if (isBlank(sender)) {
+            sender = inferSenderFromImage(src);
+        }
+        sender = sanitizeSender(sender);
 
         String summary = firstNonBlank(
                 textOrNull(block.selectFirst(".summary")),
                 deriveSummaryFromAlt(alt));
+        summary = normalizeSummary(summary, sender);
 
         if (isMarketingText(alt) || isMarketingText(sender) || isMarketingText(summary)) {
             return null;
@@ -512,7 +521,12 @@ public class GmailParser {
         if (isBlank(sender)) {
             sender = extractSender(img.parent());
         }
+        if (isBlank(sender)) {
+            sender = inferSenderFromImage(src);
+        }
+        sender = sanitizeSender(sender);
         String summary = deriveSummaryFromAlt(alt);
+        summary = normalizeSummary(summary, sender);
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
 
         if (isMarketingText(alt) || isMarketingText(sender) || isMarketingText(summary)) {
@@ -545,9 +559,24 @@ public class GmailParser {
 
     private String deriveSenderFromContext(Element block) {
         if (block == null) return null;
-        Element label = block.selectFirst("strong:matchesOwn((?i)(from|sender))");
+        Element label = block.selectFirst("strong:matchesOwn((?i)(from|sender)), b:matchesOwn((?i)(from|sender)), span:matchesOwn((?i)(from|sender))");
         if (label != null) {
             return label.text().replaceFirst("(?i)(?:from|sender)\\s*", "").trim();
+        }
+        Element fromElement = block.selectFirst("*:matchesOwn((?i)^from\\s*:?)");
+        if (fromElement != null) {
+            String text = fromElement.text();
+            String candidate = text.replaceFirst("(?i)from\\s*:?", "").trim();
+            if (!candidate.isEmpty()) {
+                return candidate;
+            }
+            Element sibling = fromElement.nextElementSibling();
+            if (sibling != null) {
+                String siblingText = sibling.text();
+                if (!isBlank(siblingText)) {
+                    return siblingText.trim();
+                }
+            }
         }
         return null;
     }
@@ -638,9 +667,15 @@ public class GmailParser {
         String cleaned = value
                 .replaceAll("(?i)tracking number.*", "")
                 .replaceAll("(?i)expected delivery.*", "")
+                .replaceAll("(?i)campaign", "")
+                .replaceAll("(?i)mail piece", "")
+                .replaceAll("(?i)^from\\s*", "")
                 .replaceAll("[\\r\\n]+", " ")
                 .trim();
         if (cleaned.isEmpty()) {
+            return null;
+        }
+        if (cleaned.equalsIgnoreCase("mail") || cleaned.equalsIgnoreCase("image")) {
             return null;
         }
         return cleaned;
@@ -718,6 +753,43 @@ public class GmailParser {
         return isBlank(value) ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
+    private String inferSenderFromImage(String imageSrc) {
+        if (mailpieceOcrService == null || isBlank(imageSrc)) {
+            return null;
+        }
+        if (!imageSrc.startsWith("data:")) {
+            return null;
+        }
+        int comma = imageSrc.indexOf(',');
+        if (comma <= 0 || comma >= imageSrc.length() - 1) {
+            return null;
+        }
+        String metadata = imageSrc.substring(5, comma); // after 'data:'
+        String base64 = imageSrc.substring(comma + 1);
+        try {
+            byte[] bytes = Base64.getDecoder().decode(base64);
+            Optional<String> candidate = mailpieceOcrService.extractTopLeftLabel(bytes, metadata);
+            return candidate.map(this::sanitizeSender).orElse(null);
+        } catch (IllegalArgumentException ex) {
+            System.out.println("[GmailParser] Failed to decode inline image for OCR: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    private String normalizeSummary(String summary, String sender) {
+        if (!isBlank(summary)) {
+            String cleaned = sanitizeSender(summary);
+            if (!isBlank(cleaned)) {
+                summary = cleaned;
+            }
+            String lower = summary.toLowerCase(Locale.ROOT);
+            if (!lower.equals("mail") && !lower.equals("campaign") && !lower.startsWith("image")) {
+                return summary;
+            }
+        }
+        return isBlank(sender) ? summary : sender;
+    }
+
     private List<MailPiece> extractCampaignMailPieces(Document doc, GmailDigestPayload payload, OffsetDateTime defaultDate) {
         List<MailPiece> results = new ArrayList<>();
         Set<String> seenCids = new LinkedHashSet<>();
@@ -751,16 +823,26 @@ public class GmailParser {
             if (cidKey != null && !seenCids.add(cidKey)) {
                 continue;
             }
-            String sender = firstNonBlank(
-                    extractSender(container),
-                    extractSender(container.parent()),
-                    deriveSenderFromAlt(img.attr("alt"))
-            );
-            String summary = firstNonBlank(
-                    deriveSummaryFromAlt(img.attr("alt")),
-                    textOrNull(container.selectFirst("p")),
-                    textOrNull(container.selectFirst("span"))
-            );
+        String rawSender = firstNonBlank(
+                extractSender(container),
+                extractSender(container.parent()),
+                deriveSenderFromAlt(img.attr("alt")),
+                extractCampaignSenderHint(container)
+        );
+        String sender = sanitizeOrFallback(rawSender);
+        String summary = firstNonBlank(
+                deriveSummaryFromAlt(img.attr("alt")),
+                textOrNull(container.selectFirst("p")),
+                textOrNull(container.selectFirst("span"))
+        );
+        if (isBlank(sender)) {
+            sender = inferSenderFromImage(resolved);
+        }
+        sender = sanitizeOrFallback(sender, rawSender);
+        if (isBlank(summary) && !isBlank(sender)) {
+            summary = sender;
+        }
+        summary = normalizeSummary(summary, sender);
             OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
             results.add(new MailPiece(
                     "mailpiece-" + counter++,
