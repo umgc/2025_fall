@@ -7,6 +7,158 @@ import 'package:provider/provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'dart:html' as html;
 
+class _TrackingEvent {
+  final String title;
+  final List<String> details;
+  final bool isCompleted;
+  final bool isCurrent;
+
+  const _TrackingEvent({
+    required this.title,
+    this.details = const [],
+    this.isCompleted = false,
+    this.isCurrent = false,
+  });
+}
+
+class _TrackingEnhancement {
+  final List<_TrackingEvent> events;
+  final String? expectedDisplayOverride;
+
+  const _TrackingEnhancement({
+    this.events = const [],
+    this.expectedDisplayOverride,
+  });
+}
+
+class _TrackingTimeline extends StatelessWidget {
+  final List<_TrackingEvent> events;
+
+  const _TrackingTimeline({required this.events});
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        for (var i = 0; i < events.length; i++)
+          _TrackingTimelineTile(
+            event: events[i],
+            isFirst: i == 0,
+            isLast: i == events.length - 1,
+          ),
+      ],
+    );
+  }
+}
+
+class _TrackingTimelineTile extends StatelessWidget {
+  final _TrackingEvent event;
+  final bool isFirst;
+  final bool isLast;
+
+  const _TrackingTimelineTile({
+    required this.event,
+    required this.isFirst,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final baseTitleColor = theme.textTheme.bodyMedium?.color ?? Colors.black87;
+    final neutralColor = Colors.grey.shade500;
+    final Color accentColor = event.isCompleted
+        ? Colors.green.shade600
+        : (event.isCurrent ? theme.colorScheme.primary : neutralColor);
+    final Color fillColor =
+        (event.isCompleted || event.isCurrent) ? accentColor : Colors.white;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Column(
+              children: [
+                if (!isFirst)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 2,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 6),
+                Container(
+                  width: 12,
+                  height: 12,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: fillColor,
+                    border: Border.all(color: accentColor, width: 2),
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 2,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 6),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight:
+                          event.isCurrent ? FontWeight.w600 : FontWeight.w500,
+                      color: (event.isCompleted || event.isCurrent)
+                          ? baseTitleColor
+                          : neutralColor,
+                    ),
+                  ),
+                  for (final detail in event.details)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        detail,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class UspsTestScreen extends StatefulWidget {
   const UspsTestScreen({super.key});
   @override
