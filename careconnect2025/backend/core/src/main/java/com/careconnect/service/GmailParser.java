@@ -125,6 +125,7 @@ public class GmailParser {
             String cid = normalizeCid(raw.substring(raw.indexOf(':') + 1));
             String dataUrl = lookup.get(cid);
             if (dataUrl != null) {
+                img.attr("data-inline-cid", cid);
                 if (!isBlank(img.attr("src")) && img.attr("src").startsWith("cid:")) {
                     img.attr("src", dataUrl);
                 }
@@ -342,17 +343,26 @@ public class GmailParser {
         }
 
         if (pieces.isEmpty()) {
+            List<MailPiece> campaignPieces = extractCampaignMailPieces(doc, payload, defaultDate);
+            if (!campaignPieces.isEmpty()) {
+                System.out.println("[GmailParser] Extracted " + campaignPieces.size() + " mail pieces from campaign tables");
+                pieces.addAll(campaignPieces);
+            }
+        }
+
+        if (pieces.isEmpty()) {
             System.out.println("[GmailParser] No structured mail pieces found, looking for fallback images");
             var imgElements = doc.select("#mailpieces img[src^=data:], #mailpieces img[src^=https], "
                     + "#mailpieces img[src^=cid:], "
                     + "#mailpieces img[data-src^=data:], #mailpieces img[data-src^=https], #mailpieces img[data-src^=cid:], "
                     + "#mailpieces img[data-lazy-src^=data:], #mailpieces img[data-lazy-src^=https], #mailpieces img[data-lazy-src^=cid:], "
                     + "#mailpieces img[data-original^=data:], #mailpieces img[data-original^=https], #mailpieces img[data-original^=cid:], "
+                    + "#mailpieces img[data-inline-cid], "
                     + "img[alt*=mailpiece]");
             System.out.println("[GmailParser] Found " + imgElements.size() + " potential mail piece images");
 
             // Look for any CID images that might be mail pieces
-            var cidImages = doc.select("img[src^=cid:]");
+            var cidImages = doc.select("img[data-inline-cid], img[src^=cid:], img[data-src^=cid:], img[data-lazy-src^=cid:], img[data-original^=cid:]");
             System.out.println("[GmailParser] Found " + cidImages.size() + " CID images");
 
             // Try to convert any CID images into mail pieces
@@ -443,6 +453,9 @@ public class GmailParser {
                 img.attr("data-src"),
                 img.attr("data-lazy-src"),
                 img.attr("data-original"));
+        if (isRideAlongImage(img, rawSrc)) {
+            return null;
+        }
         String src = resolveCidReference(rawSrc, payload.inlineCidData());
         if (isBlank(src)) return null;
 
@@ -487,6 +500,9 @@ public class GmailParser {
                 img.attr("data-src"),
                 img.attr("data-lazy-src"),
                 img.attr("data-original"));
+        if (isRideAlongImage(img, rawSrc)) {
+            return null;
+        }
         String src = resolveCidReference(rawSrc, payload.inlineCidData());
         if (isBlank(src)) return null;
 
@@ -599,8 +615,7 @@ public class GmailParser {
             return false;
         }
         String lower = value.toLowerCase(Locale.ROOT);
-        return lower.contains("campaign")
-            || lower.contains("ridealong")
+        return lower.contains("ridealong")
             || lower.contains("promo")
             || lower.contains("sat");
     }
@@ -610,8 +625,7 @@ public class GmailParser {
             return false;
         }
         String lower = value.toLowerCase(Locale.ROOT);
-        return lower.contains("campaign")
-            || lower.contains("ridealong")
+        return lower.contains("ridealong")
             || lower.contains("promotion")
             || lower.contains("learn more about your mail")
             || lower.contains("tru") && lower.contains("stage");
@@ -702,6 +716,111 @@ public class GmailParser {
 
     private String safeLower(String value) {
         return isBlank(value) ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<MailPiece> extractCampaignMailPieces(Document doc, GmailDigestPayload payload, OffsetDateTime defaultDate) {
+        List<MailPiece> results = new ArrayList<>();
+        Set<String> seenCids = new LinkedHashSet<>();
+        var campaignContainers = doc.select("#mail-section table.mail, #mail-section div[id^=mail-campaign], #mail-section div.mail");
+        System.out.println("[GmailParser] Inspecting " + campaignContainers.size() + " campaign containers");
+        int counter = 1;
+
+        for (Element container : campaignContainers) {
+            Element img = container.selectFirst("img[data-inline-cid], img[src^=cid:], img[data-src^=cid:], img[data-lazy-src^=cid:], img[data-original^=cid:], img[src^=data:]");
+            if (img == null) {
+                continue;
+            }
+            String rawSrc = firstNonBlank(
+                    img.attr("src"),
+                    img.attr("data-src"),
+                    img.attr("data-lazy-src"),
+                    img.attr("data-original"));
+            if (isRideAlongImage(img, rawSrc)) {
+                continue;
+            }
+            String resolved = resolveCidReference(rawSrc, payload.inlineCidData());
+            if (isBlank(resolved)) {
+                continue;
+            }
+            String cidKey = null;
+            if (img.hasAttr("data-inline-cid")) {
+                cidKey = img.attr("data-inline-cid");
+            } else if (!isBlank(rawSrc) && rawSrc.toLowerCase(Locale.ROOT).startsWith("cid:")) {
+                cidKey = normalizeCid(rawSrc.substring(rawSrc.indexOf(':') + 1));
+            }
+            if (cidKey != null && !seenCids.add(cidKey)) {
+                continue;
+            }
+            String sender = firstNonBlank(
+                    extractSender(container),
+                    extractSender(container.parent()),
+                    deriveSenderFromAlt(img.attr("alt"))
+            );
+            String summary = firstNonBlank(
+                    deriveSummaryFromAlt(img.attr("alt")),
+                    textOrNull(container.selectFirst("p")),
+                    textOrNull(container.selectFirst("span"))
+            );
+            OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
+            results.add(new MailPiece(
+                    "mailpiece-" + counter++,
+                    sender,
+                    summary,
+                    resolved,
+                    received,
+                    ActionLinks.defaults(null)
+            ));
+        }
+
+        return results;
+    }
+
+    private boolean isRideAlongImage(Element img, String rawSrc) {
+        if (img == null) {
+            return false;
+        }
+        String alt = img.attr("alt");
+        String id = img.id();
+        String classes = img.className();
+        String parentClasses = img.parent() != null ? img.parent().className() : "";
+        String lowerAlt = safeLower(alt);
+        String lowerId = safeLower(id);
+        String lowerClasses = safeLower(classes);
+        String lowerParentClasses = safeLower(parentClasses);
+        String inlineCid = img.attr("data-inline-cid");
+        String lowerInlineCid = safeLower(inlineCid);
+
+        if (lowerAlt.contains("ridealong") || lowerAlt.contains("ride along")) {
+            return true;
+        }
+        if (lowerId.contains("ridealong") || lowerId.contains("ride-along")) {
+            return true;
+        }
+        if (lowerClasses.contains("ridealong") || lowerClasses.contains("ride-along")) {
+            return true;
+        }
+        if (lowerParentClasses.contains("ridealong") || lowerParentClasses.contains("ride-along")) {
+            return true;
+        }
+
+        if (!isBlank(lowerInlineCid)) {
+            if (lowerInlineCid.startsWith("content-") || lowerInlineCid.contains("ridealong") || lowerInlineCid.contains("ride-along")) {
+                return true;
+            }
+        }
+
+        if (!isBlank(rawSrc)) {
+            String lowerSrc = rawSrc.toLowerCase(Locale.ROOT);
+            if (lowerSrc.startsWith("cid:")) {
+                String cid = normalizeCid(rawSrc.substring(rawSrc.indexOf(':') + 1));
+                if (cid.startsWith("content-") || cid.contains("ridealong") || cid.contains("ride-along")) {
+                    return true;
+                }
+            } else if (lowerSrc.contains("ridealong") || lowerSrc.contains("ride-along")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private MailPiece createPlaceholderMailPiece(String id, OffsetDateTime receivedAt) {
