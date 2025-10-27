@@ -15,7 +15,7 @@ public final class QuestionMapper {
                 q.getType(),
                 q.isRequired(),
                 q.getOrdinal(),
-                q.getActive()
+                q.isActive()
         );
     }
 

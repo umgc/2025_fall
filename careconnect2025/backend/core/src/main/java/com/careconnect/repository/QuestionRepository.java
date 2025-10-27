@@ -2,14 +2,15 @@ package com.careconnect.repository;
 
 import com.careconnect.model.Question;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
 
-    List<Question> findAllByOrderByOrdinalAscIdAsc();
+    // Return all active/inactive questions
+    List<Question> findByActive(Boolean active);
 
-    List<Question> findByActiveTrueOrderByOrdinalAscIdAsc();
-
-    List<Question> findByActiveOrderByOrdinalAscIdAsc(boolean active);
+    // (Optional niceties)
+    List<Question> findAllByActiveTrue();
+    List<Question> findAllByActiveFalse();
 }
+

@@ -40,11 +40,14 @@ public class QuestionServiceImpl implements QuestionService {
     public QuestionDTO create(QuestionUpsertDTO body) {
         Question q = new Question();
         QuestionMapper.applyUpsert(q, body);
-        // default active if null logic is in entity or set here:
-        if (q.getActive() == null) q.setActive(Boolean.TRUE);
+
+        // ensure new questions default to active
+        q.setActive(true);
+
         q = repo.save(q);
         return QuestionMapper.toDto(q);
     }
+
 
     @Override
     public Optional<QuestionDTO> update(Long id, QuestionUpsertDTO body) {
