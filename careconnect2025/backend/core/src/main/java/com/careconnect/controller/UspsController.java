@@ -3,10 +3,13 @@ package com.careconnect.controller;
 import com.careconnect.model.UspsDigest;
 import com.careconnect.service.UspsDigestService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/usps")
@@ -18,7 +21,8 @@ public class UspsController {
     @GetMapping("/digest")
     public ResponseEntity<UspsDigest> getDigest(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(required = false) String userId) {
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         // Try to get userId from JWT first, then from parameter, then fallback
         String actualUserId;
@@ -30,11 +34,14 @@ public class UspsController {
             actualUserId = "demo-user"; // fallback for testing
         }
 
-        System.out.println("[USPS] Fetching digest for userId: " + actualUserId);
+        // If no date specified, default to today
+        LocalDate targetDate = date != null ? date : LocalDate.now();
 
-        var digest = service.latestForUser(actualUserId)
+        System.out.println("[USPS] Fetching digest for userId: " + actualUserId + ", date: " + targetDate);
+
+        var digest = service.digestForUserAndDate(actualUserId, targetDate)
                 .orElseGet(() -> {
-                    System.out.println("[USPS] No digest found, returning empty");
+                    System.out.println("[USPS] No digest found for date " + targetDate + ", returning empty");
                     return new UspsDigest(null, java.util.List.of(), java.util.List.of());
                 });
 

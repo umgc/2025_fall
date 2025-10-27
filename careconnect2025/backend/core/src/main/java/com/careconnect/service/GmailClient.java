@@ -10,8 +10,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,6 +29,81 @@ public class GmailClient {
             .baseUrl("https://gmail.googleapis.com/gmail/v1")
             .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             .build();
+
+    /**
+     * Fetch USPS digest email for a specific date.
+     */
+    public Optional<GmailDigestPayload> fetchDigestForDate(String accessToken, LocalDate date) {
+        try {
+            // Format the date for Gmail search (e.g., "2025/10/27")
+            String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyy/M/d"));
+            String query = "from:USPSInformeddelivery@email.informeddelivery.usps.com subject:(Your Daily Digest) after:" +
+                    formattedDate + " before:" + date.plusDays(1).format(DateTimeFormatter.ofPattern("yyyy/M/d"));
+
+            System.out.println("[GmailClient] Searching for digest with query: " + query);
+
+            JsonNode search = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/users/me/messages")
+                            .queryParam("q", query)
+                            .queryParam("maxResults", 10)
+                            .build())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (search == null || !search.has("messages")) {
+                System.out.println("[GmailClient] No messages found for date " + date);
+                return Optional.empty();
+            }
+
+            // Find the digest closest to the target date
+            GmailDigestPayload bestMatch = null;
+            long bestDateDiff = Long.MAX_VALUE;
+
+            Iterator<JsonNode> iterator = search.get("messages").elements();
+            while (iterator.hasNext()) {
+                JsonNode messageRef = iterator.next();
+                String messageId = messageRef.path("id").asText(null);
+                if (messageId == null) continue;
+
+                JsonNode message = webClient.get()
+                        .uri("/users/me/messages/{id}?format=full", messageId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .retrieve()
+                        .bodyToMono(JsonNode.class)
+                        .block();
+
+                if (message == null) continue;
+
+                long internalDate = message.path("internalDate").asLong(0);
+                if (internalDate == 0) continue;
+
+                // Check if this message is from the target date
+                OffsetDateTime messageDate = OffsetDateTime.ofInstant(
+                        Instant.ofEpochMilli(internalDate), ZoneOffset.UTC);
+                LocalDate messageDateLocal = messageDate.toLocalDate();
+
+                if (messageDateLocal.equals(date)) {
+                    GmailDigestPayload payload = buildPayload(accessToken, messageId, message);
+                    if (payload != null) {
+                        long dateDiff = Math.abs(internalDate - date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli());
+                        if (dateDiff < bestDateDiff) {
+                            bestDateDiff = dateDiff;
+                            bestMatch = payload;
+                        }
+                    }
+                }
+            }
+
+            return Optional.ofNullable(bestMatch);
+        } catch (Exception e) {
+            System.err.println("[GmailClient] Error fetching digest for date " + date + ": " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
 
     /**
      * Fetch the latest USPS digest email along with inline CID assets.

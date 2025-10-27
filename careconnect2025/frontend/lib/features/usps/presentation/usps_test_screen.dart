@@ -18,6 +18,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
   bool loading = false;
   String? error;
   bool isGoogleConnected = false;
+  DateTime selectedDate = DateTime.now();
 
   Future<void> _fetchDigest() async {
     setState(() { loading = true; error = null; });
@@ -28,8 +29,10 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     final user = userProvider.user;
     final userId = user?.id ?? 'demo-user';
 
-    final url = '$base/api/usps/digest?userId=$userId';
-    print('Fetching USPS digest for userId: $userId from: $url');
+    // Format date as YYYY-MM-DD
+    final dateString = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+    final url = '$base/api/usps/digest?userId=$userId&date=$dateString';
+    print('Fetching USPS digest for userId: $userId, date: $dateString from: $url');
 
     try {
       final dio = Dio(BaseOptions(
@@ -51,6 +54,29 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       setState(() => error = e.toString());
     } finally {
       setState(() => loading = false);
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020), // USPS Informed Delivery started around 2017
+      lastDate: DateTime.now(),
+      helpText: 'Select digest date',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
+    );
+
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        digest = null; // Clear previous digest when date changes
+        error = null;
+      });
+
+      // Automatically fetch digest for the new date
+      _fetchDigest();
     }
   }
 
@@ -88,7 +114,12 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
   @override
   void initState() {
     super.initState();
-    _checkGoogleConnection();
+    _checkGoogleConnection().then((_) {
+      // Auto-fetch today's digest after checking connection
+      if (isGoogleConnected) {
+        _fetchDigest();
+      }
+    });
   }
 
   @override
@@ -259,6 +290,66 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Date Selection Section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Select Digest Date',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose any date to view historical USPS digest data. Defaults to today.',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _selectDate,
+                            icon: const Icon(Icons.calendar_today),
+                            label: Text(
+                              '${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}',
+                              style: const TextStyle(fontFamily: 'monospace'),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Theme.of(context).primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedDate = DateTime.now();
+                              digest = null;
+                              error = null;
+                            });
+                            _fetchDigest();
+                          },
+                          icon: const Icon(Icons.today),
+                          tooltip: 'Go to Today',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // Existing controls
             Row(children: [
               ElevatedButton(
@@ -285,6 +376,55 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
             Expanded(
               child: ListView(
                 children: [
+                  // Show selected date info
+                  if (digest != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event, color: Theme.of(context).primaryColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Showing digest for ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (pkgs.isNotEmpty || mail.isNotEmpty) ...[
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${pkgs.length + mail.length} items',
+                              style: const TextStyle(color: Colors.green, fontSize: 12),
+                            ),
+                          ] else ...[
+                            Icon(
+                              Icons.info,
+                              color: Colors.grey,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'No items',
+                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   if (pkgs.isNotEmpty) ...[
                     const Text('Packages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),

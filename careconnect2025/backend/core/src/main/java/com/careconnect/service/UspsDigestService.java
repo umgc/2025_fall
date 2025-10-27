@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -35,13 +36,13 @@ public class UspsDigestService {
 
     private final ObjectMapper om = new ObjectMapper();
 
-    public Optional<UspsDigest> latestForUser(String userId) {
-        System.out.println("[UspsDigestService] Starting latestForUser for userId: " + userId);
+    public Optional<UspsDigest> digestForUserAndDate(String userId, LocalDate date) {
+        System.out.println("[UspsDigestService] Starting digestForUserAndDate for userId: " + userId + ", date: " + date);
 
-        // 1) cache
-        var cached = cacheRepo.findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc(userId, Instant.now());
+        // 1) Check cache for this specific date
+        var cached = cacheRepo.findByUserIdAndDigestDate(userId, date);
         if (cached.isPresent()) {
-            System.out.println("[UspsDigestService] Found cached digest, returning from cache");
+            System.out.println("[UspsDigestService] Found cached digest for date, returning from cache");
             try {
                 return Optional.of(om.readValue(cached.get().getPayloadJson(), UspsDigest.class));
             } catch (Exception e) {
@@ -49,27 +50,36 @@ public class UspsDigestService {
             }
         }
 
-        // 2) Gmail
-        System.out.println("[UspsDigestService] No cache found, checking Gmail credentials");
+        // 2) Fetch from Gmail for the specific date
+        return fetchDigestFromGmail(userId, date);
+    }
+
+    public Optional<UspsDigest> latestForUser(String userId) {
+        return digestForUserAndDate(userId, LocalDate.now());
+    }
+
+    private Optional<UspsDigest> fetchDigestFromGmail(String userId, LocalDate date) {
+        // Gmail
+        System.out.println("[UspsDigestService] Fetching from Gmail for date: " + date);
         var g = emailCredentialRepository.findFirstByUserIdAndProvider(userId, EmailCredential.Provider.GMAIL);
         if (g.isPresent()) {
             System.out.println("[UspsDigestService] Gmail credentials found, attempting to fetch from Gmail");
             try {
                 var at = tokenCryptor.decrypt(g.get().getAccessTokenEnc());
                 System.out.println("[UspsDigestService] Token decrypted successfully, calling Gmail API");
-                var raw = gmailClient.fetchLatestDigest(at);
+                var raw = gmailClient.fetchDigestForDate(at, date);
                 if (raw.isPresent()) {
                     System.out.println("[UspsDigestService] Raw Gmail data found, parsing...");
                     var digest = gmailParser.toDomain(raw.get());
                     if (digest != null) {
                         System.out.println("[UspsDigestService] Gmail parsing successful, caching and returning");
-                        cache(userId, digest);
+                        cacheForDate(userId, digest, date);
                         return Optional.of(digest);
                     } else {
                         System.out.println("[UspsDigestService] Gmail parsing returned null");
                     }
                 } else {
-                    System.out.println("[UspsDigestService] No raw Gmail data found (no matching emails)");
+                    System.out.println("[UspsDigestService] No raw Gmail data found for date " + date);
                 }
             } catch (Exception e) {
                 System.err.println("[UspsDigestService] Gmail processing failed: " + e.getMessage());
@@ -79,24 +89,38 @@ public class UspsDigestService {
             System.out.println("[UspsDigestService] No Gmail credentials found");
         }
 
-        // 3) Outlook
+        // Outlook (similar logic)
         var o = emailCredentialRepository.findFirstByUserIdAndProvider(userId, EmailCredential.Provider.OUTLOOK);
         if (o.isPresent()) {
-            var at = tokenCryptor.decrypt(o.get().getAccessTokenEnc());
-            var raw = outlookClient.fetchLatestDigest(at);
-            if (raw.isPresent()) {
-                var digest = outlookParser.toDomain(raw.get());
-                if (digest != null) {
-                    cache(userId, digest);
-                    return Optional.of(digest);
+            try {
+                var at = tokenCryptor.decrypt(o.get().getAccessTokenEnc());
+                var raw = outlookClient.fetchDigestForDate(at, date);
+                if (raw.isPresent()) {
+                    var digest = outlookParser.toDomain(raw.get());
+                    if (digest != null) {
+                        cacheForDate(userId, digest, date);
+                        return Optional.of(digest);
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("[UspsDigestService] Outlook processing failed: " + e.getMessage());
             }
         }
 
-        // 4) mock fallback so you can test UI today
-        var mock = mockDigest();
-        cache(userId, mock);
-        return Optional.of(mock);
+        return Optional.empty();
+    }
+
+    private void cacheForDate(String userId, UspsDigest d, LocalDate date) {
+        try {
+            var c = new UspsDigestCache();
+            c.setUserId(userId);
+            c.setDigestDate(d.getDigestDate() != null ? d.getDigestDate().toInstant() :
+                date.atStartOfDay().toInstant(ZoneOffset.UTC));
+            c.setPayloadJson(serialize(d));
+            // Don't set expiration for historical data - keep it forever
+            c.setExpiresAt(Instant.now().plus(Duration.ofDays(365 * 10))); // 10 years
+            cacheRepo.save(c);
+        } catch (Exception ignored) {}
     }
 
     private void cache(String userId, UspsDigest d) {
