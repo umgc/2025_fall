@@ -535,24 +535,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                             _handleMedicationAction(false),
                                       ),
 
-                                    // Primary Care Provider
-                                    if (primaryCareProvider != null)
-                                      PrimaryCareProviderWidget(
-                                        providerName:
-                                            primaryCareProvider!['name'],
-                                        specialty:
-                                            primaryCareProvider!['specialty'],
-                                        organization:
-                                            primaryCareProvider!['organization'],
-                                        phone: primaryCareProvider!['phone'],
-                                        email: primaryCareProvider!['email'],
-                                        nextAppointment:
-                                            primaryCareProvider!['nextAppointment'],
-                                        appointmentType:
-                                            primaryCareProvider!['appointmentType'],
-                                        onContactProvider:
-                                            _handleContactProvider,
-                                      ),
+                                    
                                   ],
                                 ),
                               ),
@@ -606,20 +589,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             onMarkMissed: () => _handleMedicationAction(false),
                           ),
 
-                        // Primary Care Provider
-                        if (primaryCareProvider != null)
-                          PrimaryCareProviderWidget(
-                            providerName: primaryCareProvider!['name'],
-                            specialty: primaryCareProvider!['specialty'],
-                            organization: primaryCareProvider!['organization'],
-                            phone: primaryCareProvider!['phone'],
-                            email: primaryCareProvider!['email'],
-                            nextAppointment:
-                                primaryCareProvider!['nextAppointment'],
-                            appointmentType:
-                                primaryCareProvider!['appointmentType'],
-                            onContactProvider: _handleContactProvider,
-                          ),
+                        
                       ],
 
                       // Emergency Actions
