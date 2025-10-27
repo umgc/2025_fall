@@ -1,14 +1,15 @@
 package com.careconnect.controller;
 
+import com.careconnect.model.USPSDigest;
 import com.careconnect.service.USPSDigestService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.careconnect.model.USPSDigest;
-import org.springframework.format.annotation.DateTimeFormat;
-
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/usps")
@@ -30,6 +31,15 @@ public class UspsDigestController {
         return digest
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Map<String, Object>>> search(
+            @RequestParam(defaultValue = "demo-user") String userId,
+            @RequestParam String keyword) {
+
+        var results = uspsDigestService.search(userId, keyword);
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/clear-cache")

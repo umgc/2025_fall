@@ -274,9 +274,11 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     final base = getBackendBaseUrl();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
-    final userId = user?.id ?? 'demo-user';
+    final dynamic userIdRaw = user?.id;
+    final userId = userIdRaw?.toString() ?? 'demo-user';
+    final encodedUser = Uri.encodeComponent(userId);
 
-    final url = '$base/api/usps/search?userId=$userId&keyword=${Uri.encodeComponent(keyword)}';
+    final url = '$base/api/usps/search?userId=$encodedUser&keyword=${Uri.encodeComponent(keyword)}';
 
     try {
       final dio = Dio(BaseOptions(
@@ -314,13 +316,13 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
   Future<void> _checkGoogleConnection() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
-
     if (user == null) return;
+    final encodedUser = Uri.encodeComponent(user.id.toString());
 
     final base = getBackendBaseUrl();
     try {
       final dio = Dio();
-      final resp = await dio.get('$base/api/email-credentials/status?userId=${user.id}');
+      final resp = await dio.get('$base/api/email-credentials/status?userId=$encodedUser');
       if (resp.statusCode == 200 && resp.data == true) {
         setState(() => isGoogleConnected = true);
       }
@@ -353,12 +355,13 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
   Future<void> _clearCache() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
-    final userId = user?.id ?? 'demo-user';
+    final dynamic userIdRaw = user?.id;
+    final userId = userIdRaw?.toString() ?? 'demo-user';
 
     final base = getBackendBaseUrl();
     try {
       final dio = Dio();
-      await dio.post('$base/api/usps/clear-cache?userId=$userId');
+      await dio.post('$base/api/usps/clear-cache?userId=${Uri.encodeComponent(userId)}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cache cleared! Try fetching digest again.')),
       );
@@ -397,7 +400,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
 
     // Get actual current page URL from browser window
     final currentUrl = html.window.location.href;
-    final authUrl = '$base/oauth/google/start?userId=${user.id}&returnUrl=${Uri.encodeComponent(currentUrl)}';
+    final authUrl = '$base/oauth/google/start?userId=${Uri.encodeComponent(user.id.toString())}&returnUrl=${Uri.encodeComponent(currentUrl)}';
 
     final uri = Uri.parse(authUrl);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
