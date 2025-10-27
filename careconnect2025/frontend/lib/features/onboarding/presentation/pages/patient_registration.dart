@@ -35,6 +35,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
   // final _passwordController = TextEditingController(); // Commented out - handled on backend
   final _phoneController = TextEditingController();
   final _dobController = TextEditingController();
+  final _maNumberController = TextEditingController();
   String? _selectedGender; // Add gender field
 
   // Step 1: Address Information
@@ -56,6 +57,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
   final _dobFocus = FocusNode();
+  final _maNumberFocus = FocusNode();
   final _addressLine1Focus = FocusNode();
   final _cityFocus = FocusNode();
   final _stateFocus = FocusNode();
@@ -71,6 +73,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
     'email': false,
     'phone': false,
     'dob': false,
+    'maNumber': false,
     'gender': false, // Add gender validation
     // Address Info
     'addressLine1': false,
@@ -120,6 +123,12 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
     _dobFocus.addListener(() {
       if (!_dobFocus.hasFocus) {
         _validateAndUpdate('dob', _dobController.text);
+      }
+    });
+
+    _maNumberFocus.addListener(() {
+      if (!_maNumberFocus.hasFocus) {
+        _validateAndUpdate('maNumber', _maNumberController.text);
       }
     });
 
@@ -184,6 +193,9 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
       case 'dob':
         validationResult = value.isEmpty ? 'Please enter date of birth' : null;
         break;
+      case 'maNumber':
+        validationResult = _validateMaNumber(value);
+        break;
       case 'gender':
         validationResult = _selectedGender == null
             ? 'Please select gender'
@@ -217,6 +229,25 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
     if (!value.contains('@')) {
       return 'Please enter a valid email address';
     }
+    return null;
+  }
+
+  String? _validateMaNumber(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter MA Number';
+    }
+    
+    // Check if it starts with "MA"
+    if (!value.toUpperCase().startsWith('MA')) {
+      return 'MA Number must start with "MA"';
+    }
+    
+    // Check if it has exactly 9 digits after "MA"
+    final digitsOnly = value.substring(2).replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.length != 9) {
+      return 'MA Number must have exactly 9 digits after "MA" (e.g., MA123456789)';
+    }
+    
     return null;
   }
 
@@ -275,6 +306,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
     _passwordController.dispose();
     _phoneController.dispose();
     _dobController.dispose();
+    _maNumberController.dispose();
 
     // Address controllers
     _addressLine1Controller.dispose();
@@ -293,6 +325,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
     _emailFocus.dispose();
     _phoneFocus.dispose();
     _dobFocus.dispose();
+    _maNumberFocus.dispose();
     _addressLine1Focus.dispose();
     _cityFocus.dispose();
     _stateFocus.dispose();
@@ -548,6 +581,22 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
               }
             },
             readOnly: true,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _maNumberController,
+            focusNode: _maNumberFocus,
+            decoration: AppTheme.inputDecoration('MA Number *').copyWith(
+              prefixIcon: const Icon(Icons.badge),
+              helperText: 'Format: MA followed by 9 digits (e.g., MA123456789)',
+              errorText:
+                  _maNumberController.text.isNotEmpty && !_fieldValidStatus['maNumber']!
+                  ? _validateMaNumber(_maNumberController.text)
+                  : null,
+            ),
+            textCapitalization: TextCapitalization.characters,
+            validator: _validateMaNumber,
+            autovalidateMode: AutovalidateMode.disabled,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
@@ -840,6 +889,7 @@ class _PatientRegistrationPageState extends State<PatientRegistrationPage> {
         'email': _emailController.text.trim(),
         // 'password': _passwordController.text.trim(), // Removed - handled on backend
         'phone': _phoneController.text.trim(),
+        'maNumber': _maNumberController.text.trim().toUpperCase(),
         'gender': _selectedGender?.toUpperCase(), // Add gender field
         'address': address.toJson(), // Use the Address model's toJson method
         'caregiverId': caregiverId,

@@ -1,5 +1,6 @@
 package com.careconnect.dto.v2;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.careconnect.dto.ScheduledNotificationDTO;
@@ -197,4 +198,13 @@ public class TaskDtoV2 {
      * </p>
      */
     private Boolean updateSeries;
+
+    /**
+     * Date of the task creation in miliseconds.
+     * <p>
+     * </p>
+     * <p>
+     * </p>
+     */
+    private Long createdAt;
 }

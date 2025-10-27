@@ -17,7 +17,7 @@ public class EvvOutboxService {
     public void enqueue(EvvRecord record, String destination) {
         Map<String,Object> payload = Map.of(
                 "id", record.getId(),
-                "participant", record.getParticipant().getMaNumber(),
+                "patient", record.getPatient().getMaNumber(),
                 "serviceType", record.getServiceType(),
                 "timeIn", record.getTimeIn(),
                 "timeOut", record.getTimeOut(),
