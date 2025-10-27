@@ -276,14 +276,31 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
         );
 
     if (imageDataUrl == null || imageDataUrl.isEmpty) {
-      return placeholder(Icons.markunread_mailbox);
+      return placeholder(Icons.mail_outline);
     }
 
     if (imageDataUrl.startsWith('cid:')) {
-      return placeholder(Icons.image_not_supported);
+      return placeholder(Icons.mail_outline);
     }
 
     if (imageDataUrl.startsWith('data:')) {
+      try {
+        final uri = Uri.parse(imageDataUrl);
+        final data = uri.data;
+        if (data != null) {
+          final bytes = data.contentAsBytes();
+          return Image.memory(
+            bytes,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, __, ___) => placeholder(Icons.mail_outline),
+          );
+        }
+      } catch (_) {
+        // fall through to manual base64 decode
+      }
+
       try {
         final base64Data = imageDataUrl.split(',').last;
         final bytes = const Base64Decoder().convert(base64Data);
@@ -292,10 +309,10 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
           width: width,
           height: height,
           fit: fit,
-          errorBuilder: (_, __, ___) => placeholder(Icons.image_not_supported),
+          errorBuilder: (_, __, ___) => placeholder(Icons.mail_outline),
         );
       } catch (_) {
-        return placeholder(Icons.image_not_supported);
+        return placeholder(Icons.mail_outline);
       }
     }
 
@@ -305,11 +322,21 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => placeholder(Icons.image_not_supported),
+        errorBuilder: (_, __, ___) => placeholder(Icons.mail_outline),
       );
     }
 
-    return placeholder(Icons.image_not_supported);
+    return placeholder(Icons.mail_outline);
+  }
+
+  bool _hasAttachment(String? imageDataUrl) {
+    if (imageDataUrl == null || imageDataUrl.isEmpty) {
+      return false;
+    }
+    if (imageDataUrl.startsWith('cid:')) {
+      return false;
+    }
+    return true;
   }
 
   void _showMailItemDetails(Map<String, dynamic> item) {
@@ -318,14 +345,17 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
 
     final imageSource = (item['imageDataUrl'] as String?) ??
         (item['thumbnailUrl'] as String?);
+    final hasAttachment = !isPackage && _hasAttachment(imageSource);
     final actions = item['actions'];
     final Map<String, dynamic> actionsMap = actions is Map<String, dynamic>
         ? Map<String, dynamic>.from(actions as Map)
         : <String, dynamic>{};
     final trackUrl = actionsMap['track'] as String?;
     final dashboardUrl = actionsMap['dashboard'] as String?;
-    final sender = (item['sender'] as String?) ??
-        (isPackage ? 'USPS Package' : 'Mail item');
+    final rawSender = (item['sender'] as String?)?.trim();
+    final sender = (rawSender != null && rawSender.isNotEmpty)
+        ? rawSender
+        : (isPackage ? 'USPS Package' : 'Unknown sender');
     final subject = (item['summary'] as String?) ??
         (item['subject'] as String?) ??
         (isPackage && item['trackingNumber'] != null
@@ -409,15 +439,28 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                         ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    subject,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          subject,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      if (hasAttachment) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.attachment, size: 18),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'From: $sender',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  if (rawSender != null && rawSender.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'From: $sender',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                   if (isPackage && trackingNumber != null && trackingNumber.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -810,6 +853,9 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                           final trailingIcon = isPackage ? Icons.local_shipping : Icons.open_in_new;
                           final summary = result['summary'] ?? result['subject'] ?? 'No summary';
                           final from = result['sender'] as String?;
+                          final attachmentSource = (result['imageDataUrl'] as String?) ??
+                              (result['thumbnailUrl'] as String?);
+                          final hasAttachment = !isPackage && _hasAttachment(attachmentSource);
                           final deliveryLabel = isPackage
                               ? (result['expectedDate'] as String?) ?? (result['deliveryDate'] as String?)
                               : result['deliveryDate'] as String?;
@@ -827,6 +873,10 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                                   Expanded(
                                     child: Text(result['sender'] ?? 'Unknown Sender'),
                                   ),
+                                  if (hasAttachment) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.attachment, size: 16),
+                                  ],
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1084,9 +1134,14 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                           final mailPiece = Map<String, dynamic>.from(m as Map);
                           final imageSource = (mailPiece['imageDataUrl'] as String?) ??
                               (mailPiece['thumbnailUrl'] as String?);
-                          final summary = (mailPiece['summary'] as String?) ??
+                          final hasAttachment = _hasAttachment(imageSource);
+                          final summary = ((mailPiece['summary'] as String?) ??
                               (mailPiece['subject'] as String?) ??
-                              'Mail';
+                              '').trim();
+                          final senderName = (mailPiece['sender'] as String?)?.trim();
+                          final displayTitle = (senderName != null && senderName.isNotEmpty)
+                              ? senderName
+                              : (summary.isNotEmpty ? summary : 'Mail');
                           mailPiece['type'] ??= 'mail';
                           final actions = mailPiece['actions'];
                           final actionsMap = actions is Map<String, dynamic>
@@ -1103,8 +1158,12 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                               title: Row(
                                 children: [
                                   Expanded(
-                                    child: Text(summary),
+                                    child: Text(displayTitle),
                                   ),
+                                  if (hasAttachment) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.attachment, size: 16),
+                                  ],
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1123,7 +1182,9 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                                   ),
                                 ],
                               ),
-                              subtitle: Text('From: ${mailPiece['sender'] ?? 'Sender'}'),
+                              subtitle: summary.isNotEmpty && summary != displayTitle
+                                  ? Text(summary)
+                                  : const SizedBox.shrink(),
                               trailing: IconButton(
                                 icon: const Icon(Icons.open_in_new),
                                 onPressed: trailingUrl == null || trailingUrl.isEmpty

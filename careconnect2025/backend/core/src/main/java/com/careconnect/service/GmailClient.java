@@ -178,33 +178,44 @@ public class GmailClient {
     }
 
     private String extractHtml(String accessToken, String messageId, JsonNode part, Map<String, String> cidMap) {
-        if (part == null || part.isMissingNode()) return null;
+        if (part == null || part.isMissingNode()) {
+            return null;
+        }
 
         collectInlinePart(accessToken, messageId, part, cidMap);
 
         JsonNode body = part.path("body");
         String mimeType = part.path("mimeType").asText("");
-        if ("text/html".equalsIgnoreCase(mimeType) && body.has("data")) {
-            return decodeToString(body.path("data").asText());
-        }
 
-        if (body.has("data") && !body.path("data").asText().isBlank() && mimeType.startsWith("multipart/")) {
+        String html = null;
+        if ("text/html".equalsIgnoreCase(mimeType) && body.has("data")) {
+            html = decodeToString(body.path("data").asText());
+        } else if (body.has("data") && !body.path("data").asText().isBlank() && mimeType.startsWith("multipart/")) {
             // multipart bodies occasionally inline the HTML directly
             String candidate = decodeToString(body.path("data").asText());
             if (candidate.toLowerCase().contains("<html")) {
-                return candidate;
+                html = candidate;
             }
         }
 
         for (JsonNode child : part.path("parts")) {
-            String html = extractHtml(accessToken, messageId, child, cidMap);
-            if (html != null) return html;
+            String childHtml = extractHtml(accessToken, messageId, child, cidMap);
+            if (html == null && childHtml != null) {
+                html = childHtml;
+            }
         }
-        return null;
+
+        return html;
     }
 
     private void collectInlinePart(String accessToken, String messageId, JsonNode part, Map<String, String> cidMap) {
         String contentId = header(part, "Content-ID");
+        if (contentId == null) {
+            contentId = header(part, "X-Attachment-Id");
+        }
+        if (contentId == null) {
+            contentId = header(part, "Content-Location");
+        }
         if (contentId == null) return;
 
         contentId = contentId.replace("<", "").replace(">", "").trim();

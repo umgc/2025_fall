@@ -13,7 +13,15 @@ import org.springframework.stereotype.Component;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -22,7 +30,7 @@ import java.util.stream.Collectors;
 public class GmailParser {
 
     private static final Pattern TRACKING_PATTERN = Pattern.compile("(\\d{10,})");
-    private static final Pattern FROM_PATTERN = Pattern.compile("(?i)from[:\\s]+(.+)");
+    private static final Pattern FROM_PATTERN = Pattern.compile("(?i)(?:from|sender)[:\\s]+(.+)");
     private static final Pattern EXPECTED_PATTERN = Pattern.compile("Expected Delivery(?: Day)?:\\s*(.+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern DIGEST_HEADING_PATTERN = Pattern.compile("(?i)Daily Digest(?: for)?\\s*(.*)");
     private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME;
@@ -42,19 +50,39 @@ public class GmailParser {
         inlineCidImages(doc, payload.inlineCidData());
 
         OffsetDateTime digestDate = resolveDigestDate(doc, payload.receivedAt());
+        int expectedMailCount = parseMailCount(doc);
+        int expectedPackageCount = parsePackageCount(doc);
+
         List<PackageItem> packages = extractPackages(doc, digestDate);
         List<MailPiece> mailPieces = extractMailPieces(doc, payload, digestDate);
 
-        if (!packages.isEmpty()) {
-            mailPieces.removeIf(piece -> {
-                if (piece == null) {
-                    return true;
-                }
-                String id = piece.getId();
-                String summary = piece.getSubject();
-                return (id != null && id.startsWith("mail-summary-"))
-                    || (summary != null && summary.toLowerCase(Locale.ROOT).startsWith("mail piece"));
-            });
+        mailPieces = deduplicateMailPieces(mailPieces);
+
+        for (int i = 0; i < mailPieces.size(); i++) {
+            MailPiece mp = mailPieces.get(i);
+            if (mp == null) continue;
+            String thumb = mp.getThumbnailUrl();
+            String thumbInfo;
+            if (thumb == null) {
+                thumbInfo = "null";
+            } else if (thumb.startsWith("cid:")) {
+                thumbInfo = "cid:" + thumb;
+            } else {
+                thumbInfo = "len=" + thumb.length();
+            }
+            System.out.println("[GmailParser] mailPiece " + i + " id=" + mp.getId() + ", sender=" + mp.getSender() + ", thumb=" + thumbInfo);
+        }
+
+        System.out.println("[GmailParser] Expected mail count: " + expectedMailCount + ", parsed mail pieces: " + mailPieces.size());
+        System.out.println("[GmailParser] Expected package count: " + expectedPackageCount + ", parsed packages: " + packages.size());
+
+        if (expectedMailCount > 0 && mailPieces.size() > expectedMailCount) {
+            System.out.println("[GmailParser] Trimming mail pieces from " + mailPieces.size() + " to expected count " + expectedMailCount);
+            mailPieces = new ArrayList<>(mailPieces.subList(0, expectedMailCount));
+        }
+        if (expectedPackageCount > 0 && packages.size() > expectedPackageCount) {
+            System.out.println("[GmailParser] Trimming packages from " + packages.size() + " to expected count " + expectedPackageCount);
+            packages = new ArrayList<>(packages.subList(0, expectedPackageCount));
         }
 
         System.out.println("[GmailParser] Extracted " + packages.size() + " packages and " + mailPieces.size() + " mail pieces");
@@ -270,6 +298,9 @@ public class GmailParser {
         System.out.println("[GmailParser] Found " + mailElements.size() + " potential mail piece elements");
 
         for (Element block : mailElements) {
+            if (isMarketingElement(block)) {
+                continue;
+            }
             MailPiece piece = toMailPiece(block, payload, defaultDate, counter++);
             if (piece != null) {
                 pieces.add(piece);
@@ -288,6 +319,9 @@ public class GmailParser {
             // Try to convert any CID images into mail pieces
             int cidIdx = 1;
             for (Element img : cidImages) {
+                if (isMarketingElement(img)) {
+                    continue;
+                }
                 MailPiece piece = toMailPieceFromImg(img, payload, defaultDate, cidIdx++);
                 if (piece != null) {
                     pieces.add(piece);
@@ -343,6 +377,9 @@ public class GmailParser {
 
             int idx = 1;
             for (Element img : imgElements) {
+                if (isMarketingElement(img)) {
+                    continue;
+                }
                 MailPiece piece = toMailPieceFromImg(img, payload, defaultDate, idx++);
                 if (piece != null) {
                     pieces.add(piece);
@@ -352,21 +389,64 @@ public class GmailParser {
         return pieces;
     }
 
+    private List<MailPiece> deduplicateMailPieces(List<MailPiece> pieces) {
+        if (pieces == null || pieces.isEmpty()) {
+            return pieces;
+        }
+
+        List<MailPiece> filtered = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        for (MailPiece piece : pieces) {
+            if (piece == null) {
+                continue;
+            }
+
+            String id = piece.getId();
+            boolean placeholder = id != null && id.startsWith("mail-summary-");
+            String key = firstNonBlank(piece.getThumbnailUrl(), piece.getSubject(), piece.getSender(), id);
+            if (key == null) {
+                key = UUID.randomUUID().toString();
+            }
+
+            if (!seen.add(key)) {
+                continue;
+            }
+
+            if (placeholder) {
+                continue;
+            }
+
+            filtered.add(piece);
+        }
+
+        if (filtered.isEmpty()) {
+            return pieces.stream()
+                    .filter(Objects::nonNull)
+                    .limit(1)
+                    .collect(Collectors.toList());
+        }
+
+        return filtered;
+    }
+
     private MailPiece toMailPiece(Element block, GmailDigestPayload payload, OffsetDateTime defaultDate, int counter) {
         if (block == null) return null;
         Element img = block.selectFirst("img");
         if (img == null) return null;
 
-        String src = img.attr("src");
+        String src = resolveCidReference(img.attr("src"), payload.inlineCidData());
         if (isBlank(src)) return null;
 
         String id = block.hasAttr("data-mailpiece-id")
                 ? block.attr("data-mailpiece-id")
                 : "mailpiece-" + counter;
 
+        String alt = img.attr("alt");
+
         String sender = firstNonBlank(
                 textOrNull(block.selectFirst(".sender")),
-                deriveSenderFromAlt(img.attr("alt")),
+                deriveSenderFromAlt(alt),
                 deriveSenderFromContext(block));
         if (isBlank(sender)) {
             sender = extractSender(block);
@@ -374,12 +454,13 @@ public class GmailParser {
 
         String summary = firstNonBlank(
                 textOrNull(block.selectFirst(".summary")),
-                deriveSummaryFromAlt(img.attr("alt")));
+                deriveSummaryFromAlt(alt));
+
+        if (isMarketingText(alt) || isMarketingText(sender) || isMarketingText(summary)) {
+            return null;
+        }
 
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
-
-        // Resolve CID references
-        src = resolveCidReference(src, payload.inlineCidData());
 
         return new MailPiece(
                 id,
@@ -393,19 +474,21 @@ public class GmailParser {
 
     private MailPiece toMailPieceFromImg(Element img, GmailDigestPayload payload, OffsetDateTime defaultDate, int counter) {
         if (img == null) return null;
-        String src = img.attr("src");
+        String src = resolveCidReference(img.attr("src"), payload.inlineCidData());
         if (isBlank(src)) return null;
 
         String id = "mailpiece-" + counter;
-        String sender = deriveSenderFromAlt(img.attr("alt"));
+        String alt = img.attr("alt");
+        String sender = deriveSenderFromAlt(alt);
         if (isBlank(sender)) {
             sender = extractSender(img.parent());
         }
-        String summary = deriveSummaryFromAlt(img.attr("alt"));
+        String summary = deriveSummaryFromAlt(alt);
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
 
-        // Resolve CID references
-        src = resolveCidReference(src, payload.inlineCidData());
+        if (isMarketingText(alt) || isMarketingText(sender) || isMarketingText(summary)) {
+            return null;
+        }
 
         return new MailPiece(
                 id,
@@ -433,9 +516,9 @@ public class GmailParser {
 
     private String deriveSenderFromContext(Element block) {
         if (block == null) return null;
-        Element label = block.selectFirst("strong:matchesOwn((?i)from)");
+        Element label = block.selectFirst("strong:matchesOwn((?i)(from|sender))");
         if (label != null) {
-            return label.text().replaceFirst("(?i)from\\s*", "").trim();
+            return label.text().replaceFirst("(?i)(?:from|sender)\\s*", "").trim();
         }
         return null;
     }
@@ -482,6 +565,43 @@ public class GmailParser {
             return sanitizeSender(matcher.group(1));
         }
         return null;
+    }
+
+    private boolean isMarketingElement(Element element) {
+        Element cursor = element;
+        int depth = 0;
+        while (cursor != null && depth++ < 6) {
+            String id = cursor.id();
+            String classes = cursor.className();
+            if (containsMarketingKeyword(id) || containsMarketingKeyword(classes)) {
+                return true;
+            }
+            cursor = cursor.parent();
+        }
+        return false;
+    }
+
+    private boolean containsMarketingKeyword(String value) {
+        if (isBlank(value)) {
+            return false;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.contains("campaign")
+            || lower.contains("ridealong")
+            || lower.contains("promo")
+            || lower.contains("sat");
+    }
+
+    private boolean isMarketingText(String value) {
+        if (isBlank(value)) {
+            return false;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.contains("campaign")
+            || lower.contains("ridealong")
+            || lower.contains("promotion")
+            || lower.contains("learn more about your mail")
+            || lower.contains("tru") && lower.contains("stage");
     }
 
     private String sanitizeSender(String value) {
@@ -569,6 +689,35 @@ public class GmailParser {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private int parseMailCount(Document doc) {
+        Element countEl = doc.selectFirst("#total-mailpieces, #total-mailpieces-secondary, #today-mailitem-number");
+        if (countEl != null) {
+            int parsed = parseIntSafe(countEl.text());
+            if (parsed > 0) {
+                return parsed;
+            }
+        }
+        Element header = doc.selectFirst("p:matches(You have \\d+ mailpiece)");
+        if (header != null) {
+            Matcher matcher = Pattern.compile("You have \\s*(\\d+)").matcher(header.text());
+            if (matcher.find()) {
+                return parseIntSafe(matcher.group(1));
+            }
+        }
+        return -1;
+    }
+
+    private int parsePackageCount(Document doc) {
+        Element countEl = doc.selectFirst("#total-packages, #total-packages-secondary, #today-package-item-number, #onetwodays-package-item-number, #awaiting-package-item-number");
+        if (countEl != null) {
+            int parsed = parseIntSafe(countEl.text());
+            if (parsed >= 0) {
+                return parsed;
+            }
+        }
+        return -1;
     }
 
     private String resolveCidReference(String src, Map<String, String> cidMap) {
