@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface UspsDigestCacheRepo extends JpaRepository<UspsDigestCache, Long> {
@@ -20,6 +21,8 @@ public interface UspsDigestCacheRepo extends JpaRepository<UspsDigestCache, Long
             @Param("userId") String userId,
             @Param("date") LocalDate date
     );
+
+    List<UspsDigestCache> findAllByUserId(String userId);
 
     int deleteByUserId(String userId);
 }

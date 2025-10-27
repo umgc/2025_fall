@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/usps")
@@ -52,6 +54,29 @@ public class UspsController {
         System.out.println("[USPS] Returning digest with " + mailCount + " mail pieces and " + packageCount + " packages");
 
         return ResponseEntity.ok(digest);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Map<String, Object>>> searchMail(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) String userId,
+            @RequestParam String keyword) {
+
+        // Get actual user ID
+        String actualUserId;
+        if (jwt != null && jwt.getSubject() != null) {
+            actualUserId = jwt.getSubject();
+        } else if (userId != null && !userId.isEmpty()) {
+            actualUserId = userId;
+        } else {
+            actualUserId = "demo-user";
+        }
+
+        System.out.println("[USPS] Searching mail for userId: " + actualUserId + ", keyword: " + keyword);
+
+        var results = service.searchMailHistory(actualUserId, keyword);
+
+        return ResponseEntity.ok(results);
     }
 
     @PostMapping("/clear-cache")

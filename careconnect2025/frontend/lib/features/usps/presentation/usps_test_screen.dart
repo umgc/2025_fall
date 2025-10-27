@@ -19,9 +19,18 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
   String? error;
   bool isGoogleConnected = false;
   DateTime selectedDate = DateTime.now();
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> searchResults = [];
+  bool searchLoading = false;
+  String? searchError;
+  bool _isSearchActive = false;
 
   Future<void> _fetchDigest() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+      _isSearchActive = false;
+    });
     final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
 
     // Get user ID to pass as parameter
@@ -32,7 +41,6 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     // Format date as YYYY-MM-DD
     final dateString = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
     final url = '$base/api/usps/digest?userId=$userId&date=$dateString';
-    print('Fetching USPS digest for userId: $userId, date: $dateString from: $url');
 
     try {
       final dio = Dio(BaseOptions(
@@ -43,10 +51,13 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       final resp = await dio.get(url);
       if (resp.statusCode == 200) {
         setState(() {
-          digest = resp.data is Map<String, dynamic>
+        digest = resp.data is Map<String, dynamic>
               ? (resp.data as Map<String, dynamic>)
               : json.decode(json.encode(resp.data)) as Map<String, dynamic>;
-        });
+        searchResults = [];
+        searchError = null;
+        _searchController.clear();
+      });
       } else {
         setState(() => error = 'HTTP ${resp.statusCode}');
       }
@@ -73,10 +84,59 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
         selectedDate = picked;
         digest = null; // Clear previous digest when date changes
         error = null;
+        _isSearchActive = false;
+        searchResults = [];
+        searchError = null;
+        _searchController.clear();
       });
 
       // Automatically fetch digest for the new date
       _fetchDigest();
+    }
+  }
+
+  Future<void> _searchMail() async {
+    final keyword = _searchController.text.trim();
+    if (keyword.isEmpty) {
+      setState(() {
+        _isSearchActive = false;
+        searchResults = [];
+        searchError = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearchActive = true;
+      searchLoading = true;
+      searchError = null;
+    });
+
+    final base = dotenv.env['BACKEND_BASE_URL'] ?? 'http://localhost:8080';
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+    final userId = user?.id ?? 'demo-user';
+
+    final url = '$base/api/usps/search?userId=$userId&keyword=${Uri.encodeComponent(keyword)}';
+
+    try {
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+
+      final resp = await dio.get(url);
+      if (resp.statusCode == 200) {
+        setState(() {
+          searchResults = List<Map<String, dynamic>>.from(resp.data ?? []);
+        });
+      } else {
+        setState(() => searchError = 'HTTP ${resp.statusCode}');
+      }
+    } catch (e) {
+      setState(() => searchError = e.toString());
+    } finally {
+      setState(() => searchLoading = false);
     }
   }
 
@@ -140,13 +200,27 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     try {
       final dio = Dio();
       await dio.post('$base/api/usps/clear-cache?userId=$userId');
-      print('Cache cleared successfully');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cache cleared! Try fetching digest again.')),
       );
     } catch (e) {
-      print('Failed to clear cache: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to clear cache')),
+      );
     }
+  }
+
+  Future<void> _resetSearchToToday() async {
+    _searchController.clear();
+    setState(() {
+      _isSearchActive = false;
+      searchResults = [];
+      searchError = null;
+      selectedDate = DateTime.now();
+      digest = null;
+      error = null;
+    });
+    await _fetchDigest();
   }
 
   Future<void> _connectGoogleAccount() async {
@@ -166,7 +240,6 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     final currentUrl = html.window.location.href;
     final authUrl = '$base/oauth/google/start?userId=${user.id}&returnUrl=${Uri.encodeComponent(currentUrl)}';
 
-    print('Starting OAuth with return URL: $currentUrl');
     final uri = Uri.parse(authUrl);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
@@ -177,46 +250,265 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     }
   }
 
-  Widget _buildMailImage(String? imageDataUrl) {
+  Widget _buildMailImage(
+    String? imageDataUrl, {
+    double width = 48,
+    double height = 32,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    final iconSize = height.clamp(16, 48).toDouble();
+    Widget placeholder(IconData icon) => SizedBox(
+          width: width,
+          height: height,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                color: Colors.grey.shade600,
+                size: iconSize,
+              ),
+            ),
+          ),
+        );
+
     if (imageDataUrl == null || imageDataUrl.isEmpty) {
-      return const Icon(Icons.markunread_mailbox);
+      return placeholder(Icons.markunread_mailbox);
     }
 
-    // Handle CID references - these shouldn't be processed as base64
     if (imageDataUrl.startsWith('cid:')) {
-      return const Icon(Icons.image_not_supported);
+      return placeholder(Icons.image_not_supported);
     }
 
-    // Handle data URLs
     if (imageDataUrl.startsWith('data:')) {
       try {
         final base64Data = imageDataUrl.split(',').last;
         final bytes = const Base64Decoder().convert(base64Data);
         return Image.memory(
           bytes,
-          width: 48,
-          height: 32,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, __, ___) => placeholder(Icons.image_not_supported),
         );
-      } catch (e) {
-        return const Icon(Icons.image_not_supported);
+      } catch (_) {
+        return placeholder(Icons.image_not_supported);
       }
     }
 
-    // Handle regular URLs
     if (imageDataUrl.startsWith('http')) {
       return Image.network(
         imageDataUrl,
-        width: 48,
-        height: 32,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => placeholder(Icons.image_not_supported),
       );
     }
 
-    // Fallback for unknown formats
-    return const Icon(Icons.image_not_supported);
+    return placeholder(Icons.image_not_supported);
+  }
+
+  void _showMailItemDetails(Map<String, dynamic> item) {
+    final type = ((item['type'] as String?) ?? 'mail').toLowerCase();
+    final bool isPackage = type == 'package';
+
+    final imageSource = (item['imageDataUrl'] as String?) ??
+        (item['thumbnailUrl'] as String?);
+    final actions = item['actions'];
+    final Map<String, dynamic> actionsMap = actions is Map<String, dynamic>
+        ? Map<String, dynamic>.from(actions as Map)
+        : <String, dynamic>{};
+    final trackUrl = actionsMap['track'] as String?;
+    final dashboardUrl = actionsMap['dashboard'] as String?;
+    final sender = (item['sender'] as String?) ??
+        (isPackage ? 'USPS Package' : 'Mail item');
+    final subject = (item['summary'] as String?) ??
+        (item['subject'] as String?) ??
+        (isPackage && item['trackingNumber'] != null
+            ? 'Tracking ${item['trackingNumber']}'
+            : 'No subject available');
+    final trackingNumber = item['trackingNumber'] as String?;
+    final delivered = (item['deliveryDate'] as String?) ??
+        (item['receivedAt'] as String?);
+    final expectedIso = item['expectedDateIso'] as String?;
+    final expectedDisplay = (item['expectedDate'] as String?) ??
+        (expectedIso != null ? _formatDateLabel(expectedIso) : null);
+
+    final typeLabel = isPackage ? 'Package' : 'Mail Piece';
+    final primaryActionUrl = isPackage
+        ? (trackUrl ?? dashboardUrl)
+        : (dashboardUrl ?? trackUrl);
+    final primaryActionLabel = isPackage
+        ? 'Track Package'
+        : 'View in USPS Dashboard';
+    final String? dateLabel = isPackage ? expectedDisplay : delivered;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          sender,
+                          style: Theme.of(context).textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Chip(
+                        label: Text(typeLabel),
+                        backgroundColor: isPackage
+                            ? Colors.orange.shade100
+                            : Colors.blue.shade100,
+                        labelStyle: TextStyle(
+                          color: isPackage
+                              ? Colors.orange.shade800
+                              : Colors.blue.shade800,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _buildMailImage(
+                        imageSource,
+                        width: 260,
+                        height: 180,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isPackage ? 'Details' : 'Subject',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subject,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'From: $sender',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  if (isPackage && trackingNumber != null && trackingNumber.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Tracking Number',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SelectableText(
+                            trackingNumber,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (trackUrl != null && trackUrl.isNotEmpty)
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _openUri(trackUrl);
+                            },
+                            icon: const Icon(Icons.open_in_new, size: 16),
+                            label: const Text('Track'),
+                          ),
+                      ],
+                    ),
+                  ],
+                  if (dateLabel != null && dateLabel.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      isPackage ? 'Expected Delivery' : 'Delivered',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateLabel,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  if (primaryActionUrl != null && primaryActionUrl.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _openUri(primaryActionUrl);
+                        },
+                        icon: Icon(isPackage ? Icons.local_shipping : Icons.open_in_new),
+                        label: Text(primaryActionLabel),
+                      ),
+                    ),
+                  ],
+                  if (!isPackage && trackUrl != null && trackUrl.isNotEmpty && trackUrl != primaryActionUrl) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _openUri(trackUrl);
+                        },
+                        icon: const Icon(Icons.local_shipping),
+                        label: const Text('Track Package'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDateLabel(String iso) {
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) {
+      return iso;
+    }
+
+    return '${parsed.month.toString().padLeft(2, '0')}/'
+        '${parsed.day.toString().padLeft(2, '0')}/'
+        '${parsed.year}';
   }
 
   @override
@@ -291,63 +583,154 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Date Selection Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Select Digest Date',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Choose any date to view historical USPS digest data. Defaults to today.',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _selectDate,
-                            icon: const Icon(Icons.calendar_today),
-                            label: Text(
-                              '${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}',
-                              style: const TextStyle(fontFamily: 'monospace'),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(context).primaryColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            // Date Selection and Search Section
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Date Selection Section (Half Screen)
+                Expanded(
+                  flex: 1,
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Select Digest Date',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Choose any date to view historical USPS digest data.',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _selectDate,
+                              icon: const Icon(Icons.calendar_today),
+                              label: Text(
+                                '${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.year}',
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Theme.of(context).primaryColor,
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedDate = DateTime.now();
-                              digest = null;
-                              error = null;
-                            });
-                            _fetchDigest();
-                          },
-                          icon: const Icon(Icons.today),
-                          tooltip: 'Go to Today',
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  selectedDate = DateTime.now();
+                                  digest = null;
+                                  error = null;
+                                });
+                                _fetchDigest();
+                              },
+                              icon: const Icon(Icons.today, size: 16),
+                              label: const Text('Go to Today'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.grey[600],
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 16),
+                // Search Section (Half Screen)
+                Expanded(
+                  flex: 1,
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.search, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Search Mail History',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Search for mail by sender, subject, or any keyword.',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter keyword to search...',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      onPressed: () => _resetSearchToToday(),
+                                      icon: const Icon(Icons.clear),
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            ),
+                            onChanged: (value) {
+                              setState(() {}); // Trigger rebuild to show/hide clear button
+                            },
+                            onSubmitted: (value) => _searchMail(),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: searchLoading ? null : _searchMail,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: searchLoading
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text('Search'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             // Existing controls
@@ -376,8 +759,186 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
             Expanded(
               child: ListView(
                 children: [
+                  // Show search results if available
+                  if (_isSearchActive && searchResults.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.search, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Found ${searchResults.length} mail items matching "${_searchController.text}"',
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => _resetSearchToToday(),
+                            child: const Text('Clear Search'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Text('Search Results', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    for (final result in searchResults)
+                      Builder(
+                        builder: (context) {
+                          final type = ((result['type'] as String?) ?? 'mail').toLowerCase();
+                          final isPackage = type == 'package';
+                          final actions = result['actions'];
+                          final actionsMap = actions is Map<String, dynamic>
+                              ? Map<String, dynamic>.from(actions as Map)
+                              : <String, dynamic>{};
+                          final trackUrl = actionsMap['track'] as String?;
+                          final dashboardUrl = actionsMap['dashboard'] as String?;
+                          final trailingUrl = isPackage
+                              ? (trackUrl ?? dashboardUrl)
+                              : (dashboardUrl ?? trackUrl);
+                          final trailingIcon = isPackage ? Icons.local_shipping : Icons.open_in_new;
+                          final summary = result['summary'] ?? result['subject'] ?? 'No summary';
+                          final from = result['sender'] as String?;
+                          final deliveryLabel = isPackage
+                              ? (result['expectedDate'] as String?) ?? (result['deliveryDate'] as String?)
+                              : result['deliveryDate'] as String?;
+                          final deliveryPrefix = isPackage ? 'Expected: ' : 'Delivered: ';
+
+                          return Card(
+                            child: ListTile(
+                              onTap: () => _showMailItemDetails(Map<String, dynamic>.from(result)),
+                              leading: _buildMailImage(
+                                (result['imageDataUrl'] as String?) ??
+                                    (result['thumbnailUrl'] as String?),
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(result['sender'] ?? 'Unknown Sender'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isPackage
+                                          ? Colors.orange.withOpacity(0.15)
+                                          : Colors.blue.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      isPackage ? 'Package' : 'Mail',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isPackage ? Colors.orange[800] : Colors.blue[800],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (from != null && from.isNotEmpty)
+                                    Text('From: $from'),
+                                  Text(summary),
+                                  if (deliveryLabel != null && deliveryLabel.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '$deliveryPrefix$deliveryLabel',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context).primaryColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: Icon(trailingIcon),
+                                onPressed: trailingUrl == null || trailingUrl.isEmpty
+                                    ? null
+                                    : () => _openUri(trailingUrl),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Show search error if any
+                  if (_isSearchActive && searchError != null) ...[
+                    Card(
+                      color: Colors.red.withOpacity(0.1),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Search failed: $searchError',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  if (_isSearchActive &&
+                      !searchLoading &&
+                      searchError == null &&
+                      searchResults.isEmpty) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info, color: Colors.blue),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'No mail items matched "${_searchController.text.trim()}".',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => _resetSearchToToday(),
+                              child: const Text('Show Today\'s Mail'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Show selected date info
-                  if (digest != null) ...[
+                  if (digest != null && !_isSearchActive) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 16),
@@ -391,7 +952,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                           Icon(Icons.event, color: Theme.of(context).primaryColor),
                           const SizedBox(width: 8),
                           Text(
-                            'Showing digest for ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                            'Showing digest for ${selectedDate.month}/${selectedDate.day}/${selectedDate.year}',
                             style: TextStyle(
                               color: Theme.of(context).primaryColor,
                               fontWeight: FontWeight.w500,
@@ -425,39 +986,156 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
                       ),
                     ),
                   ],
-                  if (pkgs.isNotEmpty) ...[
+                  if (!_isSearchActive && pkgs.isNotEmpty) ...[
                     const Text('Packages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     for (final p in pkgs)
-                      Card(
-                        child: ListTile(
-                          title: Text(p['trackingNumber'] ?? 'Unknown'),
-                          subtitle: Text('Expected: ${p['expectedDateIso'] ?? '—'}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.local_shipping),
-                            onPressed: () => _openUri(p['actions']?['track']),
-                          ),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          if (p is! Map) {
+                            return const SizedBox.shrink();
+                          }
+
+                          final pkg = Map<String, dynamic>.from(p as Map);
+                          final expectedIso = pkg['expectedDateIso'] as String?;
+                          final expectedLabel = expectedIso != null && expectedIso.isNotEmpty
+                              ? _formatDateLabel(expectedIso)
+                              : '—';
+                          final sender = (pkg['sender'] as String?)?.trim();
+                          final trackingNumber = pkg['trackingNumber'] as String?;
+                          final actions = pkg['actions'];
+                          final actionsMap = actions is Map<String, dynamic>
+                              ? Map<String, dynamic>.from(actions as Map)
+                              : <String, dynamic>{};
+                          final trackUrl = actionsMap['track'] as String?;
+                          final dashboardUrl = actionsMap['dashboard'] as String?;
+                          final trailingUrl = trackUrl ?? dashboardUrl;
+
+                          final detailPayload = {
+                            ...pkg,
+                            'type': 'package',
+                            'sender': sender ?? 'USPS Package',
+                            'expectedDate': expectedLabel,
+                            'expectedDateIso': expectedIso,
+                            'trackingNumber': trackingNumber,
+                          };
+
+                          return Card(
+                            child: ListTile(
+                              onTap: () => _showMailItemDetails(detailPayload),
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.orange.withOpacity(0.15),
+                                child: Icon(Icons.local_shipping, color: Colors.orange[700]),
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(sender ?? trackingNumber ?? 'Package'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Package',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange[800],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (sender != null && sender.isNotEmpty)
+                                    Text('From: $sender'),
+                                  if (trackingNumber != null && trackingNumber.isNotEmpty)
+                                    Text('Tracking: $trackingNumber'),
+                                  Text('Expected: $expectedLabel'),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.local_shipping),
+                                onPressed: trailingUrl == null || trailingUrl.isEmpty
+                                    ? null
+                                    : () => _openUri(trailingUrl),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     const SizedBox(height: 16),
                   ],
-                  if (mail.isNotEmpty) ...[
+                  if (!_isSearchActive && mail.isNotEmpty) ...[
                     const Text('Mail Pieces', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     for (final m in mail)
-                      Card(
-                        child: ListTile(
-                          leading: _buildMailImage(m['imageDataUrl']),
-                          title: Text(m['sender'] ?? 'Sender'),
-                          subtitle: Text(m['summary'] ?? 'Summary'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.open_in_new),
-                            onPressed: () => _openUri(m['actions']?['dashboard']),
-                          ),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          if (m is! Map) {
+                            return const SizedBox.shrink();
+                          }
+                          final mailPiece = Map<String, dynamic>.from(m as Map);
+                          final imageSource = (mailPiece['imageDataUrl'] as String?) ??
+                              (mailPiece['thumbnailUrl'] as String?);
+                          final summary = (mailPiece['summary'] as String?) ??
+                              (mailPiece['subject'] as String?) ??
+                              'Mail';
+                          mailPiece['type'] ??= 'mail';
+                          final actions = mailPiece['actions'];
+                          final actionsMap = actions is Map<String, dynamic>
+                              ? Map<String, dynamic>.from(actions as Map)
+                              : <String, dynamic>{};
+                          final dashboardUrl = actionsMap['dashboard'] as String?;
+                          final trackUrl = actionsMap['track'] as String?;
+                          final trailingUrl = dashboardUrl ?? trackUrl;
+
+                          return Card(
+                            child: ListTile(
+                              onTap: () => _showMailItemDetails(Map<String, dynamic>.from(mailPiece)),
+                              leading: _buildMailImage(imageSource),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(summary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Mail',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.blue[800],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              subtitle: Text('From: ${mailPiece['sender'] ?? 'Sender'}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.open_in_new),
+                                onPressed: trailingUrl == null || trailingUrl.isEmpty
+                                    ? null
+                                    : () => _openUri(trailingUrl),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                   ],
-                  if ((mail.isEmpty && pkgs.isEmpty) && digest != null)
+                  if ((mail.isEmpty && pkgs.isEmpty) && digest != null && !_isSearchActive)
                     const Center(child: Text('No items in digest')),
                 ],
               ),

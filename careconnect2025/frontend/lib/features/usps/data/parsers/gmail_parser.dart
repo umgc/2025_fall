@@ -17,7 +17,7 @@ class GmailRaw {
 
 class GmailParser {
   static final _trackingRegex = RegExp(r'(\d{10,})');
-  static final _fromRegex = RegExp(r'from\s+(.+)', caseSensitive: false);
+  static final _fromRegex = RegExp(r'from[:\s]+(.+)', caseSensitive: false);
   static final _expectedRegex = RegExp(r'Expected Delivery(?: Day)?:\s*(.+)', caseSensitive: false);
   static final _digestHeadingRegex = RegExp(r'Daily Digest(?: for)?\s*(.*)', caseSensitive: false);
   static final _friendlyFormats = <DateFormat>[
@@ -95,9 +95,11 @@ class GmailParser {
 
       final expected = _parseDate(_extractExpectedText(element)) ?? digestDate;
       final trackUrl = element.querySelector('a[href*="TrackConfirmAction"]')?.attributes['href'];
+      final sender = _extractSenderFromElement(element);
 
       items.add(PackageItem(
         trackingNumber: tracking,
+        sender: sender,
         expectedDateIso: expected?.toIso8601String(),
         actions: ActionLinks(track: trackUrl, redelivery: null, dashboard: null),
       ));
@@ -193,7 +195,7 @@ class GmailParser {
   String? _deriveSenderFromAlt(String? alt) {
     if (alt == null || alt.trim().isEmpty) return null;
     final match = _fromRegex.firstMatch(alt);
-    return match?.group(1)?.trim();
+    return _sanitizeSender(match?.group(1));
   }
 
   String? _deriveSummaryFromAlt(String? alt) {
@@ -204,7 +206,7 @@ class GmailParser {
   String? _senderFromContext(Element block) {
     final label = block.querySelector('strong:matchesOwn("from")');
     if (label == null) return null;
-    return label.text.replaceFirst(RegExp(r'(?i)from\s*'), '').trim();
+    return _sanitizeSender(label.text.replaceFirst(RegExp(r'(?i)from\s*'), ''));
   }
 
   String? _extractTrackingNumber(String text) {
@@ -238,5 +240,41 @@ class GmailParser {
       if (value != null && value.trim().isNotEmpty) return value.trim();
     }
     return null;
+  }
+
+  String? _extractSenderFromElement(Element element) {
+    final direct = _extractSenderFromText(element.text);
+    if (direct != null) return direct;
+
+    for (final child in element.querySelectorAll('*')) {
+      final candidate = _extractSenderFromText(child.text);
+      if (candidate != null) return candidate;
+    }
+
+    var sibling = element.previousElementSibling;
+    var hops = 0;
+    while (sibling != null && hops++ < 3) {
+      final candidate = _extractSenderFromText(sibling.text);
+      if (candidate != null) return candidate;
+      sibling = sibling.previousElementSibling;
+    }
+
+    return null;
+  }
+
+  String? _extractSenderFromText(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final match = _fromRegex.firstMatch(text);
+    return match == null ? null : _sanitizeSender(match.group(1));
+  }
+
+  String? _sanitizeSender(String? value) {
+    if (value == null) return null;
+    final cleaned = value
+        .replaceAll(RegExp(r'(?i)tracking number.*'), '')
+        .replaceAll(RegExp(r'(?i)expected delivery.*'), '')
+        .replaceAll(RegExp(r'[\r\n]+'), ' ')
+        .trim();
+    return cleaned.isEmpty ? null : cleaned;
   }
 }

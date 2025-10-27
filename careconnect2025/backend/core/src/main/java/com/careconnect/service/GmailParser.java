@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class GmailParser {
 
     private static final Pattern TRACKING_PATTERN = Pattern.compile("(\\d{10,})");
-    private static final Pattern FROM_PATTERN = Pattern.compile("from\\s+(.+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FROM_PATTERN = Pattern.compile("(?i)from[:\\s]+(.+)");
     private static final Pattern EXPECTED_PATTERN = Pattern.compile("Expected Delivery(?: Day)?:\\s*(.+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern DIGEST_HEADING_PATTERN = Pattern.compile("(?i)Daily Digest(?: for)?\\s*(.*)");
     private static final DateTimeFormatter RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME;
@@ -44,6 +44,18 @@ public class GmailParser {
         OffsetDateTime digestDate = resolveDigestDate(doc, payload.receivedAt());
         List<PackageItem> packages = extractPackages(doc, digestDate);
         List<MailPiece> mailPieces = extractMailPieces(doc, payload, digestDate);
+
+        if (!packages.isEmpty()) {
+            mailPieces.removeIf(piece -> {
+                if (piece == null) {
+                    return true;
+                }
+                String id = piece.getId();
+                String summary = piece.getSubject();
+                return (id != null && id.startsWith("mail-summary-"))
+                    || (summary != null && summary.toLowerCase(Locale.ROOT).startsWith("mail piece"));
+            });
+        }
 
         System.out.println("[GmailParser] Extracted " + packages.size() + " packages and " + mailPieces.size() + " mail pieces");
 
@@ -103,20 +115,31 @@ public class GmailParser {
         Set<String> seen = new LinkedHashSet<>();
 
         System.out.println("[GmailParser] Looking for packages with selectors: .package, [data-package], article:has(.tracking-number)");
-        var packageElements = doc.select(".package, [data-package], article:has(.tracking-number)");
+        var packageElements = doc.select(".package, [data-package], article:has(.tracking-number), table:has(.tracking-number)");
         System.out.println("[GmailParser] Found " + packageElements.size() + " potential package elements");
         for (Element pkg : packageElements) {
-            String tracking = firstNonBlank(
+            String rawTracking = firstNonBlank(
+                    pkg.attr("data-tracking-number"),
+                    textOrNull(pkg.selectFirst("[data-tracking-number]")),
                     textOrNull(pkg.selectFirst(".tracking-number")),
-                    extractTrackingNumber(pkg.text()));
-            if (isBlank(tracking) || !seen.add(tracking)) continue;
+                    extractTrackingNumber(pkg.text()),
+                    extractTrackingNumber(textOrNull(pkg.selectFirst("a[href*='Track']"))));
+            String trackUrl = findTrackUrl(pkg);
+            if (isBlank(rawTracking) && !isBlank(trackUrl)) {
+                rawTracking = extractTrackingNumber(trackUrl);
+            }
+            String normalizedTracking = normalizeTracking(rawTracking);
+            if (isBlank(normalizedTracking) || !seen.add(normalizedTracking)) continue;
 
             OffsetDateTime expected = parseToOffset(extractExpectedText(pkg));
             if (expected == null) expected = digestDate;
-            String trackUrl = findTrackUrl(pkg);
+            String sender = extractSender(pkg);
+
+            String displayTracking = !isBlank(rawTracking) ? rawTracking.trim() : normalizedTracking;
 
             items.add(PackageItem.builder()
-                    .trackingNumber(tracking)
+                    .trackingNumber(displayTracking)
+                    .sender(sender)
                     .expectedDeliveryDate(expected)
                     .actionLinks(ActionLinks.defaults(trackUrl))
                     .build());
@@ -129,18 +152,25 @@ public class GmailParser {
         System.out.println("[GmailParser] Found " + trackingElements.size() + " elements containing 'Tracking Number'");
 
         for (Element element : trackingElements) {
-            Matcher matcher = TRACKING_PATTERN.matcher(element.text());
-            if (!matcher.find()) continue;
-            String tracking = matcher.group(1);
-            if (!seen.add(tracking)) continue;
-
+            String rawTracking = extractTrackingNumber(element.text());
             Element context = element.parent() != null ? element.parent() : element;
             OffsetDateTime expected = parseToOffset(extractExpectedText(context));
             if (expected == null) expected = digestDate;
             String trackUrl = findTrackUrl(context);
 
+            String sender = extractSender(context);
+
+            if (isBlank(rawTracking) && !isBlank(trackUrl)) {
+                rawTracking = extractTrackingNumber(trackUrl);
+            }
+            String normalizedTracking = normalizeTracking(rawTracking);
+            if (isBlank(normalizedTracking) || !seen.add(normalizedTracking)) continue;
+
+            String displayTracking = !isBlank(rawTracking) ? rawTracking.trim() : normalizedTracking;
+
             items.add(PackageItem.builder()
-                    .trackingNumber(tracking)
+                    .trackingNumber(displayTracking)
+                    .sender(sender)
                     .expectedDeliveryDate(expected)
                     .actionLinks(ActionLinks.defaults(trackUrl))
                     .build());
@@ -175,25 +205,36 @@ public class GmailParser {
                 String text = summary.text();
                 System.out.println("[GmailParser] Processing summary text: " + text);
 
-                // Extract count from text like "Expected Today 1 item(s)"
-                java.util.regex.Pattern countPattern = java.util.regex.Pattern.compile("(\\d+)\\s*item");
-                java.util.regex.Matcher countMatcher = countPattern.matcher(text);
+                java.util.regex.Pattern itemPattern = java.util.regex.Pattern.compile("(\\d+)\\s*item", java.util.regex.Pattern.CASE_INSENSITIVE);
+                java.util.regex.Matcher itemMatcher = itemPattern.matcher(text);
 
-                if (countMatcher.find()) {
-                    int count = Integer.parseInt(countMatcher.group(1));
-                    if (count > 0) {
-                        System.out.println("[GmailParser] Found " + count + " packages indicated in summary");
+                int count = -1;
+                if (itemMatcher.find()) {
+                    count = parseIntSafe(itemMatcher.group(1));
+                }
 
-                        // Create generic package entries
-                        for (int i = 1; i <= count && i <= 5; i++) { // Limit to 5 to be safe
-                            items.add(PackageItem.builder()
+                if (count <= 0) {
+                    java.util.regex.Matcher numberMatcher = java.util.regex.Pattern.compile("(\\d+)").matcher(text.replaceAll("\\s+", ""));
+                    if (numberMatcher.find()) {
+                        count = Math.max(1, parseIntSafe(numberMatcher.group(1)));
+                    }
+                }
+
+                if (count <= 0) {
+                    count = 1; // Fallback to at least one package
+                }
+
+                if (count > 0) {
+                    System.out.println("[GmailParser] Creating " + count + " summary packages");
+                    for (int i = 1; i <= count && i <= 5; i++) {
+                        items.add(PackageItem.builder()
                                 .trackingNumber("USPS-SUMMARY-" + i + "-" + System.currentTimeMillis())
+                                .sender("USPS Package")
                                 .expectedDeliveryDate(digestDate)
                                 .actionLinks(ActionLinks.defaults("https://informeddelivery.usps.com/box/dashboard"))
                                 .build());
-                        }
-                        break; // Only process first matching summary
                     }
+                    break;
                 }
             }
         }
@@ -209,7 +250,7 @@ public class GmailParser {
         }
         Matcher matcher = EXPECTED_PATTERN.matcher(element.text());
         if (matcher.find()) {
-            return matcher.group(1).trim();
+            return sanitizeSender(matcher.group(1));
         }
         return null;
     }
@@ -327,6 +368,9 @@ public class GmailParser {
                 textOrNull(block.selectFirst(".sender")),
                 deriveSenderFromAlt(img.attr("alt")),
                 deriveSenderFromContext(block));
+        if (isBlank(sender)) {
+            sender = extractSender(block);
+        }
 
         String summary = firstNonBlank(
                 textOrNull(block.selectFirst(".summary")),
@@ -354,6 +398,9 @@ public class GmailParser {
 
         String id = "mailpiece-" + counter;
         String sender = deriveSenderFromAlt(img.attr("alt"));
+        if (isBlank(sender)) {
+            sender = extractSender(img.parent());
+        }
         String summary = deriveSummaryFromAlt(img.attr("alt"));
         OffsetDateTime received = payload.receivedAt() != null ? payload.receivedAt() : defaultDate;
 
@@ -374,7 +421,7 @@ public class GmailParser {
         if (isBlank(alt)) return null;
         Matcher matcher = FROM_PATTERN.matcher(alt);
         if (matcher.find()) {
-            return matcher.group(1).trim();
+            return sanitizeSender(matcher.group(1));
         }
         return null;
     }
@@ -391,6 +438,65 @@ public class GmailParser {
             return label.text().replaceFirst("(?i)from\\s*", "").trim();
         }
         return null;
+    }
+
+    private String extractSender(Element context) {
+        if (context == null) return null;
+
+        String candidate = extractSenderFromText(context.ownText());
+        if (!isBlank(candidate)) {
+            return candidate;
+        }
+
+        candidate = deriveSenderFromContext(context);
+        if (!isBlank(candidate)) {
+            return candidate;
+        }
+
+        for (Element child : context.select("*")) {
+            candidate = extractSenderFromText(child.ownText());
+            if (!isBlank(candidate)) {
+                return candidate;
+            }
+        }
+
+        Element sibling = context.previousElementSibling();
+        int hops = 0;
+        while (sibling != null && hops++ < 3) {
+            candidate = extractSenderFromText(sibling.text());
+            if (!isBlank(candidate)) {
+                return candidate;
+            }
+            sibling = sibling.previousElementSibling();
+        }
+
+        return null;
+    }
+
+    private String extractSenderFromText(String text) {
+        if (isBlank(text)) {
+            return null;
+        }
+        Matcher matcher = FROM_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return sanitizeSender(matcher.group(1));
+        }
+        return null;
+    }
+
+    private String sanitizeSender(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        String cleaned = value
+                .replaceAll("(?i)tracking number.*", "")
+                .replaceAll("(?i)expected delivery.*", "")
+                .replaceAll("[\\r\\n]+", " ")
+                .trim();
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        return cleaned;
     }
 
     private OffsetDateTime parseToOffset(String value) {
@@ -422,8 +528,31 @@ public class GmailParser {
 
     private String extractTrackingNumber(String text) {
         if (isBlank(text)) return null;
+        String digitsOnly = text.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() >= 10) {
+            return digitsOnly;
+        }
         Matcher matcher = TRACKING_PATTERN.matcher(text);
         return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String normalizeTracking(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        String digitsOnly = value.replaceAll("[^0-9]", "");
+        return digitsOnly.length() >= 10 ? digitsOnly : value.trim();
+    }
+
+    private int parseIntSafe(String value) {
+        if (isBlank(value)) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 
     private String textOrNull(Element element) {

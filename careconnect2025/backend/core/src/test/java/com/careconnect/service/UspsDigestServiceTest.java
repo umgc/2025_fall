@@ -56,6 +56,7 @@ class UspsDigestServiceTest {
                 gmailParser,
                 new OutlookClient(),
                 new OutlookParser(),
+                googleOAuthServiceStub(),
                 cryptor
         );
 
@@ -86,6 +87,7 @@ class UspsDigestServiceTest {
                 new StubGmailParser(),
                 new OutlookClient(),
                 new OutlookParser(),
+                googleOAuthServiceStub(),
                 cryptor
         );
 
@@ -153,6 +155,15 @@ class UspsDigestServiceTest {
                     handler
             );
         }
+    }
+
+    private GoogleOAuthService googleOAuthServiceStub() {
+        return new GoogleOAuthService(null, null, cryptor) {
+            @Override
+            public EmailCredential ensureFreshToken(EmailCredential current) {
+                return current;
+            }
+        };
     }
 
     private static class StubGmailClient extends GmailClient {

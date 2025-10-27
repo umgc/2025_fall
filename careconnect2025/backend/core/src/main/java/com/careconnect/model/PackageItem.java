@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class PackageItem {
     private String trackingNumber;
+    private String sender;
 
     @JsonProperty("expectedDateIso")
     private OffsetDateTime expectedDeliveryDate;  // null if unknown
