@@ -1,7 +1,7 @@
 package com.careconnect.service;
 
 import com.careconnect.dto.GmailDigestPayload;
-import com.careconnect.model.UspsDigest;
+import com.careconnect.model.USPSDigest;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.Test;
@@ -25,10 +25,10 @@ class GmailParserTest {
         String html = Files.readString(htmlPath);
         GmailDigestPayload payload = new GmailDigestPayload(html, Map.of(), OffsetDateTime.now(ZoneOffset.UTC));
 
-        UspsDigest digest = parser.toDomain(payload);
+        USPSDigest digest = parser.toDomain(payload);
         assertNotNull(digest);
-        assertEquals(1, digest.getPackages().size(), "should find one package");
-        assertEquals("Awesome Vendor LLC", digest.getPackages().get(0).getSender());
-        assertEquals("9400 1234 5678", digest.getPackages().get(0).getTrackingNumber());
+        assertEquals(1, digest.packages().size(), "should find one package");
+        assertEquals("Awesome Vendor LLC", digest.packages().get(0).getSender());
+        assertEquals("9400 1234 5678", digest.packages().get(0).getTrackingNumber());
     }
 }

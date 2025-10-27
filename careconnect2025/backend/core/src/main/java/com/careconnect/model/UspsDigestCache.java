@@ -5,7 +5,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "usps_digest_cache")
-public class UspsDigestCache {
+public class USPSDigestCache {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

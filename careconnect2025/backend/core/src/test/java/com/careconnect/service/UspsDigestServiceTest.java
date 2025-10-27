@@ -2,10 +2,10 @@ package com.careconnect.service;
 
 import com.careconnect.dto.GmailDigestPayload;
 import com.careconnect.model.EmailCredential;
-import com.careconnect.model.UspsDigest;
-import com.careconnect.model.UspsDigestCache;
-import com.careconnect.repository.EmailCredentialRepository;
-import com.careconnect.repository.UspsDigestCacheRepo;
+import com.careconnect.model.USPSDigest;
+import com.careconnect.model.USPSDigestCache;
+import com.careconnect.repository.EmailCredentialRepo;
+import com.careconnect.repository.USPSDigestCacheRepo;
 import com.careconnect.security.TokenCryptor;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class UspsDigestServiceTest {
+class USPSDigestServiceTest {
 
     private final TokenCryptor cryptor = new TokenCryptor("unit-test-secret-32-bytes-long!!!");
 
@@ -42,25 +42,22 @@ class UspsDigestServiceTest {
         gmailClient.payload = Optional.of(payload);
 
         var gmailParser = new StubGmailParser();
-        UspsDigest digest = UspsDigest.builder()
-                .digestDate(OffsetDateTime.now(ZoneOffset.UTC))
-                .mailPieces(List.of())
-                .packages(List.of())
-                .build();
+        USPSDigest digest = new USPSDigest(
+                OffsetDateTime.now(ZoneOffset.UTC),
+                List.of(),
+                List.of());
         gmailParser.digest = digest;
 
-        UspsDigestService service = new UspsDigestService(
+        USPSDigestService service = new USPSDigestService(
                 emailRepo,
                 cacheStub.asRepo(),
                 gmailClient,
-                gmailParser,
                 new OutlookClient(),
-                new OutlookParser(),
-                googleOAuthServiceStub(),
-                cryptor
+                gmailParser,
+                new OutlookParser()
         );
 
-        Optional<UspsDigest> result = service.latestForUser("user-1");
+        Optional<USPSDigest> result = service.latestForUser("user-1");
 
         assertTrue(result.isPresent());
         assertEquals(digest, result.get());
@@ -73,38 +70,36 @@ class UspsDigestServiceTest {
     void returnsCachedDigestWhenAvailable() throws Exception {
         var cacheStub = new CacheRepoStub();
 
-        var cached = new UspsDigestCache();
+        var cached = new USPSDigestCache();
         cached.setUserId("user-2");
         cached.setDigestDate(Instant.now());
         cached.setExpiresAt(Instant.now().plusSeconds(3600));
         cached.setPayloadJson("{\"digestDate\":null,\"mailPieces\":[],\"packages\":[]}");
         cacheStub.nextLookup = Optional.of(cached);
 
-        UspsDigestService service = new UspsDigestService(
+        USPSDigestService service = new USPSDigestService(
                 emailCredentialRepository(Optional.empty()),
                 cacheStub.asRepo(),
                 new StubGmailClient(),
-                new StubGmailParser(),
                 new OutlookClient(),
-                new OutlookParser(),
-                googleOAuthServiceStub(),
-                cryptor
+                new StubGmailParser(),
+                new OutlookParser()
         );
 
-        Optional<UspsDigest> result = service.latestForUser("user-2");
+        Optional<USPSDigest> result = service.latestForUser("user-2");
 
         assertTrue(result.isPresent());
-        assertNull(result.get().getDigestDate());
+        assertNull(result.get().digestDate());
         assertNull(cacheStub.saved, "Cached value should be reused without overwriting");
     }
 
-    private EmailCredentialRepository emailCredentialRepository(Optional<EmailCredential> credential) {
+    private EmailCredentialRepo emailCredentialRepository(Optional<EmailCredential> credential) {
         InvocationHandler handler = new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                 if (method.getDeclaringClass() == Object.class) {
                     return switch (method.getName()) {
-                        case "toString" -> "EmailCredentialRepositoryStub";
+                        case "toString" -> "EmailCredentialRepoStub";
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "equals" -> proxy == args[0];
                         default -> method.invoke(this, args);
@@ -116,24 +111,24 @@ class UspsDigestServiceTest {
                 };
             }
         };
-        return (EmailCredentialRepository) Proxy.newProxyInstance(
-                UspsDigestServiceTest.class.getClassLoader(),
-                new Class[]{EmailCredentialRepository.class},
+        return (EmailCredentialRepo) Proxy.newProxyInstance(
+                USPSDigestServiceTest.class.getClassLoader(),
+                new Class[]{EmailCredentialRepo.class},
                 handler
         );
     }
 
     private static class CacheRepoStub {
-        Optional<UspsDigestCache> nextLookup = Optional.empty();
-        UspsDigestCache saved;
+        Optional<USPSDigestCache> nextLookup = Optional.empty();
+        USPSDigestCache saved;
 
-        UspsDigestCacheRepo asRepo() {
+        USPSDigestCacheRepo asRepo() {
             InvocationHandler handler = new InvocationHandler() {
                 @Override
                 public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                     if (method.getDeclaringClass() == Object.class) {
                         return switch (method.getName()) {
-                            case "toString" -> "UspsDigestCacheRepoStub";
+                            case "toString" -> "USPSDigestCacheRepoStub";
                             case "hashCode" -> System.identityHashCode(proxy);
                             case "equals" -> proxy == args[0];
                             default -> method.invoke(this, args);
@@ -142,16 +137,16 @@ class UspsDigestServiceTest {
                     return switch (method.getName()) {
                         case "findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc" -> nextLookup;
                         case "save" -> {
-                            saved = (UspsDigestCache) args[0];
+                            saved = (USPSDigestCache) args[0];
                             yield saved;
                         }
                         default -> throw new UnsupportedOperationException("Unsupported: " + method.getName());
                     };
                 }
             };
-            return (UspsDigestCacheRepo) Proxy.newProxyInstance(
-                    UspsDigestServiceTest.class.getClassLoader(),
-                    new Class[]{UspsDigestCacheRepo.class},
+            return (USPSDigestCacheRepo) Proxy.newProxyInstance(
+                    USPSDigestServiceTest.class.getClassLoader(),
+                    new Class[]{USPSDigestCacheRepo.class},
                     handler
             );
         }
@@ -176,10 +171,10 @@ class UspsDigestServiceTest {
     }
 
     private static class StubGmailParser extends GmailParser {
-        UspsDigest digest;
+        USPSDigest digest;
 
         @Override
-        public UspsDigest toDomain(GmailDigestPayload payload) {
+        public USPSDigest toDomain(GmailDigestPayload payload) {
             return digest;
         }
     }

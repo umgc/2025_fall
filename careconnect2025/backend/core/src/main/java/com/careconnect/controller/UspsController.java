@@ -1,92 +1,24 @@
 package com.careconnect.controller;
 
-import com.careconnect.model.UspsDigest;
-import com.careconnect.service.UspsDigestService;
+import com.careconnect.model.USPSDigest;
+import com.careconnect.service.USPSDigestService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-
 @RestController
-@RequestMapping("/api/usps")
+@RequestMapping("/v1/api/usps")
 @RequiredArgsConstructor
-public class UspsController {
+public class USPSController {
 
-    private final UspsDigestService service;
+    private final USPSDigestService service;
 
-    @GetMapping("/digest")
-    public ResponseEntity<UspsDigest> getDigest(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(required = false) String userId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-
-        // Try to get userId from JWT first, then from parameter, then fallback
-        String actualUserId;
-        if (jwt != null && jwt.getSubject() != null) {
-            actualUserId = jwt.getSubject();
-        } else if (userId != null && !userId.isEmpty()) {
-            actualUserId = userId;
-        } else {
-            actualUserId = "demo-user"; // fallback for testing
-        }
-
-        // If no date specified, default to today
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-
-        System.out.println("[USPS] Fetching digest for userId: " + actualUserId + ", date: " + targetDate);
-
-        var digest = service.digestForUserAndDate(actualUserId, targetDate)
-                .orElseGet(() -> {
-                    System.out.println("[USPS] No digest found for date " + targetDate + ", returning empty");
-                    return new UspsDigest(null, java.util.List.of(), java.util.List.of());
-                });
-
-        // Ensure non-null lists before logging
-        int mailCount = digest.getMailPieces() != null ? digest.getMailPieces().size() : 0;
-        int packageCount = digest.getPackages() != null ? digest.getPackages().size() : 0;
-
-        System.out.println("[USPS] Returning digest with " + mailCount + " mail pieces and " + packageCount + " packages");
-
+    @GetMapping("/mail")
+    public ResponseEntity<USPSDigest> getDigest(@AuthenticationPrincipal Jwt jwt) {
+        var userId = jwt != null ? jwt.getSubject() : "demo-user"; // fallback for early testing
+        var digest = service.latestForUser(userId).orElseGet(() -> new USPSDigest(null, java.util.List.of(), java.util.List.of()));
         return ResponseEntity.ok(digest);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Map<String, Object>>> searchMail(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestParam(required = false) String userId,
-            @RequestParam String keyword) {
-
-        // Get actual user ID
-        String actualUserId;
-        if (jwt != null && jwt.getSubject() != null) {
-            actualUserId = jwt.getSubject();
-        } else if (userId != null && !userId.isEmpty()) {
-            actualUserId = userId;
-        } else {
-            actualUserId = "demo-user";
-        }
-
-        System.out.println("[USPS] Searching mail for userId: " + actualUserId + ", keyword: " + keyword);
-
-        var results = service.searchMailHistory(actualUserId, keyword);
-
-        return ResponseEntity.ok(results);
-    }
-
-    @PostMapping("/clear-cache")
-    public ResponseEntity<String> clearCache(@RequestParam(required = false) String userId) {
-        String actualUserId = userId != null ? userId : "demo-user";
-
-        // This will force a fresh fetch by clearing cache
-        System.out.println("[USPS] Clearing cache for userId: " + actualUserId);
-        service.clearCache(actualUserId);
-
-        return ResponseEntity.ok("Cache cleared for user " + actualUserId);
     }
 }

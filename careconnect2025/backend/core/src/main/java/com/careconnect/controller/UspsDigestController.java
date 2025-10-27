@@ -1,7 +1,7 @@
 package com.careconnect.controller;
 
-import com.careconnect.model.UspsDigest;
-import com.careconnect.service.UspsDigestService;
+import com.careconnect.model.USPSDigest;
+import com.careconnect.service.USPSDigestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class UspsDigestController {
 
-    private final UspsDigestService uspsDigestService;
+    private final USPSDigestService uspsDigestService;
 
     @GetMapping("/latest")
-    public ResponseEntity<UspsDigest> getLatestDigest(
+    public ResponseEntity<USPSDigest> getLatestDigest(
             @RequestParam(defaultValue = "demo-user") String userId) {
 
         return uspsDigestService.latestForUser(userId)

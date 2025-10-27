@@ -4,7 +4,7 @@ import com.careconnect.dto.GmailDigestPayload;
 import com.careconnect.model.ActionLinks;
 import com.careconnect.model.MailPiece;
 import com.careconnect.model.PackageItem;
-import com.careconnect.model.UspsDigest;
+import com.careconnect.model.USPSDigest;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -46,7 +46,7 @@ public class GmailParser {
     @Autowired(required = false)
     private MailpieceOcrService mailpieceOcrService;
 
-    public UspsDigest toDomain(GmailDigestPayload payload) {
+    public USPSDigest toDomain(GmailDigestPayload payload) {
         if (payload == null) return null;
 
         String htmlBody = payload.htmlBody() == null ? "" : payload.htmlBody();
@@ -106,7 +106,7 @@ public class GmailParser {
 
         System.out.println("[GmailParser] Extracted " + packages.size() + " packages and " + mailPieces.size() + " mail pieces");
 
-        return new UspsDigest(digestDate, mailPieces, packages);
+        return new USPSDigest(digestDate, mailPieces, packages);
     }
 
     private void inlineCidImages(Document doc, Map<String, String> cidMap) {
