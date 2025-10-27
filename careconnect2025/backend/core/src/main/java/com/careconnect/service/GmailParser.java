@@ -185,6 +185,11 @@ public class GmailParser {
         var packageElements = doc.select(".package, [data-package], article:has(.tracking-number), table:has(.tracking-number)");
         System.out.println("[GmailParser] Found " + packageElements.size() + " potential package elements");
         for (Element pkg : packageElements) {
+            if (isMarketingElement(pkg)) {
+                System.out.println("[GmailParser] Skipping package candidate due to marketing markers");
+                continue;
+            }
+
             String rawTracking = firstNonBlank(
                     pkg.attr("data-tracking-number"),
                     textOrNull(pkg.selectFirst("[data-tracking-number]")),
@@ -200,7 +205,16 @@ public class GmailParser {
 
             OffsetDateTime expected = parseToOffset(extractExpectedText(pkg));
             if (expected == null) expected = digestDate;
-            String sender = extractSender(pkg);
+            String sender = extractPackageSender(pkg);
+            if (isBlank(sender)) {
+                sender = extractSender(pkg);
+            }
+            if (isMarketingText(sender)) {
+                sender = null;
+            }
+            if (isBlank(sender)) {
+                sender = "USPS Package";
+            }
 
             String displayTracking = !isBlank(rawTracking) ? rawTracking.trim() : normalizedTracking;
 
@@ -219,13 +233,26 @@ public class GmailParser {
         System.out.println("[GmailParser] Found " + trackingElements.size() + " elements containing 'Tracking Number'");
 
         for (Element element : trackingElements) {
+            if (isMarketingElement(element)) {
+                System.out.println("[GmailParser] Skipping fallback package candidate due to marketing markers");
+                continue;
+            }
             String rawTracking = extractTrackingNumber(element.text());
             Element context = element.parent() != null ? element.parent() : element;
             OffsetDateTime expected = parseToOffset(extractExpectedText(context));
             if (expected == null) expected = digestDate;
             String trackUrl = findTrackUrl(context);
 
-            String sender = extractSender(context);
+            String sender = extractPackageSender(context);
+            if (isBlank(sender)) {
+                sender = extractSender(context);
+            }
+            if (isMarketingText(sender)) {
+                sender = null;
+            }
+            if (isBlank(sender)) {
+                sender = "USPS Package";
+            }
 
             if (isBlank(rawTracking) && !isBlank(trackUrl)) {
                 rawTracking = extractTrackingNumber(trackUrl);
@@ -580,6 +607,112 @@ public class GmailParser {
                 }
             }
         }
+        return null;
+    }
+
+    private String extractPackageSender(Element pkg) {
+        if (pkg == null) {
+            return null;
+        }
+
+        String direct = firstNonBlank(
+                sanitizeSender(pkg.attr("data-sender")),
+                sanitizeSender(textOrNull(pkg.selectFirst("[data-sender]"))),
+                sanitizeSender(textOrNull(pkg.selectFirst("[id*=shipper]"))),
+                sanitizeSender(textOrNull(pkg.selectFirst("[id*=sender]"))),
+                sanitizeSender(textOrNull(pkg.selectFirst("[class*=shipper]"))),
+                sanitizeSender(textOrNull(pkg.selectFirst(".package-sender"))),
+                sanitizeSender(textOrNull(pkg.selectFirst(".sender")))
+        );
+        if (!isBlank(direct) && !isMarketingText(direct)) {
+            return direct;
+        }
+
+        Element fromNode = pkg.selectFirst("*:matchesOwn((?i)\\bfrom\\s*:)");
+        if (fromNode != null) {
+            String fromText = sanitizeSender(fromNode.text());
+            if (!isBlank(fromText) && !isMarketingText(fromText)) {
+                return fromText;
+            }
+            Element child = fromNode.selectFirst("*");
+            if (child != null) {
+                String childText = sanitizeSender(child.text());
+                if (!isBlank(childText) && !isMarketingText(childText)) {
+                    return childText;
+                }
+            }
+        }
+
+        Element trackingNode = pkg.selectFirst("*:matchesOwn((?i)Tracking Number)");
+        if (trackingNode != null) {
+            String candidate = extractNearbySender(trackingNode);
+            if (!isBlank(candidate) && !isMarketingText(candidate)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private String extractNearbySender(Element anchor) {
+        if (anchor == null) return null;
+
+        String candidate = extractSenderFromText(anchor.text());
+        if (!isBlank(candidate)) {
+            return candidate;
+        }
+
+        Element sibling = anchor.previousElementSibling();
+        int hops = 0;
+        while (sibling != null && hops++ < 4) {
+            candidate = extractSenderFromText(sibling.text());
+            if (!isBlank(candidate)) {
+                return candidate;
+            }
+            sibling = sibling.previousElementSibling();
+        }
+
+        Element next = anchor.nextElementSibling();
+        hops = 0;
+        while (next != null && hops++ < 4) {
+            candidate = extractSenderFromText(next.text());
+            if (!isBlank(candidate)) {
+                return candidate;
+            }
+            next = next.nextElementSibling();
+        }
+
+        Element parent = anchor.parent();
+        int depth = 0;
+        while (parent != null && depth++ < 3) {
+            candidate = extractSenderFromText(parent.ownText());
+            if (!isBlank(candidate)) {
+                return candidate;
+            }
+
+            Element prev = parent.previousElementSibling();
+            int prevHops = 0;
+            while (prev != null && prevHops++ < 3) {
+                candidate = extractSenderFromText(prev.text());
+                if (!isBlank(candidate)) {
+                    return candidate;
+                }
+                prev = prev.previousElementSibling();
+            }
+
+            Element following = parent.nextElementSibling();
+            prevHops = 0;
+            while (following != null && prevHops++ < 3) {
+                candidate = extractSenderFromText(following.text());
+                if (!isBlank(candidate)) {
+                    return candidate;
+                }
+                following = following.nextElementSibling();
+            }
+
+            parent = parent.parent();
+        }
+
         return null;
     }
 

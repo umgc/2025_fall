@@ -54,7 +54,8 @@ class USPSDigestServiceTest {
                 gmailClient,
                 new OutlookClient(),
                 gmailParser,
-                new OutlookParser()
+                new OutlookParser(),
+                new TokenCryptor("test-secret-key")
         );
 
         Optional<USPSDigest> result = service.latestForUser("user-1");
@@ -83,7 +84,8 @@ class USPSDigestServiceTest {
                 new StubGmailClient(),
                 new OutlookClient(),
                 new StubGmailParser(),
-                new OutlookParser()
+                new OutlookParser(),
+                new TokenCryptor("test-secret-key")
         );
 
         Optional<USPSDigest> result = service.latestForUser("user-2");

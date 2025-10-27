@@ -188,11 +188,13 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
     // Get user ID to pass as parameter
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
-    final userId = user?.id ?? 'demo-user';
+    final dynamic userIdRaw = user?.id;
+    final userId = userIdRaw?.toString() ?? 'demo-user';
 
     // Format date as YYYY-MM-DD
     final dateString = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    final url = '$base/api/usps/latest?userId=$userId';
+    final encodedUser = Uri.encodeComponent(userId);
+    final url = '$base/api/usps/latest?userId=$encodedUser&date=$dateString';
 
     try {
       final dio = Dio(BaseOptions(
@@ -203,13 +205,18 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
       final resp = await dio.get(url);
       if (resp.statusCode == 200) {
         setState(() {
-        digest = resp.data is Map<String, dynamic>
+          digest = resp.data is Map<String, dynamic>
               ? (resp.data as Map<String, dynamic>)
               : json.decode(json.encode(resp.data)) as Map<String, dynamic>;
-        searchResults = [];
-        searchError = null;
-        _searchController.clear();
-      });
+          searchResults = [];
+          searchError = null;
+          _searchController.clear();
+        });
+      } else if (resp.statusCode == 204) {
+        setState(() {
+          digest = null;
+          error = 'No USPS digest found for $dateString.';
+        });
       } else {
         setState(() => error = 'HTTP ${resp.statusCode}');
       }
@@ -708,7 +715,7 @@ class _UspsTestScreenState extends State<UspsTestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mail = (digest?['mailPieces'] as List?) ?? const [];
+    final mail = (digest?['mailpieces'] as List?) ?? const [];
     final pkgs = (digest?['packages'] as List?) ?? const [];
 
     return Scaffold(

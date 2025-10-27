@@ -3,6 +3,7 @@ package com.careconnect.service;
 import com.careconnect.model.*;
 import com.careconnect.repository.EmailCredentialRepo;
 import com.careconnect.repository.USPSDigestCacheRepo;
+import com.careconnect.security.TokenCryptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class USPSDigestService {
     private final OutlookClient outlookClient;
     private final GmailParser gmailParser;
     private final OutlookParser outlookParser;
+    private final TokenCryptor tokenCryptor;
     private final ObjectMapper om = new ObjectMapper();
 
     public Optional<USPSDigest> latestForUser(String userId) {
@@ -55,17 +57,69 @@ public class USPSDigestService {
             }
         }
 
-        // 4) mock fallback so you can test UI today
-        var mock = mockDigest();
-        cache(userId, mock);
-        return Optional.of(mock);
+        // 4) No mock data - return empty if no real data found
+        return Optional.empty();
+    }
+
+    public Optional<USPSDigest> digestForDate(String userId, LocalDate date) {
+        if (date == null) {
+            return latestForUser(userId);
+        }
+
+        var start = date.atStartOfDay(ZoneOffset.UTC).toInstant();
+        var end = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        var now = Instant.now();
+
+        var cached = cacheRepo.findFirstByUserIdAndDigestDateBetweenAndExpiresAtAfterOrderByDigestDateDesc(
+                userId, start, end, now);
+        if (cached.isPresent()) {
+            try {
+                return Optional.of(om.readValue(cached.get().getPayloadJson(), USPSDigest.class));
+            } catch (Exception ignored) { }
+        }
+
+        var g = credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.GMAIL);
+        if (g.isPresent()) {
+            var at = decrypt(g.get().getAccessTokenEnc());
+            var raw = gmailClient.fetchDigestForDate(at, date);
+            if (raw.isPresent()) {
+                var digest = gmailParser.toDomain(raw.get());
+                cache(userId, digest, date);
+                return Optional.of(digest);
+            }
+        }
+
+        var o = credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.OUTLOOK);
+        if (o.isPresent()) {
+            var at = decrypt(o.get().getAccessTokenEnc());
+            var raw = outlookClient.fetchDigestForDate(at, date);
+            if (raw.isPresent()) {
+                var digest = outlookParser.toDomain(raw.get());
+                cache(userId, digest, date);
+                return Optional.of(digest);
+            }
+        }
+
+        return Optional.empty();
     }
 
     private void cache(String userId, USPSDigest d) {
+        cache(userId, d, null);
+    }
+
+    private void cache(String userId, USPSDigest d, LocalDate requestedDate) {
         try {
             var c = new USPSDigestCache();
             c.setUserId(userId);
-            c.setDigestDate(d.digestDate() != null ? d.digestDate().toInstant() : Instant.now());
+            Instant digestInstant;
+            if (requestedDate != null) {
+                digestInstant = requestedDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+            } else if (d.digestDate() != null) {
+                digestInstant = d.digestDate().toInstant();
+            } else {
+                digestInstant = Instant.now();
+            }
+            c.setDigestDate(digestInstant);
             c.setPayloadJson(om.writeValueAsString(d));
             c.setExpiresAt(Instant.now().plus(Duration.ofHours(6)));
             cacheRepo.save(c);
@@ -85,7 +139,9 @@ public class USPSDigestService {
         }
     }
 
-    private String decrypt(String s) { return s; } // TODO: plug KMS/JCE
+    private String decrypt(String s) {
+        return tokenCryptor.decrypt(s);
+    }
 
     private USPSDigest mockDigest() {
         var now = OffsetDateTime.now(ZoneOffset.UTC);

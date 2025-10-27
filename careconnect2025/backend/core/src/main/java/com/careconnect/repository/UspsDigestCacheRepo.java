@@ -7,4 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface USPSDigestCacheRepo extends JpaRepository<USPSDigestCache, Long> {
     Optional<USPSDigestCache> findFirstByUserIdAndExpiresAtAfterOrderByDigestDateDesc(String userId, Instant now);
+
+    Optional<USPSDigestCache> findFirstByUserIdAndDigestDateBetweenAndExpiresAtAfterOrderByDigestDateDesc(
+            String userId,
+            Instant startInclusive,
+            Instant endExclusive,
+            Instant now);
 }
