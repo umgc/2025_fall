@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../services/evv_service.dart';
+import '../../../../widgets/common_drawer.dart';
+import '../../../../widgets/app_bar_helper.dart';
 
 class EvvVisitHistoryPage extends StatefulWidget {
   const EvvVisitHistoryPage({super.key});
@@ -120,11 +122,11 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EVV Visit History'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
+      drawer: const CommonDrawer(currentRoute: '/evv/visit-history'),
+      appBar: AppBarHelper.createAppBar(
+        context,
+        title: 'EVV Visit History',
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.clear_all),
             onPressed: _clearFilters,
@@ -398,7 +400,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                                       children: [
                                         Text('${record.serviceType} - ${_formatDate(record.dateOfService)}'),
                                         Text('${_formatTime(record.timeIn)} - ${_formatTime(record.timeOut)}'),
-                                        Text('MA: ${record.participant.maNumber}'),
+                                        Text('MA: ${record.patient?.maNumber ?? 'N/A'}'),
                                         Row(
                                           children: [
                                             Container(
@@ -489,7 +491,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
               _buildDetailRow('Location Source', record.locationSource),
               _buildDetailRow('State', record.stateCode),
               _buildDetailRow('Status', record.status),
-              _buildDetailRow('MA Number', record.participant.maNumber),
+              _buildDetailRow('MA Number', record.patient?.maNumber ?? 'N/A'),
               _buildDetailRow('Created', _formatDateTime(record.createdAt)),
               _buildDetailRow('Updated', _formatDateTime(record.updatedAt)),
               if (record.isOffline) ...[

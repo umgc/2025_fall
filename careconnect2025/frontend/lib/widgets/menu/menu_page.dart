@@ -120,15 +120,30 @@ class _MenuPageState extends State<MenuPage> {
         visibleFor: const {'CAREGIVER'},
       ),
       _MenuItem(
+        icon: Icons.mail,
+        label: 'Informed Delivery',
+        route: '/informed-delivery',
+      ),
+      _MenuItem(
         icon: Icons.settings,
         label: t.settings,
         route: '/settings',
         section: _Section.settings,
       ),
       _MenuItem(
+        icon: Icons.devices,
+        label: 'Smart Devices',
+        route: '/smart-devices',
+      ),
+      _MenuItem(
         icon: Icons.folder,
         label: 'File Management',
         route: '/file-management',
+      ),
+      _MenuItem(
+        icon: Icons.sensors,
+        label: 'Fall Detection',
+        route: '/alertpage',
       ),
     ].where((m) => m.isVisibleFor(role)).toList();
 

@@ -201,6 +201,14 @@ class _CommonDrawerState extends State<CommonDrawer> {
 
           _buildDrawerItem(
             context,
+            icon: Icons.calendar_month,
+            title: 'Informed Delivery',
+            route: '/calendar',
+            isActive: widget.currentRoute == '/calendar',
+          ),
+
+          _buildDrawerItem(
+            context,
             icon: Icons.note,
             title: 'Medical Notetaker',
             route: '/notetaker-search',
@@ -236,7 +244,7 @@ class _CommonDrawerState extends State<CommonDrawer> {
             route: '/gamification',
             isActive: widget.currentRoute == '/gamification',
           ),
-      
+
           ExpansionTile(
             leading: Icon(
               Icons.receipt_long,           color: widget.currentRoute.startsWith('/invoice-assistant')

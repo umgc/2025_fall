@@ -34,6 +34,7 @@ class InvoiceOcrLlmApi {
   static Future<InvoiceResponseDto?> extractWithLlm({
     List<XFile> images = const [],
     List<String> pdfPaths = const [],
+    List<Uint8List> pdfBytes = const [], // <-- 1. PARAMETER ADDED HERE
   }) async {
     final uri = Uri.parse('${ApiConstants.invoices}/extract-llm');
     final headers = await AuthTokenManager.getAuthHeaders();
@@ -46,7 +47,7 @@ class InvoiceOcrLlmApi {
       req.files.add(part);
     }
 
-    // PDFs
+    // PDFs (from paths)
     for (final path in pdfPaths) {
       req.files.add(await http.MultipartFile.fromPath(
         'files',
@@ -55,6 +56,19 @@ class InvoiceOcrLlmApi {
         contentType: MediaType('application', 'pdf'),
       ));
     }
+
+    // <-- 2. NEW LOGIC BLOCK ADDED HERE
+    // PDFs (from bytes)
+    int pdfBytesCounter = 0;
+    for (final bytes in pdfBytes) {
+      req.files.add(http.MultipartFile.fromBytes(
+        'files',
+        bytes,
+        filename: 'upload_${pdfBytesCounter++}.pdf', // Generate a filename
+        contentType: MediaType('application', 'pdf'),
+      ));
+    }
+    // END OF NEW LOGIC BLOCK
 
     final streamed = await req.send().timeout(const Duration(seconds: 180));
     final resp = await http.Response.fromStream(streamed);
@@ -119,7 +133,7 @@ MediaType _mediaTypeFromString(String mime) {
   if (parts.length == 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
     return MediaType(parts[0], parts[1]);
   }
-  return MediaType('application', 'octet-stream');  
+  return MediaType('application', 'octet-stream');
 }
 
 
@@ -228,10 +242,10 @@ Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
 
   final check = (checkPayable != null)
       ? CheckPayableTo(
-          name: _str(checkPayable['name']),
-          address: _str(checkPayable['address']),
-          reference: _str(checkPayable['reference']),
-        )
+    name: _str(checkPayable['name']),
+    address: _str(checkPayable['address']),
+    reference: _str(checkPayable['reference']),
+  )
       : null;
 
   final history = historyList.map<HistoryEntry>((e) {
@@ -313,21 +327,21 @@ List<String> _stringList(Object? v) {
 
 PaymentStatus _paymentStatusFromWire(String? s) {
   switch ((s ?? '').toLowerCase()) {
-    case 'pending':
-      return PaymentStatus.pending;
-    case 'overdue':
-      return PaymentStatus.overdue;
-    case 'pendinginsurance':
-      return PaymentStatus.pendingInsurance;
-    case 'sent':
-      return PaymentStatus.sent;
-    case 'paid':
-      return PaymentStatus.paid;
-    case 'partialpayment':
-      return PaymentStatus.partialPayment;
-    case 'rejectedinsurance':
-      return PaymentStatus.rejectedInsurance;
-    default:
-      return PaymentStatus.pending;
+  case 'pending':
+  return PaymentStatus.pending;
+  case 'overdue':
+  return PaymentStatus.overdue;
+  case 'pendinginsurance':
+  return PaymentStatus.pendingInsurance;
+  case 'sent':
+  return PaymentStatus.sent;
+  case 'paid':
+  return PaymentStatus.paid;
+  case 'partialpayment':
+  return PaymentStatus.partialPayment;
+  case 'rejectedinsurance':
+  return PaymentStatus.rejectedInsurance;
+  default:
+  return PaymentStatus.pending;
   }
 }

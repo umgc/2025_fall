@@ -59,6 +59,8 @@ Future<void> main() async {
             ChangeNotifierProvider.value(value: themeProvider),
             ChangeNotifierProvider.value(value: shortcutProvider),
             ChangeNotifierProvider.value(value: localeProvider),
+            ChangeNotifierProvider(create: (_) => TaskTypeManager()),
+            ChangeNotifierProvider(create: (_) => ShortcutProvider()..init()),
           ],
           child: CareConnectAppWithErrorBoundary(),
         ),

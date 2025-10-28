@@ -2,6 +2,7 @@ import 'package:care_connect_app/features/dashboard/presentation/sosscreen.dart'
 import 'package:care_connect_app/features/health/medication-tracker/pages/medication-tracker.dart';
 import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_page.dart';
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
+import 'package:care_connect_app/features/informed_delivery/informed_delivery_screen.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
 
@@ -51,6 +52,21 @@ class PatientMoreFeaturesBottomDrawerWidget extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => const CalendarAssistantScreen(),
+            ),
+          );
+        },
+      ),
+      FeatureItem(
+        icon: Icons.mail,
+        iconColor: Colors.blue,
+        title: 'Informed Delivery',
+        subtitle: 'View your Infomred Deliver digest',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const InformedDeliveryScreen(),
             ),
           );
         },

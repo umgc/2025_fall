@@ -19,7 +19,7 @@
     <application
         android:label="care_connect_app"
         android:name="${applicationName}"
-        android:requestLegacyExternalStorage="true">
+        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher"
         tools:replace="android:label">
         <activity

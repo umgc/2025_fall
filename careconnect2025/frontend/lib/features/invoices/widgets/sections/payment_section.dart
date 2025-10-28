@@ -263,22 +263,29 @@ class PaymentSection extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: SizedBox(
-                            height: 140,
-                            width: 140,
-                            child: Center(
-                              child: QrImageView(
-                                data: refs.qrCodeUrl!.trim(),
-                                version: QrVersions.auto,
-                                size: 140,
-                                gapless: true,
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,                
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.all(12),   
+                            child: QrImageView(
+                              data: refs.qrCodeUrl!.trim(),      
+                              version: QrVersions.auto,
+                              size: 140,
+                              gapless: true,
+                              backgroundColor: Colors.white,    
+                              dataModuleStyle: const QrDataModuleStyle(
+                                dataModuleShape: QrDataModuleShape.square,
+                                color: Colors.black,            
+                              ),
+                              eyeStyle: const QrEyeStyle(
+                                eyeShape: QrEyeShape.square,
+                                color: Colors.black,
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                          )
+                          ,
                         Expanded(
                           child: Text(
                             'Scan this QR code to open the destination URL.',
@@ -298,25 +305,34 @@ class PaymentSection extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: SizedBox(
-                            height: 140,
-                            width: 140,
-                            child: Center(
-                              child: QrImageView(
-                                data: refs.paymentLink!.trim(),
-                                version: QrVersions.auto,
-                                size: 140,
-                                gapless: true,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                    
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,             
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(12),   
+                    child: QrImageView(
+                      data: refs.qrCodeUrl!.trim(),     
+                      version: QrVersions.auto,
+                      size: 140,
+                      gapless: true,
+                      backgroundColor: Colors.white,     
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Colors.black,            
+                      ),
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  SizedBox( height: 10,),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            
+                            crossAxisAlignment: CrossAxisAlignment.start, 
                             children: [
                               if (canOpenPaymentLink)
                                 OutlinedButton.icon(
@@ -325,7 +341,7 @@ class PaymentSection extends StatelessWidget {
                                   onPressed: () =>
                                       _openUrl(refs.paymentLink!.trim()),
                                 ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 20),
                               Text(
                                 canOpenPaymentLink
                                     ? 'Scan the QR or tap the button to open the payment page.'

@@ -36,100 +36,110 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     });
   }
 
+  // --- THIS IS THE MODIFIED FUNCTION ---
   Future<void> _onUploadFile() async {
     final picked = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
       type: FileType.custom,
       withReadStream: false,
+      // On web there is no file path, so we need bytes
+      withData: kIsWeb,
     );
     if (picked == null) return;
 
-    String? ext(String? p) => p?.split('.').last.toLowerCase();
-    final imageFiles = <XFile>[];
-    final pdfPaths = <String>[];
-
+    // 1. UNIFY ALL FILES
+    // Convert all picked files (images and PDFs) into a single List<XFile>
+    // to pass to the review screen.
+    final allFilesToReview = <XFile>[];
     for (final f in picked.files) {
-      final path = f.path;
-      if (path == null) continue;
-      final e = ext(f.name);
-      if (e == 'png' || e == 'jpg' || e == 'jpeg') {
-        // For images, create XFile properly for both web and mobile
-        if (kIsWeb) {
-          // On web, create XFile from bytes
-          if (f.bytes != null) {
-            imageFiles.add(XFile.fromData(f.bytes!, name: f.name));
-          }
-        } else {
-          // On mobile, use path if available
-          if (f.path != null) {
-            imageFiles.add(XFile(f.path!));
-          }
+      if (kIsWeb) {
+        if (f.bytes != null) {
+          allFilesToReview.add(XFile.fromData(f.bytes!, name: f.name));
         }
-      } else if (e == 'pdf') {
-        // For PDFs, we still need paths for now
-        // TODO: Update PDF handling for web compatibility
+      } else {
         if (f.path != null) {
-          pdfPaths.add(f.path!);
-        } else if (kIsWeb) {
-          _snack('PDF upload on web is not currently supported. Please use mobile device or upload images instead.');
-          return;
+          allFilesToReview.add(XFile(f.path!));
         }
       }
     }
 
-    if (imageFiles.isEmpty && pdfPaths.isEmpty) {
+    if (allFilesToReview.isEmpty) {
       _snack('No supported files selected');
       return;
     }
 
-    // Images flow
-    if (imageFiles.isNotEmpty) {
-      final reviewed = await Navigator.push<List<XFile>>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ReviewPhotosScreen(
-            initialPhotos: imageFiles,
-          ),
-          fullscreenDialog: true,
+    // 2. GO TO REVIEW SCREEN
+    // Pass ALL files (images and PDFs) to the review screen.
+    // We assume ReviewPhotosScreen will pass back any file it can't preview.
+    final reviewedFiles = await Navigator.push<List<XFile>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReviewPhotosScreen(
+          initialPhotos: allFilesToReview, // Pass all files
         ),
-      );
-      if (!mounted) return;
+        fullscreenDialog: true,
+      ),
+    );
+    if (!mounted) return;
 
-      if (reviewed == null || reviewed.isEmpty) {
-        _snack('No photos selected');
-        return;
+    if (reviewedFiles == null || reviewedFiles.isEmpty) {
+      _snack('No files selected');
+      return;
+    }
+
+    // 3. EXTRACT AFTER REVIEW
+    // Now that the user has clicked "Done", separate the
+    // *reviewed* files and send them to the API.
+
+    String? ext(String? p) => p?.split('.').last.toLowerCase();
+    final imageFiles = <XFile>[];
+    final pdfPaths = <String>[];
+    final pdfBytes = <Uint8List>[];
+
+    for (final f in reviewedFiles) {
+      final e = ext(f.name);
+      if (e == null) continue;
+
+      if (e == 'png' || e == 'jpg' || e == 'jpeg') {
+        imageFiles.add(f); // XFile is already in the right format
+      } else if (e == 'pdf') {
+        if (kIsWeb) {
+          // On web, XFile from pickFiles will have bytes.
+          // We need to read them.
+          pdfBytes.add(await f.readAsBytes());
+        } else {
+          // On mobile, XFile has a path.
+          pdfPaths.add(f.path);
+        }
       }
-
-      final res = await runWithBlockingDialog<InvoiceResponseDto?>(
-        context: context,
-        message: 'Extracting invoice data from images. This may take a minute.',
-        future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
-      );
-
-      await _handleExtractResult(
-        res,
-        failMessage: 'Could not extract invoice from images',
-      );
-      if (!mounted) return;
     }
 
-    // PDFs flow
-    if (pdfPaths.isNotEmpty) {
-      final res = await runWithBlockingDialog<InvoiceResponseDto?>(
-        context: context,
-        message:
-            'Extracting invoice data from PDF files. This may take a minute.',
-        future: InvoiceOcrLlmApi.extractWithLlm(pdfPaths: pdfPaths),
-      );
-
-      await _handleExtractResult(
-        res,
-        failMessage: 'Could not extract invoice from PDF files',
-      );
-      if (!mounted) return;
+    // 4. RUN API CALL
+    // Make a SINGLE API call with all file types
+    if (imageFiles.isEmpty && pdfPaths.isEmpty && pdfBytes.isEmpty) {
+      _snack('No supported files were returned from review');
+      return;
     }
+
+    final res = await runWithBlockingDialog<InvoiceResponseDto?>(
+      context: context,
+      message: 'Extracting invoice data. This may take a minute.',
+      future: InvoiceOcrLlmApi.extractWithLlm(
+        images: imageFiles,
+        pdfPaths: pdfPaths,
+        pdfBytes: pdfBytes,
+      ),
+    );
+
+    await _handleExtractResult(
+      res,
+      failMessage: 'Could not extract invoice data from files',
+    );
+    if (!mounted) return;
   }
+  // --- END OF MODIFIED FUNCTION ---
+
 
   Future<void> _onTakePhoto() async {
     final first = await ImagePicker().pickImage(
@@ -140,14 +150,14 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     );
     if (first == null) return;
 
-    if (!mounted) return;    
-    
+    if (!mounted) return;
+
     final reviewed = await Navigator.of(context, rootNavigator: true).push<List<XFile>>(
-  MaterialPageRoute(
-    builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
-    fullscreenDialog: true,
-  ),
-);
+      MaterialPageRoute(
+        builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
+        fullscreenDialog: true,
+      ),
+    );
     if (!mounted) return;
 
     if (reviewed == null || reviewed.isEmpty) {
@@ -168,9 +178,9 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
   }
 
   Future<void> _handleExtractResult(
-    InvoiceResponseDto? res, {
-    required String failMessage,
-  }) async {
+      InvoiceResponseDto? res, {
+        required String failMessage,
+      }) async {
     if (res == null) {
       _snack(failMessage);
       return;
@@ -212,7 +222,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
         ),
       ),
     );
-   
+
   }
 
   void _snack(String msg) {

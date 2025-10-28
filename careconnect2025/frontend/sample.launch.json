@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "frontend (dev)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=BACKEND_URL=http://192.168.1.155:8080"
+      ]
+    },
+    {
+      "name": "frontend (staging)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=BACKEND_URL=https://staging.api.example.com"
+      ]
+    },
+    {
+      "name": "frontend (prod)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define=BACKEND_URL=https://api.example.com"
+      ]
+    },
+    {
+      "name": "mock-server",
+      "cwd": "mock-server",
+      "request": "launch",
+      "type": "dart"
+    }
+  ]
+}
