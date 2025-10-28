@@ -1145,4 +1145,9 @@ class GoogleLmsService extends LmsInterface {
     // TODO: implement uploadFileToDraft
     throw UnimplementedError();
   }
+
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
+    throw UnimplementedError();
+  }
 }

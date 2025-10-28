@@ -114,4 +114,9 @@ abstract class LmsInterface {
   }) {
     throw UnimplementedError();
   }
+
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
+    throw UnimplementedError();
+  }
 }
