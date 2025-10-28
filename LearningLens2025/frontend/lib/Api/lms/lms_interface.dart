@@ -4,8 +4,10 @@ import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/grade.dart';
 import 'package:learninglens_app/beans/moodle_rubric.dart';
+import 'package:learninglens_app/beans/override.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz.dart';
+import 'package:learninglens_app/beans/quiz_override';
 import 'package:learninglens_app/beans/quiz_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/beans/submission_status.dart';
@@ -27,6 +29,7 @@ abstract class LmsInterface {
   String? profileImage;
   List<Course>? courses;
   UserRole? role;
+  List<Override>? overrides;
 
   // Authentication/Login methods
   Future<void> login(String username, String password, String baseURL);
@@ -104,6 +107,8 @@ abstract class LmsInterface {
     required int draftItemId,
   });
 
+  Future<void> refreshOverrides();
+
   Future<void> submitAssignmentForGrading({
     required int assignId,
     bool acceptSubmissionStatement,
@@ -114,4 +119,28 @@ abstract class LmsInterface {
   }) {
     throw UnimplementedError();
   }
+
+    Future<QuizOverride> addQuizOverride({
+    required int quizId,
+    int? userId,
+    int? groupId,
+    int? timeOpen,
+    int? timeClose,
+    int? timeLimit,
+    int? attempts,
+    String? password,
+    int? courseId
+  });
+
+    Future<String> addEssayOverride({
+    required int assignid,
+    int? userId,
+    int? groupId,
+    int? allowsubmissionsfromdate,
+    int? dueDate,
+    int? cutoffDate,
+    int? timelimit,
+    int? sortorder,
+    int? courseId
+  });
 }

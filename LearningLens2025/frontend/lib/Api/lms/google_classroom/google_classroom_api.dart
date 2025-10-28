@@ -201,7 +201,7 @@ class GoogleClassroomApi {
     int day = int.parse(dateParts[2]);
     int hours = int.parse(dateParts[3]);
     int minutes = int.parse(dateParts[4]);
-    String? topicId = await getTopicId(courseId, 'Quiz') ?? '755868506953';
+    String? topicId = await getTopicId(courseId, 'quiz') ?? '755868506953';
 
     print('topic id is : $topicId');
 

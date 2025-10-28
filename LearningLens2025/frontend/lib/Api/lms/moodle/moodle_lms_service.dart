@@ -62,9 +62,11 @@ class MoodleLmsService implements LmsInterface {
   @override
   UserRole? role;
 
-  List<Override>? overrides;
-
   int? userId;
+
+  
+  @override
+  List<Override>? overrides;
 
   String? get userToken => _userToken;
 
@@ -1019,6 +1021,7 @@ class MoodleLmsService implements LmsInterface {
     int? timeLimit,
     int? attempts,
     String? password,
+    int? courseId
   }) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
@@ -1061,6 +1064,7 @@ class MoodleLmsService implements LmsInterface {
     int? cutoffDate,
     int? timelimit,
     int? sortorder,
+    int? courseId
   }) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 

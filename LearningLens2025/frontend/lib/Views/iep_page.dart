@@ -61,7 +61,7 @@ class _IepPageState extends State<IepPage> {
   @override
   void initState() {
     super.initState();
-    overrides = MoodleLmsService().overrides;
+    overrides = LmsFactory.getLmsService().overrides;
     overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     selectedLLM = LlmType.values
         .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
@@ -561,13 +561,13 @@ class _IepPageState extends State<IepPage> {
                                     attempts != null) &&
                                 (selectedAssignment?.type != "essay" ||
                                     epochTime2 != null)
-                            ? () {
+                            ? () async {
                                 if (selectedAssignment?.type == 'quiz') {
-                                  quizOver(epochTime!, selectedAssignment!.id,
+                                  await quizOver(epochTime!, int.parse(selectedCourse!), selectedAssignment!.id,
                                       userId!, attempts!);
                                 } else if (selectedAssignment?.type ==
                                     'essay') {
-                                  essayOver(epochTime!, selectedAssignment!.id,
+                                  await essayOver(epochTime!, int.parse(selectedCourse!), selectedAssignment!.id,
                                       userId!, epochTime2!);
                                 }
                                 resetForm(false);
@@ -697,13 +697,13 @@ class _IepPageState extends State<IepPage> {
 
   List<Course>? getAllCourses() {
     List<Course>? result;
-    result = MoodleLmsService().courses;
+    result = LmsFactory.getLmsService().courses;
     return result;
   }
 
   Future<List<Participant>>? getAllParticipants(String courseID) async {
     List<Participant>? participants;
-    participants = await MoodleLmsService().getCourseParticipants(courseID);
+    participants = await LmsFactory.getLmsService().getCourseParticipants(courseID);
     return participants;
   }
 
@@ -723,11 +723,11 @@ class _IepPageState extends State<IepPage> {
 
   Future<List<Assessment>> handleAssessmentSelection(int? courseID) async {
     if (courseID != null) {
-      List<Assignment> essayList = await MoodleLmsService().getEssays(courseID);
+      List<Assignment> essayList = await LmsFactory.getLmsService().getEssays(courseID);
       // Fetch quizzes (if available).
       List<Quiz> quizList = [];
       try {
-        quizList = await MoodleLmsService().getQuizzes(courseID);
+        quizList = await LmsFactory.getLmsService().getQuizzes(courseID);
       } catch (e) {
         print("getQuizzes not available or failed: $e");
       }
@@ -760,15 +760,16 @@ class _IepPageState extends State<IepPage> {
     });
   }
 
-  void quizOver(int epochTime, int quizId, int userId, int attempts) async {
-    await MoodleLmsService().addQuizOverride(
+  Future<void> quizOver(int epochTime, int courseId, int quizId, int userId, int attempts) async {
+    await LmsFactory.getLmsService().addQuizOverride(
         quizId: quizId,
+        courseId: courseId,
         userId: userId,
         timeClose: epochTime,
         attempts: attempts);
-    await MoodleLmsService().refreshOverrides();
+    await LmsFactory.getLmsService().refreshOverrides();
     setState(() {
-      overrides = MoodleLmsService().overrides;
+      overrides =  LmsFactory.getLmsService().overrides;
       overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -776,15 +777,16 @@ class _IepPageState extends State<IepPage> {
     );
   }
 
-  void essayOver(int epochTime, int essayId, int userId, int epochTime2) async {
-    await MoodleLmsService().addEssayOverride(
+  Future<void> essayOver(int epochTime, int courseId, int essayId, int userId, int epochTime2) async {
+    await LmsFactory.getLmsService().addEssayOverride(
         assignid: essayId,
+        courseId: courseId,
         userId: userId,
         dueDate: epochTime,
         cutoffDate: epochTime2);
-    await MoodleLmsService().refreshOverrides();
+    await LmsFactory.getLmsService().refreshOverrides();
     setState(() {
-      overrides = MoodleLmsService().overrides;
+      overrides = LmsFactory.getLmsService().overrides;
       overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(

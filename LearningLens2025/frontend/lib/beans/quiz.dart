@@ -1,3 +1,4 @@
+import 'package:learninglens_app/Controller/g_bean.dart';
 import 'package:xml/xml.dart';
 import 'package:learninglens_app/beans/question.dart';
 import 'package:learninglens_app/beans/xml_consts.dart';
@@ -13,6 +14,8 @@ class Quiz {
 
   DateTime? timeOpen;
   DateTime? timeClose;
+
+  List<int> individualStudentsOptions = [];
   // Constructor with all optional params.
   Quiz(
       {this.name,
@@ -100,6 +103,10 @@ class Quiz {
     print('Debug: DueDate parsed to: ${tmpQuiz.timeClose}');
 
     print('Debug: Quiz object created successfully');
+    if (json['AssigneeMode']?.toString() == "INDIVIDUAL_STUDENTS") {
+      final studentOptions = json["studentIds"] as List<dynamic>;
+      tmpQuiz.individualStudentsOptions.addAll(studentOptions.map((e) => int.parse(e.toString())));
+    }
     return tmpQuiz;
   }
 
