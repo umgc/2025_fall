@@ -304,8 +304,7 @@ class GoogleLmsService extends LmsInterface {
       if (studentsJson.containsKey('students')) {
         for (var student in studentsJson['students']) {
           participants.add(Participant(
-            id: student['userId']
-                .hashCode, // Google Classroom does not provide numeric IDs
+            id: int.parse(student['userId']),
             fullname: student['profile']['name']['fullName'],
             firstname: student['profile']['name']['givenName'],
             lastname: student['profile']['name']['familyName'],
@@ -381,7 +380,7 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<int?> createQuiz(String courseid, String quizname, String quizintro,
-      String sectionid, String timeopen, String timeclose, {List<int> individualStudentsOptions = const []}) async {
+      String sectionid, String timeopen, String timeclose, {List<String> individualStudentsOptions = const []}) async {
     print('Creating quiz in Google Classroom...');
     print('Course ID: $courseid');
     print('Quiz Name: $quizname');
@@ -410,7 +409,7 @@ class GoogleLmsService extends LmsInterface {
   }
 
   Future<String?> createAssignmentHelper(String courseId, String title,
-      String description, String responderUri, String dueDate, List<int> individualStudentsOptions) async {
+      String description, String responderUri, String dueDate, List<String> individualStudentsOptions) async {
     print('Creating assignment in Google Classroom... Inside helper');
     print('Course ID: $courseId');
     print('Title: $title');
@@ -459,10 +458,9 @@ class GoogleLmsService extends LmsInterface {
 
     
       if (individualStudentsOptions.isNotEmpty) {
-        requestBody['assigneeMode'] = "INDIVIDUAL_STUDENTS";
         requestBody['individualStudentsOptions'] = {
-          "studentIds" : individualStudentsOptions.map((e) => e.toString()).toList()
-        } ;
+          "studentIds" : individualStudentsOptions
+        };
       }
     
     final body = jsonEncode(requestBody);
@@ -774,7 +772,7 @@ class GoogleLmsService extends LmsInterface {
     String enddate,
     String rubricJson,
     String description,
-    {List<int> individualStudentsOptions = const []}
+    {List<String> individualStudentsOptions = const []}
   ) async {
       final url = Uri.parse(
           'https://classroom.googleapis.com/v1/courses/$courseid/courseWork');
@@ -786,7 +784,7 @@ class GoogleLmsService extends LmsInterface {
       Map<String, dynamic> requestBody = {
         'title': assignmentName,
         'description': description,
-        'state': 'PUBLISHED',
+        'state': individualStudentsOptions.isNotEmpty ? 'DRAFT' : 'PUBLISHED',
         'workType': 'ASSIGNMENT',
         'maxPoints': int.tryParse(rubricJson.toString()),
       };
@@ -806,17 +804,12 @@ class GoogleLmsService extends LmsInterface {
         };
       }
 
-      if (individualStudentsOptions.isNotEmpty) {
-        requestBody['assigneeMode'] = "INDIVIDUAL_STUDENTS";
-        requestBody['individualStudentsOptions'] = {
-          "studentIds" : individualStudentsOptions.map((e) => e.toString()).toList()
-        };
-      }
-
       String? topicIdNew = await GoogleClassroomApi().getTopicId(courseid, "essay");
       if (topicIdNew != null) {
         requestBody['topicId'] = topicIdNew;
       }
+
+      print(requestBody);
 
       final body = jsonEncode(requestBody);
 
@@ -829,6 +822,60 @@ class GoogleLmsService extends LmsInterface {
 
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
       print('Create Assignment Response: $responseData');
+
+      if (individualStudentsOptions.isNotEmpty) {
+        var id = responseData['id'];
+        final modUrl = Uri.parse(
+          'https://classroom.googleapis.com/v1/courses/$courseid/courseWork/$id:modifyAssignees');
+        final modHead = {
+          'Authorization': 'Bearer $_userToken',
+          'Content-Type': 'application/json',
+        };
+
+      Map<String, dynamic> modifyAssigneesBody = {
+        'assigneeMode': 'INDIVIDUAL_STUDENTS',
+        'modifyIndividualStudentsOptions': {
+          "addStudentIds" : individualStudentsOptions,
+          "removeStudentIds" : []
+        }
+      };
+      final modBody = jsonEncode(modifyAssigneesBody);
+
+      final modRep = await ApiService().httpPost(modUrl, headers: modHead, body: modBody);
+
+      if (modRep.statusCode != 200) {
+        print('Request failed with status: ${modRep.statusCode}.');
+        return null;
+      }
+
+      var modData = jsonDecode(modRep.body) as Map<String, dynamic>;
+      print('Modify Assignment Response: $modData');
+
+
+        final patchUrl = Uri.parse(
+          'https://classroom.googleapis.com/v1/courses/$courseid/courseWork/$id?state');
+        final patchHead = {
+          'Authorization': 'Bearer $_userToken',
+          'Content-Type': 'application/json',
+        };
+
+      modData['state'] = "PUBLISHED";
+
+      final patchBody = jsonEncode(modData);
+
+      final patchRep = await ApiService().httpPatch(patchUrl, headers: patchHead, body: patchBody);
+
+      if (patchRep.statusCode != 200) {
+        print('Request failed with status: ${patchRep.statusCode}.');
+        return null;
+      }
+
+      final patchData = jsonDecode(patchRep.body) as Map<String, dynamic>;
+      print('Modify Assignment Response: $patchData');
+      return patchData;
+
+
+      }
 
       return responseData;
   }
@@ -1222,6 +1269,9 @@ class GoogleLmsService extends LmsInterface {
     if (courses != null) {
       for (Course c in courses!) {
         List<Participant> parts = await getCourseParticipants(c.id.toString());
+        for (Participant p in parts) {
+          print(p.id);
+        }
         var quizzes = (await getQuizzes(c.id, topicId: c.quizTopicId)).where((q) => q.individualStudentsOptions.isNotEmpty);
         for (Quiz q in quizzes) {
           for (int p in q.individualStudentsOptions) {
@@ -1247,7 +1297,7 @@ class GoogleLmsService extends LmsInterface {
       return "";
     }
     print("due date: $dueDate");
-    var response = await createAssignment(courseId.toString(), "", assignment.name, (assignment.allowsubmissionsfromdate?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch).toString(), (dueDate == null ? assignment.dueDate?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch : dueDate * 1000).toString(), assignment.maxScore.toString(), assignment.description, individualStudentsOptions: [userId!]);
+    var response = await createAssignment(courseId.toString(), "", assignment.name, (assignment.allowsubmissionsfromdate?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch).toString(), (dueDate == null ? assignment.dueDate?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch : dueDate * 1000).toString(), assignment.maxScore.toString(), assignment.description, individualStudentsOptions: [userId!.toString()]);
     print(response);
     return "Created essay override";
   }
@@ -1260,7 +1310,7 @@ class GoogleLmsService extends LmsInterface {
       return QuizOverride.empty();
     }
 
-    await createQuiz(courseId.toString(), assignment.name!, assignment.description ?? "",  "", (timeOpen == null ? assignment.timeOpen : DateTime.fromMillisecondsSinceEpoch(timeOpen)).toString(), (timeClose == null ? assignment.timeClose?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch : timeClose * 1000).toString(), individualStudentsOptions: [userId!]);
+    await createQuiz(courseId.toString(), assignment.name!, assignment.description ?? "",  "", (timeOpen == null ? assignment.timeOpen : DateTime.fromMillisecondsSinceEpoch(timeOpen)).toString(), (timeClose == null ? assignment.timeClose?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch : timeClose * 1000).toString(), individualStudentsOptions: [userId!.toString()]);
     return QuizOverride.empty();
   }
 }

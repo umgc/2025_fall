@@ -110,7 +110,7 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
         return;
       }
 
-      var ess = await GoogleLmsService().createAssignment(_selectedCourseId!, "", _title!, _dueDate?.millisecondsSinceEpoch.toString() ?? "", "", _points?.toString() ?? "", _instructions ?? "");
+      var ess = await GoogleLmsService().createAssignment(_selectedCourseId!, "", _title!, "", _dueDate?.millisecondsSinceEpoch.toString() ?? "", _points?.toString() ?? "", _instructions ?? "");
       if (ess != null) {
                   print('Assignment created successfully!');
           await GoogleLmsService()
