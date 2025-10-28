@@ -467,10 +467,11 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
         ),
         const SizedBox(height: 12),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(
             children: [
-              Expanded(
+              SizedBox(
+                width: 260,
                 child: DropdownButtonFormField<DateTime>(
                   initialValue: hasDays ? _selectedDay : null,
                   isExpanded: true,
@@ -522,16 +523,15 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
+                          crossAxisCount: 8,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
                           childAspectRatio: 0.8,
                         ),
                     itemCount: selectedImages.length,
                     itemBuilder: (context, index) {
                       final url = selectedImages[index];
-                      final meta =
-                          _imageMetaByUrl[url];
+                      final meta = _imageMetaByUrl[url];
 
                       return _ImageTile(
                         url: url,
