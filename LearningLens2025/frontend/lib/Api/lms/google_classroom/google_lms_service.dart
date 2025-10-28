@@ -304,7 +304,7 @@ class GoogleLmsService extends LmsInterface {
       if (studentsJson.containsKey('students')) {
         for (var student in studentsJson['students']) {
           participants.add(Participant(
-            id: int.parse(student['userId']),
+            id: int.parse(student['profile']['id']),
             fullname: student['profile']['name']['fullName'],
             firstname: student['profile']['name']['givenName'],
             lastname: student['profile']['name']['familyName'],
