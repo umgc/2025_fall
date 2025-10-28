@@ -120,7 +120,7 @@ oauth-credentials.json
 database.env
 db.env
 
-# Test tokens and mock data
+# Test tokens and mock models
 test_video_calls.dart
 **/test/**/*token*
 **/test/**/*secret*

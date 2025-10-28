@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
 
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/question_type.dart'; // <-- BackendQuestionType lives here
-import 'package:care_connect_app/features/health/virtual_check_in/data/mappers/virtual_check_in_mapper.dart' as vmap;
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/question_type.dart'; // <-- BackendQuestionType lives here
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_mapper.dart' as vmap;
 
-import 'package:care_connect_app/features/health/virtual_check_in/data/services/checkin_api.dart';    // if you fetch questions per check-in
+import 'package:care_connect_app/features/health/virtual_check_in/services/checkin_api.dart';    // if you fetch questions per check-in
 
 
 

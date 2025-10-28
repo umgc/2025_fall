@@ -57,9 +57,9 @@ class OAuthService {
     return token;
   }
 
-  // Clear OAuth session data
+  // Clear OAuth session models
   static void clearSession() {
-    // No session data to clear since backend handles everything
+    // No session models to clear since backend handles everything
     print('OAuth session cleared');
   }
 }

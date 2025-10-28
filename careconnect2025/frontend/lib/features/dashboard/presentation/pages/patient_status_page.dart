@@ -103,12 +103,12 @@ class _PatientStatusPageState extends State<PatientStatusPage> {
       final responseData = json.decode(profileRes.body);
       print('🔍 API Response: $responseData');
 
-      // Extract patient data - handle different response structures
+      // Extract patient models - handle different response structures
       final Map<String, dynamic> patientData;
 
       if (user.role.toUpperCase() == 'CAREGIVER' ||
           user.role.toUpperCase() == 'FAMILY_LINK') {
-        // For caregiver endpoint, the patient data may be nested
+        // For caregiver endpoint, the patient models may be nested
         if (responseData is Map<String, dynamic> &&
             responseData.containsKey('patient')) {
           patientData = responseData['patient'] as Map<String, dynamic>;
@@ -152,7 +152,7 @@ class _PatientStatusPageState extends State<PatientStatusPage> {
         loading = false;
       });
     } catch (e) {
-      print('🔍 Error fetching patient data: $e');
+      print('🔍 Error fetching patient models: $e');
       setState(() {
         error = 'Error: $e';
         loading = false;
@@ -600,7 +600,7 @@ class _PatientStatusPageState extends State<PatientStatusPage> {
   Widget buildVitalsSummary(DashboardAnalytics? vitals) {
     if (vitals == null) {
       return Text(
-        'No vitals data available for summary.',
+        'No vitals models available for summary.',
         style: TextStyle(
           color: Colors.grey.shade600,
           fontStyle: FontStyle.italic,

@@ -50,7 +50,7 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       // Check if we have required parameters
       if (widget.token == null || widget.user == null) {
         setState(() {
-          _status = 'Missing authentication data. Please try signing in again.';
+          _status = 'Missing authentication models. Please try signing in again.';
           _isError = true;
         });
         _redirectToLogin();
@@ -58,10 +58,10 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       }
 
       setState(() {
-        _status = 'Saving authentication data...';
+        _status = 'Saving authentication models...';
       });
 
-      // Parse user data (it's URL encoded)
+      // Parse user models (it's URL encoded)
       final userDataString = Uri.decodeComponent(widget.user!);
       final userData = jsonDecode(userDataString);
       final userSession = UserSession.fromJson(userData);

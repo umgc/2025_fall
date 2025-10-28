@@ -63,7 +63,7 @@ class Medication {
       endDate: json['endDate'] as String?,
       notes: json['notes'] as String?,
       isActive: json['isActive'] as bool? ?? true,
-      // UI fields - calculate from backend data
+      // UI fields - calculate from backend models
       nextDose: _calculateNextDose(
         json['frequency'] as String?,
         json['startDate'] as String?,

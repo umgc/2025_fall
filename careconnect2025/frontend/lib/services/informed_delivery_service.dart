@@ -25,7 +25,7 @@ class InformedDeliveryService {
       throw Exception("Not authorized. Please log in again.");
     } else {
       print("Status: ${response.statusCode}, Body: '${response.body}'");
-      throw Exception("Failed to fetch informed delivery data");
+      throw Exception("Failed to fetch informed delivery models");
     }
   }
 }

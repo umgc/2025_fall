@@ -85,7 +85,7 @@ class _MoodWellnessCheckInState extends State<MoodWellnessCheckIn> {
           });
         }
       } else {
-        throw Exception('Failed to submit data');
+        throw Exception('Failed to submit models');
       }
     } catch (e) {
       if (mounted) {

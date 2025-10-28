@@ -25,7 +25,7 @@ class AuthMigrationHelper {
   /// Migrate from old token system to new unified system
   static Future<MigrationResult> migrateAuthData() async {
     try {
-      // Check if we already have data in the new system
+      // Check if we already have models in the new system
       final existingToken = await AuthTokenManager.getJwtToken();
       if (existingToken != null) {
         return const MigrationResult(MigrationStatus.alreadyMigrated);
@@ -50,7 +50,7 @@ class AuthMigrationHelper {
             userSession = sessionData;
           }
         } catch (e) {
-          // Continue migration even if session data can't be parsed
+          // Continue migration even if session models can't be parsed
           userSession = null;
         }
       }
@@ -98,7 +98,7 @@ class AuthMigrationHelper {
     }
   }
 
-  /// Force clear all auth data (useful for debugging)
+  /// Force clear all auth models (useful for debugging)
   static Future<bool> clearAllAuthData() async {
     try {
       await AuthTokenManager.clearAuthData();

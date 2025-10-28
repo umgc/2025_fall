@@ -126,7 +126,7 @@ void main() {
 
       when(mockUserProvider.user).thenReturn(mockUser);
 
-      // Mock patient data (like from API)
+      // Mock patient models (like from API)
       final patientData = {'firstName': 'Jane', 'lastName': 'Smith'};
 
       await tester.pumpWidget(
@@ -159,7 +159,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify the correct name from patient data is displayed
+      // Verify the correct name from patient models is displayed
       expect(find.text('Jane Smith'), findsOneWidget);
 
       // Verify role text is also displayed

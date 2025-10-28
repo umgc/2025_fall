@@ -39,7 +39,7 @@ class UspsMailpiece {
   final String sender;
   final String summary;
   final DateTime dateIso;
-  final String imageDataUrl; // data:*;base64,XXXX
+  final String imageDataUrl; // models:*;base64,XXXX
   final UspsActions actions;
   Uint8List? _decoded; // lazy cache
 
@@ -52,7 +52,7 @@ class UspsMailpiece {
     required this.actions,
   });
 
-  /// Decode the data URL to bytes (memoized).
+  /// Decode the models URL to bytes (memoized).
   Uint8List? get bytes {
     _decoded ??= _decodeDataUrl(imageDataUrl);
     return _decoded;
@@ -185,7 +185,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
               packages: const [],
             );
 
-      // Optionally apply mock data
+      // Optionally apply mock models
       UspsDigest combined = base;
       if (enableMockUSPSDigest) {
         debugPrint('⚠️ Using mock mailpieces for demo purposes.');
@@ -417,14 +417,14 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
           SnackBar(
             content: Text(
               enableUSPSDigest
-                  ? 'Mail data refreshed (API ${enableMockUSPSDigest ? "+ mock" : ""}).'
-                  : 'Mail data refreshed (mock only).',
+                  ? 'Mail models refreshed (API ${enableMockUSPSDigest ? "+ mock" : ""}).'
+                  : 'Mail models refreshed (mock only).',
             ),
           ),
         );
       }
     } catch (e, st) {
-      debugPrint('❌ Error refreshing mail data: $e');
+      debugPrint('❌ Error refreshing mail models: $e');
       debugPrintStack(stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -473,7 +473,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
 Uint8List? _decodeDataUrl(String? dataUrl) {
   if (dataUrl == null) return null;
   final i = dataUrl.indexOf(';base64,');
-  if (!dataUrl.startsWith('data:') || i == -1) return null;
+  if (!dataUrl.startsWith('models:') || i == -1) return null;
   final comma = dataUrl.indexOf(',', i);
   if (comma == -1) return null;
   final base64Part = dataUrl.substring(comma + 1);
@@ -515,7 +515,7 @@ class _ImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDataUrl = url.startsWith('data:');
+    final bool isDataUrl = url.startsWith('models:');
     Widget imageWidget;
 
     if (isDataUrl) {
@@ -524,7 +524,7 @@ class _ImageTile extends StatelessWidget {
         imageWidget = const Center(
           child: Icon(Icons.broken_image_outlined, size: 48),
         );
-      } else if (url.startsWith('data:image/svg+xml')) {
+      } else if (url.startsWith('models:image/svg+xml')) {
         // SVG handling
         imageWidget = SvgPicture.memory(bytes, fit: BoxFit.cover);
       } else {

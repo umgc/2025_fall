@@ -30,7 +30,7 @@ class PatientDashboard extends StatefulWidget {
 }
 
 class _PatientDashboardState extends State<PatientDashboard> {
-  // Patient data
+  // Patient models
   Map<String, dynamic>? patient;
   List<Map<String, dynamic>> caregivers = [];
   List<Map<String, dynamic>> familyMembers = [];
@@ -40,7 +40,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
   bool isLoading = false;
   String? error;
 
-  // Dashboard specific data
+  // Dashboard specific models
   List<CheckIn> recentCheckIns = [];
   MedicationReminder? upcomingReminder;
   Map<String, dynamic>? primaryCareProvider;
@@ -73,14 +73,14 @@ class _PatientDashboardState extends State<PatientDashboard> {
   /// Check connectivity status
   Future<void> _checkConnectivity() async {
     // Implement actual connectivity checking
-    // For now, using mock data
+    // For now, using mock models
     setState(() {
       _isOffline = false; // Set based on actual connectivity
       _lastSynced = DateTime.now().subtract(const Duration(hours: 2));
     });
   }
 
-  /// Load all dashboard data
+  /// Load all dashboard models
   Future<void> _loadDashboardData() async {
     setState(() {
       loading = true;
@@ -113,11 +113,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
     }
   }
 
-  /// Load recent mood data
+  /// Load recent mood models
   Future<void> _loadRecentMoodData() async {
     try {
-      // This would be an API call to get mood data
-      // For now, using sample data
+      // This would be an API call to get mood models
+      // For now, using sample models
       setState(() {
         currentMoodScore = 8;
         currentMoodLabel = 'Good';
@@ -142,7 +142,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         ];
       });
     } catch (e) {
-      print('Error loading mood data: $e');
+      print('Error loading mood models: $e');
     }
   }
 
@@ -150,7 +150,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
   Future<void> _loadMedicationReminders() async {
     try {
       // This would be an API call to get medication reminders
-      // For now, using sample data
+      // For now, using sample models
       setState(() {
         upcomingReminder = MedicationReminder(
           medicationName: 'Blood Pressure Medication',
@@ -166,8 +166,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
   /// Load primary care provider
   Future<void> _loadPrimaryCareProvider() async {
     try {
-      // This would be an API call to get provider data
-      // For now, using sample data
+      // This would be an API call to get provider models
+      // For now, using sample models
       setState(() {
         primaryCareProvider = {
           'name': 'Dr. Sarah Mitchell, MD',
@@ -184,7 +184,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     }
   }
 
-  /// Check for alerts based on current data
+  /// Check for alerts based on current models
   void _checkForAlerts() {
     activeAlerts.clear();
 
@@ -199,7 +199,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     }
 
     // Check for missed medications
-    // This would check actual medication data
+    // This would check actual medication models
     if (DateTime.now().hour > 10) {
       activeAlerts.add(
         AlertNotification(

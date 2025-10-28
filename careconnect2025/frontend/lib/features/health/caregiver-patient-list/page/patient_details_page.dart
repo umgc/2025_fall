@@ -18,8 +18,8 @@ import '../widgets/current_medications_card.dart';
 
 // Virtual Check-in history
 // Virtual Check-In domain entities
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
 
 // Virtual Check-In UI
 import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_config_sheet.dart';
@@ -42,11 +42,11 @@ class PatientDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // TODO: Fetch from your store/service using patientId.
-    // For now, demo data mirrors your mockups (Sarah Johnson).
+    // For now, demo models mirrors your mockups (Sarah Johnson).
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
-    // --- Mood demo data ---
+    // --- Mood demo models ---
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -84,7 +84,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Health demo data ---
+    // --- Health demo models ---
     final symptomEntries = <SymptomEntry>[
       SymptomEntry(
         id: 's4',
@@ -149,7 +149,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Virtual Check-In demo data ---
+    // --- Virtual Check-In demo models ---
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',

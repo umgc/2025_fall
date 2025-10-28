@@ -110,9 +110,9 @@ void main() {
     });
 
     test(
-      'persistence works: data is reloaded from SharedPreferences',
+      'persistence works: models is reloaded from SharedPreferences',
       () async {
-        // Simulate stored data in prefs
+        // Simulate stored models in prefs
         final prefs = await SharedPreferences.getInstance();
         final encoded = json.encode({
           'hydration': {

@@ -57,7 +57,7 @@ class EmergencyInfo {
       orElse: () => contacts.isNotEmpty ? contacts.first : const _Contact(name: 'None', role: '', phone: ''),
     );
 
-    // Generate PNG image data URI
+    // Generate PNG image models URI
     return _generateEmergencyCardPng(primaryContact);
   }
 

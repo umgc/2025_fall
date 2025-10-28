@@ -194,8 +194,8 @@ class NotetakerConfigService {
         List<dynamic> data;
         if (decoded is List) {
           data = decoded;
-        } else if (decoded is Map && decoded.containsKey('data')) {
-          data = decoded['data'] as List<dynamic>;
+        } else if (decoded is Map && decoded.containsKey('models')) {
+          data = decoded['models'] as List<dynamic>;
         } else if (decoded is Map && decoded.containsKey('notes')) {
           data = decoded['notes'] as List<dynamic>;
         } else {

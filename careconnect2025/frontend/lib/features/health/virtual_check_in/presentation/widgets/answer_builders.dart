@@ -1,7 +1,7 @@
 // lib/features/virtual-check-in/pages/answer_builders.dart
 
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_dto.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_model.dart';
 
 
 AnswerItem buildAnswerFromUi({

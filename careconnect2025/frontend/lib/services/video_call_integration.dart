@@ -5,7 +5,7 @@ import '../services/subscription_service.dart';
 import '../providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
-/// Helper class to integrate video calling with your real dashboard data
+/// Helper class to integrate video calling with your real dashboard models
 class VideoCallIntegration {
   /// Initialize with your authentication token from login
   static void initialize(String authToken) {
@@ -13,7 +13,7 @@ class VideoCallIntegration {
   }
 
   /// Start a video call from caregiver dashboard to patient
-  /// Uses real patient data from your API: /v1/api/caregivers/{id}/patients
+  /// Uses real patient models from your API: /v1/api/caregivers/{id}/patients
   static Future<void> startCallToPatient({
     required BuildContext context,
     required String caregiverId,
@@ -46,7 +46,7 @@ class VideoCallIntegration {
     print('   Patient: $patientName ($patientEmail)');
     print('   Call ID: $callId');
 
-    // Navigate to video call widget with real data
+    // Navigate to video call widget with real models
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => HybridVideoCallWidget(
@@ -57,11 +57,11 @@ class VideoCallIntegration {
           isVideoEnabled: true,
           isAudioEnabled: true,
 
-          // Real caregiver data
+          // Real caregiver models
           userName: caregiverName,
           userEmail: caregiverEmail,
           userPhone: null, // Add if available
-          // Real patient data from backend
+          // Real patient models from backend
           recipientName: patientName,
           recipientEmail: patientEmail,
           recipientPhone: patientPhone,

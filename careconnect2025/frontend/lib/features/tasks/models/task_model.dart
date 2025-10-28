@@ -52,7 +52,7 @@ class Task {
     this.parentTaskId,
   });
 
-  /// Factory constructor: build a [Task] from JSON data.
+  /// Factory constructor: build a [Task] from JSON models.
   ///
   /// Handles:
   /// - Parsing `daysOfWeek` into `List<bool>`

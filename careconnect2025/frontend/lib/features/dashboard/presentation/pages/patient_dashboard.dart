@@ -231,7 +231,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         final userId = widget.userId ?? user?.patientId ?? 1;
 
         print('🔍 Adding family member for userId: $userId');
-        print('🔍 Family member data: $result');
+        print('🔍 Family member models: $result');
 
         final response = await ApiService.addFamilyMember(userId, result);
 
@@ -770,14 +770,14 @@ class _PatientDashboardState extends State<PatientDashboard> {
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(
-          errorData['error'] ?? 'Failed to save mood and pain data',
+          errorData['error'] ?? 'Failed to save mood and pain models',
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving data: ${e.toString()}'),
+            content: Text('Error saving models: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

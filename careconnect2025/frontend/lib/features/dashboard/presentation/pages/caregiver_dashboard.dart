@@ -148,7 +148,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        print('🔍 Received patient data: $data');
+        print('🔍 Received patient models: $data');
 
         List<Patient> parsedPatients = [];
         for (var json in data) {
@@ -160,7 +160,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               if (patientData is Map) {
                 patientJson = Map<String, dynamic>.from(patientData);
               } else {
-                print('⚠️ Warning: patient data is not a Map: $patientData');
+                print('⚠️ Warning: patient models is not a Map: $patientData');
                 continue;
               }
 
@@ -178,11 +178,11 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                 }
               }
             } else {
-              // Handle case where json is the patient data directly
+              // Handle case where json is the patient models directly
               if (json is Map) {
                 patientJson = Map<String, dynamic>.from(json);
               } else {
-                print('⚠️ Warning: json data is not a Map: $json');
+                print('⚠️ Warning: json models is not a Map: $json');
                 continue;
               }
             }
@@ -221,7 +221,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               );
               if (enhancedRes.statusCode == 200) {
                 final enhancedJson = jsonDecode(enhancedRes.body);
-                final enhancedData = enhancedJson['data'];
+                final enhancedData = enhancedJson['models'];
 
                 // Defensive: handle allergies as list of string or objects, or null
                 final allergiesRaw = enhancedData?['allergies'];
@@ -232,7 +232,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   patientJson['allergies'] = List.from(allergiesRaw);
                 } else {
                   print(
-                    '⚠️ Warning: allergies data is not a List: $allergiesRaw',
+                    '⚠️ Warning: allergies models is not a List: $allergiesRaw',
                   );
                   patientJson['allergies'] = [];
                 }
@@ -247,7 +247,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   );
                 } else {
                   print(
-                    '⚠️ Warning: latestVitals data is not a Map: $vitalsRaw',
+                    '⚠️ Warning: latestVitals models is not a Map: $vitalsRaw',
                   );
                   patientJson['latestVitals'] = <String, dynamic>{};
                 }
@@ -260,7 +260,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   patientJson['medications'] = List.from(medicationsRaw);
                 } else {
                   print(
-                    '⚠️ Warning: medications data is not a List: $medicationsRaw',
+                    '⚠️ Warning: medications models is not a List: $medicationsRaw',
                   );
                   patientJson['medications'] = [];
                 }
@@ -296,7 +296,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               );
             }
           } catch (e) {
-            print('❌ Error parsing patient: $e, data: $json');
+            print('❌ Error parsing patient: $e, models: $json');
           }
         }
 
@@ -374,7 +374,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
   // Helper method to format vital conditions summary
   String _getVitalConditionsSummary(Patient patient) {
     if (patient.vitalConditions == null || patient.vitalConditions!.isEmpty) {
-      return 'No vital data available';
+      return 'No vital models available';
     }
 
     final vitals = patient.vitalConditions!;

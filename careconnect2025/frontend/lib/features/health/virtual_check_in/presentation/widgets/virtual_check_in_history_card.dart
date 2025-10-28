@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
 
 
 /// "Virtual Check-In History"

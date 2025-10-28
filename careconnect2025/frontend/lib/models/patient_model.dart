@@ -4,7 +4,7 @@ import 'user_model.dart';
 
 /// Extended user model for patients with detailed personal information.
 ///
-/// This model extends UserModel to include patient-specific data such as
+/// This model extends UserModel to include patient-specific models such as
 /// personal details, contact information, and address. It represents
 /// individuals who receive care and use the health tracking features
 /// of the application.
@@ -80,14 +80,14 @@ class PatientUserModel extends UserModel {
   /// Creates a PatientUserModel instance from a JSON map.
   ///
   /// Factory constructor that handles comprehensive deserialization of patient
-  /// data from API responses, including nested address information. Provides
+  /// models from API responses, including nested address information. Provides
   /// safe defaults for all missing fields and ensures role is set to 'PATIENT'.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing complete patient data
+  /// * [json] - JSON map containing complete patient models
   ///
   /// Returns:
-  /// * PatientUserModel - New instance populated from JSON data
+  /// * PatientUserModel - New instance populated from JSON models
   factory PatientUserModel.fromJson(Map<String, dynamic> json) {
     return PatientUserModel(
       name: json['name'] ?? '',

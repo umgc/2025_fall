@@ -1,9 +1,9 @@
-// lib/features/health/virtual_check_in/data/services/checkin_api.dart
+// lib/features/health/virtual_check_in/models/services/checkin_api.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_dto.dart'
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_model.dart'
     show SubmitAnswersRequest;
 
 class CheckInApi {

@@ -2,7 +2,7 @@
 ///
 /// This class encapsulates address information including street address,
 /// city, state, ZIP code, and optional phone number. It provides JSON
-/// serialization capabilities for API communication and data persistence.
+/// serialization capabilities for API communication and models persistence.
 class Address {
   /// First line of the street address (required)
   final String line1;
@@ -42,7 +42,7 @@ class Address {
 
   /// Converts the Address instance to a JSON map.
   ///
-  /// Used for API requests and data serialization. All fields are included
+  /// Used for API requests and models serialization. All fields are included
   /// in the JSON output, with null phone numbers preserved.
   ///
   /// Returns:
@@ -65,10 +65,10 @@ class Address {
   /// null values appropriately.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing address data
+  /// * [json] - JSON map containing address models
   ///
   /// Returns:
-  /// * Address - New Address instance populated from JSON data
+  /// * Address - New Address instance populated from JSON models
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       line1: json['line1'] ?? '',

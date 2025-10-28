@@ -13,7 +13,7 @@ import 'package:intl/intl.dart';
 ///
 /// The card has visual indicators for urgent cases with red border and badge.
 class PatientCard extends StatelessWidget {
-  /// The patient data to display
+  /// The patient models to display
   final Patient patient;
 
   /// Optional callback function when the card is tapped
@@ -22,7 +22,7 @@ class PatientCard extends StatelessWidget {
   /// Creates a PatientCard widget.
   ///
   /// Parameters:
-  /// * [patient] - The patient data to display in the card
+  /// * [patient] - The patient models to display in the card
   /// * [onTap] - Optional callback function executed when card is tapped
   const PatientCard({
     super.key,
@@ -200,7 +200,7 @@ class PatientCard extends StatelessWidget {
   /// Parameters:
   /// * [icon] - The icon to display
   /// * [count] - The number to show in the badge (badge hidden if 0)
-  /// * [theme] - The app theme data for consistent styling
+  /// * [theme] - The app theme models for consistent styling
   ///
   /// Returns:
   /// * Widget - A stack containing the icon and optional badge

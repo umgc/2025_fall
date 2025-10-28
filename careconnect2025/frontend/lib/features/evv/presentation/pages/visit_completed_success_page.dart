@@ -182,7 +182,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
       if (_selectedPatient == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Patient data not available for export'),
+            content: Text('Patient models not available for export'),
             backgroundColor: Colors.red,
           ),
         );
@@ -209,7 +209,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Visit data exported successfully'),
+          content: Text('Visit models exported successfully'),
           backgroundColor: Colors.green,
         ),
       );

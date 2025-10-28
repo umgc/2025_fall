@@ -1,6 +1,6 @@
-import 'package:care_connect_app/features/health/virtual_check_in/domain/entities/virtual_check_in_question.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/virtual_check_in_backend_question_dto.dart';
-import 'package:care_connect_app/features/health/virtual_check_in/data/dto/question_type.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/question_type.dart';
 
 CheckInQuestionType mapTypeToUi(BackendQuestionType t) {
   switch (t) {

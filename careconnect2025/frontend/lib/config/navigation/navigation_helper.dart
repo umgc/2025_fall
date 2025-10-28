@@ -5,9 +5,9 @@ import '../../services/user_role_storage_service.dart';
 import '../../providers/user_provider.dart';
 import 'main_screen_config.dart';
 
-/// Navigation helper that works with stored user data instead of URL parameters
+/// Navigation helper that works with stored user models instead of URL parameters
 class NavigationHelper {
-  /// Navigate to the main screen using stored user data
+  /// Navigate to the main screen using stored user models
   static Future<void> navigateToMainScreen(
     BuildContext context, {
     int? tabIndex,
@@ -61,7 +61,7 @@ class NavigationHelper {
     }
   }
 
-  /// Get MainScreenConfig based on stored user data
+  /// Get MainScreenConfig based on stored user models
   static Future<MainScreenConfig?> getMainScreenConfig() async {
     final userData = await UserRoleStorageService.instance.getUserData();
 
@@ -104,11 +104,11 @@ class NavigationHelper {
     return await UserRoleStorageService.instance.isLoggedIn();
   }
 
-  /// Logout and clear stored data
+  /// Logout and clear stored models
   static Future<void> logout(BuildContext context) async {
     await UserRoleStorageService.instance.clearUserData();
 
-    // Clear provider data as well
+    // Clear provider models as well
     if (context.mounted) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       userProvider.clearUser();
@@ -186,7 +186,7 @@ class NavigationHelper {
 
 /// Extension methods for BuildContext to make navigation easier
 extension NavigationContextExtension on BuildContext {
-  /// Navigate to main screen using stored user data
+  /// Navigate to main screen using stored user models
   Future<void> navigateToMainScreen({
     int? tabIndex,
     bool clearHistory = false,

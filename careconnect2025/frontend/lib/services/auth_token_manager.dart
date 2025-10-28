@@ -43,7 +43,7 @@ class AuthTokenManager {
       }
     } catch (e) {
       // Re-throw to let callers handle the error appropriately
-      throw Exception('Failed to save authentication data: ${e.toString()}');
+      throw Exception('Failed to save authentication models: ${e.toString()}');
     }
   }
 
@@ -61,7 +61,7 @@ class AuthTokenManager {
     }
   }
 
-  // Get user session data
+  // Get user session models
   static Future<Map<String, dynamic>?> getUserSession() async {
     try {
       final sessionData = await _storage.read(key: _userSessionKey);
@@ -125,7 +125,7 @@ class AuthTokenManager {
     }
 
     return headers;
-  } // Clear all auth data
+  } // Clear all auth models
 
   static Future<void> clearAuthData() async {
     try {
@@ -134,14 +134,14 @@ class AuthTokenManager {
       await _storage.delete(key: _tokenExpiryKey);
       await _storage.delete(key: 'last_activity');
 
-      // Also clear old session data for migration
+      // Also clear old session models for migration
       await _storage.delete(key: 'session');
       await _storage.delete(key: 'authCookie');
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_cookie');
     } catch (e) {
-      print('Error clearing auth data: $e');
+      print('Error clearing auth models: $e');
     }
   }
 
@@ -161,7 +161,7 @@ class AuthTokenManager {
 
       final isValid = await _isTokenValid(token);
       if (!isValid) {
-        // Token is invalid/expired, clear all auth data
+        // Token is invalid/expired, clear all auth models
         await clearAuthData();
         return false;
       }

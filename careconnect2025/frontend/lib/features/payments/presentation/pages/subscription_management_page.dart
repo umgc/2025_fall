@@ -43,7 +43,7 @@ class _SubscriptionManagementPageState
     });
 
     try {
-      // We no longer need a separate call to get customer ID, as we'll extract it from the subscription data
+      // We no longer need a separate call to get customer ID, as we'll extract it from the subscription models
 
       // Now we don't need a separate call to getCurrentSubscription since we use getUserSubscriptions
       final response = await ApiService.getCurrentSubscription();
@@ -53,7 +53,7 @@ class _SubscriptionManagementPageState
 
       if (plansResponse.statusCode == 200) {
         final plansData = jsonDecode(plansResponse.body);
-        print('⚠️ Plans data from API: $plansData');
+        print('⚠️ Plans models from API: $plansData');
         if (plansData != null && plansData is List) {
           _plans = plansData.map((planData) {
             print('⚠️ Processing plan: $planData');
@@ -110,7 +110,7 @@ class _SubscriptionManagementPageState
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data != null) {
-          // If data is a list, find the active subscription
+          // If models is a list, find the active subscription
           if (data is List) {
             final activeSubscriptions = data
                 .where(
@@ -126,7 +126,7 @@ class _SubscriptionManagementPageState
                 ? activeSubscriptions.first
                 : null;
 
-            // Extract customer ID from the subscription data
+            // Extract customer ID from the subscription models
             if (activeSubscription != null &&
                 activeSubscription is Map<String, dynamic>) {
               if (activeSubscription.containsKey('stripeCustomerId')) {
@@ -260,7 +260,7 @@ class _SubscriptionManagementPageState
     } catch (e) {
       setState(() {
         _error =
-            'Error loading subscription data. Please check your connection and try again.';
+            'Error loading subscription models. Please check your connection and try again.';
       });
       print('Exception in _loadSubscriptionData: $e');
     } finally {
@@ -544,7 +544,7 @@ class _SubscriptionManagementPageState
         // ),
       ),
     ).then((_) {
-      // Refresh data when returning from checkout
+      // Refresh models when returning from checkout
       _loadSubscriptionData();
       setState(() {
         _processingAction = false;

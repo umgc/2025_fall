@@ -37,7 +37,7 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading offline data: $e')),
+          SnackBar(content: Text('Error loading offline models: $e')),
         );
       }
     }
@@ -51,13 +51,13 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     try {
       await _evvService.syncOfflineData();
       
-      // Reload data after sync
+      // Reload models after sync
       await _loadOfflineData();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Offline data sync completed'),
+            content: Text('Offline models sync completed'),
             backgroundColor: Colors.green,
           ),
         );
@@ -66,7 +66,7 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error syncing offline data: $e'),
+            content: Text('Error syncing offline models: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -195,7 +195,7 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
                               ),
                               SizedBox(height: 16),
                               Text(
-                                'All data is synced',
+                                'All models is synced',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey,

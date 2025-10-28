@@ -36,14 +36,14 @@ void main() {
       // expect(aiChatWidget.healthDataContext, isNotNull);
     });
 
-    test('Health data context anonymizes patient information', () {
+    test('Health models context anonymizes patient information', () {
       // TODO: Create a mock analytics page state to test the context method
       // const analyticsPage = AnalyticsPage(patientId: 123);
 
       // This test would need to access the private method, so we'll test the concept
       // In real implementation, the context should:
       // - Remove patient names and personal identifiers
-      // - Include anonymized health data
+      // - Include anonymized health models
       // - Provide guidance on what questions can be asked
 
       expect(

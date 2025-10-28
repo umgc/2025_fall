@@ -36,10 +36,10 @@ void main() {
       // expect(aiChatWidget.healthDataContext, isNotNull);
     });
 
-    test('Health data context anonymizes patient information', () {
+    test('Health models context anonymizes patient information', () {
       // Test the concept that analytics pages should:
       // - Remove patient names and personal identifiers
-      // - Include anonymized health data
+      // - Include anonymized health models
       // - Provide guidance on what questions can be asked
 
       expect(

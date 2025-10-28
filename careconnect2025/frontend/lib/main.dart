@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'config/router/app_router.dart';
+import 'features/tasks/utils/task_type_manager.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
 import 'config/theme/app_theme.dart';

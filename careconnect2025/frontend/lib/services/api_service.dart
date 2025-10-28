@@ -129,7 +129,7 @@ class ApiService {
         .post(Uri.parse('${ApiConstants.auth}/logout'), headers: headers)
         .timeout(const Duration(seconds: 30));
 
-    // Clear all auth data
+    // Clear all auth models
     await AuthTokenManager.clearAuthData();
     return response;
   }
@@ -492,7 +492,7 @@ class ApiService {
 
     final uri = Uri.parse('${ApiConstants.subscriptions}/create-direct');
 
-    // Create form data as required by the API
+    // Create form models as required by the API
     final formData = {'customerId': customerId, 'priceId': priceId};
 
     return await _httpClient
@@ -521,7 +521,7 @@ class ApiService {
     final headers = await AuthTokenManager.getAuthHeaders();
     headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-    // Create form data as required by the API
+    // Create form models as required by the API
     final formData = {
       'oldSubscriptionId': oldSubscriptionId,
       'newPriceId': newPriceId,
@@ -529,7 +529,7 @@ class ApiService {
 
     final uri = Uri.parse('${ApiConstants.subscriptions}/upgrade-or-downgrade');
 
-    // Send form data as required by the API
+    // Send form models as required by the API
     return await _httpClient
         .post(uri, headers: headers, body: formData)
         .timeout(const Duration(seconds: 30));
@@ -545,7 +545,7 @@ class ApiService {
 
     final uri = Uri.parse('${ApiConstants.subscriptions}/upgrade-or-downgrade');
 
-    // Create form data
+    // Create form models
     final formData = {
       'oldSubscriptionId': oldSubscriptionId,
       'newPriceId': newPriceId,
@@ -609,7 +609,7 @@ class ApiService {
     }
   }
 
-  // Get specific patient data (family member access)
+  // Get specific patient models (family member access)
   static Future<Map<String, dynamic>> getPatientData(int patientId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     final response = await http.get(
@@ -622,9 +622,9 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else if (response.statusCode == 403) {
-      throw Exception('Access denied to patient data');
+      throw Exception('Access denied to patient models');
     } else {
-      throw Exception('Failed to fetch patient data');
+      throw Exception('Failed to fetch patient models');
     }
   }
 
@@ -644,11 +644,11 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else if (response.statusCode == 403) {
-      throw Exception('Access denied to patient data');
+      throw Exception('Access denied to patient models');
     } else if (response.statusCode == 404) {
       throw Exception('Patient not found');
     } else {
-      throw Exception('Failed to fetch patient data');
+      throw Exception('Failed to fetch patient models');
     }
   }
 
@@ -684,7 +684,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else if (response.statusCode == 403) {
-      throw Exception('Access denied to patient data');
+      throw Exception('Access denied to patient models');
     } else {
       throw Exception('Failed to fetch patient dashboard');
     }
@@ -845,7 +845,7 @@ class ApiService {
   // PROFILE MANAGEMENT METHODS
   // ========================
 
-  /// Get caregiver profile data
+  /// Get caregiver profile models
   static Future<http.Response> getCaregiverProfile(int caregiverId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     return await _httpClient
@@ -871,7 +871,7 @@ class ApiService {
         .timeout(const Duration(seconds: 15));
   }
 
-  /// Get patient profile data
+  /// Get patient profile models
   static Future<http.Response> getPatientProfile(int patientId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     return await _httpClient
@@ -1216,8 +1216,8 @@ class ApiService {
           .timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>?;
+        if (decoded is Map<String, dynamic> && decoded.containsKey('models')) {
+          return decoded['models'] as Map<String, dynamic>?;
         } else {
           return decoded as Map<String, dynamic>?;
         }

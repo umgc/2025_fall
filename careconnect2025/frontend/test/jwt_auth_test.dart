@@ -143,7 +143,7 @@ void main() {
 
   group('Authentication Security Tests', () {
     test('JWT token should not be logged in production', () {
-      // This test ensures we're not accidentally logging sensitive data
+      // This test ensures we're not accidentally logging sensitive models
       const mockJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test';
 
       // In our debug code, we only log the first 20 characters

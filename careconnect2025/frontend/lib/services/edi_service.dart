@@ -98,7 +98,7 @@ IEA*1*$controlNumber~
     return ediContent;
   }
 
-  /// Export visit data as an EDI file
+  /// Export visit models as an EDI file
   /// Returns true if successful, false otherwise
   static Future<bool> exportVisitData({
     required Patient patient,

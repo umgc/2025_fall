@@ -35,12 +35,12 @@
 //       });
 //
 //       // WebRTC signaling events
-//       _socket!.on('offer', (data) => _emitEvent('offer', data));
-//       _socket!.on('answer', (data) => _emitEvent('answer', data));
-//       _socket!.on('ice-candidate', (data) => _emitEvent('ice-candidate', data));
-//       _socket!.on('user-joined', (data) => _emitEvent('user-joined', data));
-//       _socket!.on('user-left', (data) => _emitEvent('user-left', data));
-//       _socket!.on('call-ended', (data) => _emitEvent('call-ended', data));
+//       _socket!.on('offer', (models) => _emitEvent('offer', models));
+//       _socket!.on('answer', (models) => _emitEvent('answer', models));
+//       _socket!.on('ice-candidate', (models) => _emitEvent('ice-candidate', models));
+//       _socket!.on('user-joined', (models) => _emitEvent('user-joined', models));
+//       _socket!.on('user-left', (models) => _emitEvent('user-left', models));
+//       _socket!.on('call-ended', (models) => _emitEvent('call-ended', models));
 //
 //       // Wait for connection
 //       await Future.delayed(const Duration(seconds: 2));
@@ -132,9 +132,9 @@
 //   }
 //
 //   // Emit event to listeners
-//   static void _emitEvent(String event, dynamic data) {
+//   static void _emitEvent(String event, dynamic models) {
 //     if (_eventControllers.containsKey(event)) {
-//       _eventControllers[event]!.add(data);
+//       _eventControllers[event]!.add(models);
 //     }
 //   }
 //

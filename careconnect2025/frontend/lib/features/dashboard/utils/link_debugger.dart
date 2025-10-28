@@ -15,7 +15,7 @@ class LinkDebugger {
       print('');
       print('🔍 ----- LINK DEBUGGER STARTING -----');
       print('🔍 Debugging linkId for patient: ${patient.id} - ${patient.firstName} ${patient.lastName}');
-      print('🔍 Current patient data: $patient');
+      print('🔍 Current patient models: $patient');
       final user = Provider.of<UserProvider>(context, listen: false).user;
       if (user == null) {
         print('⚠️ Cannot debug - no logged in user');
@@ -71,7 +71,7 @@ class LinkDebugger {
       // Direct patient structure
       if (item.containsKey('id') && item['id'] == patientId) {
         print('✅ Found patient with direct structure');
-        print('📋 Patient data: ${json.encode(item)}');
+        print('📋 Patient models: ${json.encode(item)}');
         print('🔑 Available top-level keys: ${item.keys.toList()}');
         _checkForLinkIdInItem(item);
         return;
@@ -85,12 +85,12 @@ class LinkDebugger {
           print('✅ Found patient with nested structure');
           print('📋 Container: ${json.encode(item)}');
           print('� Container keys: ${item.keys.toList()}');
-          print('�📋 Patient data: ${json.encode(patient)}');
+          print('�📋 Patient models: ${json.encode(patient)}');
           print('🔑 Patient keys: ${patient.keys.toList()}');
 
-          // Look for link data in container
+          // Look for link models in container
           if (item.containsKey('link')) {
-            print('📋 Link data found: ${json.encode(item['link'])}');
+            print('📋 Link models found: ${json.encode(item['link'])}');
             if (item['link'] is Map<String, dynamic>) {
               final linkData = item['link'] as Map<String, dynamic>;
               print('🔑 Link keys: ${linkData.keys.toList()}');
@@ -101,10 +101,10 @@ class LinkDebugger {
                 print('💡 RECOMMENDED: Use this ID for relationship operations: ${linkData['id']}');
               }
             } else {
-              print('⚠️ Link data is not a map: ${item['link'].runtimeType}');
+              print('⚠️ Link models is not a map: ${item['link'].runtimeType}');
             }
           } else {
-            print('⚠️ No link data found in container');
+            print('⚠️ No link models found in container');
           }
 
           // Also check patient itself for linkId
@@ -138,11 +138,11 @@ class LinkDebugger {
 
   static void _checkForLinkIdInLink(dynamic linkData) {
     if (linkData is! Map<String, dynamic>) {
-      print('⚠️ Link data is not a map: $linkData');
+      print('⚠️ Link models is not a map: $linkData');
       return;
     }
 
-    print('🔎 Examining link data for ID field...');
+    print('🔎 Examining link models for ID field...');
     
     // Check for ID field - many possible formats
     int? foundId;
@@ -168,12 +168,12 @@ class LinkDebugger {
       print('✅ linkId found in link.relationshipId: ${linkData['relationshipId']} (${linkData['relationshipId'].runtimeType})');
     } else {
       print(
-        '⚠️ No linkId found in link data. Available keys: ${linkData.keys.toList()}',
+        '⚠️ No linkId found in link models. Available keys: ${linkData.keys.toList()}',
       );
     }
     
     // Check for status field - many possible formats
-    print('🔎 Examining link data for status field...');
+    print('🔎 Examining link models for status field...');
     String? foundStatus;
     String? statusSource;
     
@@ -192,7 +192,7 @@ class LinkDebugger {
       statusSource = 'link.active';
       print('✅ active status found: ${linkData['active']} → $foundStatus');
     } else {
-      print('⚠️ No status found in link data');
+      print('⚠️ No status found in link models');
     }
     
     // Summary

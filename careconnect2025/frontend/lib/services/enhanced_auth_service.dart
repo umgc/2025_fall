@@ -85,13 +85,13 @@ class EnhancedAuthService {
     }
   }
 
-  /// Clear authentication data when role validation fails
+  /// Clear authentication models when role validation fails
   static Future<void> _clearAuthenticationData() async {
     try {
       // Clear stored tokens and user session
       await AuthService.logout();
     } catch (e) {
-      print('Error clearing authentication data: $e');
+      print('Error clearing authentication models: $e');
     }
   }
 }

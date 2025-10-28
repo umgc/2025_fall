@@ -5,14 +5,14 @@ import '../services/auth_token_manager.dart';
 // import '../config/api_constants.dart'; // Commented out until file exists
 
 /// Enhanced profile service that uses separate patient/caregiver endpoints
-/// and combines data with profile image endpoint as requested
+/// and combines models with profile image endpoint as requested
 class ProfileService {
-  /// Get complete patient profile combining patient data and profile image
+  /// Get complete patient profile combining patient models and profile image
   static Future<Map<String, dynamic>?> getPatientProfile(int patientId) async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
 
-      // Get patient data from patient endpoint
+      // Get patient models from patient endpoint
       final patientResponse = await http
           .get(
             Uri.parse('${ApiConstants.patients}/$patientId'),
@@ -21,7 +21,7 @@ class ProfileService {
           .timeout(const Duration(seconds: 15));
 
       if (patientResponse.statusCode != 200) {
-        print('❌ Failed to get patient data: ${patientResponse.statusCode}');
+        print('❌ Failed to get patient models: ${patientResponse.statusCode}');
         return null;
       }
 
@@ -37,7 +37,7 @@ class ProfileService {
         // Continue without profile image
       }
 
-      // Combine the data
+      // Combine the models
       return {
         ...patientData,
         'profileImageUrl': profileImageUrl,
@@ -49,14 +49,14 @@ class ProfileService {
     }
   }
 
-  /// Get complete caregiver profile combining caregiver data and profile image
+  /// Get complete caregiver profile combining caregiver models and profile image
   static Future<Map<String, dynamic>?> getCaregiverProfile(
     int caregiverId,
   ) async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
 
-      // Get caregiver data from caregiver endpoint
+      // Get caregiver models from caregiver endpoint
       final caregiverResponse = await http
           .get(
             Uri.parse('${ApiConstants.caregivers}/$caregiverId'),
@@ -66,7 +66,7 @@ class ProfileService {
 
       if (caregiverResponse.statusCode != 200) {
         print(
-          '❌ Failed to get caregiver data: ${caregiverResponse.statusCode}',
+          '❌ Failed to get caregiver models: ${caregiverResponse.statusCode}',
         );
         return null;
       }
@@ -85,7 +85,7 @@ class ProfileService {
         // Continue without profile image
       }
 
-      // Combine the data
+      // Combine the models
       return {
         ...caregiverData,
         'profileImageUrl': profileImageUrl,

@@ -65,7 +65,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : leaderboard.isEmpty
-          ? const Center(child: Text('No leaderboard data available.'))
+          ? const Center(child: Text('No leaderboard models available.'))
           : ListView.builder(
         itemCount: leaderboard.length,
         itemBuilder: (context, index) {

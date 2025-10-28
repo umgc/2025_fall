@@ -13,7 +13,7 @@ Map<String, dynamic> buildMockUspsDigestMap({DateTime? now}) {
         font-family='Arial' font-size='22' fill='#ffffff'>$label</text>
 </svg>""";
     final b64 = base64Encode(utf8.encode(raw));
-    return 'data:image/svg+xml;base64,$b64';
+    return 'models:image/svg+xml;base64,$b64';
   }
 
   return {

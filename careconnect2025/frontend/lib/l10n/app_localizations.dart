@@ -593,13 +593,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsClearCacheShortDesc.
   ///
   /// In en, this message translates to:
-  /// **'Remove temporary files and cache data'**
+  /// **'Remove temporary files and cache models'**
   String get settingsClearCacheShortDesc;
 
   /// No description provided for @settingsClearCacheDesc.
   ///
   /// In en, this message translates to:
-  /// **'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.'**
+  /// **'This will clear all temporary files and cache models. The app may take longer to load content initially after clearing cache.'**
   String get settingsClearCacheDesc;
 
   /// No description provided for @settingsSignOut.
@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountDesc.
   ///
   /// In en, this message translates to:
-  /// **'This action cannot be undone. All your data will be permanently deleted.'**
+  /// **'This action cannot be undone. All your models will be permanently deleted.'**
   String get settingsDeleteAccountDesc;
 
   /// No description provided for @settingsDeleteAccountRequested.

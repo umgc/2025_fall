@@ -118,15 +118,15 @@ class _WearablesScreenState extends State<WearablesScreen> {
       DateTime now = DateTime.now();
       DateTime yesterday = now.subtract(const Duration(days: 1));
 
-      // Fetch Fitbit data
+      // Fetch Fitbit models
       await _fetchFitbitData(yesterday, now);
 
-      // Fetch Google Health/Apple Health data
+      // Fetch Google Health/Apple Health models
       await _fetchGoogleAppleHealthData(yesterday, now);
 
-      print('✓ Fetched health data: ${latestHealthData.length} metrics');
+      print('✓ Fetched health models: ${latestHealthData.length} metrics');
     } catch (e) {
-      print('✗ Error fetching health data: $e');
+      print('✗ Error fetching health models: $e');
     } finally {
       setState(() {
         isLoadingData = false;
@@ -328,24 +328,24 @@ class _WearablesScreenState extends State<WearablesScreen> {
         HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
       ];
 
-      // Fetch all health data types at once
+      // Fetch all health models types at once
       List<HealthDataPoint> allHealthData = await health.getHealthDataFromTypes(
         startTime: startTime,
         endTime: endTime,
         types: types,
       );
 
-      // Process each type of health data
+      // Process each type of health models
       await _processHealthDataByType(allHealthData, source);
 
     } catch (e) {
-      print('⚠ Health data fetch failed: $e');
+      print('⚠ Health models fetch failed: $e');
       _setDefaultHealthData();
     }
   }
 
   Future<void> _processHealthDataByType(List<HealthDataPoint> allHealthData, String source) async {
-    // Group data by type
+    // Group models by type
     Map<HealthDataType, List<HealthDataPoint>> groupedData = {};
     for (var point in allHealthData) {
       if (!groupedData.containsKey(point.type)) {
@@ -463,7 +463,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
       }
     }
 
-    // Set default values for any missing data
+    // Set default values for any missing models
     _setDefaultHealthData(source);
   }
 
@@ -488,7 +488,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
     }
   }
 
-  // Get appropriate icon for health data type
+  // Get appropriate icon for health models type
   IconData _getHealthDataIcon(String type) {
     switch (type.toLowerCase()) {
       case 'steps':
@@ -509,7 +509,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
     }
   }
 
-  // Get appropriate color for health data type
+  // Get appropriate color for health models type
   Color _getHealthDataColor(String type) {
     switch (type.toLowerCase()) {
       case 'steps':
@@ -706,7 +706,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
           const SizedBox(height: 16),
 
           const Text(
-            'Connect wearable devices to track your patient\'s health data in real-time.',
+            'Connect wearable devices to track your patient\'s health models in real-time.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.4),
           ),

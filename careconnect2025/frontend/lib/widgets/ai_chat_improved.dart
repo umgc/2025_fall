@@ -371,7 +371,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
               ),
               SizedBox(height: 8),
               Text(
-                '• All data is encrypted and access is logged',
+                '• All models is encrypted and access is logged',
                 style: TextStyle(fontSize: 14),
               ),
               SizedBox(height: 12),
@@ -711,7 +711,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         userId: currentUserId,
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         uploadedFiles: uploadedFilesJson,
-        // Include all medical context data
+        // Include all medical context models
         includeVitals: true,
         includeMedications: true,
         includeNotes: true,

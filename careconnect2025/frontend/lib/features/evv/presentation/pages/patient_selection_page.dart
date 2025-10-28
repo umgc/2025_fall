@@ -47,7 +47,7 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        print('🔍 Received patient data: $data');
+        print('🔍 Received patient models: $data');
 
         List<Patient> parsedPatients = [];
         for (var json in data) {

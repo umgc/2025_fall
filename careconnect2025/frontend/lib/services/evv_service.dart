@@ -418,7 +418,7 @@ class EvvService {
     if (response.statusCode == 200) {
       return response.body;
     } else {
-      throw Exception('Failed to sync offline data: ${response.body}');
+      throw Exception('Failed to sync offline models: ${response.body}');
     }
   }
 

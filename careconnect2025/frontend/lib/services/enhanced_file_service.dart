@@ -199,7 +199,7 @@ class EnhancedFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        return FileUploadResponse.fromJson(responseData['data']);
+        return FileUploadResponse.fromJson(responseData['models']);
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['error'] ?? 'Failed to upload file');
@@ -333,7 +333,7 @@ class EnhancedFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final List<dynamic> files = responseData['data'];
+        final List<dynamic> files = responseData['models'];
         return files.map((json) => UserFileDTO.fromJson(json)).toList();
       } else {
         final errorData = json.decode(response.body);
@@ -362,7 +362,7 @@ class EnhancedFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final List<dynamic> files = responseData['data'];
+        final List<dynamic> files = responseData['models'];
         return files.map((json) => UserFileDTO.fromJson(json)).toList();
       } else {
         final errorData = json.decode(response.body);
@@ -407,7 +407,7 @@ class EnhancedFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        return UserFileDTO.fromJson(responseData['data']);
+        return UserFileDTO.fromJson(responseData['models']);
       } else if (response.statusCode == 404) {
         // No profile image found is not an error
         return null;

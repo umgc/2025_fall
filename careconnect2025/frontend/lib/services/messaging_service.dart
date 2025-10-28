@@ -31,7 +31,7 @@ class MessagingService {
         'message': message,
         'messageType': messageType,
         'timestamp': DateTime.now().toIso8601String(),
-        'data': data ?? {},
+        'models': data ?? {},
       };
       _channel!.sink.add(jsonEncode(msg));
       // Store message locally

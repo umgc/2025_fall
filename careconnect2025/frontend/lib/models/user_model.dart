@@ -32,7 +32,7 @@ class UserModel {
 
   /// Converts the UserModel instance to a JSON map.
   ///
-  /// Used for API requests, data serialization, and storage operations.
+  /// Used for API requests, models serialization, and storage operations.
   /// All core user fields are included in the JSON output.
   ///
   /// Returns:
@@ -49,14 +49,14 @@ class UserModel {
   /// Creates a UserModel instance from a JSON map.
   ///
   /// Factory constructor that handles JSON deserialization from API responses
-  /// and stored data. Provides default empty strings for missing fields to
+  /// and stored models. Provides default empty strings for missing fields to
   /// ensure the model remains stable.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing user data
+  /// * [json] - JSON map containing user models
   ///
   /// Returns:
-  /// * UserModel - New UserModel instance populated from JSON data
+  /// * UserModel - New UserModel instance populated from JSON models
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       name: json['name'] ?? '',
