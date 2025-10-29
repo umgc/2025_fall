@@ -849,10 +849,24 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const PatientVirtualCheckIn(),
     ),
         //Adding Alexa login route
-    GoRoute(
+     GoRoute(
       path: '/alexaLogin',
-      builder: (_, __) => const AlexaLoginPage(),
+      builder: (context, state){
+        return const AlexaLoginPage();
+      },
     ),
+    GoRoute(
+      path: '/alexaLogin/:redirectUri/:state',
+      builder: (context, state) {
+    final redirectUri = state.pathParameters['redirectUri'];
+    final oauthState = state.pathParameters['state'];
+    return AlexaLoginPage(
+      key: ValueKey('alexaLoginPage'),
+      // optionally pass them into your widget if you modify its constructor
+    );
+  },
+),
+
     //Adding Informed Delivery route
     GoRoute(
       path: '/informed-delivery',
