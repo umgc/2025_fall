@@ -297,10 +297,26 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = MediaQuery.of(context).size.width < 500;
+
+    if (isCompact) {
+      // Compact version: icon-only
+      return IconButton(
+        tooltip: 'Import ICS',
+        icon: const Icon(Icons.file_upload),
+        onPressed: _openDialog,
+      );
+    }
+
+    // Default (wide) version: full labeled button
     return ElevatedButton.icon(
       onPressed: _openDialog,
       icon: const Icon(Icons.file_upload),
       label: const Text("Import ICS"),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle: const TextStyle(fontSize: 14),
+      ),
     );
   }
 

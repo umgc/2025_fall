@@ -19,6 +19,8 @@ public class PatientNote {
     private Long patientId;
     @Column(name = "note", columnDefinition = "TEXT", nullable = false)
     private String note;
+    @Column(name = "ai_summary", columnDefinition = "TEXT", nullable = true)
+    private String aiSummary;
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     @Column(name = "updated_at", nullable = false)
