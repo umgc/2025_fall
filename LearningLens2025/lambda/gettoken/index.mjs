@@ -47,6 +47,10 @@ export const handler = async (event, context) => {
       await buildDatabase(client);
       return "Database created successfully.";
     }
+    if (command === "clearDb") {
+      await clearOldDatabaseEntries(client);
+      return "Database entries older than two years deleted successfully.";
+    }
     if (command === "addLog") {
       console.log(event);
       await addLog(client, event["body"]);
@@ -76,6 +80,16 @@ export const handler = async (event, context) => {
     }
 };
 
+  async function clearOldDatabaseEntries(client) {
+    try {
+    await client`DELETE FROM AI_LOGS WHERE time AT TIME ZONE 'UTC' < (current_timestamp - interval '2 years') AT TIME ZONE 'UTC';`;
+    }
+    catch (error) {
+      console.error("Failed to clear old database entries: ", error);
+      throw error;
+    }
+};
+
   async function getAllLogs(client, courseId, assignmentId, studentId, lms, startDate, endDate) {
     try {
       return await client`SELECT log_id, student_id, assignment_id, course_id, prompt, response, reflection, ai_model, time FROM AI_LOGS WHERE
@@ -83,8 +97,8 @@ export const handler = async (event, context) => {
       lms_service = ${lms} AND
       (${assignmentId} = -1 OR assignment_id = ${assignmentId}) AND
       (${studentId} = -1 OR student_id = ${studentId}) AND
-      date_trunc('day', time) >= date_trunc('day', ${startDate} AT TIME ZONE 'UTC') AND
-      date_trunc('day', time) <= date_trunc('day', ${endDate} AT TIME ZONE 'UTC');`;
+      time >= ${startDate} AT TIME ZONE 'UTC' AND
+      time <= ${endDate} AT TIME ZONE 'UTC';`;
     }
     catch (error) {
       console.error("Failed to get logs ", error);
@@ -106,7 +120,7 @@ export const handler = async (event, context) => {
       ${log.reflection},
       ${log.model},
       ${log.lms},
-      current_timestamp
+      current_timestamp AT TIME ZONE 'UTC'
       );`;
     }
     catch (error) {

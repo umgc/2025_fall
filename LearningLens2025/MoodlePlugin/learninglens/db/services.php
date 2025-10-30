@@ -141,12 +141,20 @@ $functions = [
         'capabilities' => 'mod/lesson:manage',
         'services'    => [MOODLE_OFFICIAL_MOBILE_SERVICE]
     ],
-    'local_learninglens_get_all_overrides' => [
-        'classname'   => 'local_learninglens\external\get_all_overrides',
-        'description' => 'Gets overrides for both quiz and essay',
+    'local_learninglens_get_essay_overrides' => [
+        'classname'   => 'local_learninglens\external\get_essay_overrides',
+        'description' => 'Gets overrides for essay',
         'type'        => 'read',
         'ajax'        => true,
-        'capabilities' => 'mod/quiz:view, mod/assign:view',
+        'capabilities' => 'mod/assign:view',
+        'services'    => [MOODLE_OFFICIAL_MOBILE_SERVICE]
+    ],
+    'local_learninglens_get_quiz_overrides' => [
+        'classname'   => 'local_learninglens\external\get_quiz_overrides',
+        'description' => 'Gets overrides for quiz',
+        'type'        => 'read',
+        'ajax'        => true,
+        'capabilities' => 'mod/quiz:view',
         'services'    => [MOODLE_OFFICIAL_MOBILE_SERVICE]
     ],
     'local_learninglens_get_question_stats_from_quiz' => [
