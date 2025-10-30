@@ -43,7 +43,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/v1/api/test",
         "/v1/api/caregivers",
         "/v1/api/subscriptions",
-        "/v1/api/email-test"
+        "/v1/api/email-test",
+        "/v1/api/emergency"
     );
 
     private final JwtTokenProvider jwt;

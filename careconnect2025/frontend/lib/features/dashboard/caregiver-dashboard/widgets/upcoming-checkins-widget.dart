@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class UpcomingCheckins extends StatelessWidget {
   const UpcomingCheckins({Key? key}) : super(key: key);
@@ -52,8 +53,9 @@ class UpcomingCheckins extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
+            
             child: TextButton(
-              onPressed: () {},
+             onPressed: () => context.push('/tasks'),
               child: const Text(
                 'View All Patients',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -62,7 +64,7 @@ class UpcomingCheckins extends StatelessWidget {
           ),
           Center(
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => context.push('/evv/select-patient'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[700],
                 foregroundColor: Colors.white,

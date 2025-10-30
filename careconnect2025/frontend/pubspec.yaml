@@ -49,11 +49,11 @@ dependencies:
   path_provider: ^2.1.5
   mime: ^2.0.0
   image_picker: ^1.2.0  # image upload
-
   # Temporarily disabled for faster builds
   # jitsi_meet_flutter_sdk: ^11.4.0
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
-  
+  flutter_localizations:
+    sdk: flutter
   intl: ^0.20.2 # data formatting
   camera: ^0.11.1 # emotion detector use
   pdf: ^3.11.3 # PDF generation
@@ -87,7 +87,7 @@ dependencies:
   # Platform detection
   platform: ^3.1.6
 # my key storage
-  flutter_dotenv: ^6.0.0
+#  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
   sqflite: ^2.4.2
 # -- Astha - start
@@ -98,7 +98,7 @@ dependencies:
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
-  
+    
   # AI Voice Commands 
   # ag added as a fix
   porcupine_flutter: ^3.0.5
@@ -106,7 +106,7 @@ dependencies:
 
   # device integration
   fitbitter: ^2.0.6
-  health: ^13.1.4
+  health: ^13.2.0
   mobile_scanner: ^7.0.1
   share_plus: ^12.0.0
 
@@ -126,8 +126,39 @@ dependencies:
   sherpa_onnx: ^1.12.14
   #for recording audio samples for speaker recognition
   record: ^6.1.1
+  #for breaking audio into smaller files
+  new_simple_audio_trimmer: ^0.1.5
   #The following is needed as the calendar for the Calendar Assisstant feature
+  table_calendar: ^3.2.0
+# Team D - Dependencies Begin
+  syncfusion_flutter_pdfviewer: ^31.2.3
+  qr_flutter: ^4.1.0
+  #llm_toolkit: ^0.0.4
+  #llama_cpp_dart: 
+  http_parser: ^4.0.2
+  image: ^4.2.0
+  # Required dependencies
+  #flutter_gemma: ^0.9.0
+  #tflite_flutter: ^0.11.0 
+  #fftea: ^1.5.0
+  json_schema: ^5.2.1
+  flutter_staggered_grid_view: ^0.7.0
+  excel: ^4.0.6         # For creating and manipulating Excel files. 
+  open_filex: ^4.7.0  
+
+  ##EVV Dependencies
+  connectivity_plus: ^6.0.5
+  device_info_plus: ^12.1.0
+  flutter_local_notifications: ^17.2.1
+  # Team D - Dependencies End
+dependency_overrides:
+  # llama_cpp_dart:
+  #   git:
+  #     url: https://github.com/netdur/llama_cpp_dart.git
+  #     ref: main
   calendar_view: ^1.0.0
+  accordion: ^2.6.0
+
   
 dev_dependencies:
   flutter_test:
@@ -135,6 +166,7 @@ dev_dependencies:
   mockito: ^5.5.1
   build_runner: ^2.4.9
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -147,17 +179,38 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-flutter:
+flutter: 
+  generate: true  # enables gen-l10n on build
+  uses-material-design: true
   assets:
     - assets/images/banner.png
     - assets/images/app_icon.png
+    - assets/sherpa-onnx-streaming-zipformer-en-2023-06-26/
+    - assets/sherpa-onnx-pyannote-segmentation-3-0/
+    - assets/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx
+    - assets/sherpa-onnx-zipformer-gigaspeech-2023-12-12/
     - assets/images/CareConnectLogo.png
     - assets/images/CareConnectLogo.svg
-    - .env
+    - assets/images/default_avatar.svg
+ 
+# -------------------------------------------------------------------
+# Splash Screen configuration
+# flutter_native_splash generates native splash screens for your Flutter app on Android, iOS, and web.
+# A splash screen is the image or logo you see immediately when the app opens — before Flutter finishes loading and renders your first frame.
+# -------------------------------------------------------------------
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/images/app_icon.png
+  android: true
+  web: true
+  ios: true
+  android_12:
+    image: assets/images/app_icon.png
+    icon_background_color: "#ffffff"
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -192,9 +245,12 @@ flutter:
 
 # Flutter Launcher Icons Configuration
 flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
+  android: true
+  ios: true 
   image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
+  remove_alpha_ios: true
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true

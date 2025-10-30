@@ -14,11 +14,13 @@ import 'package:flutter/material.dart';
 class ImportIcsButton extends StatefulWidget {
   final Map<int, String> patientNames; // patientId → name
   final VoidCallback? onTasksImported; // callback after import finishes
+  final dynamic filePicker; // instead of FilePicker
 
   const ImportIcsButton({
     super.key,
     required this.patientNames,
     this.onTasksImported,
+    this.filePicker,
   });
 
   @override
@@ -38,7 +40,8 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
       return;
     }
 
-    final result = await FilePicker.platform.pickFiles(
+    final picker = widget.filePicker ?? FilePicker.platform;
+    final result = await picker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['ics'],
     );
@@ -294,10 +297,26 @@ class _ImportIcsButtonState extends State<ImportIcsButton> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = MediaQuery.of(context).size.width < 500;
+
+    if (isCompact) {
+      // Compact version: icon-only
+      return IconButton(
+        tooltip: 'Import ICS',
+        icon: const Icon(Icons.file_upload),
+        onPressed: _openDialog,
+      );
+    }
+
+    // Default (wide) version: full labeled button
     return ElevatedButton.icon(
       onPressed: _openDialog,
       icon: const Icon(Icons.file_upload),
       label: const Text("Import ICS"),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        textStyle: const TextStyle(fontSize: 14),
+      ),
     );
   }
 

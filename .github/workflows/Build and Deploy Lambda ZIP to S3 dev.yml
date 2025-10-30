@@ -1,0 +1,74 @@
+# This workflow builds a Spring Boot project and uploads the resulting ZIP artifact
+# to an S3 bucket for AWS Lambda.
+
+name: Build and Deploy Lambda ZIP to S3
+
+# Triggers the workflow on pushes to the 'main' branch
+on:
+  push:
+    branches:
+      - developer
+
+
+# Permissions required for AWS OIDC authentication and checking out the code
+permissions:
+  id-token: write # Required for assuming an IAM role via OIDC.
+  contents: read  # Required for actions/checkout to read the repository code.
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Check out your repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up JDK using the repository variable and cache Maven dependencies
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          # Reads the JAVA_VERSION variable from your repo settings (Settings > Variables > Actions).
+          # It defaults to '17' if the variable is not found.
+          java-version: ${{ vars.JAVA_VERSION || '17' }}
+          distribution: 'temurin'
+          cache: 'maven' 
+
+      # Step 3: Build the project with Maven, creating the ZIP artifact
+      - name: Build with Maven
+        # Set the working directory to where your pom.xml is located
+        working-directory: ./careconnect2025/backend/core
+        run: mvn clean package -DskipTests -Dspring.profiles.active=dev
+
+      # Step 4: Upload the generated ZIP artifact to GitHub for record-keeping
+      - name: Upload Build Artifact to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-lambda-zip
+          path: careconnect2025/backend/core/target/*.zip
+
+      # Step 5: Configure AWS credentials using OIDC and the role from your GitHub secret
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Use the secrets you created in GitHub
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 6: Upload the generated ZIP file to the specified S3 bucket and folder
+      - name: Upload artifact to S3
+        run: |
+          # Dynamically find the .zip file in the project's target directory
+          ARTIFACT_PATH=$(find careconnect2025/backend/core/target -name "*.zip" | head -n 1)
+          
+          # Check if the artifact was found
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "Error: Build artifact (.zip file) not found in target directory."
+            exit 1
+          fi
+          
+          # Upload the file to the 'cc_backend_builds' folder in your S3 bucket
+          echo "Uploading $ARTIFACT_PATH to S3..."
+          aws s3 cp $ARTIFACT_PATH s3://${{ secrets.S3_BUCKET_NAME }}/${{ secrets.S3_BACKEND_FOLDER_NAME }}/
+          echo "Upload complete."
+

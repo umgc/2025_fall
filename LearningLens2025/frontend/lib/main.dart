@@ -12,11 +12,16 @@ import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/program_assessment_service.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+
 import 'Views/dashboard.dart';
 import 'Views/edit_questions.dart';
 import 'Views/essay_generation.dart';
 import 'Views/gamification_view.dart';
 import 'Views/quiz_generator.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   await dotenv.load();
@@ -66,11 +71,21 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Learning Lens",
       home: home,
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
             seedColor: Provider.of<ThemeNotifier>(context).primaryColor),
       ),
       scrollBehavior: CustomScrollBehavior(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        FlutterQuillLocalizations.delegate, // <-- required for Quill
+      ],
+      supportedLocales: const [
+        Locale('en'), // add more if you support multiple languages
+      ],
       routes: {
         // '/EssayEditPage': (context) => EssayEditPage(jsonData),
         // '/Content': (context) => ViewCourseContents(),

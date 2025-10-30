@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:care_connect_app/features/streaming_asr_with_diarization/streaming_asr_and_diarization.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -124,7 +125,6 @@ class _FileManagementPageState extends State<FileManagementPage>
           ],
         ),
       ),
-      drawer: const CommonDrawer(currentRoute: '/file-management'),
       body: TabBarView(
         controller: _tabController,
         children: [_buildFilesTab(), _buildUploadTab(), _buildAnalyticsTab()],
@@ -497,8 +497,6 @@ class _FileManagementPageState extends State<FileManagementPage>
               ),
             ),
             const SizedBox(height: 24),
-
-            // Speech to Text Section
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -517,7 +515,7 @@ class _FileManagementPageState extends State<FileManagementPage>
                   },
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),

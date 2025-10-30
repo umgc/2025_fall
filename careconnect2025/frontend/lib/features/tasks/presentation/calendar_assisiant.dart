@@ -7,20 +7,22 @@ import 'dart:convert';
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
 import 'package:care_connect_app/features/tasks/utils/recurrence_utils.dart';
-import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
 import 'package:care_connect_app/features/tasks/utils/task_utils.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import 'widgets/add_task_button.dart';
 import 'widgets/calendar_cell.dart';
 import 'widgets/event_tile.dart';
 import 'widgets/filters_panel.dart';
 import 'widgets/import_ics_button.dart';
 import 'widgets/legend.dart';
+import 'widgets/legend_editor.dart';
 import 'widgets/task_form_dialog.dart';
 import 'widgets/task_list_day.dart';
 import 'widgets/task_list_week.dart';
@@ -243,7 +245,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     return CalendarControllerProvider<Task>(
       controller: _eventController,
       child: Scaffold(
@@ -252,14 +253,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           context,
           title: 'Calendar Assistant',
           additionalActions: [
-            TextButton.icon(
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                "Add Task",
-                style: TextStyle(color: Colors.white),
-              ),
-              onPressed: _addTask,
-            ),
+            AddTaskButton(onPressed: _addTask),
             ImportIcsButton(
               onTasksImported: _loadTasksFromDb,
               patientNames: patientNames, //refresh calendar after import
@@ -411,6 +405,46 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                                 color: theme.colorScheme.onSurface,
                               ),
                             ),
+                            headerBuilder: (date) {
+                              final formatted = DateFormat(
+                                'MMM yyyy',
+                              ).format(date);
+
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Left arrow (previous month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.previousPage();
+                                    },
+                                  ),
+
+                                  // Month title
+                                  Text(
+                                    formatted,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: theme.colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+
+                                  // Right arrow (next month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.nextPage();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+
                             weekDayBuilder: (day) {
                               final labels = [
                                 "M",
@@ -615,41 +649,62 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
               // ------------------
               // Legend
               // ------------------
-              Wrap(
-                spacing: 16,
-                children: TaskTypeUtils.taskTypeColors.entries
-                    .map((e) => LegendDot(color: e.value, label: e.key))
-                    .toList(),
+              Legend(
+                onManage: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => LegendEditor(
+                      usedTaskTypes: _eventController.events
+                          .map((e) => e.event?.taskType?.toLowerCase() ?? "")
+                          .toSet(),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
 
-              // Task list changes depending on view
+              // ------------------
+              // Task list section (scrollable)
+              // ------------------
               if (_selectedDay != null)
-                _currentView == CalendarViewType.week
-                    ? TaskListWeek(
-                        events: _eventController.events.where((e) {
-                          final weekStart = TaskUtils.getStartOfWeek(
-                            _selectedDay!,
-                          );
-                          final weekEnd = weekStart.add(
-                            const Duration(days: 7),
-                          );
-                          return e.date.isAfter(
-                                weekStart.subtract(const Duration(seconds: 1)),
-                              ) &&
-                              e.date.isBefore(weekEnd);
-                        }).toList(),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      )
-                    : TaskListDay(
-                        events: _eventController.getEventsOnDay(_selectedDay!),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      ),
+                Column(
+                  children: [
+                    const Divider(thickness: 1),
+                    SizedBox(
+                      // adjust this to control how tall the list area is
+                      height: MediaQuery.of(context).size.height * 0.20,
+                      child: _currentView == CalendarViewType.week
+                          ? TaskListWeek(
+                              events: _eventController.events.where((e) {
+                                final weekStart = TaskUtils.getStartOfWeek(
+                                  _selectedDay!,
+                                );
+                                final weekEnd = weekStart.add(
+                                  const Duration(days: 7),
+                                );
+                                return e.date.isAfter(
+                                      weekStart.subtract(
+                                        const Duration(seconds: 1),
+                                      ),
+                                    ) &&
+                                    e.date.isBefore(weekEnd);
+                              }).toList(),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            )
+                          : TaskListDay(
+                              events: _eventController.getEventsOnDay(
+                                _selectedDay!,
+                              ),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -708,27 +763,57 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
       ),
     );
     if (result == null) return;
-    final draftTask = result['task'] as Task;
-    final newTask = RecurrenceUtils.buildTask(baseTask: draftTask);
+    final List<Task> baseTasks = result['tasks'] != null
+        ? (result['tasks'] as List<Task>)
+        : (result['task'] as List<Task>);
+
+    if (baseTasks.isEmpty) return;
 
     try {
-      final response = await ApiService.createTaskV2(
-        newTask.assignedPatientId!,
-        jsonEncode(newTask.toJson()),
-      );
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        await _loadTasksFromDb();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Task added successfully")),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to add task: ${response.statusCode}")),
-        );
+      final List<Task> expandedTasks = [];
+
+      for (final Task base in baseTasks) {
+        final Object? built = RecurrenceUtils.buildTask(baseTask: base);
+
+        if (built is List<Task>) {
+          expandedTasks.addAll(built);
+        } else if (built is Task) {
+          expandedTasks.add(built);
+        } else {
+          debugPrint(
+            "Unexpected return type from buildTask: ${built.runtimeType}",
+          );
+        }
       }
+
+      // Save each generated task
+      for (final Task newTask in expandedTasks) {
+        final response = await ApiService.createTaskV2(
+          newTask.assignedPatientId!,
+          jsonEncode(newTask.toJson()),
+        );
+
+        if (response.statusCode != 200) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to add task: ${response.statusCode}"),
+            ),
+          );
+        }
+      }
+
+      await _loadTasksFromDb();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            expandedTasks.length > 1
+                ? "${expandedTasks.length} tasks added successfully"
+                : "Task added successfully",
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -806,39 +891,67 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
     if (result == null) return;
 
-    final editedTask = result['task'] as Task;
     final applyToSeries = result['applyToSeries'] as bool? ?? false;
+    final Object? returned = result['task'];
 
-    // normalize recurrence
-    final newTask = RecurrenceUtils.buildTask(baseTask: editedTask);
+    // Normalize into a list of Task objects (dialog always returns a list)
+    final List<Task> editedTasks = <Task>[];
+    if (returned is List<Task>) {
+      editedTasks.addAll(returned);
+    } else if (returned is Task) {
+      editedTasks.add(returned);
+    } else {
+      debugPrint("Unexpected task return type: ${returned.runtimeType}");
+      return;
+    }
 
-    try {
-      final response = await ApiService.editTaskV2(
-        newTask.id!,
-        newTask.toJson(),
-        updateSeries: applyToSeries,
-      );
+    // Expand recurrence safely
+    final List<Task> expandedTasks = <Task>[];
+    for (final Task base in editedTasks) {
+      final Object? built = RecurrenceUtils.buildTask(baseTask: base);
 
-      if (response.statusCode == 200) {
-        await _loadTasksFromDb();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              applyToSeries
-                  ? "Series updated successfully"
-                  : "Task updated successfully",
-            ),
-          ),
-        );
+      if (built is List<Task>) {
+        expandedTasks.addAll(built);
+      } else if (built is Task) {
+        expandedTasks.add(built);
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to update task: ${response.statusCode}"),
-          ),
+        debugPrint(
+          " Unexpected type from RecurrenceUtils.buildTask: ${built.runtimeType}",
         );
       }
+    }
+
+    try {
+      for (final Task updated in expandedTasks) {
+        final response = await ApiService.editTaskV2(
+          updated.id!,
+          updated.toJson(),
+          updateSeries: applyToSeries,
+        );
+
+        if (response.statusCode != 200) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to update task: ${response.statusCode}"),
+            ),
+          );
+        }
+      }
+
+      await _loadTasksFromDb();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            applyToSeries
+                ? "Series updated successfully"
+                : (expandedTasks.length > 1
+                      ? "${expandedTasks.length} tasks updated successfully"
+                      : "Task updated successfully"),
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

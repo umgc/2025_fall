@@ -1,7 +1,9 @@
 import 'package:calendar_view/calendar_view.dart';
 import 'package:care_connect_app/features/tasks/models/task_model.dart';
-import 'package:care_connect_app/features/tasks/utils/task_type_utils.dart';
+import 'package:care_connect_app/features/tasks/utils/task_type_manager.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// =============================
 /// TaskListDay Widget
@@ -26,16 +28,26 @@ class TaskListDay extends StatelessWidget {
   /// Callback when the user taps the delete button on a task.
   final void Function(Task) onDelete;
 
-  const TaskListDay({
-    super.key,
+  /// injectable completion updater for testing
+  final Future<void> Function(int taskId, bool complete) updateCompletion;
+
+  TaskListDay({
+    Key? key,
     required this.events,
     required this.patientNames,
     required this.onEdit,
     required this.onDelete,
-  });
+    Future<void> Function(int, bool)? updateCompletion,
+  }) : updateCompletion =
+           updateCompletion ??
+           ((int id, bool complete) =>
+               ApiService.updateTaskCompletionV2(id, complete)),
+       super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final manager = context.watch<TaskTypeManager>();
+
     if (events.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16.0),
@@ -43,8 +55,7 @@ class TaskListDay extends StatelessWidget {
       );
     }
 
-    // Extract Task objects from the calendar events
-    // and sort them by time first, then by name.
+    // Extract Task objects and sort by time/name
     final tasks = events.map((e) => e.event!).toList()
       ..sort((a, b) {
         if (a.timeOfDay != null && b.timeOfDay != null) {
@@ -56,49 +67,119 @@ class TaskListDay extends StatelessWidget {
         if (b.timeOfDay != null) return 1;
         return a.name.compareTo(b.name);
       });
-    // Render a vertical column of ListTiles, one per task.
-    return Column(
-      children: tasks.map((task) {
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
         final assignedName = task.assignedPatientId != null
             ? patientNames[task.assignedPatientId] ?? "Unknown Patient"
             : "Unassigned";
 
-        return ListTile(
-          leading: Icon(
-            TaskTypeUtils.getIcon(task.taskType),
-            color: TaskTypeUtils.getColor(task.taskType),
-          ),
-          title: Text(
-            task.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.timeOfDay != null
-                    ? task.timeOfDay!.format(context)
-                    : "All day",
+        final color = manager.getColor(task.taskType);
+        final icon = manager.getIcon(task.taskType);
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
               ),
-              if (assignedName.isNotEmpty && assignedName != "Unassigned")
-                Text("👤 $assignedName"),
-            ],
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => onEdit(task),
+              leading: Icon(icon, color: color),
+              title: Text(
+                task.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => onDelete(task),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        task.timeOfDay != null
+                            ? task.timeOfDay!.format(context)
+                            : "All day",
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: task.isComplete
+                              ? Colors.white
+                              : Colors.green,
+                          backgroundColor: task.isComplete
+                              ? Colors.green
+                              : Colors.transparent,
+                          side: BorderSide(
+                            color: task.isComplete ? Colors.green : Colors.grey,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: task.isComplete
+                            ? const Icon(Icons.check, size: 14)
+                            : const SizedBox.shrink(),
+                        label: Text(
+                          task.isComplete ? "Completed" : "Mark as Complete",
+                          style: TextStyle(
+                            color: task.isComplete
+                                ? Colors.white
+                                : Colors.green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        onPressed: () async {
+                          final newStatus = !task.isComplete;
+                          setState(() => task.isComplete = newStatus);
+                          try {
+                            await updateCompletion(task.id!, newStatus);
+                          } catch (e) {
+                            setState(() => task.isComplete = !newStatus);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Failed to update task"),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  if (assignedName.isNotEmpty && assignedName != "Unassigned")
+                    Text("👤 $assignedName"),
+                ],
               ),
-            ],
-          ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () => onEdit(task),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => onDelete(task),
+                  ),
+                ],
+              ),
+            );
+          },
         );
-      }).toList(),
+      },
     );
   }
 }

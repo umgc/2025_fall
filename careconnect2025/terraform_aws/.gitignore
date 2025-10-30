@@ -17,6 +17,7 @@ override.tf.json
 
 # Plan output files
 *.tfplan
+tfplan
 
 # Sensitive files
 .terraformrc

@@ -6,6 +6,7 @@ import 'package:learninglens_app/Views/about_page.dart';
 import 'package:learninglens_app/Views/analytics_page.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
 import 'package:learninglens_app/Views/course_list.dart';
+import 'package:learninglens_app/Views/essay_assistant.dart';
 import 'package:learninglens_app/Views/essays_view.dart';
 import 'package:learninglens_app/Views/g_lesson_plan.dart';
 import 'package:learninglens_app/Views/iep_page.dart';
@@ -341,7 +342,8 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Essay Assistant',
           'description': 'Utilize AI to help complete essay assignments.',
-          'onPressed': null,
+          'onPressed': () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => EssayAssistant())),
           'icon': Icons.assistant_outlined
         },
         {

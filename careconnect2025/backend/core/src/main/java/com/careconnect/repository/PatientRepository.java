@@ -19,4 +19,5 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     boolean hasAccessByCaregiverId(@Param("patientId") Long patientId, 
                                   @Param("caregiverId") Long caregiverId);
 
+    Optional<Patient> findByAlexaRefreshToken(String alexaRefreshToken);
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
@@ -259,6 +261,56 @@ class ApiSingleton implements LmsInterface {
   @override
   Future getQuizStatsForStudent(String quizId, int userId) {
     // TODO: implement getQuizStatsForStudent
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> appendFileToDraft(
+      {required File file, required int contextId, required int draftItemId}) {
+    // TODO: implement appendFileToDraft
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> saveAssignmentSubmissionFiles(
+      {required int assignId, required int draftItemId}) {
+    // TODO: implement saveAssignmentSubmissionFiles
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> saveAssignmentSubmissionOnlineText(
+      {required int assignId,
+      required String text,
+      int format = 1,
+      int? draftItemId}) {
+    // TODO: implement saveAssignmentSubmissionOnlineText
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> submitAssignmentForGrading(
+      {required int assignId, bool? acceptSubmissionStatement}) {
+    // TODO: implement submitAssignmentForGrading
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<int> uploadFileToDraft({required File file, required int contextId}) {
+    // TODO: implement uploadFileToDraft
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getSubmissionStatusRaw(
+      {required int assignId, int? forUserId}) {
+    // TODO: implement getSubmissionStatusRaw
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
     throw UnimplementedError();
   }
 }
