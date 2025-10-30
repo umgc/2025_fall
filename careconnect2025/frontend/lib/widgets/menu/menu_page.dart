@@ -145,6 +145,11 @@ class _MenuPageState extends State<MenuPage> {
         label: 'Fall Detection',
         route: '/alertpage',
       ),
+      _MenuItem(
+        icon: Icons.search,
+        label: 'Search',
+        route: '/search',
+      ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(
