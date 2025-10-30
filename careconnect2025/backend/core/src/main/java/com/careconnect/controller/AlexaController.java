@@ -296,14 +296,10 @@ public class AlexaController {
                 System.out.println("📅 Filtering tasks by week...");
 
                 java.time.LocalDate today = java.time.LocalDate.now();
-                java.time.DayOfWeek dayOfWeek = today.getDayOfWeek();
 
-                // Get start of week (Sunday)
-                java.time.LocalDate startOfWeek = today.minusDays(
-                        dayOfWeek == java.time.DayOfWeek.SUNDAY ? 0 : dayOfWeek.getValue());
-
-                // Get end of week (Saturday)
-                java.time.LocalDate endOfWeek = startOfWeek.plusDays(6);
+                // Rolling 7-day window starting today
+                java.time.LocalDate startOfWeek = today;
+                java.time.LocalDate endOfWeek = today.plusDays(6);
 
                 System.out.println("📅 Week range: " + startOfWeek + " to " + endOfWeek);
 

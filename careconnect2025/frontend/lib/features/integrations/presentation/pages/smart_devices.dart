@@ -140,6 +140,30 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
 
             const SizedBox(height: 32),
 
+            // Privacy Policy footer
+            GestureDetector(
+              onTap: () async {
+                final uri = Uri.parse('https://www.freeprivacypolicy.com/live/9a586bf1-2869-40aa-993a-c8f80200209c');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open Privacy Policy')),
+                  );
+                }
+              },
+              child: Text(
+                'Privacy Policy',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
             // Two-Column Layout for Alexa and Google
             LayoutBuilder(
               builder: (context, constraints) {
@@ -261,20 +285,19 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isPatient
-                    ? (isAlexaLinked == true ? _checkAlexaStatus : _linkAlexaAccount)
-                    : null,
+                    ?  _linkAlexaAccount : null,
                 icon: Icon(isPatient && isAlexaLinked == true
                     ? Icons.refresh
                     : Icons.add),
                 label: Text(
                   isPatient
                       ? (isAlexaLinked == true
-                          ? 'Check Status'
+                          ? 'Disable Alexa Skill'
                           : 'Enable Alexa Skill')
                       : 'Coming Soon for Caregivers',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isPatient ? Colors.blue : Colors.grey,
+                  backgroundColor: isPatient ? (isAlexaLinked == true ? Colors.red : Colors.blue) : Colors.grey,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
