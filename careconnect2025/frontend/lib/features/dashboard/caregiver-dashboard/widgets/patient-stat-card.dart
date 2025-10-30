@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
+import 'package:care_connect_app/services/checkin_service.dart';
+import 'package:provider/provider.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
 
 /// Widget that displays patient statistics in responsive card layout.
 ///
@@ -14,12 +18,6 @@ class PatientStatisticsCards extends StatelessWidget {
   /// Uses LayoutBuilder to determine screen size and adjusts the layout
   /// accordingly. On screens smaller than 600px, cards are arranged vertically.
   /// On larger screens, cards are arranged horizontally.
-  ///
-  /// Parameters:
-  /// * [context] - The build context
-  ///
-  /// Returns:
-  /// * Widget - A responsive layout containing statistics cards
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -33,7 +31,22 @@ class PatientStatisticsCards extends StatelessWidget {
                 icon: Icons.people_outline,
                 iconColor: Colors.blue,
                 title: '# of Missed Check-Ins',
-                value: '24',
+                value: FutureBuilder<int>(
+                  future: _fetchCheckinCount(context),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text('...', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    if (snapshot.hasError) {
+                      return const Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    final n = snapshot.data ?? 0;
+                    return Text(
+                      n.toString(),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
                 valueColor: Theme.of(context).primaryColor,
               ),
               const SizedBox(height: 16),
@@ -41,7 +54,22 @@ class PatientStatisticsCards extends StatelessWidget {
                 icon: Icons.monitor_heart_outlined,
                 iconColor: Colors.green,
                 title: 'Active Patients',
-                value: '32',
+                value: FutureBuilder<int>(
+                  future: _fetchActivePatients(context),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text('...', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    if (snapshot.hasError) {
+                      return const Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    final n = snapshot.data ?? 0;
+                    return Text(
+                      n.toString(),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
                 valueColor: Colors.green,
               ),
             ],
@@ -55,7 +83,22 @@ class PatientStatisticsCards extends StatelessWidget {
                 icon: Icons.people_outline,
                 iconColor: Colors.blue,
                 title: '# of Missed\nCheck-Ins',
-                value: '24',
+                value: FutureBuilder<int>(
+                  future: _fetchCheckinCount(context),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text('...', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    if (snapshot.hasError) {
+                      return const Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    final n = snapshot.data ?? 0;
+                    return Text(
+                      n.toString(),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
                 valueColor: Colors.blue,
               ),
             ),
@@ -65,7 +108,22 @@ class PatientStatisticsCards extends StatelessWidget {
                 icon: Icons.monitor_heart_outlined,
                 iconColor: Colors.green,
                 title: 'Active\nPatients',
-                value: '32',
+                value: FutureBuilder<int>(
+                  future: _fetchActivePatients(context),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Text('...', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    if (snapshot.hasError) {
+                      return const Text('0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold));
+                    }
+                    final n = snapshot.data ?? 0;
+                    return Text(
+                      n.toString(),
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
                 valueColor: Colors.green,
               ),
             ),
@@ -74,12 +132,25 @@ class PatientStatisticsCards extends StatelessWidget {
       },
     );
   }
+
+  /// Fetches the count of missed check-ins for the current caregiver.
+  Future<int> _fetchCheckinCount(BuildContext context) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final caregiverId = userProvider.user?.id.toString() ?? '';
+    return await CheckinService.getCheckinCount(caregiverId);
+  }
+
+  /// Fetches the count of active patients linked to this caregiver.
+  Future<int> _fetchActivePatients(BuildContext context) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final caregiverId = userProvider.user?.id.toString() ?? '';
+
+    // Placeholder: using check-in count until /patients/active endpoint exists.
+    return await CheckinService.getCheckinCount(caregiverId);
+  }
 }
 
 /// Private widget that displays an individual statistic card.
-///
-/// This widget renders a single statistic with an icon, title, and value
-/// in a visually appealing card format with rounded corners and shadow.
 class _StatCard extends StatelessWidget {
   /// The icon to display at the top of the card
   final IconData icon;
@@ -91,19 +162,11 @@ class _StatCard extends StatelessWidget {
   final String title;
 
   /// The statistical value to be prominently displayed
-  final String value;
+  final Widget value;
 
   /// The color for the value and title text
   final Color valueColor;
 
-  /// Creates a _StatCard widget.
-  ///
-  /// Parameters:
-  /// * [icon] - The icon to display at the top of the card
-  /// * [iconColor] - The color for the icon and its background
-  /// * [title] - The title text displayed below the icon
-  /// * [value] - The statistical value to be prominently displayed
-  /// * [valueColor] - The color for the value and title text
   const _StatCard({
     required this.icon,
     required this.iconColor,
@@ -112,17 +175,6 @@ class _StatCard extends StatelessWidget {
     required this.valueColor,
   });
 
-  /// Builds the statistic card widget.
-  ///
-  /// Creates a container with rounded corners, shadow, and padding that
-  /// displays the icon, title, and value in a centered column layout.
-  /// The card has a minimum height of 120px and uses theme colors.
-  ///
-  /// Parameters:
-  /// * [context] - The build context
-  ///
-  /// Returns:
-  /// * Widget - A decorated container with the statistic information
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -133,7 +185,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -146,7 +198,7 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -168,14 +220,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: valueColor,
-              ),
-            ),
+            child: value,
           ),
         ],
       ),

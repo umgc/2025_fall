@@ -15,7 +15,7 @@ class MedicationReminder {
 
 /// Medication Reminders Widget
 class MedicationRemindersWidget extends StatelessWidget {
-  final MedicationReminder reminder;
+  final MedicationReminder? reminder; // ✅ made nullable to allow empty state
   final VoidCallback? onMarkTaken;
   final VoidCallback? onMarkMissed;
 
@@ -29,6 +29,37 @@ class MedicationRemindersWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // ✅ If no reminders exist, show "None to show"
+    if (reminder == null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            'None to show',
+            style: TextStyle(
+              fontSize: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
@@ -67,7 +98,7 @@ class MedicationRemindersWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            _formatScheduledTime(reminder.scheduledTime),
+            _formatScheduledTime(reminder!.scheduledTime),
             style: TextStyle(
               fontSize: 14,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -86,7 +117,7 @@ class MedicationRemindersWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  reminder.medicationName,
+                  reminder!.medicationName,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -94,7 +125,7 @@ class MedicationRemindersWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  reminder.status,
+                  reminder!.status,
                   style: TextStyle(
                     fontSize: 14,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

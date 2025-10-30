@@ -10,6 +10,7 @@ import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/pr
 import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
+import 'package:care_connect_app/services/checkin_service.dart';
 import 'package:care_connect_app/services/call_notification_service.dart';
 import 'package:care_connect_app/services/communication_service.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +29,8 @@ class PatientDashboard extends StatefulWidget {
   @override
   State<PatientDashboard> createState() => _PatientDashboardState();
 }
+
+
 
 class _PatientDashboardState extends State<PatientDashboard> {
   // Patient data
@@ -99,9 +102,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         return;
       }
 
-      // Check for alerts
-      _checkForAlerts();
-
+      
       setState(() {
         loading = false;
       });
@@ -116,73 +117,89 @@ class _PatientDashboardState extends State<PatientDashboard> {
   /// Load recent mood data
   Future<void> _loadRecentMoodData() async {
     try {
-      // This would be an API call to get mood data
-      // For now, using sample data
-      setState(() {
-        currentMoodScore = 8;
-        currentMoodLabel = 'Good';
-        moodTags = ['happy', 'calm', 'comfortable', 'positive'];
+      final user = Provider.of<UserProvider>(context, listen: false).user;
+      if (user == null) return;
 
-        recentCheckIns = [
-          CheckIn(
-            date: DateTime.now(),
-            status: 'Feeling well today',
-            emoji: '😊',
-          ),
-          CheckIn(
-            date: DateTime.now().subtract(const Duration(days: 1)),
-            status: 'Slight headache',
-            emoji: '🙂',
-          ),
-          CheckIn(
-            date: DateTime.now().subtract(const Duration(days: 2)),
-            status: 'Medications taken',
-            emoji: '😐',
-          ),
-        ];
-      });
+      // Fetch mood data dynamically from backend
+      final response = await ApiService.getMoodData(user.id);
+
+      if (response != null) {
+        setState(() {
+          final scoreValue = response['score'];
+          currentMoodScore = (scoreValue is int) ? scoreValue : 0;
+
+          final labelValue = response['label'];
+          currentMoodLabel = (labelValue is String && labelValue.isNotEmpty)
+              ? labelValue
+              : _getMoodLabel(currentMoodScore);
+
+          final tagsValue = response['tags'];
+          moodTags = (tagsValue is List)
+              ? List<String>.from(tagsValue.whereType<String>())
+              : [];
+
+          final checkinsValue = response['checkins'];
+          recentCheckIns = (checkinsValue is List)
+              ? checkinsValue
+                  .whereType<Map<String, dynamic>>()
+                  .map((c) => CheckIn.fromJson(c))
+                  .toList()
+              : [];
+        });
+
+      }
     } catch (e) {
       print('Error loading mood data: $e');
     }
   }
 
-  /// Load medication reminders
-  Future<void> _loadMedicationReminders() async {
+
+  /// Load medication reminders (dynamic)
+    Future<void> _loadMedicationReminders() async {
+      try {
+        final user = Provider.of<UserProvider>(context, listen: false).user;
+        final reminders = await ApiService.getTodaysMedications(user?.id ?? 0);
+
+        if (reminders.isNotEmpty) {
+          setState(() {
+            final first = reminders.first;
+            upcomingReminder = MedicationReminder(
+              medicationName: first['medicationName'],
+              scheduledTime: DateTime.parse(first['scheduledTime']),
+              status: first['taken'] ? 'Taken' : 'Scheduled',
+            );
+          });
+        } else {
+          setState(() {
+            upcomingReminder = null;
+          });
+        }
+      } catch (e) {
+        print('❌ Error loading medication reminders: $e');
+      }
+    }
+
+
+  /// Load primary care provider dynamically
+  Future<void> _loadPrimaryCareProvider() async {
     try {
-      // This would be an API call to get medication reminders
-      // For now, using sample data
-      setState(() {
-        upcomingReminder = MedicationReminder(
-          medicationName: 'Blood Pressure Medication',
-          scheduledTime: DateTime.now().add(const Duration(days: 1, hours: 9)),
-          status: 'Scheduled reminder',
-        );
-      });
+      final user = Provider.of<UserProvider>(context, listen: false).user;
+      final data = await ApiService.getPrimaryCareProvider(user?.id ?? 0);
+
+      if (data.isNotEmpty) {
+        setState(() {
+          primaryCareProvider = data;
+        });
+      } else {
+        setState(() {
+          primaryCareProvider = {};
+        });
+      }
     } catch (e) {
-      print('Error loading medication reminders: $e');
+      print('❌ Error loading primary care provider: $e');
     }
   }
 
-  /// Load primary care provider
-  Future<void> _loadPrimaryCareProvider() async {
-    try {
-      // This would be an API call to get provider data
-      // For now, using sample data
-      setState(() {
-        primaryCareProvider = {
-          'name': 'Dr. Sarah Mitchell, MD',
-          'specialty': 'Internal Medicine',
-          'organization': 'CareConnect Medical Group',
-          'phone': '(555) 123-4567',
-          'email': 'sarah.mitchell@careconnect.com',
-          'nextAppointment': DateTime.now().add(const Duration(days: 30)),
-          'appointmentType': 'Annual Checkup',
-        };
-      });
-    } catch (e) {
-      print('Error loading primary care provider: $e');
-    }
-  }
 
   /// Check for alerts based on current data
   void _checkForAlerts() {
@@ -367,6 +384,17 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 
+
+  String _getMoodLabel(int score) {
+    if (score >= 8) return 'Excellent';
+    if (score >= 6) return 'Good';
+    if (score >= 4) return 'Neutral';
+    if (score >= 2) return 'Low';
+    return 'Depressed';
+  }
+
+
+
   @override
   void dispose() {
     CallNotificationService.dispose();
@@ -504,7 +532,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                           ),
                                         ),
 
-                                    // Current Mood
+                                    // Current Mood (interactive)
                                     CurrentMoodWidget(
                                       moodScore: currentMoodScore,
                                       moodLabel: currentMoodLabel,
@@ -512,11 +540,43 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                       date: DateTime.now(),
                                     ),
 
+                                    
+                                    
+
+
                                     // Recent Check-ins
                                     if (recentCheckIns.isNotEmpty)
-                                      RecentCheckInsWidget(
-                                        checkIns: recentCheckIns,
+                                      // Recent Check-ins (auto-average + dynamic)
+                                      FutureBuilder<Map<String, dynamic>?>(
+                                        future: ApiService.getDailyMoodAverage(user?.id ?? 0),
+                                        builder: (context, snapshot) {
+                                          if (!snapshot.hasData) {
+                                            return const Center(child: CircularProgressIndicator());
+                                          }
+
+                                          final data = snapshot.data!;
+                                          final avgMood = data['average'] ?? 0;
+                                          final todayCheckIns = (data['checkins'] as List<dynamic>?)
+                                                  ?.map((c) => CheckIn.fromJson(c))
+                                                  .toList() ??
+                                              [];
+
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                child: Text(
+                                                  'Today’s Average Mood: ${avgMood.toStringAsFixed(1)}/10',
+                                                  style: theme.textTheme.titleMedium,
+                                                ),
+                                              ),
+                                              RecentCheckInsWidget(checkIns: todayCheckIns),
+                                            ],
+                                          );
+                                        },
                                       ),
+
                                   ],
                                 ),
                               ),
@@ -525,15 +585,27 @@ class _PatientDashboardState extends State<PatientDashboard> {
                               Expanded(
                                 child: Column(
                                   children: [
+                                    
                                     // Medication Reminders
-                                    if (upcomingReminder != null)
-                                      MedicationRemindersWidget(
-                                        reminder: upcomingReminder!,
-                                        onMarkTaken: () =>
-                                            _handleMedicationAction(true),
-                                        onMarkMissed: () =>
-                                            _handleMedicationAction(false),
-                                      ),
+                                      if (upcomingReminder != null)
+                                        MedicationRemindersWidget(
+                                          reminder: upcomingReminder!,
+                                          onMarkTaken: () => _handleMedicationAction(true),
+                                          onMarkMissed: () => _handleMedicationAction(false),
+                                        )
+                                      else
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          child: Text(
+                                            'No medication reminders for today.',
+                                            style: theme.textTheme.bodyMedium?.copyWith(
+                                              fontSize: 24,
+                                              color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+
 
                                     
                                   ],
@@ -579,7 +651,37 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
                         // Recent Check-Ins
                         if (recentCheckIns.isNotEmpty)
-                          RecentCheckInsWidget(checkIns: recentCheckIns),
+                          // Recent Check-ins (auto-average + dynamic)
+                          FutureBuilder<Map<String, dynamic>?>(
+                            future: ApiService.getDailyMoodAverage(user?.id ?? 0),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+
+                              final data = snapshot.data!;
+                              final avgMood = data['average'] ?? 0;
+                              final todayCheckIns = (data['checkins'] as List<dynamic>?)
+                                      ?.map((c) => CheckIn.fromJson(c))
+                                      .toList() ??
+                                  [];
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    child: Text(
+                                      'Today’s Average Mood: ${avgMood.toStringAsFixed(1)}/10',
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  RecentCheckInsWidget(checkIns: todayCheckIns),
+                                ],
+                              );
+                            },
+                          ),
+
 
                         // Medication Reminders
                         if (upcomingReminder != null)
@@ -587,7 +689,20 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             reminder: upcomingReminder!,
                             onMarkTaken: () => _handleMedicationAction(true),
                             onMarkMissed: () => _handleMedicationAction(false),
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              'No medication reminders for today.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                              fontSize: 24,
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
+                              fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
+
 
                         
                       ],
@@ -767,3 +882,56 @@ class _PatientDashboardState extends State<PatientDashboard> {
     );
   }
 }
+
+
+// Custom slider track shape for gradient colors
+      class GradientRectSliderTrackShape extends SliderTrackShape {
+        const GradientRectSliderTrackShape({required this.gradient});
+        final LinearGradient gradient;
+
+        @override
+        Rect getPreferredRect({
+          required RenderBox parentBox,
+          Offset offset = Offset.zero,
+          required SliderThemeData sliderTheme,
+          bool isEnabled = false,
+          bool isDiscrete = false,
+        }) {
+          final double trackHeight = sliderTheme.trackHeight ?? 4.0;
+          final double trackLeft = offset.dx;
+          final double trackTop =
+              offset.dy + (parentBox.size.height - trackHeight) / 2;
+          final double trackWidth = parentBox.size.width;
+          return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
+        }
+
+        @override
+        void paint(
+          PaintingContext context,
+          Offset offset, {
+          required RenderBox parentBox,
+          required SliderThemeData sliderTheme,
+          required Animation<double> enableAnimation,
+          required TextDirection textDirection,
+          required Offset thumbCenter,
+          Offset? secondaryOffset,
+          bool isDiscrete = false,
+          bool isEnabled = false,
+        }) {
+          final Rect trackRect = getPreferredRect(
+            parentBox: parentBox,
+            offset: offset,
+            sliderTheme: sliderTheme,
+            isEnabled: isEnabled,
+            isDiscrete: isDiscrete,
+          );
+
+          final Paint paint = Paint()
+            ..shader = gradient.createShader(trackRect);
+
+          context.canvas.drawRRect(
+            RRect.fromRectAndRadius(trackRect, const Radius.circular(4)),
+            paint,
+          );
+        }
+      }
