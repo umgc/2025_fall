@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
+import "package:learninglens_app/Controller/html_converter.dart";
 import "package:learninglens_app/Views/view_submissions.dart";
 import "package:learninglens_app/beans/assignment.dart";
 import "package:learninglens_app/beans/participant.dart";
@@ -168,40 +169,85 @@ class _EssaysState extends State<EssaysView> {
                                         Text('Select an essay to view details'))
                                 : Column(
                                     children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          border:
-                                              Border.all(color: Colors.grey),
-                                          borderRadius:
-                                              BorderRadius.circular(8.0),
-                                        ),
-                                        margin: EdgeInsets.all(8.0),
-                                        child: Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16.0),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Text('Essay Prompt',
-                                                        style: TextStyle(
-                                                            fontSize: 20))),
-                                                Text(selectedEssay
-                                                        ?.description ??
-                                                    getEssay(widget.essayID,
-                                                            widget.courseID)
-                                                        ?.description ??
-                                                    "No description is available."),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                       Expanded(
-                                        flex: 1,
+                                          flex: 1,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                  color: Colors.grey),
+                                              borderRadius:
+                                                  BorderRadius.circular(8.0),
+                                            ),
+                                            margin: EdgeInsets.all(8.0),
+                                            child: Center(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16.0),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                                8.0),
+                                                        child: InkWell(
+                                                            child: Text(
+                                                                'Essay Prompt',
+                                                                style: TextStyle(
+                                                                    decoration:
+                                                                        TextDecoration
+                                                                            .underline,
+                                                                    color: Colors
+                                                                        .blue,
+                                                                    fontSize:
+                                                                        20)),
+                                                            onTap: () {
+                                                              showDialog(
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (BuildContext
+                                                                          context) {
+                                                                    return AlertDialog(
+                                                                        title: Text(
+                                                                            "Essay Prompt"),
+                                                                        content:
+                                                                            SingleChildScrollView(
+                                                                          child:
+                                                                              Column(children: [
+                                                                            Container(
+                                                                                width: 500,
+                                                                                margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
+                                                                                padding: const EdgeInsets.all(14),
+                                                                                decoration: BoxDecoration(
+                                                                                  borderRadius: BorderRadius.circular(16),
+                                                                                ),
+                                                                                child: Text(HtmlConverter.convert(selectedEssay?.description) ?? HtmlConverter.convert(getEssay(widget.essayID, widget.courseID)?.description) ?? "No description is available."))
+                                                                          ]),
+                                                                        ));
+                                                                  });
+                                                            })),
+                                                    Expanded(
+                                                        child: SingleChildScrollView(
+                                                            child: Text(HtmlConverter
+                                                                    .convert(
+                                                                        selectedEssay
+                                                                            ?.description) ??
+                                                                HtmlConverter.convert(getEssay(
+                                                                        widget
+                                                                            .essayID,
+                                                                        widget
+                                                                            .courseID)
+                                                                    ?.description) ??
+                                                                "No description is available."))),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          )),
+                                      Expanded(
+                                        flex: 3,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             border:
