@@ -155,7 +155,6 @@ PermTokens essayAssistPromptBuilder(AiMode mode, String? submissionText,
   - “Take a moment to reflect…”  
   ''';
 
-
   // Mode-specific instructions
   switch (mode) {
     case AiMode.brainstorm:

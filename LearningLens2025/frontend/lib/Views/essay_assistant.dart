@@ -36,7 +36,8 @@ import 'package:uuid/uuid.dart';
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:super_clipboard/super_clipboard.dart';
-import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart' as qh;
+import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart'
+    as qh;
 
 // Api
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
@@ -150,6 +151,7 @@ String removeHtmlTags(String htmlText) {
 bool _hasKeyFor(LlmType llm) {
   return LocalStorageService.userHasLlmKey(llm);
 }
+
 /// Convert markdown text to HTML
 String _markdownToHTML(String markdownText) {
   return md.markdownToHtml(markdownText);
@@ -161,7 +163,8 @@ String _markdownToPlain(String mdText) {
 
   // Replace fenced code blocks
   s = s.replaceAllMapped(RegExp(r'```[\s\S]*?```'), (m) {
-    final inner = m.group(0)!
+    final inner = m
+        .group(0)!
         .replaceFirst(RegExp(r'^```[^\n]*\n'), '')
         .replaceAll('```', '');
     return inner;
@@ -186,12 +189,12 @@ String _markdownToPlain(String mdText) {
   // Collapse triple newlines
   s = s.replaceAll(RegExp(r'\n{3,}'), '\n\n');
 
-  s = s.replaceAll(RegExp(r'\r\n?'), '\n');   // unify line endings
-  s = s.replaceAll(RegExp(r'\n{2,}'), '\n\n'); // one blank line between paragraphs
+  s = s.replaceAll(RegExp(r'\r\n?'), '\n'); // unify line endings
+  s = s.replaceAll(
+      RegExp(r'\n{2,}'), '\n\n'); // one blank line between paragraphs
 
   return s.trim();
 }
-
 
 /// Copy rich markdown as HTML to clipboard
 Future<void> _copyMarkdown(BuildContext context, String mdText) async {
@@ -1394,39 +1397,42 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 8.0, horizontal: 12.0),
                                 child: _AssistantMessageCard(
-                                    text: text, // raw markdown that you already computed above
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primaryContainer,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                  child: MarkdownBody(
-                                    data: text,
-                                    selectable:
-                                        true, // lets users highlight/copy text
-                                    styleSheet: MarkdownStyleSheet.fromTheme(
-                                            Theme.of(context))
-                                        .copyWith(
-                                      p: const TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black87,
-                                          height: 1.46),
-                                      strong: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      em: const TextStyle(
-                                          fontStyle: FontStyle.italic),
-                                      a: const TextStyle(
-                                        color: Colors.blueAccent,
-                                        decoration: TextDecoration.underline,
-                                      ) 
+                                  text:
+                                      text, // raw markdown that you already computed above
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: MarkdownBody(
+                                      data: text,
+                                      selectable:
+                                          true, // lets users highlight/copy text
+                                      styleSheet: MarkdownStyleSheet.fromTheme(
+                                              Theme.of(context))
+                                          .copyWith(
+                                              p: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
+                                                  height: 1.46),
+                                              strong: const TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                              em: const TextStyle(
+                                                  fontStyle: FontStyle.italic),
+                                              a: const TextStyle(
+                                                color: Colors.blueAccent,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              )),
                                     ),
                                   ),
                                 ),
-                              ),
-                            );
-                          }
+                              );
+                            }
 
                             // (2) User messages (right-aligned bubble)
                             if (m is types.TextMessage &&
@@ -2066,63 +2072,71 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
   }
 
-  Future<void> _richPaste(BuildContext editorCtx, quill.QuillController controller) async {
-  final sys = SystemClipboard.instance;
-  if (sys == null) {
-    // super_clipboard not available → let default paste run
-    Actions.invoke(editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
-    return;
-  }
-
-  final reader = await sys.read();
-
-  String normalizeLineBreaks(String rawHtml) {
-    var h = rawHtml;
-    final startIdx = h.indexOf('<!--StartFragment-->');
-    final endIdx = h.indexOf('<!--EndFragment-->');
-    if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
-      h = h.substring(startIdx + '<!--StartFragment-->'.length, endIdx);
-    }
-    h = h.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
-    h = h.replaceAll(RegExp(r'\n{2,}'), '</p><p>');
-    if (!RegExp(r'</?(p|div|ul|ol|h[1-6])\b', caseSensitive: false).hasMatch(h)) {
-      h = '<p>$h</p>';
-    }
-    h = h.replaceAll('\n', '<br/>');
-    return h;
-  }
-
-  if (reader.canProvide(Formats.htmlText)) {
-    var html = await reader.readValue(Formats.htmlText);
-    if (html != null && html.trim().isNotEmpty) {
-      html = normalizeLineBreaks(html);
-      final delta = qh.HtmlToDelta().convert(html);
-
-      final sel = controller.selection;
-      final base = sel.baseOffset;
-      final extent = sel.extentOffset;
-      final deleteLen = (extent - base).abs();
-
-      controller.replaceText(
-        base, deleteLen, '', TextSelection.collapsed(offset: base),
-      );
-      controller.compose(delta, controller.selection, quill.ChangeSource.local);
-      controller.updateSelection(
-        TextSelection.collapsed(offset: base + delta.length),
-        quill.ChangeSource.local,
-      );
+  Future<void> _richPaste(
+      BuildContext editorCtx, quill.QuillController controller) async {
+    final sys = SystemClipboard.instance;
+    if (sys == null) {
+      // super_clipboard not available → let default paste run
+      Actions.invoke(
+          editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
       return;
     }
-  }
 
-  // fallback to normal paste (plain text)
-  Actions.invoke(editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
-}
+    final reader = await sys.read();
+
+    String normalizeLineBreaks(String rawHtml) {
+      var h = rawHtml;
+      final startIdx = h.indexOf('<!--StartFragment-->');
+      final endIdx = h.indexOf('<!--EndFragment-->');
+      if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
+        h = h.substring(startIdx + '<!--StartFragment-->'.length, endIdx);
+      }
+      h = h.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+      h = h.replaceAll(RegExp(r'\n{2,}'), '</p><p>');
+      if (!RegExp(r'</?(p|div|ul|ol|h[1-6])\b', caseSensitive: false)
+          .hasMatch(h)) {
+        h = '<p>$h</p>';
+      }
+      h = h.replaceAll('\n', '<br/>');
+      return h;
+    }
+
+    if (reader.canProvide(Formats.htmlText)) {
+      var html = await reader.readValue(Formats.htmlText);
+      if (html != null && html.trim().isNotEmpty) {
+        html = normalizeLineBreaks(html);
+        final delta = qh.HtmlToDelta().convert(html);
+
+        final sel = controller.selection;
+        final base = sel.baseOffset;
+        final extent = sel.extentOffset;
+        final deleteLen = (extent - base).abs();
+
+        controller.replaceText(
+          base,
+          deleteLen,
+          '',
+          TextSelection.collapsed(offset: base),
+        );
+        controller.compose(
+            delta, controller.selection, quill.ChangeSource.local);
+        controller.updateSelection(
+          TextSelection.collapsed(offset: base + delta.length),
+          quill.ChangeSource.local,
+        );
+        return;
+      }
+    }
+
+    // fallback to normal paste (plain text)
+    Actions.invoke(
+        editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
+  }
 
   Widget _richPasteWrapper({
     required quill.QuillController controller,
     required Widget child,
-    void Function(BuildContext ctx)? onInnerContext, 
+    void Function(BuildContext ctx)? onInnerContext,
   }) {
     late BuildContext editorCtx;
 
@@ -2142,7 +2156,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         child: Builder(
           builder: (inner) {
             editorCtx = inner;
-            onInnerContext?.call(editorCtx); 
+            onInnerContext?.call(editorCtx);
             return child;
           },
         ),
@@ -2150,47 +2164,45 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     );
   }
 
-
   /// Open the Quill editor dialog for a given essay (or "general draft" if null).
   /// Saves the draft (Quill delta JSON) locally in `_drafts` and via stubbed backend.
   void _openQuillEditorDialogFor(Assignment? essay) async {
     if (!_sessionActive) return;
 
-    BuildContext? _draftEditorCtx;
+    BuildContext? draftEditorCtx;
 
-        Widget _editorWithContextMenuForDraft() {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onSecondaryTapDown: (details) async {
-        // Show a desktop-style context menu with Paste (rich)
-        final selected = await showMenu<String>(
-          context: context,
-          position: RelativeRect.fromLTRB(
-            details.globalPosition.dx,
-            details.globalPosition.dy,
-            details.globalPosition.dx,
-            details.globalPosition.dy,
+    Widget editorWithContextMenuForDraft() {
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onSecondaryTapDown: (details) async {
+          // Show a desktop-style context menu with Paste (rich)
+          final selected = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+            ),
+            items: const [
+              PopupMenuItem(value: 'paste_rich', child: Text('Paste (rich)')),
+            ],
+          );
+          if (selected == 'paste_rich' && draftEditorCtx != null) {
+            _richPaste(draftEditorCtx!, _quillDraftController);
+          }
+        },
+        child: quill.QuillEditor(
+          focusNode: _draftFocus,
+          scrollController: _quillDraftScrollController,
+          controller: _quillDraftController,
+          config: const quill.QuillEditorConfig(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
+            placeholder: 'Write your essay here…',
           ),
-          items: const [
-            PopupMenuItem(value: 'paste_rich', child: Text('Paste (rich)')),
-          ],
-        );
-        if (selected == 'paste_rich' && _draftEditorCtx != null) {
-          _richPaste(_draftEditorCtx!, _quillDraftController);
-        }
-      },
-      child: quill.QuillEditor(
-        focusNode: _draftFocus,
-        scrollController: _quillDraftScrollController,
-        controller: _quillDraftController,
-        config: const quill.QuillEditorConfig(
-          padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
-          placeholder: 'Write your essay here…',
         ),
-      ),
-    );
-  }
-    
+      );
+    }
 
     // Load current session draft
     if (_currentSession!.draftDeltaOps != null) {
@@ -2247,33 +2259,33 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     const Divider(height: 1),
 
                     // ----- Toolbar (simple) -----
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Paste (rich)',
-                          icon: const Icon(Icons.content_paste),
-                          onPressed: () {
-                            final ctx = _draftEditorCtx ?? context;
-                            _richPaste(ctx, _quillDraftController);
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: quill.QuillSimpleToolbar(
-                            controller: _quillDraftController,
-                            config: const quill.QuillSimpleToolbarConfig(
-                              multiRowsDisplay: true,
-                              showDividers: true,
-                              showClipboardPaste: false,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Paste (rich)',
+                            icon: const Icon(Icons.content_paste),
+                            onPressed: () {
+                              final ctx = draftEditorCtx ?? context;
+                              _richPaste(ctx, _quillDraftController);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: quill.QuillSimpleToolbar(
+                              controller: _quillDraftController,
+                              config: const quill.QuillSimpleToolbarConfig(
+                                multiRowsDisplay: true,
+                                showDividers: true,
+                                showClipboardPaste: false,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
+                    const Divider(height: 1),
 
                     // ----- Editor area -----
                     Expanded(
@@ -2293,10 +2305,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                           ),
                           child: _richPasteWrapper(
                             controller: _quillDraftController,
-                            onInnerContext: (ctx) => _draftEditorCtx = ctx, 
-                            child: _editorWithContextMenuForDraft(),     
+                            onInnerContext: (ctx) => draftEditorCtx = ctx,
+                            child: editorWithContextMenuForDraft(),
                           ),
-                                                  ),
+                        ),
                       ),
                     ),
                     // ----- Footer (Save / Cancel) -----
@@ -2402,11 +2414,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
   /// Open the Quill notes editor dialog for a given essay (or "general notes" if null).
   void _openNotesEditorDialogFor(Assignment? essay) async {
     if (!_sessionActive) return;
-    
-    BuildContext? _notesEditorCtx;
 
-    
-    Widget _editorWithContextMenuForNotes() {
+    BuildContext? notesEditorCtx;
+
+    Widget editorWithContextMenuForNotes() {
       return GestureDetector(
         behavior: HitTestBehavior.translucent,
         onSecondaryTapDown: (details) async {
@@ -2424,8 +2435,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
             ],
           );
           // ignore: unnecessary_null_comparison
-          if (selected == 'paste_rich' && _notesEditorCtx != null) {
-            _richPaste(_notesEditorCtx!, _quillNotesController);
+          if (selected == 'paste_rich' && notesEditorCtx != null) {
+            _richPaste(notesEditorCtx!, _quillNotesController);
           }
         },
         child: quill.QuillEditor(
@@ -2485,32 +2496,32 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                 const Divider(height: 1),
 
                 // Toolbar
-                                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Paste (rich)',
-                          icon: const Icon(Icons.content_paste),
-                          onPressed: () {
-                            final ctx = _notesEditorCtx ?? context;
-                            _richPaste(ctx, _quillNotesController);
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: quill.QuillSimpleToolbar(
-                            controller: _quillNotesController,
-                            config: const quill.QuillSimpleToolbarConfig(
-                              multiRowsDisplay: true,
-                              showDividers: true,
-                              showClipboardPaste: false,
-                            ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Paste (rich)',
+                        icon: const Icon(Icons.content_paste),
+                        onPressed: () {
+                          final ctx = notesEditorCtx ?? context;
+                          _richPaste(ctx, _quillNotesController);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: quill.QuillSimpleToolbar(
+                          controller: _quillNotesController,
+                          config: const quill.QuillSimpleToolbarConfig(
+                            multiRowsDisplay: true,
+                            showDividers: true,
+                            showClipboardPaste: false,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
                 const Divider(height: 1),
 
                 // Editor
@@ -2518,25 +2529,24 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                  child: _richPasteWrapper(
-                    controller: _quillNotesController,
-                    onInnerContext: (ctx) => _notesEditorCtx = ctx, 
-                    child: _editorWithContextMenuForNotes(), 
-                  )
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: _richPasteWrapper(
+                          controller: _quillNotesController,
+                          onInnerContext: (ctx) => notesEditorCtx = ctx,
+                          child: editorWithContextMenuForNotes(),
+                        )),
+                  ),
                 ),
-              ),
-            ),
                 // Footer
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -2596,26 +2606,22 @@ class _AssistantMessageCard extends StatelessWidget {
   const _AssistantMessageCard({
     required this.text,
     required this.child,
-    super.key,
   });
   final String text;
   final Widget child;
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        Positioned(
+    return Stack(children: [
+      child,
+      Positioned(
           right: 8,
           top: 8,
           child: IconButton(
             tooltip: 'Copy to clipboard',
             icon: const Icon(Icons.copy, size: 18),
             onPressed: () => _copyMarkdown(context, text),
-          )
-        )
-      ]
-    ); 
+          ))
+    ]);
   }
 }
 
