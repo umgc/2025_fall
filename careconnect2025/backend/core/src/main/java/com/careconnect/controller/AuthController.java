@@ -618,6 +618,7 @@ public class AuthController {
                 
                 System.out.println("✅ Successfully linked Alexa for patient " + patient.getId());
                 System.out.println("🔑 Refresh token expires at: " + expiresAt);
+                System.out.println("🔑 Refresh token: " + plainRefreshToken);
     
                 // 📤 Return PLAIN TEXT token to Alexa (NOT hashed!)
                 return ResponseEntity.ok(Map.of(
@@ -635,6 +636,8 @@ public class AuthController {
     
         // 3️⃣ Handle refresh_token grant (token refresh)
         else if ("refresh_token".equalsIgnoreCase(grantType)) {
+            System.out.println("🌀 [DEBUG] Refresh token grant detected.");
+            System.out.println("🧩 Incoming refresh_token value: " + refreshToken);
             if (refreshToken == null || refreshToken.isBlank()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "missing_refresh_token"));
@@ -647,7 +650,7 @@ public class AuthController {
                 
                 // 🔐 Verify refresh token against each patient's hashed token
                 for (Patient patient : allPatients) {
-                    if (patient.getAlexaLinked() && 
+                    if (patient.isAlexaLinked() && 
                         patient.getAlexaRefreshToken() != null &&
                         tokenHashService.verifyToken(refreshToken, patient.getAlexaRefreshToken())) {
                         
@@ -682,10 +685,7 @@ public class AuthController {
                     User user = patient.getUser();
                     String email = user.getEmail();
                     
-                    String existingJwt = alexaCodeStore.findJwtByRefreshToken(refreshToken);
-
-                    // Generate new access token
-                    String newJwt = jwt.refresh(jwt.getClaims(existingJwt));
+                    String newJwt = jwt.createToken(email, user.getRole());
                     
                     // 🔄 Generate new refresh token
                     String newPlainRefreshToken = UUID.randomUUID().toString();
