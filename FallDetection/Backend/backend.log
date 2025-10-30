@@ -1,0 +1,73 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< com.example:demo >--------------------------
+[INFO] Building demo 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ demo ---
+[INFO] Deleting /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ demo ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ demo ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 15 source files with javac [debug release 17] to target/classes
+[INFO] /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/src/main/java/com/example/demo/service/AltumViewService.java: /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/src/main/java/com/example/demo/service/AltumViewService.java uses unchecked or unsafe operations.
+[INFO] /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/src/main/java/com/example/demo/service/AltumViewService.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] >>> spring-boot:3.2.0:run (default-cli) > test-compile @ demo >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ demo ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ demo ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ demo ---
+[INFO] skip non existing resourceDirectory /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ demo ---
+[INFO] Changes detected - recompiling the module! :dependency
+[INFO] Compiling 1 source file with javac [debug release 17] to target/test-classes
+[INFO] 
+[INFO] <<< spring-boot:3.2.0:run (default-cli) < test-compile @ demo <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.0:run (default-cli) @ demo ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.0)
+
+2025-10-25T11:28:06.514-04:00  INFO 50749 --- [           main] com.example.demo.DemoApplication         : Starting DemoApplication using Java 17.0.15 with PID 50749 (/Users/marksenkus/Documents/Projects/FallDetectionTest/Backend/target/classes started by marksenkus in /Users/marksenkus/Documents/Projects/FallDetectionTest/Backend)
+2025-10-25T11:28:06.516-04:00  INFO 50749 --- [           main] com.example.demo.DemoApplication         : No active profile set, falling back to 1 default profile: "default"
+2025-10-25T11:28:06.754-04:00  INFO 50749 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-10-25T11:28:06.757-04:00  INFO 50749 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-10-25T11:28:06.757-04:00  INFO 50749 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.16]
+2025-10-25T11:28:06.772-04:00  INFO 50749 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-10-25T11:28:06.772-04:00  INFO 50749 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 241 ms
+2025-10-25T11:28:06.903-04:00  INFO 50749 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2025-10-25T11:28:06.906-04:00  INFO 50749 --- [           main] com.example.demo.DemoApplication         : Started DemoApplication in 0.495 seconds (process running for 0.584)
+2025-10-25T11:29:17.783-04:00  INFO 50749 --- [0.0-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-25T11:29:17.783-04:00  INFO 50749 --- [0.0-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-10-25T11:29:17.783-04:00  INFO 50749 --- [0.0-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2025-10-25T11:29:17.791-04:00  INFO 50749 --- [0.0-8080-exec-1] c.example.demo.service.AltumViewService  : Requesting new access token from https://oauth.altumview.com/v1.0/token
+2025-10-25T11:29:18.289-04:00  INFO 50749 --- [0.0-8080-exec-1] c.example.demo.service.AltumViewService  : ✓ Obtained new access token, expires in 3599 seconds
+2025-10-25T11:29:18.290-04:00  INFO 50749 --- [0.0-8080-exec-1] c.example.demo.service.AltumViewService  : Requesting alert 68f80eef3b7ef81b8fb8de1e from https://api.altumview.com/v1.0/alerts/68f80eef3b7ef81b8fb8de1e
+2025-10-25T11:29:18.904-04:00  INFO 50749 --- [0.0-8080-exec-1] c.example.demo.service.AltumViewService  : ✓ Alert 68f80eef3b7ef81b8fb8de1e has skeleton_file (length: 11912 chars)
+2025-10-25T11:29:18.904-04:00  INFO 50749 --- [0.0-8080-exec-1] c.example.demo.service.AltumViewService  : ✓ Successfully mapped alert 68f80eef3b7ef81b8fb8de1e
+🎬 Decoding 8934 bytes
+📋 Version: 3
+📋 alertId=1761087215, cameraId=4294967294, metadata=63
+📹 Frame 0: deltaTime=164, people=92
+⚠️ Frame 0 claims 92 people (suspicious), stopping
+✅ Decoded 0 frames
