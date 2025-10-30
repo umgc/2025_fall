@@ -743,6 +743,19 @@ class GoogleLmsService extends LmsInterface {
     return essayList;
   }
 
+  MapEntry<Course, Assignment>? findCourseAssignment(int assignmentId) {
+    if (courses == null) return null;
+    for (final course in courses!) {
+      final assignments = course.essays ?? const <Assignment>[];
+      for (final assignment in assignments) {
+        if (assignment.id == assignmentId) {
+          return MapEntry(course, assignment);
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   Future<Map<String, dynamic>?> createAssignment(
     String courseid,
@@ -854,12 +867,34 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<MoodleRubric?> getRubric(String assignmentid) async {
-    // TODO: implement google api code
-    print('Getting rubric...');
-    print('Assignment ID: $assignmentid');
-    throw UnimplementedError(
-        'This feature is not supported by Google Classroom. Please contact the developer.');
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    final assignmentKey = int.tryParse(assignmentid);
+    if (assignmentKey == null) {
+      print('getRubric: Unable to parse assignmentId "$assignmentid"');
+      return null;
+    }
+
+    final target = findCourseAssignment(assignmentKey);
+    if (target == null) {
+      print('getRubric: Assignment $assignmentKey not found in cached courses');
+      return null;
+    }
+
+    final courseId = target.key.id.toString();
+    final courseWorkId = target.value.id.toString();
+
+    final rubrics = await _classroomApi.listRubrics(courseId, courseWorkId);
+
+    if (rubrics.isEmpty) {
+      return null;
+    }
+
+    return MoodleRubric.empty().fromGoogleJson(rubrics.first);
   }
+
   // ****************************************************************************************
   // Quiz creation and assignment with Answer Key
   //Short answer question 10 Points
@@ -1146,6 +1181,7 @@ class GoogleLmsService extends LmsInterface {
     throw UnimplementedError();
   }
 
+  @override
   Future<List<Map<String, dynamic>>> getSubmissionAttachments(
       {required int assignId}) {
     throw UnimplementedError();
