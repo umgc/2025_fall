@@ -70,13 +70,18 @@ class _CustomAppBarState extends State<CustomAppBar> {
             ),
           ),
           Flexible(
-            child: IconButton(
-              icon: Icon(Icons.chat_rounded),
-              onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => ChatScreen()));
-              },
-            ),
+            child: Visibility(
+                visible: isTeacher,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: IconButton(
+                  icon: Icon(Icons.chat_rounded),
+                  onPressed: () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => ChatScreen()));
+                  },
+                )),
           ),
           Flexible(
             child: Visibility(

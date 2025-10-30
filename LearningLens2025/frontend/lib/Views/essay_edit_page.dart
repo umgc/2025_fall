@@ -177,30 +177,41 @@ class EssayEditPageState extends State<EssayEditPage> {
           // Editable scores aligned above percent columns
           ...headerControllers.map((controller) {
             int index = headerControllers.indexOf(controller);
+            bool isLocked = index == 0 || index == headerControllers.length - 1;
+
             return Container(
               width: scoreColumnWidth - 8,
               margin: EdgeInsets.symmetric(horizontal: 4),
               height: 40,
               child: TextField(
                 controller: controller,
+                enabled: !isLocked,
+                readOnly: isLocked,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(4),
                   ),
                   isDense: true,
                   contentPadding: EdgeInsets.symmetric(vertical: 8),
-                  hintText: 'Score',
+                  hintText: isLocked ? null : 'Score',
+                  filled: isLocked,
+                  fillColor: isLocked ? Colors.grey.shade200 : null,
                 ),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold),
-                onChanged: (_) {
-                  String sanitizedText =
-                      controller.text.replaceAll('%', '').trim();
-                  setState(() {
-                    headers[index + 2]['title'] =
-                        sanitizedText.isEmpty ? '' : '$sanitizedText%';
-                  });
-                },
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isLocked ? Colors.grey.shade600 : Colors.black,
+                ),
+                onChanged: isLocked
+                    ? null
+                    : (_) {
+                        String sanitizedText =
+                            controller.text.replaceAll('%', '').trim();
+                        setState(() {
+                          headers[index + 2]['title'] =
+                              sanitizedText.isEmpty ? '' : '$sanitizedText%';
+                        });
+                      },
               ),
             );
           }),
@@ -380,6 +391,37 @@ class EssayEditPageState extends State<EssayEditPage> {
         );
         return;
       }
+      // Check overall order
+      List<double> scores = headerControllers
+          .map((c) => double.tryParse(c.text.trim()) ?? -1)
+          .toList();
+
+      // First and last values remain at 0 and 100
+      if (scores.first != 0 || scores.last != 100) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('First level must be 0% and last level must be 100%.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Ascending order check
+      for (int i = 1; i < scores.length; i++) {
+        if (scores[i] <= scores[i - 1]) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Percentage levels must increase from left to right (0% to 100%).',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
     }
 
     // Validate each weight first
@@ -510,7 +552,8 @@ class EssayEditPageState extends State<EssayEditPage> {
   Future<void> exportExcel(dynamic rubricData, String fileName) async {
     try {
       final excel = Excel.createExcel();
-      final sheet = excel[excel.getDefaultSheet()!];
+      excel.rename('Sheet1', 'Rubric');
+      final sheet = excel['Rubric'];
       final criteria = rubricData['criteria'] as List<dynamic>;
 
       if (criteria.isEmpty) {
@@ -525,16 +568,20 @@ class EssayEditPageState extends State<EssayEditPage> {
       final scoreHeaders = levels.map((l) => '${l['score']}%').toList();
 
       // Write header row
-      final headerRow = ['Criteria', 'Weight', ...scoreHeaders];
+      final headerRow = [
+        TextCellValue('Criteria'),
+        TextCellValue('Weight'),
+        ...scoreHeaders.map((e) => TextCellValue(e))
+      ];
       sheet.appendRow(headerRow);
 
       // Write data rows
       for (var c in criteria) {
         final row = [
-          c['description'] ?? '',
-          c['weight'].toString(),
+          TextCellValue(c['description'] ?? ''),
+          TextCellValue(c['weight'].toString()),
           for (var level in List<dynamic>.from(c['levels'] ?? []))
-            level['definition'] ?? ''
+            TextCellValue(level['definition'] ?? '')
         ];
         sheet.appendRow(row);
       }

@@ -1,3 +1,4 @@
+import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/learning_lens_interface.dart';
 import 'package:learninglens_app/beans/quiz.dart';
@@ -12,14 +13,17 @@ class Course implements LearningLensInterface {
   String? teacherFolderId;
   String? subject;
 
-  List<Quiz>? quizzes;
-  List<Assignment>? essays;
+  List<Quiz>? get quizzes => _quizzes;
+  List<Assignment>? get essays => _essays;
+
+  List<Quiz>? _quizzes;
+  List<Assignment>? _essays;
   int? quizTopicId;
   int? essayTopicId;
 
   Course(this.id, this.shortName, this.courseId, this.fullName, this.startdate,
       this.enddate,
-      {this.teacherFolderId, this.subject, this.quizzes, this.essays});
+      {this.teacherFolderId, this.subject});
 
   Course.empty()
       : id = 0,
@@ -30,8 +34,8 @@ class Course implements LearningLensInterface {
         enddate = DateTime.now(),
         teacherFolderId = '',
         subject = null,
-        quizzes = null,
-        essays = null;
+        _quizzes = null,
+        _essays = null;
 
   static String dateFormatted(DateTime date) {
     return '${date.month}/${date.day}/${date.year}';
@@ -71,5 +75,15 @@ class Course implements LearningLensInterface {
   @override
   String toString() {
     return "$shortName ($fullName) $id";
+  }
+
+  Future<void> refreshQuizzes() async {
+    _quizzes =
+        await LmsFactory.getLmsService().getQuizzes(id, topicId: quizTopicId);
+  }
+
+  Future<void> refreshEssays() async {
+    _essays =
+        await LmsFactory.getLmsService().getEssays(id, topicId: essayTopicId);
   }
 }

@@ -29,6 +29,7 @@ class XmlConsts {
   static const gradeLevel = 'gradeLevel';
   static const maxPoints = 'maxPoints';
   static const criteria = 'criteria';
+  static const weight = 'weight';
   static const points = 'points';
 
   // not tags but useful constants

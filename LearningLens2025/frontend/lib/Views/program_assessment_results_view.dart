@@ -1,14 +1,15 @@
-import 'dart:convert';
-
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
+import 'package:learninglens_app/services/program_assessment_service.dart';
 
 class ProgramAsessmentResultsView extends StatefulWidget {
-  final dynamic evaluation;
+  final ProrgramAssessmentJob evaluation;
   final Course course;
   final Assignment assignment;
   final List<Participant> participants;
@@ -19,6 +20,7 @@ class ProgramAsessmentResultsView extends StatefulWidget {
       required this.assignment,
       required this.participants});
 
+  @override
   _ProgramAsessmentResultsViewState createState() =>
       _ProgramAsessmentResultsViewState(
           evaluation: evaluation,
@@ -29,15 +31,12 @@ class ProgramAsessmentResultsView extends StatefulWidget {
 
 class _ProgramAsessmentResultsViewState
     extends State<ProgramAsessmentResultsView> {
-  final dynamic evaluation;
+  final ProrgramAssessmentJob evaluation;
   final Course course;
   final Assignment assignment;
   final List<Participant> participants;
 
   final lmsService = LmsFactory.getLmsService();
-
-  // For expansion tiles
-  bool _isExpanded = false;
 
   _ProgramAsessmentResultsViewState(
       {required this.evaluation,
@@ -48,6 +47,31 @@ class _ProgramAsessmentResultsViewState
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _publishGrade(
+      Participant student, String grade, String feedback) async {
+    final moodleLms = LmsFactory.getLmsServiceMoodle();
+    bool publishedSuccessfully = await moodleLms.publishGrade(
+        assignment.id.toString(), student.id.toString(), feedback, grade);
+
+    SnackBar snackbar;
+    if (publishedSuccessfully) {
+      snackbar = SnackBar(
+        backgroundColor: Colors.green,
+        content: Text('Grade for ${student.fullname} published successfully.'),
+        duration: Duration(seconds: 8),
+      );
+    } else {
+      snackbar = SnackBar(
+        backgroundColor: Colors.red[700],
+        content: Text('Unable to publish grade for ${student.fullname}'),
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(snackbar);
+    }
   }
 
   @override
@@ -62,28 +86,24 @@ class _ProgramAsessmentResultsViewState
   }
 
   Widget _buildMainLayout() {
-    List<dynamic> resultsJson = jsonDecode(evaluation['results_json']);
-    final children = resultsJson.map(_buildPanel).toList();
+    List<dynamic> resultsJson = evaluation.resultsJson;
+    final children = resultsJson.mapIndexed(_buildPanel).toList();
 
-    return ExpansionPanelList(
-        expansionCallback: (int index, bool isExpanded) {
-          setState(() {
-            _isExpanded = !_isExpanded;
-          });
-        },
-        children: children);
+    return Column(
+      children: children,
+    );
   }
 
-  bool _isOutputCorrect(dynamic result) {
-    bool error = result['error'];
-    final expectedOutput = evaluation['expected_output'].toString().trimRight();
-    final actualOutput = result['output'].toString().trimRight();
+  bool _isOutputCorrect(dynamic entry) {
+    bool error = entry['error'];
+    final expectedOutput = entry['expectedOutput'].toString().trimRight();
+    final actualOutput = entry['output'].toString().trimRight();
 
     return !error && expectedOutput == actualOutput;
   }
 
-  Icon _getIcon(dynamic result) {
-    if (!_isOutputCorrect(result)) {
+  Icon _getIcon(bool isOutputCorrect) {
+    if (!isOutputCorrect) {
       return Icon(Icons.error, color: Colors.red);
     }
 
@@ -99,7 +119,7 @@ class _ProgramAsessmentResultsViewState
         SingleChildScrollView(
           child: Container(
               width: 350,
-              height: 150,
+              height: 100,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey),
@@ -112,57 +132,127 @@ class _ProgramAsessmentResultsViewState
     );
   }
 
-  ExpansionPanel _buildPanel(dynamic result) {
+  Widget _buildPanel(int idx, dynamic result) {
+    List<dynamic> outputs = result['outputs'];
+
     final student = participants
         .firstWhere((p) => p.id.toString() == result['studentId'].toString());
-    final actualOutput = result['output'].toString();
-    final expectedOutput = evaluation['expected_output'].toString();
-    bool error = result['error'];
+    final allOutputCorrectness = outputs.map(_isOutputCorrect);
 
-    final outputIsCorrect = _isOutputCorrect(result);
+    List<Widget> children = [];
 
-    return ExpansionPanel(
-        headerBuilder: (context, isExpanded) {
-          return ListTile(
-              leading: _getIcon(result),
-              title: Text(
-                student.fullname,
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ));
-        },
-        body: Padding(
+    final suggestedGrade = allOutputCorrectness.where((o) => o == true).length /
+        allOutputCorrectness.length;
+
+    final gradeController = TextEditingController();
+    gradeController.text = (suggestedGrade * 100).toInt().toString();
+    final feedbackController = TextEditingController();
+    // Add UI for submitting suggested grade
+    children.add(ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 300),
+      child: Column(
+        spacing: 8,
+        children: [
+          TextField(
+              controller: gradeController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly, // Only allows digits
+                FilteringTextInputFormatter.allow(RegExp(
+                    r'^[1-9][0-9]*$|^0$')) // Allows only positive nubmers and zero
+              ],
+              decoration: InputDecoration(
+                labelText: 'Suggested Grade',
+                border: OutlineInputBorder(),
+              )),
+          TextField(
+              maxLines: 3,
+              keyboardType: TextInputType.multiline,
+              controller: feedbackController,
+              decoration: InputDecoration(
+                labelText: 'Feedback',
+                border: OutlineInputBorder(),
+              )),
+          ElevatedButton(
+            onPressed: () async {
+              if (int.parse(gradeController.text) > 100 && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  backgroundColor: Colors.red[700],
+                  content: Text('Grade cannot be more than 100%'),
+                ));
+              }
+
+              await _publishGrade(
+                  student, gradeController.text, feedbackController.text);
+            },
+            child: Text("Publish"),
+          )
+        ],
+      ),
+    ));
+
+    for (dynamic entry in outputs) {
+      final actualOutput = entry['output'].toString();
+      final expectedOutput = entry['expectedOutput'].toString();
+      final input = entry['input'].toString();
+      bool error = entry['error'];
+      bool timedout = entry['timedout'];
+
+      final outputIsCorrect = _isOutputCorrect(entry);
+
+      children.addAll([
+        Row(
+          spacing: 6,
+          children: [
+            if (timedout)
+              Text(
+                "Result: TIMED OUT",
+                style: TextStyle(fontSize: 18),
+              )
+            else
+              Text(
+                "Result: ${outputIsCorrect ? 'PASS' : 'FAIL'}",
+                style: TextStyle(fontSize: 18),
+              ),
+            _getIcon(outputIsCorrect)
+          ],
+        ),
+        if (timedout)
+          Text('Program ran for too long')
+        else if (error)
+          Text('Program encountered error during compilation or runtime')
+        else if (outputIsCorrect)
+          Text('Actual output matched what was expected')
+        else
+          Text('Actual output did not match what was expected'),
+        Wrap(
+          spacing: 12,
+          children: [
+            if (input.trim().isNotEmpty) _codeOutput('Input', input),
+            _codeOutput('Expected Output', expectedOutput),
+            _codeOutput('Actual Output', actualOutput)
+          ],
+        ),
+        SizedBox(height: 4)
+      ]);
+    }
+
+    return ExpansionTile(
+      title: Text(
+        student.fullname,
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      leading:
+          _getIcon(allOutputCorrectness.every((correct) => correct == true)),
+      children: [
+        Padding(
           padding: EdgeInsets.all(12.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 12,
-            children: [
-              Row(
-                spacing: 6,
-                children: [
-                  Text(
-                    "Result: ${_isOutputCorrect(result) ? 'PASS' : 'FAIL'}",
-                    style: TextStyle(fontSize: 18),
-                  ),
-                  _getIcon(result)
-                ],
-              ),
-              if (error)
-                Text('Program encountered error during compilation or runtime')
-              else if (outputIsCorrect)
-                Text('Actual output matched what was expected')
-              else
-                Text('Actual output did not match what was expected'),
-              SizedBox(height: 12),
-              Row(
-                spacing: 12,
-                children: [
-                  _codeOutput('Expected Output', expectedOutput),
-                  _codeOutput('Actual Output', actualOutput)
-                ],
-              )
-            ],
-          ),
-        ),
-        isExpanded: _isExpanded);
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 12,
+              children: children),
+        )
+      ],
+    );
   }
 }

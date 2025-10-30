@@ -18,6 +18,8 @@ import 'package:learninglens_app/services/LLMContextBuilder.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -38,10 +40,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // LLM selection
   LlmType _selectedLLM = LlmType.CHATGPT;
+  bool _localLlmAvail = !kIsWeb;
 
   // Check if user has API key for selected LLM
   bool _hasKeyFor(LlmType llm) {
-    return LocalStorageService.userHasLlmKey(llm);
+    return (llm == LlmType.LOCAL &&
+            LocalStorageService.getLocalLLMPath() != "" &&
+            _localLlmAvail) ||
+        LocalStorageService.userHasLlmKey(llm);
   }
 
   // Persistence
@@ -240,6 +246,13 @@ class _ChatScreenState extends State<ChatScreen> {
           return;
         }
         aiModel = DeepseekLLM(key);
+      case LlmType.LOCAL:
+        final llmPath = LocalStorageService.getLocalLLMPath();
+        if (llmPath == "" || !_localLlmAvail) {
+          _showSnack('Local LLM is not loaded.');
+          return;
+        }
+        aiModel = LocalLLMService();
     }
 
     // Optimistic UI
@@ -266,7 +279,7 @@ class _ChatScreenState extends State<ChatScreen> {
         llmContextSize: aiModel.contextSize,
         maxOutputTokens: 500,
       );
-
+      print(ctx);
       final response = await aiModel.chat(context: ctx);
 
       if (!mounted) return;

@@ -382,6 +382,11 @@ class QuizMoodleState extends State<QuizMoodle> {
                                             'Quiz submitted successfully to Moodle!')),
                                   );
                                   await Future.delayed(Duration(seconds: 2));
+                                  await courses
+                                      .firstWhere((c) =>
+                                          c.id.toString() == selectedCourse)
+                                      .refreshQuizzes();
+
                                   if (mounted) {
                                     Navigator.pop(context);
                                     Navigator.pushReplacement(
@@ -468,6 +473,10 @@ class QuizMoodleState extends State<QuizMoodle> {
                                             'Quiz submitted successfully to Google Classroom!')),
                                   );
                                   await Future.delayed(Duration(seconds: 2));
+                                  await courses
+                                      .firstWhere((c) =>
+                                          c.id.toString() == selectedCourse)
+                                      .refreshQuizzes();
                                   if (mounted) {
                                     Navigator.pop(context);
                                     Navigator.pushReplacement(

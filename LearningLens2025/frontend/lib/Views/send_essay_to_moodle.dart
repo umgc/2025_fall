@@ -53,7 +53,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
     'November',
     'December'
   ];
-  List<String> years = ['2023', '2024', '2025'];
+  List<String> years = ['2023', '2024', '2025', '2026'];
   List<String> hours =
       List.generate(24, (index) => index.toString().padLeft(2, '0'));
   List<String> minutes =
@@ -109,7 +109,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
 
       for (int i = 0; i < levels.length; i++) {
         headers.add({
-          "title": '${levels[i]['score']}', // The score (5, 3, 1) as headers
+          "title": '${levels[i]['score']}%', // The score (5, 3, 1) as headers
           'index': i + 3,
           'key': 'level_$i'
         });
@@ -458,11 +458,9 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                               bool? token = api.isLoggedIn();
 
                               if (token) {
-                                String courseId = courses
-                                    .firstWhere((course) =>
-                                        course.fullName == selectedCourse)
-                                    .id
-                                    .toString();
+                                Course course = courses.firstWhere(
+                                    (c) => c.fullName == selectedCourse);
+                                String courseId = course.id.toString();
                                 String assignmentName =
                                     _assignmentNameController.text;
                                 String sectionNumber = selectedSection;
@@ -492,6 +490,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(snackBar);
                                   await Future.delayed(snackBar.duration);
+                                  await course.refreshEssays();
                                   if (mounted) {
                                     Navigator.pop(context);
                                     Navigator.pushReplacement(
