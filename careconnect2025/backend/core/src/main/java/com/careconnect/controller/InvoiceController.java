@@ -9,8 +9,8 @@ import com.careconnect.model.invoice.Invoice;
 import com.careconnect.service.invoice.LlmExtractionService;
 import com.careconnect.service.invoice.InvoiceService;
 import com.careconnect.service.invoice.TextractService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
@@ -30,15 +30,18 @@ public class InvoiceController {
     private final InvoiceService service;
     private final TextractService textractService;
     private final LlmExtractionService llmExtractionService;
-
+    private final ObjectMapper objectMapper;
     public InvoiceController(
-            InvoiceService service,
             @Autowired(required = false) TextractService textractService,
-            @Autowired(required = false) LlmExtractionService llmExtractionService
+            @Autowired(required = false) LlmExtractionService llmExtractionService,
+            InvoiceService service,
+            ObjectMapper objectMapper
     ) {
         this.service = service;
         this.llmExtractionService = llmExtractionService;
         this.textractService = textractService;
+        this.objectMapper = objectMapper;
+
     }
 
     @GetMapping
@@ -139,8 +142,8 @@ public class InvoiceController {
 
             // Step 2: Send raw text to the LLM service
             var json = llmExtractionService.extractInvoiceData(result.rawText);
-            var outputConverter = new BeanOutputConverter<>(InvoiceDto.class);
-            InvoiceDto invoiceDto=outputConverter.convert(json);
+            InvoiceDto invoiceDto = objectMapper.readValue(json, InvoiceDto.class);
+
             invoiceDto.documentLink=result.s3Key;
 
             // Step 3: Duplicate check (provider + total are the primary keys we compare)

@@ -7,9 +7,8 @@ import org.springframework.boot.autoconfigure.websocket.servlet.WebSocketServlet
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 
-@SpringBootApplication(exclude = {
-    org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration.class
-})
+
+@SpringBootApplication(exclude = {WebSocketServletAutoConfiguration.class})
 @EnableScheduling
 public class CareconnectBackendApplication {
 
