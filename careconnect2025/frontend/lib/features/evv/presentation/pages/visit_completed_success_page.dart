@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:universal_html/html.dart' as html;
-import 'package:http/http.dart' as http;
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -248,8 +246,8 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     final gender = (patient.gender?.toUpperCase() == 'MALE' || patient.gender?.toUpperCase() == 'M') ? 'M' : 'F';
     
     final claimId = '${patient.id}${widget.checkinTime.millisecondsSinceEpoch.toString().substring(0, 10)}';
-    final evvId = 'EVV-${claimId}';
-    final lineEvvId = 'EVV-LINE-${claimId}';
+    final evvId = 'EVV-$claimId';
+    final lineEvvId = 'EVV-LINE-$claimId';
     
     final units = ((widget.duration / 15).ceil()).toString();
     final totalCharge = (30.0 * (widget.duration / 15).ceil()).toStringAsFixed(2);

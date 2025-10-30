@@ -259,11 +259,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsClearCacheShortDesc =>
-      'Remove temporary files and cache models';
+      'Remove temporary files and cache data';
 
   @override
   String get settingsClearCacheDesc =>
-      'This will clear all temporary files and cache models. The app may take longer to load content initially after clearing cache.';
+      'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.';
 
   @override
   String get settingsSignOut => 'Sign Out';
@@ -284,7 +284,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountDesc =>
-      'This action cannot be undone. All your models will be permanently deleted.';
+      'This action cannot be undone. All your data will be permanently deleted.';
 
   @override
   String get settingsDeleteAccountRequested =>

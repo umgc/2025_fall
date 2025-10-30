@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,9 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
-import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 class _Contact {
   final String name;
@@ -22,9 +18,10 @@ class _Contact {
     required this.name,
     required this.role,
     required this.phone,
-    this.isPrimary = false,
+    this.isPrimary = false, // <-- default provided
   });
 }
+
 
 class EmergencyInfo {
   final String firstName;
@@ -93,7 +90,7 @@ class QrScreen extends StatelessWidget {
   // For development, it defaults to http://localhost:8080 if BASE_URL is not set.
   static const String _baseUrl = String.fromEnvironment('BASE_URL', defaultValue: 'http://localhost:8080');
 
-  const QrScreen({required this.payload, this.emergencyId, this.patientId});
+  const QrScreen({super.key, required this.payload, this.emergencyId, this.patientId});
 
   @override
   Widget build(BuildContext context) {

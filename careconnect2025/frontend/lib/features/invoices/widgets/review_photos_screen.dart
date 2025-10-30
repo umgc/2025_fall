@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart'; // this is not fre
 
 class ReviewPhotosScreen extends StatefulWidget {
   final List<XFile> initialPhotos;
-  const ReviewPhotosScreen({Key? key, required this.initialPhotos}) : super(key: key);
+  const ReviewPhotosScreen({super.key, required this.initialPhotos});
 
   @override
   State<ReviewPhotosScreen> createState() => _ReviewPhotosScreenState();

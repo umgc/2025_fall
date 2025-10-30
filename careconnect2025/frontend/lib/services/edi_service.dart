@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:universal_html/html.dart' as html;
 import '../features/dashboard/models/patient_model.dart';
 

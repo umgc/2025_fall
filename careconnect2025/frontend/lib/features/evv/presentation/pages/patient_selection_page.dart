@@ -4,10 +4,8 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
-import '../../../../services/auth_token_manager.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
-import 'package:http/http.dart' as http;
 
 class PatientSelectionPage extends StatefulWidget {
   const PatientSelectionPage({super.key});
