@@ -18,6 +18,7 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/lms_interface.dart';
+import 'package:learninglens_app/services/gamification_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/Games/quiz_game.dart';
 import 'package:learninglens_app/Games/matching_game.dart';
@@ -31,27 +32,6 @@ class GamificationView extends StatefulWidget {
 
   @override
   State<GamificationView> createState() => _GamificationViewState();
-}
-
-// AssignedGame model
-class AssignedGame {
-  final String gameId;
-  final int studentId;
-  final int courseId;
-  final String gameType;
-  final String title;
-  final DateTime assignedDate;
-  final String? studentName;
-
-  AssignedGame({
-    required this.gameId,
-    required this.studentId,
-    required this.courseId,
-    required this.gameType,
-    required this.title,
-    required this.assignedDate,
-    this.studentName,
-  });
 }
 
 class _GamificationViewState extends State<GamificationView> {
@@ -499,7 +479,7 @@ class _GamificationViewState extends State<GamificationView> {
                       ),
                     ),
                     onPressed: () {
-                      final content = _loadGameContent(game.gameId);
+                      final content = _loadGameContent(game.gameData);
                       if (content == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('No content found for this game. Ask your teacher to reassign it.')),
@@ -1059,7 +1039,7 @@ $text
     if (!mounted) return;
     final username = LocalStorageService.getUsername();
     final entry = {
-      'gameId': game.gameId,
+      'gameId': game.uuid,
       'studentId': game.studentId,
       'courseId': game.courseId,
       'title': game.title,
@@ -1074,14 +1054,14 @@ $text
 
     final studentKey = 'game_results_student_${game.studentId}';
     final studentResults = _getResultList(studentKey)
-      ..removeWhere((item) => item['gameId'] == game.gameId);
+      ..removeWhere((item) => item['gameId'] == game.uuid);
     studentResults.add(entry);
     LocalStorageService.setString(studentKey, jsonEncode(studentResults));
 
     const globalKey = 'game_results_global';
     final globalResults = _getResultList(globalKey)
       ..removeWhere((item) =>
-          item['gameId'] == game.gameId &&
+          item['gameId'] == game.uuid &&
           item['studentId'].toString() == game.studentId.toString());
     globalResults.add(entry);
     LocalStorageService.setString(globalKey, jsonEncode(globalResults));
@@ -1209,7 +1189,7 @@ $text
 
   void _saveAssignedGamesToLocal() {
     final encoded = assignedGames.map((game) => {
-      'gameId': game.gameId,
+      'gameId': game.uuid,
       'studentId': game.studentId,
       'courseId': game.courseId,
       'gameType': game.gameType,
@@ -1232,7 +1212,9 @@ $text
         setState(() {
           assignedGames = decoded.map((item) {
             return AssignedGame(
-              gameId: item['gameId'],
+              uuid: item['gameId'],
+              gameData: "",
+              assignedBy: 0,
               studentId: int.tryParse(item['studentId'].toString()) ?? 0,
               courseId: int.tryParse(item['courseId'].toString()) ?? 0,
               gameType: item['gameType'],
@@ -1264,7 +1246,9 @@ $text
         setState(() {
           assignedGames = filtered.map((item) {
             return AssignedGame(
-              gameId: item['gameId'],
+              uuid: item['gameId'],
+                            gameData: "",
+              assignedBy: 0,
               studentId: int.tryParse(item['studentId'].toString()) ?? 0,
               courseId: int.tryParse(item['courseId'].toString()) ?? 0,
               gameType: item['gameType'],

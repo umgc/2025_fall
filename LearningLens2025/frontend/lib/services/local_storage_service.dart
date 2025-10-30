@@ -340,12 +340,26 @@ class LocalStorageService {
     return url;
   }
 
+  static String getGameUrl() {
+    String url =
+        _prefs.getString('GAME_URL') ?? dotenv.env['GAME_URL'] ?? '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
+
   static void clearAILoggingUrl() {
     _prefs.remove('AI_LOGGING_URL');
   }
 
   static void clearCodeEvalUrl() {
-    _prefs.remove('AI_LOGGING_URL');
+    _prefs.remove('CODE_EVAL_URL');
+  }
+
+  static void clearGameUrl() {
+    _prefs.remove('GAME_URL');
   }
 
   static hasLLMKey() {
