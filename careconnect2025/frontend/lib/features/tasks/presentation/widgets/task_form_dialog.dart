@@ -363,6 +363,35 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 ),
 
                 const SizedBox(height: 16),
+                // ---- Date picker (only for single, nonrecurring tasks) ----
+                if (!isRecurring) ...[
+                  Row(
+                    children: [
+                      const Text("Date: "),
+                      Text(
+                        startDate != null
+                            ? "${startDate!.month}/${startDate!.day}/${startDate!.year}"
+                            : "Not set",
+                      ),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: startDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() => startDate = picked);
+                          }
+                        },
+                        child: const Text("Pick Date"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
                 // ---- Time picker ----
                 Row(

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:care_connect_app/assets/usps_digest_mock.dart';
+import 'dart:async';
 
 /// ---- Domain models ----
 class EmailMessage {
@@ -13,11 +14,15 @@ class EmailMessage {
   final DateTime expectedAt;
   final List<String>
   imageUrls; // Inline/attachment image URLs or local file URIs
+  final String? sender;
+  final String? summary;
 
   EmailMessage({
     required this.id,
     required this.expectedAt,
     required this.imageUrls,
+    this.sender,
+    this.summary,
   });
 }
 
@@ -38,7 +43,7 @@ class UspsMailpiece {
   final String sender;
   final String summary;
   final DateTime dateIso;
-  final String imageDataUrl; // models:*;base64,XXXX
+  final String imageDataUrl; // data:*;base64,XXXX
   final UspsActions actions;
   Uint8List? _decoded; // lazy cache
 
@@ -51,7 +56,7 @@ class UspsMailpiece {
     required this.actions,
   });
 
-  /// Decode the models URL to bytes (memoized).
+  /// Decode the data URL to bytes (memoized).
   Uint8List? get bytes {
     _decoded ??= _decodeDataUrl(imageDataUrl);
     return _decoded;
@@ -76,6 +81,12 @@ class UspsActions {
   final String? dashboard;
 
   UspsActions({this.track, this.redelivery, this.dashboard});
+}
+
+class MailMeta {
+  final String? sender;
+  final String? summary;
+  const MailMeta({this.sender, this.summary});
 }
 
 /// Groups emails by the calendar day (yyyy-mm-dd) and flattens to image lists.
@@ -139,7 +150,17 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   final enableUSPSDigest = true;
   final enableMockUSPSDigest = true;
 
+  final TextEditingController _searchCtl = TextEditingController();
+  Timer? _searchDebounce;
+
+  String _searchQuery = '';
+  Map<DateTime, List<String>> _filteredImagesByDate = const {};
+
+  bool get _isSearching => _searchQuery.trim().isNotEmpty;
+
   Map<DateTime, List<String>> _imagesByDate = const {};
+  Map<String, MailMeta> _imageMetaByUrl = const {};
+
   List<DateTime> _sortedDays = const [];
   DateTime? _selectedDay;
   bool isLoadingData = false;
@@ -148,18 +169,81 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDigestData();
 
+    _searchCtl.addListener(() {
+      final q = _searchCtl.text;
+      // debounce to avoid recomputing on every keystroke
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+        setState(() {
+          _searchQuery = q;
+        });
+        _applySearch(); // recompute filtered map
+      });
+    });
+
+    _loadDigestData();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchCtl.dispose();
+    super.dispose();
+  }
+
+  void _applySearch() {
+    if (!_isSearching) {
+      // reset filtered view to original
+      setState(() {
+        _filteredImagesByDate = _imagesByDate;
+        // keep _sortedDays / _selectedDay in sync with current map
+        _syncSortedDaysAndSelected(from: _filteredImagesByDate);
+      });
+      return;
+    }
+
+    final q = _searchQuery.toLowerCase().trim();
+
+    // Build filtered map
+    final Map<DateTime, List<String>> filtered = {};
+    _imagesByDate.forEach((day, urls) {
+      final matches = <String>[];
+      for (final url in urls) {
+        final meta = _imageMetaByUrl[url];
+        final sender = meta?.sender?.toLowerCase() ?? '';
+        final summary = meta?.summary?.toLowerCase() ?? '';
+        if (sender.contains(q) || summary.contains(q)) {
+          matches.add(url);
+        }
+      }
+      if (matches.isNotEmpty) {
+        filtered[day] = matches;
+      }
+    });
+
+    setState(() {
+      _filteredImagesByDate = filtered;
+      _syncSortedDaysAndSelected(from: _filteredImagesByDate);
+    });
+  }
+
+  /// Keeps _sortedDays and _selectedDay consistent with whichever map is active
+  void _syncSortedDaysAndSelected({required Map<DateTime, List<String>> from}) {
+    final days = from.keys.toList()
+      ..sort((a, b) => b.compareTo(a)); // newest first
+    _sortedDays = days;
+    if (_selectedDay == null || !from.containsKey(_selectedDay)) {
+      _selectedDay = days.isNotEmpty ? days.first : null;
+    }
   }
 
   Future<UspsDigest> _fetchRealDigest() async {
     try {
-      // Example: Call your real API
       final response = await InformedDeliveryService.fetchInformedDelivery();
       final digest = parseUspsDigestResponse(response);
       return digest;
     } catch (e, st) {
-      // Log or show a message
       debugPrint('❌ Error fetching USPS digest: $e');
       debugPrintStack(stackTrace: st);
 
@@ -184,7 +268,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
               packages: const [],
             );
 
-      // Optionally apply mock models
+      // Optionally apply mock data
       UspsDigest combined = base;
       if (enableMockUSPSDigest) {
         debugPrint('⚠️ Using mock mailpieces for demo purposes.');
@@ -200,34 +284,56 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
   }
 
   void _hydrateDigestData(UspsDigest digest) {
-    // Map each mailpiece into your existing EmailMessage shape
-    final List<EmailMessage> inboxLike = digest.mailpieces.map((m) {
+    final inboxLike = digest.mailpieces.map((m) {
       return EmailMessage(
         id: m.id,
-        expectedAt: m.dateIso, // bucket by calendar day using dateIso
+        expectedAt: m.dateIso,
         imageUrls: [if (m.imageDataUrl.isNotEmpty) m.imageDataUrl],
+        sender: m.sender,
+        summary: m.summary,
       );
     }).toList();
 
-    // Reuse your existing grouping/sorting logic
     _hydrateData(inboxLike);
   }
 
   void _hydrateData(List<EmailMessage> inbox) {
-    final grouped = groupImagesByDate(inbox);
-    final days = grouped.keys.toList()
-      ..sort((a, b) => b.compareTo(a)); // newest first
+    final Map<String, List<String>> tmp = {};
+    final Map<String, MailMeta> meta = {}; // collect per-image metadata
+
+    for (final m in inbox) {
+      final k = _dayKey(m.expectedAt);
+      final urls = m.imageUrls;
+      if (urls.isEmpty) continue;
+
+      (tmp[k] ??= []).addAll(urls);
+
+      // record metadata per image url
+      for (final u in urls) {
+        meta[u] = MailMeta(sender: m.sender, summary: m.summary);
+      }
+    }
+
+    // convert day keys back to DateTime
+    final Map<DateTime, List<String>> grouped = {};
+    tmp.forEach((k, v) {
+      final p = k.split('-').map(int.parse).toList();
+      grouped[DateTime(p[0], p[1], p[2])] = v;
+    });
+
+    final days = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
     setState(() {
       _imagesByDate = grouped;
+      _imageMetaByUrl = meta;
       _sortedDays = days;
       _selectedDay = days.isNotEmpty ? days.first : null;
       _totalMailpieces = inbox.length;
     });
+
+    _applySearch();
   }
 
-  /// Accepts either:
-  /// - Map<String, dynamic> (already decoded), or
-  /// - String (JSON text)
   UspsDigest parseUspsDigestResponse(Object response) {
     final Map<String, dynamic> map = switch (response) {
       final String s => _looseJsonDecode(s),
@@ -237,12 +343,12 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
       ),
     };
 
-    DateTime parseDate(Object? v) {
+    DateTime _parseDate(Object? v) {
       if (v is String) return DateTime.parse(v);
       throw FormatException('Invalid date value: $v');
     }
 
-    UspsActions parseActions(Object? v) {
+    UspsActions _parseActions(Object? v) {
       final m = (v is Map)
           ? v.map((k, v) => MapEntry(k.toString(), v))
           : <String, dynamic>{};
@@ -253,7 +359,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
       );
     }
 
-    List<UspsMailpiece> parseMailpieces(Object? v) {
+    List<UspsMailpiece> _parseMailpieces(Object? v) {
       if (v is List) {
         return v.map((e) {
           final m = (e as Map).map((k, v) => MapEntry(k.toString(), v));
@@ -262,22 +368,22 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
             sender: m['sender']?.toString() ?? '',
             summary: m['summary']?.toString() ?? '',
             imageDataUrl: m['imageDataUrl']?.toString() ?? '',
-            dateIso: parseDate(m['dateIso']),
-            actions: parseActions(m['actions']),
+            dateIso: _parseDate(m['dateIso']),
+            actions: _parseActions(m['actions']),
           );
         }).toList();
       }
       return const [];
     }
 
-    List<UspsPackage> parsePackages(Object? v) {
+    List<UspsPackage> _parsePackages(Object? v) {
       if (v is List) {
         return v.map((e) {
           final m = (e as Map).map((k, v) => MapEntry(k.toString(), v));
           return UspsPackage(
             trackingNumber: m['trackingNumber']?.toString() ?? '',
-            expectedDateIso: parseDate(m['expectedDateIso']),
-            actions: parseActions(m['actions']),
+            expectedDateIso: _parseDate(m['expectedDateIso']),
+            actions: _parseActions(m['actions']),
           );
         }).toList();
       }
@@ -285,64 +391,112 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
     }
 
     return UspsDigest(
-      digestDate: parseDate(map['digestDate']),
-      mailpieces: parseMailpieces(map['mailpieces']),
-      packages: parsePackages(map['packages']),
+      digestDate: _parseDate(map['digestDate']),
+      mailpieces: _parseMailpieces(map['mailpieces']),
+      packages: _parsePackages(map['packages']),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedImages = _selectedDay == null
-        ? <String>[]
-        : _imagesByDate[_selectedDay] ?? <String>[];
-
     return Scaffold(
       drawer: const CommonDrawer(currentRoute: '/informed-delivery'),
       appBar: AppBarHelper.createAppBar(
         context,
-        title: 'Informed Delivery ($_totalMailpieces)',
+        title: 'Informed Delivery (${_totalMailpieces})',
         centerTitle: true,
-        additionalActions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: null, // Implement refresh logic
-          ),
-        ],
       ),
       body: _buildInformedDeliveryView(),
     );
   }
 
   Widget _buildInformedDeliveryView() {
+    final Map<DateTime, List<String>> activeByDate = _isSearching
+        ? _filteredImagesByDate
+        : _imagesByDate;
+
+    final hasDays = activeByDate.isNotEmpty;
+
     final selectedImages = _selectedDay == null
-        ? <String>[]
-        : _imagesByDate[_selectedDay] ?? <String>[];
+        ? const <String>[]
+        : (activeByDate[_selectedDay] ?? const <String>[]);
+
+    final visibleCount = activeByDate.values.fold<int>(
+      0,
+      (a, b) => a + b.length,
+    );
+
     return Column(
       children: [
         const SizedBox(height: 12),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: TextField(
+            controller: _searchCtl,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              labelText: 'Search by sender or summary',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchCtl.clear();
+                      },
+                    )
+                  : null,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
           child: Row(
             children: [
-              Expanded(
+              Chip(
+                label: Text(
+                  _isSearching
+                      ? 'Search results: $visibleCount'
+                      : 'Total: $_totalMailpieces',
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (_isSearching) Text("for '$_searchQuery'"),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 260,
                 child: DropdownButtonFormField<DateTime>(
-                  initialValue: _selectedDay,
+                  initialValue: hasDays ? _selectedDay : null,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Select expected date',
                     border: OutlineInputBorder(),
                   ),
-                  items: _sortedDays.map((day) {
-                    final count = _imagesByDate[day]?.length ?? 0;
-                    return DropdownMenuItem<DateTime>(
-                      value: day,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [Text(formatDay(day))],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedDay = val),
+                  items: hasDays
+                      ? _sortedDays.map((day) {
+                          final count = activeByDate[day]?.length ?? 0;
+                          return DropdownMenuItem<DateTime>(
+                            value: day,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(formatDay(day)),
+                                Text('$count item${count == 1 ? '' : 's'}'),
+                              ],
+                            ),
+                          );
+                        }).toList()
+                      : const <DropdownMenuItem<DateTime>>[],
+                  onChanged: hasDays
+                      ? (val) => setState(() => _selectedDay = val)
+                      : null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -369,18 +523,21 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                          childAspectRatio: 1.4,
+                          crossAxisCount: 8,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.8,
                         ),
-                    padding: const EdgeInsets.all(8),
                     itemCount: selectedImages.length,
                     itemBuilder: (context, index) {
                       final url = selectedImages[index];
+                      final meta = _imageMetaByUrl[url];
+
                       return _ImageTile(
                         url: url,
                         onTap: () => _openImageViewer(url),
+                        sender: 'Sender: ${meta?.sender}',
+                        summary: 'Summary: ${meta?.summary}',
                       );
                     },
                   ),
@@ -416,14 +573,14 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
           SnackBar(
             content: Text(
               enableUSPSDigest
-                  ? 'Mail models refreshed (API ${enableMockUSPSDigest ? "+ mock" : ""}).'
-                  : 'Mail models refreshed (mock only).',
+                  ? 'Mail data refreshed (API ${enableMockUSPSDigest ? "+ mock" : ""}).'
+                  : 'Mail data refreshed (mock only).',
             ),
           ),
         );
       }
     } catch (e, st) {
-      debugPrint('❌ Error refreshing mail models: $e');
+      debugPrint('❌ Error refreshing mail data: $e');
       debugPrintStack(stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -472,7 +629,7 @@ class _InformedDeliveryScreenState extends State<InformedDeliveryScreen> {
 Uint8List? _decodeDataUrl(String? dataUrl) {
   if (dataUrl == null) return null;
   final i = dataUrl.indexOf(';base64,');
-  if (!dataUrl.startsWith('models:') || i == -1) return null;
+  if (!dataUrl.startsWith('data:') || i == -1) return null;
   final comma = dataUrl.indexOf(',', i);
   if (comma == -1) return null;
   final base64Part = dataUrl.substring(comma + 1);
@@ -509,12 +666,19 @@ Map<String, dynamic> _looseJsonDecode(String s) {
 
 class _ImageTile extends StatelessWidget {
   final String url;
+  final String? sender;
+  final String? summary;
   final VoidCallback onTap;
-  const _ImageTile({required this.url, required this.onTap});
+  const _ImageTile({
+    required this.url,
+    required this.onTap,
+    this.sender,
+    this.summary,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bool isDataUrl = url.startsWith('models:');
+    final bool isDataUrl = url.startsWith('data:');
     Widget imageWidget;
 
     if (isDataUrl) {
@@ -523,11 +687,10 @@ class _ImageTile extends StatelessWidget {
         imageWidget = const Center(
           child: Icon(Icons.broken_image_outlined, size: 48),
         );
-      } else if (url.startsWith('models:image/svg+xml')) {
-        // SVG handling
+      } else if (url.startsWith('data:image/svg+xml')) {
+        // SVG support (if using flutter_svg)
         imageWidget = SvgPicture.memory(bytes, fit: BoxFit.cover);
       } else {
-        // PNG, JPG, etc.
         imageWidget = Image.memory(bytes, fit: BoxFit.cover);
       }
     } else {
@@ -539,16 +702,42 @@ class _ImageTile extends StatelessWidget {
       );
     }
 
-    return Material(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
-      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          ),
-          child: imageWidget,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: imageWidget),
+            if (sender != null || summary != null)
+              Padding(
+                padding: const EdgeInsets.all(6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (sender != null)
+                      Text(
+                        sender!,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    if (summary != null)
+                      Text(
+                        summary!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -588,7 +777,6 @@ class _EmptyState extends StatelessWidget {
 }
 
 UspsDigest mergeDigests(UspsDigest a, UspsDigest b) {
-  // Newest of the two digests
   final digestDate = (a.digestDate.isAfter(b.digestDate))
       ? a.digestDate
       : b.digestDate;
