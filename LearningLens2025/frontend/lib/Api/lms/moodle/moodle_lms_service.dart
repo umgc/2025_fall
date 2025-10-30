@@ -1623,4 +1623,93 @@ class MoodleLmsService implements LmsInterface {
     if (itemid is int) return itemid;
     throw StateError('Unexpected itemid response: ${res.body}');
   }
+
+  @override
+
+  /// Gets the latest submission attachment for all assignment submissions
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+
+    final res = await ApiService().httpPost(
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'mod_assign_get_submissions',
+        'moodlewsrestformat': 'json',
+        'assignmentids[0]': '$assignId',
+      },
+    );
+
+    if (res.statusCode != 200) {
+      throw HttpException(res.body);
+    }
+
+    final data = jsonDecode(res.body);
+    if (data is Map && data['exception'] != null) {
+      throw HttpException('${data['exception']}: ${data['message']}');
+    }
+
+    final List<Map<String, dynamic>> submissions = [];
+    final assignments = data['assignments'] as List?;
+    if (assignments == null || assignments.isEmpty) return submissions;
+
+    for (final assignment in assignments) {
+      final subs = assignment['submissions'] as List?;
+      if (subs == null || subs.isEmpty) continue;
+
+      // Group submissions by user ID
+      final Map<int, List<dynamic>> byUser = {};
+      for (final sub in subs) {
+        final uid = sub['userid'];
+        if (uid == null) continue;
+        byUser.putIfAbsent(uid, () => []).add(sub);
+      }
+
+      for (final entry in byUser.entries) {
+        final userId = entry.key;
+        final userSubs = entry.value;
+
+        // Sort by modified or created time (newest first)
+        userSubs.sort((a, b) {
+          final at = a['timemodified'] ?? a['timecreated'] ?? 0;
+          final bt = b['timemodified'] ?? b['timecreated'] ?? 0;
+          return bt.compareTo(at);
+        });
+
+        final latest = userSubs.first;
+
+        final plugins = latest['plugins'] as List?;
+        if (plugins != null) {
+          for (final plugin in plugins) {
+            if (plugin['type'] == 'file') {
+              final fileAreas = plugin['fileareas'] as List?;
+              if (fileAreas != null && fileAreas.isNotEmpty) {
+                final files = fileAreas[0]['files'] as List?;
+                if (files != null && files.isNotEmpty) {
+                  String submissionUrl = files.first['fileurl'];
+                  final uri = Uri.parse(submissionUrl);
+                  // Need to append the token to the URl
+                  final updatedUrl = uri.replace(
+                    queryParameters: {
+                      ...uri.queryParameters,
+                      'token': _userToken!,
+                    },
+                  ).toString();
+
+                  submissions.add({
+                    'userid': userId,
+                    'submissionUrl': updatedUrl,
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return submissions;
+  }
 }

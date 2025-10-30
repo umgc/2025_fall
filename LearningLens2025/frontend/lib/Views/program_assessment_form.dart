@@ -209,6 +209,14 @@ class _ProgramAssessmentFormState extends State<ProgramAssessmentForm> {
       String expectedOutput,
       String language,
       int timeoutSeconds) async {
+    // Maximum timeout cannot be more than 2 minutes
+    if (timeoutSeconds > 120) {
+      _showSnackBar(SnackBar(
+          backgroundColor: Colors.red[700],
+          content: Text('Maximum timeout cannot be longer than 2 minutes')));
+      return;
+    }
+
     if (!(await isFilesValid()) || !(await _confirmStart(course, assignment))) {
       return;
     }
