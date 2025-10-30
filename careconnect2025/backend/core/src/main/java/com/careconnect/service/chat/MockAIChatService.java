@@ -1,4 +1,4 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
 import com.careconnect.dto.ChatRequest;
 import com.careconnect.dto.ChatResponse;

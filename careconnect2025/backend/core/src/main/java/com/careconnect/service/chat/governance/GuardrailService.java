@@ -1,4 +1,4 @@
-package com.careconnect.service.chat;
+package com.careconnect.service.chat.governance;
 
 import org.springframework.stereotype.Service;
 

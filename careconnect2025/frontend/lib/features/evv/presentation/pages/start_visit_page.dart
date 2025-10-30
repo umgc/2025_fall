@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/user_provider.dart';
-import '../../../../services/api_service.dart';
-import '../../../../services/auth_token_manager.dart';
+import '../../../../services/api_service.dart'; 
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:convert'; 
 
 class StartVisitPage extends StatefulWidget {
   final int patientId;
@@ -315,7 +313,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: theme.colorScheme.secondary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(

@@ -1,5 +1,6 @@
 import 'package:care_connect_app/features/calls/presentation/pages/jitsi_meeting_screen.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
+import 'package:care_connect_app/features/fall_alert/pages/alert_details_page_patient.dart';
 import 'package:care_connect_app/features/fall_alert/pages/mock_alert_lab_page.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/home_monitoring_screen.dart';
 import 'package:care_connect_app/features/integrations/presentation/pages/medication_management.dart';
@@ -23,6 +24,7 @@ import 'package:care_connect_app/pages/ai_configuration_page.dart';
 import 'package:care_connect_app/pages/file_management_page.dart';
 import 'package:care_connect_app/widgets/hybrid_video_call_widget.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
+import 'package:care_connect_app/widgets/search/route_search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -1028,6 +1030,11 @@ final GoRouter appRouter = GoRouter(
           path: '/alertpage',
           builder: (context, state) => const MockAlertLabPage(),
         ),
+          GoRoute(
+          path: '/alertpage-patient',
+          builder: (context, state) => const PatientFallPromptPage(),
+        ),
+        GoRoute(path: '/search', builder: (_, __) => const RouteSearchPage()),
 
   ],
 );

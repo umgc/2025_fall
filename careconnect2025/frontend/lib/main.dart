@@ -4,6 +4,8 @@ import 'package:app_links/app_links.dart';
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/shortcut_provider.dart';
+import 'package:care_connect_app/widgets/search/global_search_shortcut.dart';
+import 'package:care_connect_app/widgets/search/hidden_search_launcher.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -265,82 +267,98 @@ class _CareConnectAppState extends State<CareConnectApp> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final localeProvider = Provider.of<LocaleProvider>(context);
 
-    return MaterialApp.router(
-      title: 'CareConnect',
-      debugShowCheckedModeBanner: false,
-      // Use localized title instead of the hardcoded one above
-      // onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
-      // Core i18n wiring
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      //  set this to the chosen locale
-      locale: localeProvider.locale,
+return GlobalSearchShortcut(
+  searchPath: '/search',
+  child: MaterialApp.router(
+    title: 'CareConnect',
+    debugShowCheckedModeBanner: false,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: localeProvider.locale,
+    themeMode: themeProvider.themeMode,
+    theme: AppTheme.lightTheme.copyWith(
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+        },
+      ),
+      cardTheme: CardThemeData(
+        elevation: kIsWeb ? 2 : (ResponsiveUtils.isIOS ? 1 : 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
+        ),
+      ),
+    ),
+    darkTheme: AppTheme.darkTheme.copyWith(
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+        },
+      ),
+      cardTheme: CardThemeData(
+        elevation: kIsWeb ? 3 : (ResponsiveUtils.isIOS ? 2 : 3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
+        ),
+      ),
+    ),
+    routerConfig: appRouter,
+    builder: (context, child) {
+      final mediaQuery = MediaQuery.of(context);
+      final textScaleFactor = mediaQuery.textScaleFactor.clamp(0.8, 1.2);
 
-      themeMode: themeProvider.themeMode,
-      theme: AppTheme.lightTheme.copyWith(
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
-            TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
-          },
-        ),
-        cardTheme: CardThemeData(
-          elevation: kIsWeb ? 2 : (ResponsiveUtils.isIOS ? 1 : 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
+      // Your existing wrapping
+      Widget updatedChild = child!;
+      updatedChild = SafeArea(
+        bottom: !ResponsiveUtils.isWeb,
+        child: updatedChild,
+      );
+
+      // Overlay the hidden handle above every screen
+      updatedChild = Stack(
+        children: [
+          updatedChild,
+          const HiddenSearchLauncher(
+            alignment: Alignment.centerLeft, // try Alignment.centerLeft if you prefer
+            thickness: 200,
+            searchPath: '/search',
+            showOnWebHover: true,
+            debugVisible: true, // set true temporarily to see it
           ),
+        ],
+      );
+
+      return MediaQuery(
+        data: mediaQuery.copyWith(
+          textScaler: TextScaler.linear(textScaleFactor),
+          devicePixelRatio: ResponsiveUtils.isWeb
+              ? mediaQuery.devicePixelRatio
+              : mediaQuery.devicePixelRatio.clamp(1.0, 3.0),
         ),
-      ),
-      darkTheme: AppTheme.darkTheme.copyWith(
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
-            TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
-          },
-        ),
-        cardTheme: CardThemeData(
-          elevation: kIsWeb ? 3 : (ResponsiveUtils.isIOS ? 2 : 3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ResponsiveUtils.isIOS ? 12 : 8),
-          ),
-        ),
-      ),
-      routerConfig: appRouter,
-      builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
-        final textScaleFactor = mediaQuery.textScaleFactor.clamp(0.8, 1.2);
-        Widget updatedChild = child!;
-        updatedChild = SafeArea(
-          bottom: !ResponsiveUtils.isWeb,
-          child: updatedChild,
-        );
-        return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: TextScaler.linear(textScaleFactor),
-            devicePixelRatio: ResponsiveUtils.isWeb
-                ? mediaQuery.devicePixelRatio
-                : mediaQuery.devicePixelRatio.clamp(1.0, 3.0),
-          ),
-          child: updatedChild,
-        );
-      },
-    );
+        child: updatedChild,
+      );
+    },
+  ),
+);
+
   }
 }

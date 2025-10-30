@@ -1,4 +1,4 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;

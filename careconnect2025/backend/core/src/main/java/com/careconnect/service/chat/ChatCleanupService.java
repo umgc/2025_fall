@@ -1,6 +1,6 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
-import com.careconnect.config.ChatMemoryConfig;
+import com.careconnect.config.ai.ChatMemoryConfig;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.model.ChatMessage;
 import com.careconnect.repository.ChatConversationRepository;

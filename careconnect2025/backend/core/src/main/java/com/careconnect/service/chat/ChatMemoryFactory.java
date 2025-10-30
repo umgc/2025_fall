@@ -1,8 +1,8 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import com.careconnect.config.ChatMemoryConfig;
+import com.careconnect.config.ai.ChatMemoryConfig;
 import com.careconnect.model.ChatConversation;
 import com.careconnect.model.UserAIConfig;
 import com.careconnect.repository.ChatMessageRepository;

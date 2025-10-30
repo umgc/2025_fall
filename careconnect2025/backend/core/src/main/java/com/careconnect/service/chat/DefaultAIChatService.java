@@ -1,4 +1,4 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
 import com.careconnect.dto.ChatRequest;
 import com.careconnect.dto.ChatResponse;
@@ -6,23 +6,22 @@ import com.careconnect.dto.ChatConversationSummary;
 import com.careconnect.dto.ChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
+import com.careconnect.service.*;
+import com.careconnect.service.chat.governance.ChatAuditService;
 import com.careconnect.util.UserAIConfigDefaults;
 import com.careconnect.service.security.InputSanitizationService;
 import com.careconnect.service.security.ResponseSanitizationService;
 import com.careconnect.service.security.LangChainGovernanceService;
 import com.careconnect.service.security.SecurityAuditService;
 import com.careconnect.service.cache.AIChatCacheService;
-import lombok.Builder;
 import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -219,7 +218,7 @@ public class DefaultAIChatService implements AIChatService {
 
     // Helper: Save and build response
     @Transactional
-    private ChatResponse saveAndBuildResponse(ChatProcessingResult result) {
+    protected ChatResponse saveAndBuildResponse(ChatProcessingResult result) {
         ChatProcessingContext context = result.context;
         Integer tokensUsed = result.tokensUsed != null ? result.tokensUsed : 0;
         ChatMessage userMessage = ChatMessage.builder()

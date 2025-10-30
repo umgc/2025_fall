@@ -34,19 +34,16 @@ class _EvvDashboardState extends State<EvvDashboard> {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user?.role == 'ADMIN' || user?.role == 'SUPERVISOR') {
-        // Load admin/supervisor specific data
         final pendingApprovals = await _evvService.getPendingEorApprovals();
         final pendingCorrections = await _evvService.getPendingCorrections();
-        
         setState(() {
           _pendingApprovals = pendingApprovals.length;
           _pendingCorrections = pendingCorrections.length;
         });
       }
-      
-      // Load offline queue for all users
+
       final offlineQueue = await _evvService.getOfflineQueue();
       setState(() {
         _offlineQueue = offlineQueue;
@@ -72,6 +69,9 @@ class _EvvDashboardState extends State<EvvDashboard> {
     final isSupervisor = user?.role == 'SUPERVISOR';
     final isCaregiver = user?.role == 'CAREGIVER';
 
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     if (_isLoading) {
       return Scaffold(
         drawer: const CommonDrawer(currentRoute: '/evv/dashboard'),
@@ -88,33 +88,12 @@ class _EvvDashboardState extends State<EvvDashboard> {
         additionalActions: [
           if (_offlineQueue.isNotEmpty)
             IconButton(
-              icon: Stack(
-                children: [
-                  const Icon(Icons.sync),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 12,
-                        minHeight: 12,
-                      ),
-                      child: Text(
-                        '${_offlineQueue.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
+              tooltip: 'Offline sync',
+              icon: Badge.count(
+                count: _offlineQueue.length,
+                backgroundColor: scheme.error,
+                textColor: scheme.onError,
+                child: const Icon(Icons.sync),
               ),
               onPressed: () {
                 Navigator.push(
@@ -129,42 +108,132 @@ class _EvvDashboardState extends State<EvvDashboard> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadDashboardData,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Quick Stats
-              _buildQuickStats(isAdmin, isSupervisor),
-              const SizedBox(height: 24),
-              
-              // Main Actions
-              _buildMainActions(isAdmin, isSupervisor, isCaregiver),
-              const SizedBox(height: 24),
-              
-              // Pending Items (Admin/Supervisor only)
-              if (isAdmin || isSupervisor) ...[
-                _buildPendingItems(),
-                const SizedBox(height: 24),
-              ],
-              
-              // Offline Queue Status
-              if (_offlineQueue.isNotEmpty) ...[
-                _buildOfflineQueueStatus(),
-                const SizedBox(height: 24),
-              ],
-              
-              // Recent Activity
-              _buildRecentActivity(),
-            ],
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            final horizontalPadding = maxWidth < 600
+                ? 16.0
+                : maxWidth < 1024
+                    ? 20.0
+                    : 24.0;
+
+            final content = Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Padding(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _QuickStats(
+                        offlineCount: _offlineQueue.length,
+                        pendingApprovals: _pendingApprovals,
+                        pendingCorrections: _pendingCorrections,
+                        showManagerTiles: isAdmin || isSupervisor,
+                      ),
+                      const SizedBox(height: 24),
+                      _MainActions(
+                        isAdmin: isAdmin,
+                        isSupervisor: isSupervisor,
+                        isCaregiver: isCaregiver,
+                      ),
+                      const SizedBox(height: 24),
+                      if (isAdmin || isSupervisor) ...[
+                        _PendingItems(
+                          pendingApprovals: _pendingApprovals,
+                          pendingCorrections: _pendingCorrections,
+                          onOpenCorrections: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EvvCorrectionsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      if (_offlineQueue.isNotEmpty) ...[
+                        _OfflineQueueStatus(
+                          count: _offlineQueue.length,
+                          onSync: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const EvvOfflineSyncPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                      _RecentActivity(),
+                    ],
+                  ),
+                ),
+              ),
+            );
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SafeArea(child: content),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildQuickStats(bool isAdmin, bool isSupervisor) {
+  @override
+  void dispose() {
+    _evvService.dispose();
+    super.dispose();
+  }
+}
+
+class _QuickStats extends StatelessWidget {
+  const _QuickStats({
+    required this.offlineCount,
+    required this.pendingApprovals,
+    required this.pendingCorrections,
+    required this.showManagerTiles,
+  });
+
+  final int offlineCount;
+  final int pendingApprovals;
+  final int pendingCorrections;
+  final bool showManagerTiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final items = <_StatItem>[
+      _StatItem(
+        label: 'Offline Records',
+        value: offlineCount.toString(),
+        icon: Icons.cloud_off,
+        color: scheme.tertiary,
+      ),
+      if (showManagerTiles)
+        _StatItem(
+          label: 'Pending Approvals',
+          value: pendingApprovals.toString(),
+          icon: Icons.approval,
+          color: scheme.primary,
+        ),
+      if (showManagerTiles)
+        _StatItem(
+          label: 'Pending Corrections',
+          value: pendingCorrections.toString(),
+          icon: Icons.edit,
+          color: scheme.error,
+        ),
+    ];
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -172,86 +241,164 @@ class _EvvDashboardState extends State<EvvDashboard> {
           children: [
             Text(
               'Quick Stats',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    'Offline Records',
-                    '${_offlineQueue.length}',
-                    Icons.cloud_off,
-                    Colors.orange,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final crossAxisCount = width < 480
+                    ? 1
+                    : width < 840
+                        ? 2
+                        : 3;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: items.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisExtent: 96,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
                   ),
-                ),
-                if (isAdmin || isSupervisor) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Pending Approvals',
-                      '$_pendingApprovals',
-                      Icons.approval,
-                      Colors.blue,
-                    ),
-                  ),
-                ],
-                if (isAdmin || isSupervisor) ...[
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Pending Corrections',
-                      '$_pendingCorrections',
-                      Icons.edit,
-                      Colors.red,
-                    ),
-                  ),
-                ],
-              ],
+                  itemBuilder: (context, index) => _StatCard(item: items[index]),
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+class _StatItem {
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.item});
+  final _StatItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final surface = scheme.surfaceVariant;
+
+    return Card(
+      color: surface,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: item.color.withOpacity(0.15),
+              foregroundColor: item.color,
+              child: Icon(item.icon),
             ),
-          ),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    item.value,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold, color: item.color),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.label,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildMainActions(bool isAdmin, bool isSupervisor, bool isCaregiver) {
+class _MainActions extends StatelessWidget {
+  const _MainActions({
+    required this.isAdmin,
+    required this.isSupervisor,
+    required this.isCaregiver,
+  });
+
+  final bool isAdmin;
+  final bool isSupervisor;
+  final bool isCaregiver;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    final actions = <_ActionItem>[
+      if (isCaregiver)
+        _ActionItem(
+          label: 'Start Visit',
+          icon: Icons.play_circle,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PatientSelectionPage()),
+          ),
+        ),
+      if (isCaregiver)
+        _ActionItem(
+          label: 'Review Records',
+          icon: Icons.rate_review,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EvvRecordReviewPage()),
+          ),
+        ),
+      if (isAdmin || isSupervisor)
+        _ActionItem(
+          label: 'Visit History',
+          icon: Icons.history,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EvvVisitHistoryPage()),
+          ),
+        ),
+      if (isAdmin || isSupervisor)
+        _ActionItem(
+          label: 'Manage Corrections',
+          icon: Icons.edit_note,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EvvCorrectionsPage()),
+          ),
+        ),
+      _ActionItem(
+        label: 'Offline Sync',
+        icon: Icons.sync,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EvvOfflineSyncPage()),
+        ),
+      ),
+    ];
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -259,115 +406,98 @@ class _EvvDashboardState extends State<EvvDashboard> {
           children: [
             Text(
               'Main Actions',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                if (isCaregiver)
-                  _buildActionButton(
-                    'Start Visit',
-                    Icons.play_circle,
-                    Colors.blue,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PatientSelectionPage(),
-                      ),
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final crossAxisCount = width < 480
+                    ? 2
+                    : width < 840
+                        ? 3
+                        : 5;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: actions.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    mainAxisExtent: 112,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
                   ),
-                if (isCaregiver)
-                  _buildActionButton(
-                    'Review Records',
-                    Icons.rate_review,
-                    Colors.orange,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EvvRecordReviewPage(),
-                      ),
-                    ),
-                  ),
-                if (isAdmin || isSupervisor)
-                  _buildActionButton(
-                    'Visit History',
-                    Icons.history,
-                    Colors.purple,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EvvVisitHistoryPage(),
-                      ),
-                    ),
-                  ),
-                if (isAdmin || isSupervisor)
-                  _buildActionButton(
-                    'Manage Corrections',
-                    Icons.edit_note,
-                    Colors.red,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EvvCorrectionsPage(),
-                      ),
-                    ),
-                  ),
-                _buildActionButton(
-                  'Offline Sync',
-                  Icons.sync,
-                  Colors.teal,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EvvOfflineSyncPage(),
-                    ),
-                  ),
-                ),
-              ],
+                  itemBuilder: (context, index) => _ActionCard(item: actions[index]),
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildActionButton(String title, IconData icon, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w500,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+class _ActionItem {
+  const _ActionItem({required this.label, required this.icon, required this.onTap});
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+}
 
-  Widget _buildPendingItems() {
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({required this.item});
+  final _ActionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
+      child: InkWell(
+        onTap: item.onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                backgroundColor: scheme.primaryContainer,
+                foregroundColor: scheme.onPrimaryContainer,
+                child: Icon(item.icon),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingItems extends StatelessWidget {
+  const _PendingItems({
+    required this.pendingApprovals,
+    required this.pendingCorrections,
+    required this.onOpenCorrections,
+  });
+
+  final int pendingApprovals;
+  final int pendingCorrections;
+  final VoidCallback onOpenCorrections;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -375,51 +505,50 @@ class _EvvDashboardState extends State<EvvDashboard> {
           children: [
             Text(
               'Pending Items',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            if (_pendingApprovals > 0)
+            const SizedBox(height: 8),
+            if (pendingApprovals > 0)
               ListTile(
-                leading: const Icon(Icons.approval, color: Colors.blue),
+                leading: const Icon(Icons.approval),
                 title: const Text('EOR Approvals'),
-                subtitle: Text('$_pendingApprovals pending'),
-                trailing: const Icon(Icons.arrow_forward_ios),
+                subtitle: Text('$pendingApprovals pending'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   // Navigate to EOR approvals
                 },
               ),
-            if (_pendingCorrections > 0)
+            if (pendingCorrections > 0)
               ListTile(
-                leading: const Icon(Icons.edit, color: Colors.red),
+                leading: const Icon(Icons.edit),
                 title: const Text('Corrections'),
-                subtitle: Text('$_pendingCorrections pending'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EvvCorrectionsPage(),
-                    ),
-                  );
-                },
+                subtitle: Text('$pendingCorrections pending'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: onOpenCorrections,
               ),
-            if (_pendingApprovals == 0 && _pendingCorrections == 0)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No pending items'),
-                ),
+            if (pendingApprovals == 0 && pendingCorrections == 0)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: Text('No pending items')),
               ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildOfflineQueueStatus() {
+class _OfflineQueueStatus extends StatelessWidget {
+  const _OfflineQueueStatus({required this.count, required this.onSync});
+  final int count;
+  final VoidCallback onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -427,28 +556,19 @@ class _EvvDashboardState extends State<EvvDashboard> {
           children: [
             Row(
               children: [
-                const Icon(Icons.cloud_off, color: Colors.orange),
+                const Icon(Icons.cloud_off),
                 const SizedBox(width: 8),
                 Text(
                   'Offline Queue',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text('${_offlineQueue.length} records waiting to sync'),
+            const SizedBox(height: 12),
+            Text('$count records waiting to sync'),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const EvvOfflineSyncPage(),
-                  ),
-                );
-              },
+            FilledButton.icon(
+              onPressed: onSync,
               icon: const Icon(Icons.sync),
               label: const Text('Sync Now'),
             ),
@@ -457,9 +577,15 @@ class _EvvDashboardState extends State<EvvDashboard> {
       ),
     );
   }
+}
 
-  Widget _buildRecentActivity() {
+class _RecentActivity extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -467,11 +593,9 @@ class _EvvDashboardState extends State<EvvDashboard> {
           children: [
             Text(
               'Recent Activity',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
@@ -482,11 +606,5 @@ class _EvvDashboardState extends State<EvvDashboard> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _evvService.dispose();
-    super.dispose();
   }
 }

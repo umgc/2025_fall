@@ -303,7 +303,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           TextButton.icon(
             onPressed: () => context.go('/dashboard?role=CAREGIVER'),
             icon: const Icon(Icons.cancel, color: Colors.red),
-            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            label: const Text('Closed', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
