@@ -341,4 +341,29 @@ class LocalStorageService {
     print(LocalStorageService.getSelectedClassroom());
     return LocalStorageService.getSelectedClassroom() == LmsType.MOODLE;
   }
+
+  /// Generic method to save a string value
+  static void setString(String key, String value) {
+    _prefs.setString(key, value);
+  }
+
+  /// Generic method to retrieve a string value
+  static String? getString(String key) {
+    return _prefs.getString(key);
+  }
+
+  /// Saves current user ID
+  static void saveUserId(String userId) {
+    _prefs.setString('userId', userId);
+  }
+
+  /// Clears current user ID
+  static void clearUserId() {
+    _prefs.remove('userId');
+  }
+
+  /// Retrieves current user ID
+  static String? getUserId() {
+    return _prefs.getString('userId');
+  }
 }

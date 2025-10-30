@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'game_result.dart';
+
 class MatchingGame extends StatefulWidget {
   final List<Map<String, dynamic>> pairs;
-  final VoidCallback onComplete;
+  final void Function(GamePlayResult result) onComplete;
   final bool previewMode;
 
   const MatchingGame({
@@ -24,6 +26,7 @@ class _MatchingGameState extends State<MatchingGame> {
   int score = 0;
   bool gameFinished = false;
   List<Map<String, String>> results = [];
+  bool _completionReported = false;
 
   @override
   void initState() {
@@ -59,6 +62,17 @@ class _MatchingGameState extends State<MatchingGame> {
     rightItems.shuffle();
   }
 
+  void _reportCompletion() {
+    if (_completionReported || widget.previewMode) return;
+    _completionReported = true;
+    widget.onComplete(
+      GamePlayResult(
+        score: score,
+        maxScore: leftItems.length,
+      ),
+    );
+  }
+
   bool isGameComplete() {
     return userMatches.length == leftItems.length &&
         userMatches.entries
@@ -68,25 +82,28 @@ class _MatchingGameState extends State<MatchingGame> {
   @override
   Widget build(BuildContext context) {
     if (gameFinished) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Game Complete!',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Text('Score: $score / ${leftItems.length}',
-              style: const TextStyle(fontSize: 16)),
-          const SizedBox(height: 20),
-          ...results.map((r) => ListTile(
-                title: Text(r['term'] ?? ''),
-                subtitle: Text(
-                    'Your Match: ${r['selected']}\nCorrect: ${r['correct']}'),
-                trailing: Text(r['status'] ?? ''),
-              )),
-          const SizedBox(height: 20),
-        ],
+      _reportCompletion();
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Game Complete!',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text('Score: $score / ${leftItems.length}',
+                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 20),
+            ...results.map((r) => ListTile(
+                  title: Text(r['term'] ?? ''),
+                  subtitle: Text(
+                      'Your Match: ${r['selected']}\nCorrect: ${r['correct']}'),
+                  trailing: Text(r['status'] ?? ''),
+                )),
+            const SizedBox(height: 20),
+          ],
+        ),
       );
     }
     return SingleChildScrollView(
@@ -110,26 +127,36 @@ class _MatchingGameState extends State<MatchingGame> {
               children: [
                 // Left side: draggable terms
                 Expanded(
-                  child: Column(
-                    children: leftItems.map((term) {
-                      return Draggable<String>(
-                        data: term,
-                        feedback: Material(
+                  child: ListView.builder(
+                    itemCount: leftItems.length,
+                    shrinkWrap: true,
+                    itemBuilder: (context, index) {
+                      final term = leftItems[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Draggable<String>(
+                          data: term,
+                          feedback: Material(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              color: Colors.blueAccent,
+                              child: Text(term,
+                                  style: const TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                          childWhenDragging:
+                              Opacity(opacity: 0.5, child: Text(term)),
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            color: Colors.blueAccent,
-                            child: Text(term,
-                                style: const TextStyle(color: Colors.white)),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.blue.shade50,
+                            ),
+                            child: Text(term),
                           ),
                         ),
-                        childWhenDragging:
-                            Opacity(opacity: 0.5, child: Text(term)),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(term),
-                        ),
                       );
-                    }).toList(),
+                    },
                   ),
                 ),
 
@@ -137,8 +164,11 @@ class _MatchingGameState extends State<MatchingGame> {
 
                 // Right side: drop targets for definitions
                 Expanded(
-                  child: Column(
-                    children: rightItems.map((definition) {
+                  child: ListView.builder(
+                    itemCount: rightItems.length,
+                    shrinkWrap: true,
+                    itemBuilder: (context, index) {
+                      final definition = rightItems[index];
                       final matchedTerm = userMatches.entries
                           .firstWhere((e) => e.value == definition,
                               orElse: () => MapEntry('', ''))
@@ -148,9 +178,12 @@ class _MatchingGameState extends State<MatchingGame> {
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 6),
                             padding: const EdgeInsets.all(8),
-                            color: matchedTerm.isNotEmpty
-                                ? Colors.greenAccent
-                                : Colors.grey.shade200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: matchedTerm.isNotEmpty
+                                  ? Colors.greenAccent
+                                  : Colors.grey.shade200,
+                            ),
                             child: Text(
                               matchedTerm.isNotEmpty
                                   ? '$matchedTerm → $definition'
@@ -165,7 +198,7 @@ class _MatchingGameState extends State<MatchingGame> {
                           });
                         },
                       );
-                    }).toList(),
+                    },
                   ),
                 ),
               ],
@@ -194,21 +227,9 @@ class _MatchingGameState extends State<MatchingGame> {
                 setState(() {
                   gameFinished = true;
                 });
+                _reportCompletion();
               },
               child: const Text('Submit Answers'),
-            ),
-          if (gameFinished)
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: OutlinedButton(
-                onPressed: widget.onComplete,
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.blue),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text('Close'),
-              ),
             ),
         ],
       ),

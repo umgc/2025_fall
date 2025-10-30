@@ -353,7 +353,7 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Games',
           'description': 'Participate in games assigned to you.',
-          'onPressed': null,
+          'onPressed': () => Navigator.pushNamed(context, '/gamification'),
           'icon': Icons.videogame_asset_outlined
         },
         {
