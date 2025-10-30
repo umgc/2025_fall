@@ -2,6 +2,7 @@ class PatientNote {
   final String id;
   final String patientId;
   final String note;
+  final String aiSummary;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -9,6 +10,7 @@ class PatientNote {
     required this.id,
     required this.patientId,
     required this.note,
+    required this.aiSummary,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -18,6 +20,7 @@ class PatientNote {
       id: json['id']?.toString() ?? '',
       patientId: json['patientId']?.toString() ?? '',
       note: json['note']?.toString() ?? '',
+      aiSummary: json['aiSummary']?.toString() ?? '',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -32,6 +35,7 @@ class PatientNote {
       'id': id,
       'patientId': patientId,
       'note': note,
+      'aiSummary': aiSummary,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

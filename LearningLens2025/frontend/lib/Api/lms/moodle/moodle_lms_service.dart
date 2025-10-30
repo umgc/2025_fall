@@ -1071,7 +1071,7 @@ class MoodleLmsService implements LmsInterface {
       'wstoken': _userToken!,
       'wsfunction': 'local_learninglens_add_essay_override',
       'moodlewsrestformat': 'json',
-      'assignmentId': assignid.toString(),
+      'assignid': assignid.toString(),
     };
 
     // Add only non-null fields
@@ -1090,9 +1090,10 @@ class MoodleLmsService implements LmsInterface {
     final responseData = json.decode(response.body);
 
     if (response.statusCode == 200 && responseData is Map<String, dynamic>) {
+      print(responseData);
       return 'Override: ${responseData['override_id']}';
     } else {
-      throw Exception("Failed to create quiz override: ${response.body}");
+      throw Exception("Failed to create essay override: ${response.body}");
     }
   }
 

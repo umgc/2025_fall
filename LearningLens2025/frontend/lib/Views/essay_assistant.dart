@@ -432,7 +432,7 @@ This space is designed to help you plan, write, and refine your essay from start
 
 ## Modes:\n
 Each mode changes how the assistant responds:\n
-• **Assistant** – a general-purpose mode for open discussion, quick questions, or feedback that doesn’t fit a specific phase of writing. *Good for more models with smaller context windows.*\n
+• **Assistant** – a general-purpose mode for open discussion, quick questions, or feedback that doesn’t fit a specific phase of writing. *Good for models with smaller context windows.*\n
 • **Brainstorm** – generate ideas and clarify your topic.\n
 • **Outline** – build structure with main points and supporting details.\n
 • **Revise** – improve clarity, grammar, and flow in your draft.\n
@@ -2089,7 +2089,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     ),
                     const Divider(height: 1),
 
-                    // ----- Editor area (unchanged logic; nicer "page" feel) -----
+                    // ----- Editor area -----
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(8),
@@ -2106,9 +2106,9 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                             ],
                           ),
                           child: quill.QuillEditor(
-                            focusNode: _notesFocus,
-                            scrollController: _quillNotesScrollController,
-                            controller: _quillNotesController,
+                            focusNode: _draftFocus,
+                            scrollController: _quillDraftScrollController,
+                            controller: _quillDraftController,
                             config: const quill.QuillEditorConfig(
                               // feels like page margins
                               padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
@@ -2297,9 +2297,9 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         ],
                       ),
                       child: quill.QuillEditor(
-                        focusNode: _draftFocus,
-                        scrollController: _quillDraftScrollController,
-                        controller: _quillDraftController,
+                        focusNode: _notesFocus,
+                        scrollController: _quillNotesScrollController,
+                        controller: _quillNotesController,
                         config: const quill.QuillEditorConfig(
                           // feels like page margins
                           padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
