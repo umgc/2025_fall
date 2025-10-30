@@ -20,6 +20,7 @@ class VisitCompletePage extends StatefulWidget {
   final double? checkoutLongitude;
   final String notes;
   final int duration; // Duration in seconds
+  final int? scheduledVisitId;
   
   const VisitCompletePage({
     super.key,
@@ -33,6 +34,7 @@ class VisitCompletePage extends StatefulWidget {
     this.checkoutLongitude,
     required this.notes,
     required this.duration,
+    this.scheduledVisitId,
   });
 
   @override
@@ -206,25 +208,20 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
         throw Exception('User not authenticated');
       }
 
-      // Use check-out location as primary location
-      double? locationLat;
-      double? locationLng;
-      String locationSource;
+      // Determine check-in location data
+      String checkinLocationSource = widget.checkinLocationType == 'gps' ? 'GPS' : 'PATIENT_ADDRESS';
+      double? checkinLat = widget.checkinLocationType == 'gps' ? widget.checkinLatitude : null;
+      double? checkinLng = widget.checkinLocationType == 'gps' ? widget.checkinLongitude : null;
       
-      if (widget.checkoutLocationType == 'gps' && 
-          widget.checkoutLatitude != null && 
-          widget.checkoutLongitude != null) {
-        locationLat = widget.checkoutLatitude;
-        locationLng = widget.checkoutLongitude;
-        locationSource = 'GPS';
-      } else {
-        // Use patient address coordinates (you might want to geocode this)
-        locationLat = null;
-        locationLng = null;
-        locationSource = 'PATIENT_ADDRESS';
-      }
+      // Determine check-out location data
+      String checkoutLocationSource = widget.checkoutLocationType == 'gps' ? 'GPS' : 'PATIENT_ADDRESS';
+      double? checkoutLat = widget.checkoutLocationType == 'gps' ? widget.checkoutLatitude : null;
+      double? checkoutLng = widget.checkoutLocationType == 'gps' ? widget.checkoutLongitude : null;
+      
+      // Get state from patient address or default to MD
+      String stateCode = _selectedPatient?.address?.state ?? 'MD';
 
-      // Create EVV record request
+      // Create EVV record request with both check-in and check-out locations
       final request = EvvRecordRequest(
         serviceType: widget.serviceType,
         patientId: widget.patientId,
@@ -232,10 +229,19 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
         dateOfService: _checkinTime ?? DateTime.now(),
         timeIn: _checkinTime ?? DateTime.now(),
         timeOut: _checkoutTime ?? DateTime.now(),
-        locationLat: locationLat,
-        locationLng: locationLng,
-        locationSource: locationSource,
-        stateCode: 'MD', // Default state, you might want to get this from patient address
+        // Legacy fields for backward compatibility (use check-out data)
+        locationLat: checkoutLat,
+        locationLng: checkoutLng,
+        locationSource: widget.checkoutLocationType,
+        // New separate check-in and check-out location fields
+        checkinLocationLat: checkinLat,
+        checkinLocationLng: checkinLng,
+        checkinLocationSource: checkinLocationSource,
+        checkoutLocationLat: checkoutLat,
+        checkoutLocationLng: checkoutLng,
+        checkoutLocationSource: checkoutLocationSource,
+        stateCode: stateCode,
+        scheduledVisitId: widget.scheduledVisitId,
       );
 
       // Submit the EVV record
@@ -303,7 +309,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           TextButton.icon(
             onPressed: () => context.go('/dashboard?role=CAREGIVER'),
             icon: const Icon(Icons.cancel, color: Colors.red),
-            label: const Text('Closed', style: TextStyle(color: Colors.red)),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -402,7 +408,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
   Widget _buildVisitComplete() {
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
 
     return SingleChildScrollView(
       child: Column(

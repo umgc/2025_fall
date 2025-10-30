@@ -3,6 +3,7 @@ import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/ca
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
+import 'package:care_connect_app/features/schedule/pages/schedule_page.dart';
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,7 @@ class BottomNavItem {
       case 'nav_messages': return t.navMessages;
       case 'nav_menu': return t.navMenu;
       case 'nav_patientList': return t.navPatientList;
+      case 'nav_schedule': return 'Schedule'; // TODO: Add to localization
       case 'nav_analytics': return t.navAnalytics;
       case 'nav_more': return t.navMore;
       default: return label;
@@ -165,6 +167,14 @@ static List<BottomNavItem> getCaregiverNavItems() {
         activeIcon: Icons.person_2,
         routeName: 'tasks',
         screen: const CaregiverPatientList(),
+      ),
+      BottomNavItem(
+        label: 'Schedule',
+        labelKey: 'nav_schedule',
+        icon: Icons.calendar_today_outlined,
+        activeIcon: Icons.calendar_today,
+        routeName: 'schedule',
+        screen: const SchedulePage(),
       ),
       BottomNavItem(
         label: 'Analytics',

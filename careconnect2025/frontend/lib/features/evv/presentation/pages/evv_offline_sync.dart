@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../../services/evv_service.dart';
 
 class EvvOfflineSyncPage extends StatefulWidget {
@@ -26,7 +25,7 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     try {
       final queue = await _evvService.getOfflineQueue();
       final status = await _evvService.getOfflineStatus();
-
+      
       setState(() {
         _offlineQueue = queue;
         _syncStatus = status;
@@ -44,12 +43,6 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     }
   }
 
-  String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
-    // Removed dash to keep it simple and avoid layout quirks
-    return DateFormat('MMM d, yyyy h:mm a').format(dateTime);
-  }
-
   Future<void> _syncOfflineData() async {
     setState(() {
       _isSyncing = true;
@@ -57,24 +50,31 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
 
     try {
       await _evvService.syncOfflineData();
+      
+      // Reload data after sync
       await _loadOfflineData();
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Offline data sync completed')),
+          const SnackBar(
+            content: Text('Offline data sync completed'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error syncing offline data: $e')),
+          SnackBar(
+            content: Text('Error syncing offline data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSyncing = false;
-        });
-      }
+      setState(() {
+        _isSyncing = false;
+      });
     }
   }
 
@@ -83,9 +83,10 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Offline Sync'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
             onPressed: _loadOfflineData,
           ),
@@ -93,87 +94,280 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadOfflineData,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final maxWidth = constraints.maxWidth;
-                  final horizontalPadding = maxWidth < 600
-                      ? 16.0
-                      : maxWidth < 1024
-                          ? 20.0
-                          : 24.0;
-
-                  final content = Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
-                      child: Padding(
-                        padding: EdgeInsets.all(horizontalPadding),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          : Column(
+              children: [
+                // Sync Status Overview
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            _SyncOverview(
-                              pending: _countWhere('PENDING'),
-                              syncing: _countWhere('SYNCING'),
-                              synced: _countWhere('SYNCED'),
-                              failed: _countWhere('FAILED'),
-                              isSyncing: _isSyncing,
-                              onSyncAll: _isSyncing ? null : _syncOfflineData,
-                            ),
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: _offlineQueue.isEmpty
-                                  ? _EmptyState()
-                                  : _QueueList(
-                                      items: _offlineQueue,
-                                      statusColor: _statusColor,
-                                      statusIcon: _statusIcon,
-                                      priorityColor: _priorityColor,
-                                      priorityText: _priorityText,
-                                      onRetry: _retrySync,
-                                      onDetails: _showItemDetails,
-                                    ),
+                            const Icon(Icons.cloud_sync, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Sync Status',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                  );
-
-                  return SafeArea(
-                    child: ScrollConfiguration(
-                      behavior: const ScrollBehavior().copyWith(
-                        overscroll: false,
-                      ),
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: SizedBox(
-                          height:
-                              MediaQuery.of(context).size.height - kToolbarHeight,
-                          child: content,
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatusCard(
+                                'Pending',
+                                '${_offlineQueue.where((item) => item.syncStatus == 'PENDING').length}',
+                                Icons.pending,
+                                Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatusCard(
+                                'Syncing',
+                                '${_offlineQueue.where((item) => item.syncStatus == 'SYNCING').length}',
+                                Icons.sync,
+                                Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatusCard(
+                                'Synced',
+                                '${_offlineQueue.where((item) => item.syncStatus == 'SYNCED').length}',
+                                Icons.check_circle,
+                                Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStatusCard(
+                                'Failed',
+                                '${_offlineQueue.where((item) => item.syncStatus == 'FAILED').length}',
+                                Icons.error,
+                                Colors.red,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isSyncing ? null : _syncOfflineData,
+                            icon: _isSyncing
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.sync),
+                            label: Text(_isSyncing ? 'Syncing...' : 'Sync All Offline Data'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+                
+                // Offline Queue List
+                Expanded(
+                  child: _offlineQueue.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.cloud_done,
+                                size: 64,
+                                color: Colors.green,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'All data is synced',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'No offline records to sync',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _offlineQueue.length,
+                          itemBuilder: (context, index) {
+                            final item = _offlineQueue[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: _getStatusColor(item.syncStatus),
+                                  child: Icon(
+                                    _getStatusIcon(item.syncStatus),
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                title: Text(
+                                  '${item.operationType} Record #${item.recordId}',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Caregiver ID: ${item.caregiverId}'),
+                                    Text('Queued: ${_formatDateTime(item.queuedAt)}'),
+                                    if (item.lastSyncAttempt != null)
+                                      Text('Last Attempt: ${_formatDateTime(item.lastSyncAttempt!)}'),
+                                    if (item.syncAttempts > 0)
+                                      Text('Attempts: ${item.syncAttempts}'),
+                                    if (item.lastError != null)
+                                      Text(
+                                        'Error: ${item.lastError}',
+                                        style: const TextStyle(color: Colors.red),
+                                      ),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: _getStatusColor(item.syncStatus).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            item.syncStatus,
+                                            style: TextStyle(
+                                              color: _getStatusColor(item.syncStatus),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: _getPriorityColor(item.priority).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            _getPriorityText(item.priority),
+                                            style: TextStyle(
+                                              color: _getPriorityColor(item.priority),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'retry' && item.syncStatus == 'FAILED') {
+                                      _retrySync(item);
+                                    } else if (value == 'details') {
+                                      _showItemDetails(item);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'details',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.info, size: 20),
+                                          SizedBox(width: 8),
+                                          Text('Details'),
+                                        ],
+                                      ),
+                                    ),
+                                    if (item.syncStatus == 'FAILED')
+                                      const PopupMenuItem(
+                                        value: 'retry',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.refresh, size: 20, color: Colors.blue),
+                                            SizedBox(width: 8),
+                                            Text('Retry', style: TextStyle(color: Colors.blue)),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
     );
   }
 
-  int _countWhere(String status) =>
-      _offlineQueue.where((q) => q.syncStatus == status).length;
+  Widget _buildStatusCard(String title, String count, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 
   void _retrySync(EvvOfflineQueue item) {
+    // In a real implementation, you would retry the specific item
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Retry functionality would be implemented here'),
+        backgroundColor: Colors.blue,
       ),
     );
   }
 
   void _showItemDetails(EvvOfflineQueue item) {
-    final scheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -183,33 +377,18 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _DetailRow(label: 'Record ID', value: item.recordId.toString()),
-              _DetailRow(label: 'Operation', value: item.operationType),
-              _DetailRow(
-                label: 'Caregiver ID',
-                value: item.caregiverId.toString(),
-              ),
-              _DetailRow(label: 'Device ID', value: item.deviceId ?? 'N/A'),
-              _DetailRow(
-                label: 'Queued At',
-                value: _formatDateTime(item.queuedAt),
-              ),
-              _DetailRow(label: 'Sync Status', value: item.syncStatus),
-              _DetailRow(
-                label: 'Sync Attempts',
-                value: item.syncAttempts.toString(),
-              ),
+              _buildDetailRow('Record ID', item.recordId.toString()),
+              _buildDetailRow('Operation', item.operationType),
+              _buildDetailRow('Caregiver ID', item.caregiverId.toString()),
+              _buildDetailRow('Device ID', item.deviceId ?? 'N/A'),
+              _buildDetailRow('Queued At', _formatDateTime(item.queuedAt)),
+              _buildDetailRow('Sync Status', item.syncStatus),
+              _buildDetailRow('Sync Attempts', item.syncAttempts.toString()),
               if (item.lastSyncAttempt != null)
-                _DetailRow(
-                  label: 'Last Sync Attempt',
-                  value: _formatDateTime(item.lastSyncAttempt!),
-                ),
+                _buildDetailRow('Last Sync Attempt', _formatDateTime(item.lastSyncAttempt!)),
               if (item.lastError != null)
-                _DetailRow(label: 'Last Error', value: item.lastError!),
-              _DetailRow(
-                label: 'Priority',
-                value: _priorityText(item.priority),
-              ),
+                _buildDetailRow('Last Error', item.lastError!),
+              _buildDetailRow('Priority', _getPriorityText(item.priority)),
               const SizedBox(height: 16),
               const Text(
                 'Record Data:',
@@ -217,10 +396,9 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
               ),
               const SizedBox(height: 8),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: scheme.surfaceVariant,
+                  color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -241,23 +419,43 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     );
   }
 
-  Color _statusColor(String status) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
     switch (status) {
       case 'PENDING':
-        return scheme.tertiary;
+        return Colors.orange;
       case 'SYNCING':
-        return scheme.primary;
+        return Colors.blue;
       case 'SYNCED':
-        return scheme.secondary;
+        return Colors.green;
       case 'FAILED':
-        return scheme.error;
+        return Colors.red;
       default:
-        return scheme.outline;
+        return Colors.grey;
     }
   }
 
-  IconData _statusIcon(String status) {
+  IconData _getStatusIcon(String status) {
     switch (status) {
       case 'PENDING':
         return Icons.pending;
@@ -272,21 +470,20 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     }
   }
 
-  Color _priorityColor(int priority) {
-    final scheme = Theme.of(context).colorScheme;
+  Color _getPriorityColor(int priority) {
     switch (priority) {
       case 1:
-        return scheme.outline;
+        return Colors.grey;
       case 2:
-        return scheme.tertiary;
+        return Colors.orange;
       case 3:
-        return scheme.error;
+        return Colors.red;
       default:
-        return scheme.outline;
+        return Colors.grey;
     }
   }
 
-  String _priorityText(int priority) {
+  String _getPriorityText(int priority) {
     switch (priority) {
       case 1:
         return 'Normal';
@@ -299,361 +496,13 @@ class _EvvOfflineSyncPageState extends State<EvvOfflineSyncPage> {
     }
   }
 
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
   @override
   void dispose() {
     _evvService.dispose();
     super.dispose();
-  }
-}
-
-class _SyncOverview extends StatelessWidget {
-  const _SyncOverview({
-    required this.pending,
-    required this.syncing,
-    required this.synced,
-    required this.failed,
-    required this.isSyncing,
-    required this.onSyncAll,
-  });
-
-  final int pending;
-  final int syncing;
-  final int synced;
-  final int failed;
-  final bool isSyncing;
-  final VoidCallback? onSyncAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    final items = <_StatusItem>[
-      _StatusItem(
-        'Pending',
-        pending,
-        Icons.pending,
-        Theme.of(context).colorScheme.tertiary,
-      ),
-      _StatusItem(
-        'Syncing',
-        syncing,
-        Icons.sync,
-        Theme.of(context).colorScheme.primary,
-      ),
-      _StatusItem(
-        'Synced',
-        synced,
-        Icons.check_circle,
-        Theme.of(context).colorScheme.secondary,
-      ),
-      _StatusItem(
-        'Failed',
-        failed,
-        Icons.error,
-        Theme.of(context).colorScheme.error,
-      ),
-    ];
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.cloud_sync),
-                const SizedBox(width: 8),
-                Text(
-                  'Sync Status',
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final crossAxisCount = width < 480
-                    ? 2
-                    : width < 840
-                        ? 4
-                        : 4;
-
-                // Increased tile height to avoid overflow on dense text/large fonts
-                const tileHeight = 128.0;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: items.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisExtent: tileHeight,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                  ),
-                  itemBuilder: (context, index) =>
-                      _StatusCard(item: items[index]),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onSyncAll,
-                icon: isSyncing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync),
-                label: Text(isSyncing ? 'Syncing...' : 'Sync All Offline Data'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusItem {
-  const _StatusItem(this.title, this.count, this.icon, this.color);
-  final String title;
-  final int count;
-  final IconData icon;
-  final Color color;
-}
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.item});
-  final _StatusItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // critical to avoid overflow
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              backgroundColor: item.color.withOpacity(0.15),
-              foregroundColor: item.color,
-              child: Icon(item.icon),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${item.count}',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: item.color,
-                  ),
-            ),
-            Text(item.title, style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QueueList extends StatelessWidget {
-  const _QueueList({
-    required this.items,
-    required this.statusColor,
-    required this.statusIcon,
-    required this.priorityColor,
-    required this.priorityText,
-    required this.onRetry,
-    required this.onDetails,
-  });
-
-  String _formatDateTime(DateTime? dateTime) {
-    if (dateTime == null) return '';
-    return DateFormat('MMM d, yyyy h:mm a').format(dateTime);
-  }
-
-  final List<EvvOfflineQueue> items;
-  final Color Function(String) statusColor;
-  final IconData Function(String) statusIcon;
-  final Color Function(int) priorityColor;
-  final String Function(int) priorityText;
-  final void Function(EvvOfflineQueue) onRetry;
-  final void Function(EvvOfflineQueue) onDetails;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 24),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final stColor = statusColor(item.syncStatus);
-
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: stColor.withOpacity(0.15),
-              foregroundColor: stColor,
-              child: Icon(statusIcon(item.syncStatus)),
-            ),
-            title: Text(
-              '${item.operationType} Record #${item.recordId}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Caregiver ID: ${item.caregiverId}'),
-                  Text('Queued: ${_formatDateTime(item.queuedAt)}'),
-                  if (item.lastSyncAttempt != null)
-                    Text(
-                      'Last Attempt: ${_formatDateTime(item.lastSyncAttempt!)}',
-                    ),
-                  if (item.syncAttempts > 0)
-                    Text('Attempts: ${item.syncAttempts}'),
-                  if (item.lastError != null)
-                    Text(
-                      'Error: ${item.lastError}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      _StatusChip(label: item.syncStatus, color: stColor),
-                      _StatusChip(
-                        label: priorityText(item.priority),
-                        color: priorityColor(item.priority),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            trailing: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'retry' && item.syncStatus == 'FAILED') {
-                  onRetry(item);
-                } else if (value == 'details') {
-                  onDetails(item);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'details',
-                  child: Row(
-                    children: [
-                      Icon(Icons.info, size: 20),
-                      SizedBox(width: 8),
-                      Text('Details'),
-                    ],
-                  ),
-                ),
-                if (item.syncStatus == 'FAILED')
-                  PopupMenuItem(
-                    value: 'retry',
-                    child: Row(
-                      children: [
-                        Icon(Icons.refresh, size: 20, color: scheme.primary),
-                        const SizedBox(width: 8),
-                        Text('Retry', style: TextStyle(color: scheme.primary)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(label),
-      backgroundColor: color.withOpacity(0.15),
-      labelStyle: TextStyle(color: color),
-      side: BorderSide(color: color.withOpacity(0.3)),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_done, size: 64, color: scheme.secondary),
-            const SizedBox(height: 16),
-            Text(
-              'All data is synced',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'No offline records to sync',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
   }
 }

@@ -15,6 +15,7 @@ class VisitInProgressPage extends StatefulWidget {
   final String locationType;
   final double? latitude;
   final double? longitude;
+  final int? scheduledVisitId;
   
   const VisitInProgressPage({
     super.key,
@@ -23,6 +24,7 @@ class VisitInProgressPage extends StatefulWidget {
     required this.locationType,
     this.latitude,
     this.longitude,
+    this.scheduledVisitId,
   });
 
   @override
@@ -187,8 +189,30 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
   }
 
   void _readyToCheckOut() {
-    // Navigate to Check-Out Location page
-    context.push('/evv/checkout-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(widget.serviceType)}&locationType=${widget.locationType}&notes=${Uri.encodeComponent(_notesController.text)}&duration=${_elapsedTime.inSeconds}');
+    // Navigate to Check-Out Location page with check-in location data
+    final queryParams = {
+      'patientId': widget.patientId.toString(),
+      'serviceType': widget.serviceType,
+      'locationType': widget.locationType,
+      'notes': _notesController.text,
+      'duration': _elapsedTime.inSeconds.toString(),
+    };
+    
+    // Include check-in GPS coordinates if available
+    if (widget.latitude != null && widget.longitude != null) {
+      queryParams['latitude'] = widget.latitude.toString();
+      queryParams['longitude'] = widget.longitude.toString();
+    }
+    
+    if (widget.scheduledVisitId != null) {
+      queryParams['scheduledVisitId'] = widget.scheduledVisitId.toString();
+    }
+    
+    final queryString = queryParams.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    
+    context.push('/evv/checkout-location?$queryString');
   }
 
   @override
@@ -303,7 +327,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
   Widget _buildVisitInProgress() {
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
 
     return SingleChildScrollView(
       child: Column(

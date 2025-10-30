@@ -159,8 +159,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsLoadingNotificationSettings => 'የማስታወቂያ ቅንብሮች በመጫን ላይ …';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'የማስታወቂያ ቅንብሮችን መጫን አይቻልም';
+  String get settingsUnableToLoadNotificationSettings => 'የማስታወቂያ ቅንብሮችን መጫን አይቻልም';
 
   @override
   String get settingsRefresh => 'አዘምን';
@@ -241,8 +240,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'በተምናበብ ቅንብሮች';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'በተምናበብ አገልጋይዎን ቅንብሮች አስተካክሉ';
+  String get settingsNotetakerConfigurationDesc => 'በተምናበብ አገልጋይዎን ቅንብሮች አስተካክሉ';
 
   @override
   String get settingsGeneral => 'አጠቃላይ';
@@ -254,8 +252,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsClearCacheShortDesc => 'ጊዜያዊ ፋይሎች እና ካሽ ዳታ ሰርዝ';
 
   @override
-  String get settingsClearCacheDesc =>
-      'ይህ ሁሉንም ጊዜያዊ ፋይሎች እና ካሽ ዳታ ይሰርዝ። ካሽ አጽዳ በኋላ መተግበሪያው ይዘት ለመጫን በተጨማሪ ጊዜ ሊወስድ ይችላል።';
+  String get settingsClearCacheDesc => 'ይህ ሁሉንም ጊዜያዊ ፋይሎች እና ካሽ ዳታ ይሰርዝ። ካሽ አጽዳ በኋላ መተግበሪያው ይዘት ለመጫን በተጨማሪ ጊዜ ሊወስድ ይችላል።';
 
   @override
   String get settingsSignOut => 'ውጣ';
@@ -264,8 +261,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsSignOutDesc => 'ከመለያዎ ውጣ';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'ማለት ትክክለኛ ነው የሚፈልጉት መውጣት እርግጠኛ ነው?';
+  String get settingsSignOutConfirmMessage => 'ማለት ትክክለኛ ነው የሚፈልጉት መውጣት እርግጠኛ ነው?';
 
   @override
   String get settingsDeleteAccount => 'መለያ ሰርዝ';
@@ -274,12 +270,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsDeleteAccountShortDesc => 'መለያዎን በድህረ-መጨረሻ ይሰርዝ';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'ይህ ተግባር መተው አይቻልም። ሁሉንም ዳታዎችዎ በድህረ-መጨረሻ ይሰረዝበታል።';
+  String get settingsDeleteAccountDesc => 'ይህ ተግባር መተው አይቻልም። ሁሉንም ዳታዎችዎ በድህረ-መጨረሻ ይሰረዝበታል።';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'መለያ ሰርዝ መከላከያ ተጠየቀ። እባክዎ ድጋፍ ያግኙ።';
+  String get settingsDeleteAccountRequested => 'መለያ ሰርዝ መከላከያ ተጠየቀ። እባክዎ ድጋፍ ያግኙ።';
 
   @override
   String get settingsDeleteAccountAction => 'መለያ ሰርዝ';
@@ -291,8 +285,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get welcomeReadyToConnect => 'የእንክብካቤዎን ግንኙነት ለመገናኘት ዝግጁ ነዎት!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'የጀርባ አገልግሎቱ ጤናማ አይደለም። መተግበሪያው የተወሰነ ችሎታ አለው።';
+  String get welcomeBackendNotHealthyWarning => 'የጀርባ አገልግሎቱ ጤናማ አይደለም። መተግበሪያው የተወሰነ ችሎታ አለው።';
 
   @override
   String get welcomeContinue => 'ቀጥል';

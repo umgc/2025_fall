@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../services/evv_service.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../../../utils/call_integration_helper.dart';
 import '../../../../../widgets/ai_chat_improved.dart';
@@ -59,6 +61,12 @@ class _PatientDashboardState extends State<PatientDashboard> {
   // Alert dismissal tracking
   Set<String> dismissedAlertIds = {};
 
+  // EVV sections state
+  final EvvService _evvService = EvvService();
+  List<EvvRecord> _pastEvvVisits = [];
+  List<Map<String, dynamic>> _upcomingEvvAppointments = [];
+  bool _loadingEvv = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +76,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     _loadRecentMoodData();
     _loadMedicationReminders();
     _loadPrimaryCareProvider();
+    _loadEvvSections();
   }
 
   /// Check connectivity status
@@ -110,6 +119,127 @@ class _PatientDashboardState extends State<PatientDashboard> {
         error = 'Error loading dashboard: ${e.toString()}';
         loading = false;
       });
+    }
+  }
+
+  Future<void> _loadEvvSections() async {
+    setState(() => _loadingEvv = true);
+    try {
+      final user = Provider.of<UserProvider>(context, listen: false).user;
+      final patientId = user?.patientId;
+      if (patientId == null) {
+        setState(() => _loadingEvv = false);
+        return;
+      }
+      final now = DateTime.now();
+      // Use name-based filter to avoid backend SQL param typing issue
+      String? patientName;
+      try {
+        final first = patient?['firstName'] ?? '';
+        final last = patient?['lastName'] ?? '';
+        final combined = ('$first $last').trim();
+        patientName = combined.isNotEmpty ? combined : null;
+      } catch (_) {}
+
+      final result = await _evvService.searchRecords(EvvSearchRequest(
+        patientName: patientName,
+        page: 0,
+        size: 200,
+        sortBy: 'dateOfService',
+        sortDirection: 'DESC',
+      ));
+      _pastEvvVisits = result.content.where((r) => r.patient?.id == patientId).toList();
+
+      // Try caregiver scheduled visits endpoint and filter by patient
+      try {
+        final headers = await ApiService.getAuthHeaders();
+        int? caregiverId;
+        if (caregivers.isNotEmpty) {
+          caregiverId = (caregivers.first['id'] ?? caregivers.first['caregiverId']) as int?;
+        } else {
+          final cgRes = await http.get(
+            Uri.parse('${ApiConstants.baseUrl}patients/$patientId/caregivers'),
+            headers: headers,
+          );
+          if (cgRes.statusCode == 200) {
+            final cgs = List<Map<String, dynamic>>.from(jsonDecode(cgRes.body));
+            if (cgs.isNotEmpty) caregiverId = (cgs.first['id'] ?? cgs.first['caregiverId']) as int?;
+          }
+        }
+        if (caregiverId != null) {
+          final startStr = DateTime(now.year, now.month, now.day).toIso8601String().split('T')[0];
+          final endDate = now.add(const Duration(days: 30));
+          final endStr = DateTime(endDate.year, endDate.month, endDate.day).toIso8601String().split('T')[0];
+          final url = Uri.parse('${ApiConstants.baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startStr&endDate=$endStr');
+          final res = await http.get(url, headers: headers);
+          if (res.statusCode == 200) {
+            final List<dynamic> data = jsonDecode(res.body);
+            bool matchesPatient(Map<String, dynamic> m) {
+              final target = patientId?.toString();
+              if (m.containsKey('patientId') && '${m['patientId']}' == target) return true;
+              if (m.containsKey('patient_id') && '${m['patient_id']}' == target) return true;
+              final p = m['patient'];
+              if (p is Map && ('${p['id']}' == target)) return true;
+              return false;
+            }
+            DateTime? parseWhen(Map<String, dynamic> m) {
+              // Case 1: combined timestamp string
+              final v = m['scheduledTime'] ?? m['scheduled_time'] ?? m['time'];
+              if (v is String) {
+                // If this looks like HH:mm[:ss], combine with scheduledDate
+                if (RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(v)) {
+                  final d = (m['scheduledDate'] ?? m['scheduled_date']) as String?;
+                  if (d != null && RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(d)) {
+                    return DateTime.tryParse('$d $v');
+                  }
+                }
+                final dt = DateTime.tryParse(v);
+                if (dt != null) return dt;
+              }
+              if (v is int) {
+                try { return DateTime.fromMillisecondsSinceEpoch(v); } catch (_) {}
+              }
+              // Case 2: separate date/time fields
+              final dateStr = (m['scheduledDate'] ?? m['scheduled_date']) as String?;
+              final timeStr = (m['scheduledTime'] ?? m['scheduled_time']) as String?;
+              if (dateStr != null && timeStr != null) {
+                final date = DateTime.tryParse(dateStr);
+                if (date != null) {
+                  final tp = timeStr.split(':');
+                  if (tp.length >= 2) {
+                    final h = int.tryParse(tp[0]) ?? 0;
+                    final min = int.tryParse(tp[1]) ?? 0;
+                    return DateTime(date.year, date.month, date.day, h, min);
+                  }
+                }
+              }
+              return null;
+            }
+
+            final Set<dynamic> seenIds = {};
+            final List<Map<String, dynamic>> normalized = [];
+            for (final raw in data.cast<Map<String, dynamic>>()) {
+              if (!matchesPatient(raw)) continue;
+              final when = parseWhen(raw);
+              if (when == null) continue;
+              if (when.isBefore(DateTime.now())) continue; // only upcoming
+              final id = raw['id'] ?? raw['visitId'] ?? raw['scheduledVisitId'];
+              if (id != null && seenIds.contains(id)) continue;
+              if (id != null) seenIds.add(id);
+              final service = raw['serviceType'] ?? raw['service_type'] ?? raw['service'] ?? 'Service';
+              normalized.add({'id': id, 'serviceType': service, 'scheduledTime': when.toIso8601String()});
+            }
+            normalized.sort((a,b)=> DateTime.parse(a['scheduledTime']).compareTo(DateTime.parse(b['scheduledTime'])));
+            _upcomingEvvAppointments = normalized;
+          }
+        }
+      } catch (_) {
+        _upcomingEvvAppointments = [];
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      if (mounted) setState(() => _loadingEvv = false);
     }
   }
 
@@ -342,8 +472,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                     path: email,
                     queryParameters: {
                       'subject': 'Patient Inquiry',
-                      'body':
-                          'Hello Dr. ${primaryCareProvider?['name']?.split(' ')[1]},\n\n',
+                      'body': 'Hello Dr. ${primaryCareProvider?['name']?.split(' ')[1]},\n\n',
                     },
                   );
                   if (await canLaunchUrl(uri)) {
@@ -535,6 +664,12 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                             _handleMedicationAction(false),
                                       ),
 
+                                    // Upcoming EVV & Past EVV
+                                    const SizedBox(height: 12),
+                                    _buildUpcomingEvvSection(theme),
+                                    const SizedBox(height: 12),
+                                    _buildPastEvvSection(theme),
+
                                     // Primary Care Provider
                                     if (primaryCareProvider != null)
                                       PrimaryCareProviderWidget(
@@ -605,6 +740,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             onMarkTaken: () => _handleMedicationAction(true),
                             onMarkMissed: () => _handleMedicationAction(false),
                           ),
+
+                        const SizedBox(height: 12),
+                        _buildUpcomingEvvSection(theme),
+                        const SizedBox(height: 12),
+                        _buildPastEvvSection(theme),
 
                         // Primary Care Provider
                         if (primaryCareProvider != null)
@@ -794,6 +934,90 @@ class _PatientDashboardState extends State<PatientDashboard> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildUpcomingEvvSection(ThemeData theme) {
+    if (_loadingEvv) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.event_available, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text('Upcoming EVV Appointments', style: theme.textTheme.titleMedium),
+              const Spacer(),
+              IconButton(onPressed: _loadEvvSections, icon: const Icon(Icons.refresh)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_upcomingEvvAppointments.isEmpty)
+            const Text('No upcoming appointments.')
+          else
+            ..._upcomingEvvAppointments.take(5).map((v) {
+              final when = DateTime.tryParse(v['scheduledTime'] ?? '') ?? DateTime.now();
+              final service = v['serviceType'] ?? 'Service';
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.schedule),
+                title: Text(service, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${when.month}/${when.day}/${when.year} • ${when.hour.toString().padLeft(2,'0')}:${when.minute.toString().padLeft(2,'0')}'),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPastEvvSection(ThemeData theme) {
+    if (_loadingEvv) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, color: theme.colorScheme.tertiary),
+              const SizedBox(width: 8),
+              Text('Past EVV Visits', style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_pastEvvVisits.isEmpty)
+            const Text('No past visits found.')
+          else
+            ..._pastEvvVisits.take(10).map((r) {
+              final date = r.dateOfService;
+              return ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green,
+                  child: const Icon(Icons.check, color: Colors.white, size: 18),
+                ),
+                title: Text(r.serviceType, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${date.month}/${date.day}/${date.year}'),
+              );
+            }),
+        ],
+      ),
     );
   }
 }

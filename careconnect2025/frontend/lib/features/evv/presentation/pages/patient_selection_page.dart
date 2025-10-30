@@ -268,8 +268,8 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
     final theme = Theme.of(context);
     final fullName = '${patient.firstName} ${patient.lastName}';
     
-    // Generate MA number from patient ID
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    // Use MA number from backend, or generate fallback if not available
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
     
     // Format address
     final address = _formatAddress(patient);

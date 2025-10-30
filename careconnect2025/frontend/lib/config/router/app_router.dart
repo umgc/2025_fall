@@ -620,12 +620,16 @@ final GoRouter appRouter = GoRouter(
       path: '/evv/start-visit',
       builder: (context, state) {
         final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
+        final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         if (patientId == null) {
           return const Scaffold(
             body: Center(child: Text('Invalid patient ID')),
           );
         }
-        return StartVisitPage(patientId: patientId);
+        return StartVisitPage(
+          patientId: patientId,
+          scheduledVisitId: scheduledVisitId,
+        );
       },
     ),
     GoRoute(
@@ -633,6 +637,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
         final serviceType = state.uri.queryParameters['serviceType'] ?? '';
+        final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         if (patientId == null || serviceType.isEmpty) {
           return const Scaffold(
             body: Center(child: Text('Invalid parameters')),
@@ -641,6 +646,7 @@ final GoRouter appRouter = GoRouter(
         return CheckinLocationPage(
           patientId: patientId,
           serviceType: serviceType,
+          scheduledVisitId: scheduledVisitId,
         );
       },
     ),
@@ -652,6 +658,7 @@ final GoRouter appRouter = GoRouter(
         final locationType = state.uri.queryParameters['locationType'] ?? '';
         final latitude = double.tryParse(state.uri.queryParameters['latitude'] ?? '');
         final longitude = double.tryParse(state.uri.queryParameters['longitude'] ?? '');
+        final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
           return const Scaffold(
@@ -665,6 +672,7 @@ final GoRouter appRouter = GoRouter(
           locationType: locationType,
           latitude: latitude,
           longitude: longitude,
+          scheduledVisitId: scheduledVisitId,
         );
       },
     ),
@@ -678,6 +686,7 @@ final GoRouter appRouter = GoRouter(
         final longitude = double.tryParse(state.uri.queryParameters['longitude'] ?? '');
         final notes = state.uri.queryParameters['notes'] ?? '';
         final duration = int.tryParse(state.uri.queryParameters['duration'] ?? '0') ?? 0;
+        final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
           return const Scaffold(
@@ -693,6 +702,7 @@ final GoRouter appRouter = GoRouter(
           longitude: longitude,
           notes: notes,
           duration: duration,
+          scheduledVisitId: scheduledVisitId,
         );
       },
     ),
@@ -709,6 +719,7 @@ final GoRouter appRouter = GoRouter(
         final checkoutLongitude = double.tryParse(state.uri.queryParameters['checkoutLongitude'] ?? '');
         final notes = state.uri.queryParameters['notes'] ?? '';
         final duration = int.tryParse(state.uri.queryParameters['duration'] ?? '0') ?? 0;
+        final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || checkinLocationType.isEmpty || checkoutLocationType.isEmpty) {
           return const Scaffold(
@@ -727,6 +738,7 @@ final GoRouter appRouter = GoRouter(
           checkoutLongitude: checkoutLongitude,
           notes: notes,
           duration: duration,
+          scheduledVisitId: scheduledVisitId,
         );
       },
     ),

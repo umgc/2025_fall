@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../../providers/user_provider.dart';
-import '../../../../services/api_service.dart'; 
+import '../../../../services/api_service.dart';
+import '../../../../services/auth_token_manager.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
-import 'dart:convert'; 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class StartVisitPage extends StatefulWidget {
   final int patientId;
+  final int? scheduledVisitId;
   
   const StartVisitPage({
     super.key,
     required this.patientId,
+    this.scheduledVisitId,
   });
 
   @override
@@ -116,7 +120,8 @@ class _StartVisitPageState extends State<StartVisitPage> {
     }
 
     // Navigate to Check-In Location page with selected patient and service type
-    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}');
+    final scheduledVisitParam = widget.scheduledVisitId != null ? '&scheduledVisitId=${widget.scheduledVisitId}' : '';
+    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}$scheduledVisitParam');
   }
 
   String _formatAddress(Patient patient) {
@@ -254,7 +259,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
     final theme = Theme.of(context);
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
     final address = _formatAddress(patient);
 
     return Container(
@@ -313,7 +318,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.secondary,
+                    color: theme.colorScheme.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(

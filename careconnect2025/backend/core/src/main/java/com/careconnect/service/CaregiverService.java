@@ -205,6 +205,10 @@ public Patient registerPatient(PatientRegistration reg) {
 
     Address addr = reg.getAddress() != null ? toAddress(reg.getAddress()) : null;
 
+    // Generate unique MA number
+    String maNumber = generateUniqueMaNumber();
+    log.info("Generated MA number {} for patient {}", maNumber, reg.getEmail());
+
     // Build the patient object
     Patient patient = Patient.builder()
             .firstName(reg.getFirstName())
@@ -216,6 +220,7 @@ public Patient registerPatient(PatientRegistration reg) {
             .user(savedUser) // Use the saved user with ID
             .relationship(reg.getRelationship())
             .gender(reg.getGender())
+            .maNumber(maNumber) // Set the generated MA number
             .build();
 
     try {
@@ -266,6 +271,44 @@ public Patient registerPatient(PatientRegistration reg) {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    /**
+     * Generate a unique MA number in the format MA followed by 9 digits
+     * Format: MA000000001, MA000000002, etc.
+     */
+    private String generateUniqueMaNumber() {
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        int maxAttempts = 100; // Prevent infinite loop
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            // Generate 9 random digits
+            StringBuilder digits = new StringBuilder();
+            for (int i = 0; i < 9; i++) {
+                digits.append(random.nextInt(10));
+            }
+            
+            String maNumber = "MA" + digits.toString();
+            
+            // Check if this MA number already exists
+            if (!patientRepository.existsByMaNumber(maNumber)) {
+                return maNumber;
+            }
+        }
+        
+        // Fallback: If random generation fails, use timestamp-based generation
+        long timestamp = System.currentTimeMillis();
+        String timestampStr = String.valueOf(timestamp);
+        // Take last 9 digits of timestamp
+        String maNumber = "MA" + timestampStr.substring(timestampStr.length() - 9);
+        
+        // If this also exists (extremely unlikely), throw exception
+        if (patientRepository.existsByMaNumber(maNumber)) {
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Unable to generate unique MA number. Please try again.");
+        }
+        
+        return maNumber;
     }
 
     @Transactional
@@ -488,6 +531,7 @@ public PatientWithLinkDto getPatientWithLinkById(Long caregiverId, Long patientI
         .gender(patient.getGender())
         .address(patient.getAddress())
         .relationship(patient.getRelationship())
+        .maNumber(patient.getMaNumber())
         .build();
     return new PatientWithLinkDto(summary, linkOpt.get());
 }

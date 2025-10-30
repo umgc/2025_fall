@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'dart:math' as math;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:universal_html/html.dart' as html;
 import 'package:http/http.dart' as http;
 import '../../../../providers/user_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../../services/api_service.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
@@ -166,19 +173,29 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
   }
 
   String _formatLocation(String locationType, double? latitude, double? longitude, Patient patient) {
-    if (locationType == 'gps' && latitude != null && longitude != null) {
+    // Handle both 'gps' and 'GPS' (case-insensitive)
+    if (locationType.toLowerCase() == 'gps' && latitude != null && longitude != null) {
       return 'GPS: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
+    } else if (locationType.toLowerCase() == 'gps') {
+      return 'GPS (coordinates not available)';
     } else {
       return _formatAddress(patient);
     }
   }
 
-  void _goToDashboard() {
-    context.go('/evv');
+  String _uniqueFileName(String base) {
+    final ts = DateTime.now().toUtc().microsecondsSinceEpoch;
+    final rand = math.Random().nextInt(0xFFFF).toRadixString(16).padLeft(4, '0');
+    return '${base}_${ts}_${rand}.edi';
   }
 
-  void _exportVisitData() {
+  void _goToDashboard() {
+    context.go('/dashboard?role=CAREGIVER');
+  }
+
+  Future<void> _exportVisitData() async {
     try {
+      
       if (_selectedPatient == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -191,36 +208,142 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
       // Generate EDI content
       final ediContent = _generateEDIContent();
-      
-      // Create blob and download
       final bytes = utf8.encode(ediContent);
-      final blob = html.Blob([bytes], 'text/plain');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      
-      final anchor = html.document.createElement('a') as html.AnchorElement
-        ..href = url
-        ..style.display = 'none'
-        ..download = 'visit_${_selectedPatient!.id}_${widget.checkinTime.millisecondsSinceEpoch}.edi';
-      
-      html.document.body?.children.add(anchor);
-      anchor.click();
-      html.document.body?.children.remove(anchor);
-      html.Url.revokeObjectUrl(url);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Visit data exported successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (kIsWeb) {
+        
+        final blob = html.Blob([bytes], 'text/plain');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.document.createElement('a') as html.AnchorElement
+          ..href = url
+          ..style.display = 'none'
+          ..download = 'visit_${_selectedPatient!.id}_${widget.checkinTime.millisecondsSinceEpoch}.edi';
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+        
+      } else {
+        final fileName = _uniqueFileName('visit_${_selectedPatient!.id}');
+        String? downloadsPath;
+        try {
+          downloadsPath = '/storage/emulated/0/Download';
+          final downloadsDir = Directory(downloadsPath);
+          if (!await downloadsDir.exists()) {
+            final ext = await getExternalStorageDirectory();
+            downloadsPath = ext?.path;
+          }
+          final savePath = '$downloadsPath/$fileName';
+          
+          final file = File(savePath);
+          await file.writeAsBytes(Uint8List.fromList(bytes), flush: true);
+
+          await OpenFilex.open(savePath);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Saved to: $savePath')),
+            );
+          }
+        } catch (saveErr, st) {
+          // Fallback to temp + share
+          final tempDir = await getTemporaryDirectory();
+          final tempPath = '${tempDir.path}/$fileName';
+          await File(tempPath).writeAsBytes(Uint8List.fromList(bytes), flush: true);
+          final xfile = XFile(tempPath, mimeType: 'text/plain', name: fileName);
+          await Share.shareXFiles([xfile], text: 'EVV EDI export');
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Visit data exported successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  Future<void> _previewVisitEdi() async {
+    if (kIsWeb) return; // mobile-only
+    final edi = _generateEDIContent();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Preview EDI',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      edi,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: edi));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Copied to clipboard')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Copy'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _exportVisitData,
+                        icon: const Icon(Icons.save_alt),
+                        label: const Text('Save to Downloads'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String _generateEDIContent() {
@@ -313,17 +436,10 @@ IEA*1*$controlNumber~
         title: const Text('Visit Completed'),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/evv'),
-           icon: Icon( Icons.cancel,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-           label: Text(
-                'Close',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                )),
-          ), 
-         
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: const Icon(Icons.cancel, color: Colors.red),
+            label: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
       body: _buildContent(),
@@ -421,7 +537,7 @@ IEA*1*$controlNumber~
   Widget _buildSuccessPage() {
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
     final address = _formatAddress(patient);
     final duration = Duration(seconds: widget.duration);
     
@@ -678,15 +794,13 @@ IEA*1*$controlNumber~
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Check-in location with type badge
                 Row(
                   children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
+                    Icon(
+                      widget.checkinLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home,
+                      size: 16,
+                      color: widget.checkinLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green,
                     ),
                     const SizedBox(width: 8),
                     const Text(
@@ -697,29 +811,43 @@ IEA*1*$controlNumber~
                         color: Colors.black87,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (widget.checkinLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.checkinLocationType.toLowerCase() == 'gps' ? 'GPS' : 'PATIENT ADDRESS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: widget.checkinLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Padding(
-                  padding: const EdgeInsets.only(left: 20),
+                  padding: const EdgeInsets.only(left: 24),
                   child: Text(
                     checkinLocation,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: Colors.grey[700],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Check-out location with type badge
                 Row(
                   children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
+                    Icon(
+                      widget.checkoutLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home,
+                      size: 16,
+                      color: widget.checkoutLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green,
                     ),
                     const SizedBox(width: 8),
                     const Text(
@@ -730,16 +858,32 @@ IEA*1*$controlNumber~
                         color: Colors.black87,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (widget.checkoutLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.checkoutLocationType.toLowerCase() == 'gps' ? 'GPS' : 'PATIENT ADDRESS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: widget.checkoutLocationType.toLowerCase() == 'gps' ? Colors.blue : Colors.green,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Padding(
-                  padding: const EdgeInsets.only(left: 20),
+                  padding: const EdgeInsets.only(left: 24),
                   child: Text(
                     checkoutLocation,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: Colors.grey[700],
                     ),
                   ),
                 ),
@@ -809,6 +953,17 @@ IEA*1*$controlNumber~
               
               const SizedBox(width: 16),
               
+              if (!kIsWeb) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _previewVisitEdi,
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Preview EDI'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+              ],
+
               // Dashboard Button
               Expanded(
                 child: ElevatedButton.icon(
@@ -875,12 +1030,16 @@ IEA*1*$controlNumber~
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
               ),
             ],
