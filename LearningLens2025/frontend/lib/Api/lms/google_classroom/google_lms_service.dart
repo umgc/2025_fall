@@ -154,8 +154,50 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<bool> isUserTeacher(List<Course> moodleCourses) async {
-    // TODO: implement google api code
-    throw UnimplementedError();
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+    if (moodleCourses.isEmpty) {
+      return false;
+    }
+
+    final response = await ApiService().httpGet(
+      Uri.parse('$apiURL/courses?teacherId=me'),
+      headers: {'Authorization': 'Bearer $_userToken'},
+    );
+
+    if (response.statusCode != 200) {
+      throw HttpException(
+          'Failed to determine Google Classroom teacher status: ${response.body}');
+    }
+
+    final decodedJson = jsonDecode(response.body);
+    if (decodedJson is! Map<String, dynamic>) {
+      return false;
+    }
+
+    final coursesJson = decodedJson['courses'];
+    if (coursesJson is! List) {
+      return false;
+    }
+
+    final teacherCourseIds = <int>{};
+    for (final courseJson in coursesJson) {
+      if (courseJson is Map<String, dynamic>) {
+        final idString = courseJson['id']?.toString();
+        final id = idString != null ? int.tryParse(idString) : null;
+        if (id != null) {
+          teacherCourseIds.add(id);
+        }
+      }
+    }
+
+    for (final course in moodleCourses) {
+      if (teacherCourseIds.contains(course.id)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
@@ -187,9 +229,16 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<List<Course>> getCourses() async {
-    // TODO: implement google api code
-    // Never called??
-    throw UnimplementedError();
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    if (courses != null && courses!.isNotEmpty) {
+      return courses!;
+    }
+
+    courses = await getUserCourses();
+    return courses!;
   }
 
   @override
