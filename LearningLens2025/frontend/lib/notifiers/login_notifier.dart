@@ -167,6 +167,8 @@ class LoginNotifier with ChangeNotifier {
     // Reset LMS
     LmsFactory.getLmsService().resetLMSUserInfo();
 
+    LocalStorageService.clearUserId();
+
     notifyListeners();
   }
 
