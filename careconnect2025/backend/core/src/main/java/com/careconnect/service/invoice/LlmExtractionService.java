@@ -123,6 +123,7 @@ EXTRACTION SCHEMA:
 }
 """;
 
+
         final var messages = List.of(
                 SystemMessage.from(systemMessageText),
                 new UserMessage(rawInvoiceText)

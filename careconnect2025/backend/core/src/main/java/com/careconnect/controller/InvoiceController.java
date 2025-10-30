@@ -142,7 +142,9 @@ public class InvoiceController {
 
             // Step 2: Send raw text to the LLM service
             var json = llmExtractionService.extractInvoiceData(result.rawText);
-            InvoiceDto invoiceDto = objectMapper.readValue(json, InvoiceDto.class);
+            String sanitizedJson = JsonSanitizer.extractFirstJsonObject(json);
+
+            InvoiceDto invoiceDto = objectMapper.readValue(sanitizedJson, InvoiceDto.class);
 
             invoiceDto.documentLink=result.s3Key;
 
@@ -183,6 +185,45 @@ public class InvoiceController {
     /**
      * Helper method to validate the list of uploaded files.
      */
+    public final class JsonSanitizer {
+        private JsonSanitizer() {}
+
+        public static String extractFirstJsonObject(String s) {
+            if (s == null) return null;
+            String t = s.trim();
+
+            // remove ```json ... ``` fences if present
+            if (t.startsWith("```")) {
+                int firstNewline = t.indexOf('\n');
+                t = (firstNewline >= 0 ? t.substring(firstNewline + 1) : t).trim();
+                int fence = t.lastIndexOf("```");
+                if (fence >= 0) t = t.substring(0, fence).trim();
+            }
+
+            int start = t.indexOf('{');
+            if (start < 0) return null;
+
+            int depth = 0;
+            boolean inStr = false, esc = false;
+            for (int i = start; i < t.length(); i++) {
+                char c = t.charAt(i);
+                if (inStr) {
+                    if (!esc && c == '\\') { esc = true; continue; }
+                    if (!esc && c == '"') inStr = false;
+                    esc = false;
+                    continue;
+                }
+                if (c == '"') { inStr = true; continue; }
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) return t.substring(start, i + 1);
+                }
+            }
+            return null;
+        }
+    }
+
     private boolean isFileListInvalid(List<MultipartFile> files) {
         return files == null || files.isEmpty() || files.stream().allMatch(MultipartFile::isEmpty);
     }

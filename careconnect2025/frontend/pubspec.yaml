@@ -131,7 +131,7 @@ dependencies:
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
 # Team D - Dependencies Begin
-  syncfusion_flutter_pdfviewer: ^31.2.3
+  pdfx: ^2.9.2
   qr_flutter: ^4.1.0
   #llm_toolkit: ^0.0.4
   #llama_cpp_dart: 
