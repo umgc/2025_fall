@@ -475,6 +475,84 @@ class GoogleLmsService extends LmsInterface {
   }
 
   @override
+Future<void> saveReflectionQuestions({
+  required String courseId,
+  required List<String> questions,
+  required String assignmentId,
+}) async {
+  try {
+    print('Saving reflection questions for course $courseId, assignment $assignmentId');
+
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    final courseworkUrl =
+        'https://classroom.googleapis.com/v1/courses/$courseId/courseWork/$assignmentId';
+    final courseworkResponse = await http.get(
+      Uri.parse(courseworkUrl),
+      headers: {'Authorization': 'Bearer $_userToken'},
+    );
+
+    if (courseworkResponse.statusCode != 200) {
+      throw HttpException(
+          'Failed to fetch coursework: ${courseworkResponse.statusCode} - ${courseworkResponse.body}');
+    }
+
+    final courseworkData = jsonDecode(courseworkResponse.body);
+    String? formUrl;
+    if (courseworkData['materials'] != null) {
+      for (var material in courseworkData['materials']) {
+        if (material['link'] != null &&
+            material['link']['url'] != null &&
+            material['link']['url'].contains('docs.google.com/forms')) {
+          formUrl = material['link']['url'];
+          break;
+        }
+      }
+    }
+
+    if (formUrl == null) {
+      throw Exception('No Google Form found for this assignment');
+    }
+
+    final formId = await getFormIdFromViewformUrl(formUrl, _userToken!);
+    if (formId == null) {
+      throw Exception('Failed to retrieve Form ID from viewform URL');
+    }
+
+    List<Map<String, dynamic>> requests = [];
+    int questionIndex = 0;
+    for (String question in questions) {
+      requests.add({
+        'createItem': {
+          'item': {
+            'title': question,
+            'questionItem': {
+              'question': {
+                'required': true,
+                'textQuestion': {},
+              },
+            },
+          },
+          'location': {'index': questionIndex++},
+        },
+      });
+    }
+
+    final batchResponse = await _classroomApi.batchUpdateForm(formId, requests);
+    if (batchResponse == null) {
+      throw Exception('Failed to update Google Form with reflection questions');
+    }
+
+    print('Reflection questions saved successfully!');
+  } catch (e) {
+    print('Error saving reflection questions: $e');
+    rethrow;
+  }
+}
+
+  @override
   Future<String> addRandomQuestions(
       String categoryid, String quizid, String numquestions) async {
     print('Adding random questions to quiz...');

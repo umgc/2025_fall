@@ -13,6 +13,7 @@ import 'package:learninglens_app/Views/iep_page.dart';
 import 'package:learninglens_app/Views/lesson_plans.dart';
 import 'package:learninglens_app/Views/nav_card.dart';
 import 'package:learninglens_app/Views/program_assessment_view.dart';
+import 'package:learninglens_app/Views/student_reflections_page.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -361,7 +362,8 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Reflections',
           'description': 'Reflect on your use of AI for your assignments.',
-          'onPressed': null,
+          'onPressed': () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => StudentReflectionsPage())),
           'icon': Icons.note_add_outlined
         },
       ];
