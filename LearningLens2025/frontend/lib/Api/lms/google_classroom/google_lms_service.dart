@@ -71,9 +71,15 @@ class GoogleLmsService extends LmsInterface {
   // Auth / Login
   // ****************************************************************************************
   @override
-  Future<void> login(String username, String password, String baseURL) {
-    // TODO: implement google api code
-    throw UnimplementedError();
+  Future<void> login(String username, String password, String baseURL) async {
+    final clientId =
+        baseURL.isNotEmpty ? baseURL : LocalStorageService.getGoogleClientId();
+
+    if (clientId.isEmpty) {
+      throw ArgumentError('Google client ID is required for Classroom login.');
+    }
+
+    await loginOath(clientId);
   }
 
   Future<void> loginOath(String clientID) async {
