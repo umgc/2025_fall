@@ -307,7 +307,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
         title: const Text('Visit Complete'),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            onPressed: () => context.go('/evv'),
             icon: const Icon(Icons.cancel, color: Colors.red),
             label: const Text('Cancel', style: TextStyle(color: Colors.red)),
           ),

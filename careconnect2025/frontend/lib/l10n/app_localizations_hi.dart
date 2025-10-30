@@ -72,7 +72,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get pleaseLogIn => 'कृपया लॉग इन करें';
 
   @override
-  String get loginRequiredMessage => 'मेनू तक पहुँचने के लिए आपको लॉग इन करना आवश्यक है';
+  String get loginRequiredMessage =>
+      'मेनू तक पहुँचने के लिए आपको लॉग इन करना आवश्यक है';
 
   @override
   String get login => 'लॉग इन';
@@ -156,10 +157,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsNotifications => 'सूचनाएं';
 
   @override
-  String get settingsLoadingNotificationSettings => 'सूचना सेटिंग्स लोड हो रही हैं...';
+  String get settingsLoadingNotificationSettings =>
+      'सूचना सेटिंग्स लोड हो रही हैं...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings => 'सूचना सेटिंग्स लोड करने में असमर्थ';
+  String get settingsUnableToLoadNotificationSettings =>
+      'सूचना सेटिंग्स लोड करने में असमर्थ';
 
   @override
   String get settingsRefresh => 'रिफ्रेश';
@@ -174,7 +177,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsNotifEmergency => 'आपातकालीन अलर्ट';
 
   @override
-  String get settingsNotifEmergencyDesc => 'महत्वपूर्ण स्वास्थ्य चेतावनियाँ और आपातकालीन स्थितियाँ';
+  String get settingsNotifEmergencyDesc =>
+      'महत्वपूर्ण स्वास्थ्य चेतावनियाँ और आपातकालीन स्थितियाँ';
 
   @override
   String get settingsNotifVideoCall => 'वीडियो कॉल सूचनाएं';
@@ -192,7 +196,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'महत्वपूर्ण जीवन संकेत';
 
   @override
-  String get settingsNotifSignificantVitalsDesc => 'जीवन संकेतों में महत्वपूर्ण परिवर्तन';
+  String get settingsNotifSignificantVitalsDesc =>
+      'जीवन संकेतों में महत्वपूर्ण परिवर्तन';
 
   @override
   String get settingsNotifSMS => 'एसएमएस सूचनाएं';
@@ -222,7 +227,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsAIConfiguration => 'एआई कॉन्फ़िगरेशन';
 
   @override
-  String get settingsAIConfigurationDesc => 'अपने एआई सहायक सेटिंग्स को अनुकूलित करें';
+  String get settingsAIConfigurationDesc =>
+      'अपने एआई सहायक सेटिंग्स को अनुकूलित करें';
 
   @override
   String get settingsSubscription => 'सदस्यता';
@@ -231,7 +237,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsManageSubscription => 'सदस्यता प्रबंधित करें';
 
   @override
-  String get settingsManageSubscriptionDesc => 'अपनी सदस्यता योजना देखें या अपडेट करें';
+  String get settingsManageSubscriptionDesc =>
+      'अपनी सदस्यता योजना देखें या अपडेट करें';
 
   @override
   String get settingsNotetakerAssistant => 'नोट टेकर सहायक';
@@ -240,7 +247,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'नोट टेकर सेटिंग्स';
 
   @override
-  String get settingsNotetakerConfigurationDesc => 'नोट टेकर सहायक की सेटिंग्स अनुकूलित करें';
+  String get settingsNotetakerConfigurationDesc =>
+      'नोट टेकर सहायक की सेटिंग्स अनुकूलित करें';
 
   @override
   String get settingsGeneral => 'सामान्य';
@@ -252,7 +260,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsClearCacheShortDesc => 'अस्थायी फ़ाइलें और कैश डेटा हटाएं';
 
   @override
-  String get settingsClearCacheDesc => 'यह सभी अस्थायी फ़ाइलों और कैश डेटा को हटा देगा। कैश साफ करने के बाद ऐप को कंटेंट लोड करने में अधिक समय लग सकता है।';
+  String get settingsClearCacheDesc =>
+      'यह सभी अस्थायी फ़ाइलों और कैश डेटा को हटा देगा। कैश साफ करने के बाद ऐप को कंटेंट लोड करने में अधिक समय लग सकता है।';
 
   @override
   String get settingsSignOut => 'साइन आउट';
@@ -261,31 +270,37 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsSignOutDesc => 'अपने खाते से साइन आउट करें';
 
   @override
-  String get settingsSignOutConfirmMessage => 'क्या आप वाकई साइन आउट करना चाहते हैं?';
+  String get settingsSignOutConfirmMessage =>
+      'क्या आप वाकई साइन आउट करना चाहते हैं?';
 
   @override
   String get settingsDeleteAccount => 'खाता हटाएँ';
 
   @override
-  String get settingsDeleteAccountShortDesc => 'अपने खाते को स्थायी रूप से हटाएँ';
+  String get settingsDeleteAccountShortDesc =>
+      'अपने खाते को स्थायी रूप से हटाएँ';
 
   @override
-  String get settingsDeleteAccountDesc => 'यह कार्रवाई पूर्ववत नहीं की जा सकती। आपकी सभी डेटा स्थायी रूप से हटा दी जाएगी।';
+  String get settingsDeleteAccountDesc =>
+      'यह कार्रवाई पूर्ववत नहीं की जा सकती। आपकी सभी डेटा स्थायी रूप से हटा दी जाएगी।';
 
   @override
-  String get settingsDeleteAccountRequested => 'खाता हटाने का अनुरोध किया गया है। कृपया समर्थन से संपर्क करें।';
+  String get settingsDeleteAccountRequested =>
+      'खाता हटाने का अनुरोध किया गया है। कृपया समर्थन से संपर्क करें।';
 
   @override
   String get settingsDeleteAccountAction => 'खाता हटाएँ';
 
   @override
-  String get welcomeInitializingHealthcare => 'आपका स्वास्थ्य अनुभव प्रारंभ किया जा रहा है...';
+  String get welcomeInitializingHealthcare =>
+      'आपका स्वास्थ्य अनुभव प्रारंभ किया जा रहा है...';
 
   @override
   String get welcomeReadyToConnect => 'आपकी देखभाल जोड़ने के लिए तैयार!';
 
   @override
-  String get welcomeBackendNotHealthyWarning => 'बैकएंड सेवा स्वस्थ नहीं है। एप्लिकेशन सीमित रूप से कार्य करेगा।';
+  String get welcomeBackendNotHealthyWarning =>
+      'बैकएंड सेवा स्वस्थ नहीं है। एप्लिकेशन सीमित रूप से कार्य करेगा।';
 
   @override
   String get welcomeContinue => 'जारी रखें';
@@ -315,7 +330,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get login_signInTitle => 'अपने खाते में साइन इन करें';
 
   @override
-  String get login_signInSubtitle => 'CareConnect तक पहुँचने के लिए अपनी साख दर्ज करें';
+  String get login_signInSubtitle =>
+      'CareConnect तक पहुँचने के लिए अपनी साख दर्ज करें';
 
   @override
   String get login_usernameLabel => 'उपयोगकर्ता नाम';

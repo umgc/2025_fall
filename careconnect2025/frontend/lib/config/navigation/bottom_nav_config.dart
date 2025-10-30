@@ -68,8 +68,7 @@ class BottomNavItem {
       case 'nav_health': return t.navHealth;
       case 'nav_messages': return t.navMessages;
       case 'nav_menu': return t.navMenu;
-      case 'nav_patientList': return t.navPatientList;
-      case 'nav_schedule': return 'Schedule'; // TODO: Add to localization
+      case 'nav_patientList': return t.navPatientList; 
       case 'nav_analytics': return t.navAnalytics;
       case 'nav_more': return t.navMore;
       default: return label;
@@ -168,14 +167,7 @@ static List<BottomNavItem> getCaregiverNavItems() {
         routeName: 'tasks',
         screen: const CaregiverPatientList(),
       ),
-      BottomNavItem(
-        label: 'Schedule',
-        labelKey: 'nav_schedule',
-        icon: Icons.calendar_today_outlined,
-        activeIcon: Icons.calendar_today,
-        routeName: 'schedule',
-        screen: const SchedulePage(),
-      ),
+    
       BottomNavItem(
         label: 'Analytics',
         labelKey: 'nav_analytics',

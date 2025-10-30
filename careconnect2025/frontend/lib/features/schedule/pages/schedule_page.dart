@@ -27,7 +27,7 @@ class _SchedulePageState extends State<SchedulePage> {
     'upcoming': 0,
     'totalToday': 0,
   };
-  
+
   // Internal pool used to compute summary consistently with UI
   List<ScheduledVisit> _summaryPool = [];
 
@@ -38,7 +38,7 @@ class _SchedulePageState extends State<SchedulePage> {
     _loadUpcomingVisits();
     _loadAndSetSummaryData();
   }
-  
+
   Future<void> _refreshAllData() async {
     print('🔄 Refreshing all schedule data...');
     await Future.wait([
@@ -48,7 +48,7 @@ class _SchedulePageState extends State<SchedulePage> {
     ]);
     print('✅ Data refresh complete');
   }
-  
+
   Future<void> _loadAndSetSummaryData() async {
     final data = await _loadSummaryDataClientSide();
     setState(() {
@@ -64,41 +64,50 @@ class _SchedulePageState extends State<SchedulePage> {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final caregiverId = userProvider.user?.caregiverId ?? 1;
-      
+
       final headers = await AuthTokenManager.getAuthHeaders();
       final baseUrl = ApiConstants.baseUrl;
-      
+
       // Fetch a range from the past 7 days up to today so we can include recent overdue items
       final now = DateTime.now();
       final weekAgo = now.subtract(const Duration(days: 7));
       final startStr = DateFormat('yyyy-MM-dd').format(weekAgo);
       final endStr = DateFormat('yyyy-MM-dd').format(now);
-      final url = Uri.parse('${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startStr&endDate=$endStr');
-      
+      final url = Uri.parse(
+        '${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startStr&endDate=$endStr',
+      );
+
       print('🔍 Fetching scheduled visits (week range) from: $url');
       final response = await http.get(url, headers: headers);
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         final all = data.map((json) => ScheduledVisit.fromJson(json)).toList();
-        
+
         // Keep today's visits and overdue (within past 7 days) that are still Scheduled
         final today = DateTime(now.year, now.month, now.day);
         final startWindow = now.subtract(const Duration(days: 7));
         final visits = all.where((v) {
           final dt = v.scheduledTime;
-          final isToday = dt.year == today.year && dt.month == today.month && dt.day == today.day;
-          final isOverdueWithinWeek = dt.isBefore(now) && dt.isAfter(startWindow) && v.status == 'Scheduled';
+          final isToday =
+              dt.year == today.year &&
+              dt.month == today.month &&
+              dt.day == today.day;
+          final isOverdueWithinWeek =
+              dt.isBefore(now) &&
+              dt.isAfter(startWindow) &&
+              v.status == 'Scheduled';
           return isToday || isOverdueWithinWeek;
-        }).toList()
-          ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-        
+        }).toList()..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+
         setState(() {
           _scheduledVisits = visits;
           _isLoading = false;
         });
       } else {
-        throw Exception('Failed to load scheduled visits: ${response.statusCode}');
+        throw Exception(
+          'Failed to load scheduled visits: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error loading scheduled visits: $e');
@@ -108,38 +117,44 @@ class _SchedulePageState extends State<SchedulePage> {
       });
     }
   }
-  
+
   Future<void> _loadUpcomingVisits() async {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final caregiverId = userProvider.user?.caregiverId ?? 1;
-      
+
       final headers = await AuthTokenManager.getAuthHeaders();
       final baseUrl = ApiConstants.baseUrl;
-      
+
       // Get date range: tomorrow to 30 days out
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       final endDate = DateTime.now().add(const Duration(days: 30));
-      
+
       final startDateStr = DateFormat('yyyy-MM-dd').format(tomorrow);
       final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-      
-      final url = Uri.parse('${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startDateStr&endDate=$endDateStr');
-      
+
+      final url = Uri.parse(
+        '${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startDateStr&endDate=$endDateStr',
+      );
+
       final response = await http.get(url, headers: headers);
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        final visits = data.map((json) => ScheduledVisit.fromJson(json)).toList();
-        
+        final visits = data
+            .map((json) => ScheduledVisit.fromJson(json))
+            .toList();
+
         // Sort by date and time
         visits.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-        
+
         setState(() {
           _upcomingVisits = visits;
         });
       } else {
-        throw Exception('Failed to load upcoming visits: ${response.statusCode}');
+        throw Exception(
+          'Failed to load upcoming visits: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error loading upcoming visits: $e');
@@ -148,7 +163,7 @@ class _SchedulePageState extends State<SchedulePage> {
       });
     }
   }
-  
+
   Future<Map<String, int>> _loadSummaryDataClientSide() async {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -161,9 +176,12 @@ class _SchedulePageState extends State<SchedulePage> {
       final end = now.add(const Duration(days: 30));
       final startStr = DateFormat('yyyy-MM-dd').format(start);
       final endStr = DateFormat('yyyy-MM-dd').format(end);
-      final url = Uri.parse('${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startStr&endDate=$endStr');
+      final url = Uri.parse(
+        '${baseUrl}scheduled-visits/caregiver/$caregiverId/range?startDate=$startStr&endDate=$endStr',
+      );
       final response = await http.get(url, headers: headers);
-      if (response.statusCode != 200) throw Exception('summary range fetch failed');
+      if (response.statusCode != 200)
+        throw Exception('summary range fetch failed');
       final List<dynamic> data = jsonDecode(response.body);
       _summaryPool = data.map((json) => ScheduledVisit.fromJson(json)).toList();
 
@@ -171,7 +189,8 @@ class _SchedulePageState extends State<SchedulePage> {
       for (final v in _summaryPool) {
         if (v.status != 'Scheduled') continue; // only pending visits
         final dt = v.scheduledTime;
-        final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+        final isToday =
+            dt.year == now.year && dt.month == now.month && dt.day == now.day;
         if (isToday) totalToday++;
         final diffMinutes = dt.difference(now).inMinutes;
         if (diffMinutes < 0) {
@@ -196,17 +215,31 @@ class _SchedulePageState extends State<SchedulePage> {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-    final user = userProvider.user;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final cs = theme.colorScheme;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('EVV Visit Schedules'),
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshAllData,
+            tooltip: 'Refresh',
+            color: cs.onPrimary,
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 _buildHeader(context),
+                const SizedBox(
+                  height: 12,
+                ), // add this to avoid touching the border
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
@@ -228,70 +261,163 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
+    final cs = theme.colorScheme;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-            width: 1,
-          ),
-        ),
+        color: cs.surface,
+        border: Border(bottom: BorderSide(color: theme.dividerColor, width: 1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Scheduled Visits',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textTheme.bodyLarge?.color,
-                ),
+            child: Text(
+              'Manage your visit schedule',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Manage your visit schedule',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                ),
-              ),
-            ],
             ),
           ),
           const SizedBox(width: 12),
-          Flexible(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
+          FilledButton.icon(
+            onPressed: _scheduleNewVisit,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Schedule New Visit'),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+Widget _buildSummaryCards(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+        // Give tiles more vertical room on narrow screens
+        final crossAxisCount = isNarrow ? 2 : 4;
+        final aspect = isNarrow ? 2.0 : 2.6;
+
+        return GridView.count(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: aspect,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildSummaryCard(
+              context: context,
+              title: 'Overdue',
+              count: _summaryData['overdue'].toString(),
+              icon: Icons.error_outline,
+              iconColor: cs.error,
+              iconBackgroundColor: cs.errorContainer.withOpacity(0.6),
+            ),
+            _buildSummaryCard(
+              context: context,
+              title: 'Ready',
+              count: _summaryData['ready'].toString(),
+              icon: Icons.play_arrow,
+              iconColor: cs.tertiary,
+              iconBackgroundColor: cs.tertiaryContainer.withOpacity(0.6),
+            ),
+            _buildSummaryCard(
+              context: context,
+              title: 'Upcoming',
+              count: _summaryData['upcoming'].toString(),
+              icon: Icons.access_time,
+              iconColor: cs.primary,
+              iconBackgroundColor: cs.primaryContainer.withOpacity(0.6),
+            ),
+            _buildSummaryCard(
+              context: context,
+              title: 'Total Today',
+              count: _summaryData['totalToday'].toString(),
+              icon: Icons.calendar_today,
+              iconColor: cs.secondary,
+              iconBackgroundColor: cs.secondaryContainer.withOpacity(0.6),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+Widget _buildSummaryCard({
+  required BuildContext context,
+  required String title,
+  required String count,
+  required IconData icon,
+  required Color iconColor,
+  required Color iconBackgroundColor,
+}) {
+  final theme = Theme.of(context);
+  final cs = theme.colorScheme;
+
+  // Cap text scale so accessibility settings do not overflow these compact tiles
+  final cappedScale = MediaQuery.of(context).textScaleFactor.clamp(1.0, 1.2);
+
+  return MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaleFactor: cappedScale),
+    child: Container(
+      // Allow it to grow if needed, but ensure a comfortable minimum
+      constraints: const BoxConstraints(minHeight: 98),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconBackgroundColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  onPressed: () => _refreshAllData(),
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _scheduleNewVisit(),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Schedule New Visit'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  count,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // Slightly smaller than headlineSmall to avoid overflow on dense UIs
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -299,137 +425,28 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSummaryCards(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildSummaryCard(
-              context: context,
-              title: 'Overdue',
-              count: _summaryData['overdue'].toString(),
-              icon: Icons.error_outline,
-              iconColor: Colors.red,
-              iconBackgroundColor: Colors.red.withOpacity(0.1),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildSummaryCard(
-              context: context,
-              title: 'Ready',
-              count: _summaryData['ready'].toString(),
-              icon: Icons.play_arrow,
-              iconColor: Colors.green,
-              iconBackgroundColor: Colors.green.withOpacity(0.1),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildSummaryCard(
-              context: context,
-              title: 'Upcoming',
-              count: _summaryData['upcoming'].toString(),
-              icon: Icons.access_time,
-              iconColor: Colors.blue,
-              iconBackgroundColor: Colors.blue.withOpacity(0.1),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildSummaryCard(
-              context: context,
-              title: 'Total Today',
-              count: _summaryData['totalToday'].toString(),
-              icon: Icons.calendar_today,
-              iconColor: Colors.purple,
-              iconBackgroundColor: Colors.purple.withOpacity(0.1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard({
-    required BuildContext context,
-    required String title,
-    required String count,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBackgroundColor,
-  }) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconBackgroundColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            count,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTodaysVisitsSection() {
     final theme = Theme.of(context);
-    
+
     // Filter out completed visits - only show scheduled visits
-    final activeVisits = _scheduledVisits.where((visit) => visit.status == 'Scheduled').toList();
-    
+    final activeVisits = _scheduledVisits
+        .where((visit) => visit.status == 'Scheduled')
+        .toList();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Today\'s Scheduled Visits',
-            style: TextStyle(
-              fontSize: 20,
+            "Today's Scheduled Visits",
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color,
             ),
           ),
           const SizedBox(height: 16),
@@ -447,7 +464,8 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Widget _buildEmptyState() {
     final theme = Theme.of(context);
-    
+    final cs = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Center(
@@ -457,23 +475,18 @@ class _SchedulePageState extends State<SchedulePage> {
             Icon(
               Icons.event_available,
               size: 64,
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.3),
+              color: cs.onSurfaceVariant.withOpacity(0.3),
             ),
             const SizedBox(height: 16),
             Text(
               'No visits scheduled for today',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: theme.textTheme.bodyLarge?.color,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(color: cs.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
               'Tap the + button to schedule a new visit',
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
               ),
             ),
           ],
@@ -483,23 +496,18 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   String _getVisitStatus(ScheduledVisit visit) {
-    // First check the actual status from the database
-    // If the visit is not "Scheduled", use that status
     if (visit.status != 'Scheduled') {
-      // Visit has been completed, cancelled, etc. - don't show it in today's list
       return 'completed';
     }
-    
-    // Only calculate time-based status for "Scheduled" visits
+
     final now = DateTime.now();
     final visitDateTime = visit.scheduledTime;
     final currentTime = TimeOfDay.fromDateTime(now);
     final visitTime = TimeOfDay.fromDateTime(visitDateTime);
-    
-    // Convert to minutes for comparison
+
     final currentMinutes = currentTime.hour * 60 + currentTime.minute;
     final visitMinutes = visitTime.hour * 60 + visitTime.minute;
-    
+
     if (visitMinutes < currentMinutes) {
       return 'overdue';
     } else if (visitMinutes - currentMinutes <= 30) {
@@ -511,45 +519,47 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Widget _buildTodayVisitCard(ScheduledVisit visit) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final cs = theme.colorScheme;
     final status = _getVisitStatus(visit);
-    
-    // Determine colors based on status
+
     Color backgroundColor;
     Color borderColor;
     Color statusBadgeColor;
     String statusText;
     String buttonText;
     IconData buttonIcon;
-    
+
     if (status == 'overdue') {
-      backgroundColor = isDark ? Colors.red[900]!.withOpacity(0.3) : Colors.red[50]!;
-      borderColor = Colors.red[700]!;
-      statusBadgeColor = Colors.red[700]!;
+      backgroundColor = cs.errorContainer.withOpacity(0.35);
+      borderColor = cs.error;
+      statusBadgeColor = cs.error;
       statusText = 'Overdue';
       buttonText = 'Start Overdue Visit';
       buttonIcon = Icons.play_arrow;
     } else if (status == 'ready') {
-      backgroundColor = isDark ? Colors.blue[900]!.withOpacity(0.3) : Colors.blue[50]!;
-      borderColor = Colors.blue[700]!;
-      statusBadgeColor = Colors.blue[700]!;
+      backgroundColor = cs.primaryContainer.withOpacity(0.35);
+      borderColor = cs.primary;
+      statusBadgeColor = cs.primary;
       statusText = 'Ready';
       buttonText = 'Start Visit';
       buttonIcon = Icons.play_arrow;
     } else {
-      backgroundColor = isDark ? Colors.grey[850]! : Colors.white;
-      borderColor = isDark ? Colors.grey[700]! : Colors.grey[300]!;
-      statusBadgeColor = Colors.grey[600]!;
+      backgroundColor = cs.surface;
+      borderColor = theme.dividerColor;
+      statusBadgeColor = cs.outline;
       statusText = 'Upcoming';
       buttonText = 'View Details';
       buttonIcon = Icons.info_outline;
     }
-    
-    final timeStr = '${visit.scheduledTime.hour.toString().padLeft(2, '0')}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}';
+
+    final timeStr =
+        '${visit.scheduledTime.hour.toString().padLeft(2, '0')}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}';
     final durationHours = visit.duration.inHours;
     final durationMinutes = visit.duration.inMinutes.remainder(60);
-    final durationStr = durationHours > 0 ? '${durationHours}h ${durationMinutes}m' : '${durationMinutes}m';
-    
+    final durationStr = durationHours > 0
+        ? '${durationHours}h ${durationMinutes}m'
+        : '${durationMinutes}m';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -562,14 +572,9 @@ class _SchedulePageState extends State<SchedulePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with patient name and status badge
             Row(
               children: [
-                Icon(
-                  Icons.person,
-                  color: theme.primaryColor,
-                  size: 24,
-                ),
+                Icon(Icons.person, color: cs.primary, size: 24),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -586,7 +591,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.red[700],
+                      color: cs.error,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -596,7 +601,10 @@ class _SchedulePageState extends State<SchedulePage> {
                     ),
                   ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: statusBadgeColor,
                     borderRadius: BorderRadius.circular(20),
@@ -613,8 +621,6 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
             const SizedBox(height: 12),
-            
-            // Service type
             Text(
               visit.serviceType,
               style: TextStyle(
@@ -624,8 +630,6 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             ),
             const SizedBox(height: 12),
-            
-            // Scheduled time
             Row(
               children: [
                 Icon(
@@ -652,8 +656,6 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
             const SizedBox(height: 8),
-            
-            // Duration
             Row(
               children: [
                 Icon(
@@ -680,30 +682,26 @@ class _SchedulePageState extends State<SchedulePage> {
               ],
             ),
             const SizedBox(height: 16),
-            
-            // Action button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
                   if (status == 'overdue' || status == 'ready') {
-                    // Skip patient selection AND service type selection - go directly to check-in
-                    final encodedServiceType = Uri.encodeComponent(visit.serviceType);
-                    context.push('/evv/checkin-location?patientId=${visit.patientId}&serviceType=$encodedServiceType&scheduledVisitId=${visit.id}');
+                    final encodedServiceType = Uri.encodeComponent(
+                      visit.serviceType,
+                    );
+                    context.push(
+                      '/evv/checkin-location?patientId=${visit.patientId}&serviceType=$encodedServiceType&scheduledVisitId=${visit.id}',
+                    );
                   } else {
-                    // Just view details for upcoming visits
                     _viewVisitDetails(visit);
                   }
                 },
                 icon: Icon(buttonIcon, size: 18),
                 label: Text(buttonText),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: status == 'overdue' 
-                      ? Colors.red[700] 
-                      : status == 'ready'
-                          ? Colors.blue[700]
-                          : theme.primaryColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: status == 'overdue' ? cs.error : cs.primary,
+                  foregroundColor: cs.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -734,33 +732,32 @@ class _SchedulePageState extends State<SchedulePage> {
 
   Widget _buildUpcomingVisitsSection() {
     final theme = Theme.of(context);
-    
+    final cs = theme.colorScheme;
+
     if (_upcomingVisits.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     // Group visits by date
     final Map<String, List<ScheduledVisit>> groupedVisits = {};
     for (var visit in _upcomingVisits) {
       final dateKey = DateFormat('yyyy-MM-dd').format(visit.scheduledTime);
-      if (!groupedVisits.containsKey(dateKey)) {
-        groupedVisits[dateKey] = [];
-      }
-      groupedVisits[dateKey]!.add(visit);
+      groupedVisits.putIfAbsent(dateKey, () => []).add(visit);
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.brightness == Brightness.dark ? Colors.grey[850] : Colors.white,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
+            if (theme.brightness == Brightness.light)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
         padding: const EdgeInsets.all(20),
@@ -769,10 +766,9 @@ class _SchedulePageState extends State<SchedulePage> {
           children: [
             Text(
               'Upcoming Visits',
-              style: TextStyle(
-                fontSize: 20,
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: theme.textTheme.bodyLarge?.color,
+                color: cs.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -781,7 +777,7 @@ class _SchedulePageState extends State<SchedulePage> {
               final visits = entry.value;
               final date = DateTime.parse(dateStr);
               final formattedDate = DateFormat('EEEE, MMMM d').format(date);
-              
+
               return _buildDateGroup(formattedDate, visits);
             }).toList(),
           ],
@@ -789,10 +785,11 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
     );
   }
-  
+
   Widget _buildDateGroup(String dateLabel, List<ScheduledVisit> visits) {
     final theme = Theme.of(context);
-    
+    final cs = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -800,10 +797,9 @@ class _SchedulePageState extends State<SchedulePage> {
           padding: const EdgeInsets.only(bottom: 12, top: 16),
           child: Text(
             dateLabel,
-            style: TextStyle(
-              fontSize: 16,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.blue[700],
+              color: cs.primary,
             ),
           ),
         ),
@@ -811,21 +807,22 @@ class _SchedulePageState extends State<SchedulePage> {
           final index = entry.key;
           final visit = entry.value;
           final isLast = index == visits.length - 1;
-          
+
           return _buildUpcomingVisitEntry(visit, isLast);
         }).toList(),
       ],
     );
   }
-  
+
   Widget _buildUpcomingVisitEntry(ScheduledVisit visit, bool isLast) {
     final theme = Theme.of(context);
-    final timeStr = '${visit.scheduledTime.hour.toString().padLeft(2, '0')}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}';
-    
+    final cs = theme.colorScheme;
+    final timeStr =
+        '${visit.scheduledTime.hour.toString().padLeft(2, '0')}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}';
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Vertical line
         SizedBox(
           width: 4,
           child: Column(
@@ -834,8 +831,8 @@ class _SchedulePageState extends State<SchedulePage> {
                 width: 4,
                 height: isLast ? 60 : 80,
                 decoration: BoxDecoration(
-                  color: Colors.blue[700],
-                  borderRadius: isLast 
+                  color: cs.primary,
+                  borderRadius: isLast
                       ? const BorderRadius.only(
                           bottomLeft: Radius.circular(2),
                           bottomRight: Radius.circular(2),
@@ -847,18 +844,14 @@ class _SchedulePageState extends State<SchedulePage> {
           ),
         ),
         const SizedBox(width: 12),
-        // Visit card
         Expanded(
           child: Container(
             margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: cs.primaryContainer.withOpacity(0.35),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.blue[100]!,
-                width: 1,
-              ),
+              border: Border.all(color: cs.primaryContainer, width: 1),
             ),
             child: Row(
               children: [
@@ -871,16 +864,15 @@ class _SchedulePageState extends State<SchedulePage> {
                           Icon(
                             Icons.access_time,
                             size: 16,
-                            color: Colors.grey[700],
+                            color: cs.onSurfaceVariant,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               visit.patientName,
-                              style: TextStyle(
-                                fontSize: 16,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: cs.onSurface,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey[800],
                               ),
                             ),
                           ),
@@ -891,9 +883,8 @@ class _SchedulePageState extends State<SchedulePage> {
                         padding: const EdgeInsets.only(left: 24),
                         child: Text(
                           '${visit.serviceType} at $timeStr',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -901,9 +892,12 @@ class _SchedulePageState extends State<SchedulePage> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.blue[100],
+                    color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -911,7 +905,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.blue[700],
+                      color: cs.onPrimaryContainer,
                     ),
                   ),
                 ),
@@ -946,8 +940,14 @@ class _SchedulePageState extends State<SchedulePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('Service Type', visit.serviceType),
-            _buildDetailRow('Time', '${visit.scheduledTime.hour}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}'),
-            _buildDetailRow('Duration', '${visit.duration.inHours}h ${visit.duration.inMinutes.remainder(60)}m'),
+            _buildDetailRow(
+              'Time',
+              '${visit.scheduledTime.hour}:${visit.scheduledTime.minute.toString().padLeft(2, '0')}',
+            ),
+            _buildDetailRow(
+              'Duration',
+              '${visit.duration.inHours}h ${visit.duration.inMinutes.remainder(60)}m',
+            ),
             _buildDetailRow('Status', visit.status),
           ],
         ),
@@ -959,7 +959,6 @@ class _SchedulePageState extends State<SchedulePage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Start visit
               context.push('/evv/select-patient');
             },
             child: const Text('Start Visit'),
@@ -982,9 +981,7 @@ class _SchedulePageState extends State<SchedulePage> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -1003,7 +1000,7 @@ class _ScheduleVisitDialog extends StatefulWidget {
 
 class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form fields
   Patient? _selectedPatient;
   String? _selectedServiceType;
@@ -1012,12 +1009,12 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
   int _duration = 60;
   String _priority = 'Normal';
   final TextEditingController _notesController = TextEditingController();
-  
+
   // Data
   List<Patient> _patients = [];
   bool _isLoading = false;
   bool _isSubmitting = false;
-  
+
   final List<String> _serviceTypes = [
     'Personal Care',
     'Medication Management',
@@ -1030,36 +1027,36 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
     'Occupational Therapy',
     'Skilled Nursing',
   ];
-  
+
   final List<String> _priorities = ['Normal', 'High', 'Urgent'];
-  
+
   @override
   void initState() {
     super.initState();
     _loadPatients();
   }
-  
+
   @override
   void dispose() {
     _notesController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadPatients() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final caregiverId = userProvider.user?.caregiverId ?? 1;
-      
+
       final headers = await AuthTokenManager.getAuthHeaders();
       final baseUrl = ApiConstants.baseUrl;
       final url = Uri.parse('${baseUrl}caregivers/$caregiverId/patients');
-      
+
       final response = await http.get(url, headers: headers);
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -1084,12 +1081,12 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       }
     }
   }
-  
+
   Future<void> _scheduleVisit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     if (_selectedPatient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1099,7 +1096,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       );
       return;
     }
-    
+
     if (_selectedServiceType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1109,7 +1106,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       );
       return;
     }
-    
+
     if (_selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1119,40 +1116,43 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       );
       return;
     }
-    
+
     setState(() {
       _isSubmitting = true;
     });
-    
+
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final caregiverId = userProvider.user?.caregiverId ?? 1;
-      
+
       final headers = await AuthTokenManager.getAuthHeaders();
       headers['Content-Type'] = 'application/json';
-      
+
       final baseUrl = ApiConstants.baseUrl;
-      final url = Uri.parse('${baseUrl}scheduled-visits/caregiver/$caregiverId');
-      
+      final url = Uri.parse(
+        '${baseUrl}scheduled-visits/caregiver/$caregiverId',
+      );
+
       // Build request body
       final requestBody = {
         'patientId': _selectedPatient!.id,
         'serviceType': _selectedServiceType,
         'scheduledDate': DateFormat('yyyy-MM-dd').format(_selectedDate),
-        'scheduledTime': '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}:00',
+        'scheduledTime':
+            '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}:00',
         'durationMinutes': _duration,
         'priority': _priority,
         'notes': _notesController.text.isEmpty ? null : _notesController.text,
       };
-      
+
       print('📤 Scheduling visit: $requestBody');
-      
+
       final response = await http.post(
         url,
         headers: headers,
         body: jsonEncode(requestBody),
       );
-      
+
       if (response.statusCode == 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1165,7 +1165,9 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
           widget.onScheduled();
         }
       } else {
-        throw Exception('Failed to schedule visit: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to schedule visit: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       print('Error scheduling visit: $e');
@@ -1185,15 +1187,13 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
         child: Column(
@@ -1203,7 +1203,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -1258,7 +1258,9 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                               items: _patients.map((patient) {
                                 return DropdownMenuItem<Patient>(
                                   value: patient,
-                                  child: Text('${patient.firstName} ${patient.lastName}'),
+                                  child: Text(
+                                    '${patient.firstName} ${patient.lastName}',
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (value) {
@@ -1268,7 +1270,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                               },
                             ),
                       const SizedBox(height: 16),
-                      
+
                       // Service Type dropdown
                       _buildLabel('Service Type *'),
                       const SizedBox(height: 8),
@@ -1297,7 +1299,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Date and Time row
                       Row(
                         children: [
@@ -1315,13 +1317,16 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                     ),
                                     child: Text(
-                                      DateFormat('MM/dd/yyyy').format(_selectedDate),
+                                      DateFormat(
+                                        'MM/dd/yyyy',
+                                      ).format(_selectedDate),
                                     ),
                                   ),
                                 ),
@@ -1343,10 +1348,11 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 12,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                     ),
                                     child: Text(
                                       _selectedTime != null
@@ -1361,7 +1367,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Duration and Priority row
                       Row(
                         children: [
@@ -1381,19 +1387,18 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                                   ),
                                   child: Row(
                                     children: [
-                                      // Decrement button
                                       IconButton(
                                         icon: const Icon(Icons.remove),
                                         onPressed: _duration > 15
                                             ? () {
                                                 setState(() {
-                                                  _duration = (_duration - 15).clamp(15, 480);
+                                                  _duration = (_duration - 15)
+                                                      .clamp(15, 480);
                                                 });
                                               }
                                             : null,
                                         padding: const EdgeInsets.all(8),
                                       ),
-                                      // Duration display
                                       Expanded(
                                         child: Center(
                                           child: Text(
@@ -1401,18 +1406,21 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w500,
-                                              color: theme.textTheme.bodyLarge?.color,
+                                              color: theme
+                                                  .textTheme
+                                                  .bodyLarge
+                                                  ?.color,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      // Increment button
                                       IconButton(
                                         icon: const Icon(Icons.add),
                                         onPressed: _duration < 480
                                             ? () {
                                                 setState(() {
-                                                  _duration = (_duration + 15).clamp(15, 480);
+                                                  _duration = (_duration + 15)
+                                                      .clamp(15, 480);
                                                 });
                                               }
                                             : null,
@@ -1461,7 +1469,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Notes
                       _buildLabel('Notes'),
                       const SizedBox(height: 8),
@@ -1488,17 +1496,15 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: theme.dividerColor,
-                  ),
-                ),
+                border: Border(top: BorderSide(color: theme.dividerColor)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -1511,8 +1517,8 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
                   ElevatedButton(
                     onPressed: _isSubmitting ? null : _scheduleVisit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 12,
@@ -1540,7 +1546,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       ),
     );
   }
-  
+
   Widget _buildLabel(String text) {
     return Text(
       text,
@@ -1551,7 +1557,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       ),
     );
   }
-  
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -1565,7 +1571,7 @@ class _ScheduleVisitDialogState extends State<_ScheduleVisitDialog> {
       });
     }
   }
-  
+
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -1600,26 +1606,26 @@ class ScheduledVisit {
     required this.status,
     required this.priority,
   });
-  
+
   factory ScheduledVisit.fromJson(Map<String, dynamic> json) {
     // Parse date and time from the response
     final dateStr = json['scheduledDate'] as String;
     final timeStr = json['scheduledTime'] as String;
-    
+
     // Parse date (format: yyyy-MM-dd)
     final dateParts = dateStr.split('-');
     final year = int.parse(dateParts[0]);
     final month = int.parse(dateParts[1]);
     final day = int.parse(dateParts[2]);
-    
+
     // Parse time (format: HH:mm:ss or HH:mm)
     final timeParts = timeStr.split(':');
     final hour = int.parse(timeParts[0]);
     final minute = int.parse(timeParts[1]);
-    
+
     final scheduledDateTime = DateTime(year, month, day, hour, minute);
     final durationMinutes = json['durationMinutes'] as int;
-    
+
     return ScheduledVisit(
       id: json['id'] as int,
       patientId: json['patientId'] as int,
@@ -1632,4 +1638,3 @@ class ScheduledVisit {
     );
   }
 }
-

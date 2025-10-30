@@ -72,7 +72,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pleaseLogIn => 'Please log in';
 
   @override
-  String get loginRequiredMessage => 'You need to be logged in to access the menu';
+  String get loginRequiredMessage =>
+      'You need to be logged in to access the menu';
 
   @override
   String get login => 'Login';
@@ -156,10 +157,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotifications => 'Notifications';
 
   @override
-  String get settingsLoadingNotificationSettings => 'Loading notification settings...';
+  String get settingsLoadingNotificationSettings =>
+      'Loading notification settings...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings => 'Unable to load notification settings';
+  String get settingsUnableToLoadNotificationSettings =>
+      'Unable to load notification settings';
 
   @override
   String get settingsRefresh => 'Refresh';
@@ -174,7 +177,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotifEmergency => 'Emergency Alerts';
 
   @override
-  String get settingsNotifEmergencyDesc => 'Critical health alerts and emergencies';
+  String get settingsNotifEmergencyDesc =>
+      'Critical health alerts and emergencies';
 
   @override
   String get settingsNotifVideoCall => 'Video Call Notifications';
@@ -192,7 +196,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'Significant Vitals';
 
   @override
-  String get settingsNotifSignificantVitalsDesc => 'Important changes in vital signs';
+  String get settingsNotifSignificantVitalsDesc =>
+      'Important changes in vital signs';
 
   @override
   String get settingsNotifSMS => 'SMS Notifications';
@@ -204,7 +209,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotifGamification => 'Gamification';
 
   @override
-  String get settingsNotifGamificationDesc => 'Achievement and progress notifications';
+  String get settingsNotifGamificationDesc =>
+      'Achievement and progress notifications';
 
   @override
   String get settingsSnackUpdated => 'Notification settings updated';
@@ -222,7 +228,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAIConfiguration => 'AI Configuration';
 
   @override
-  String get settingsAIConfigurationDesc => 'Customize your AI assistant settings';
+  String get settingsAIConfigurationDesc =>
+      'Customize your AI assistant settings';
 
   @override
   String get settingsSubscription => 'Subscription';
@@ -231,7 +238,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsManageSubscription => 'Manage Subscription';
 
   @override
-  String get settingsManageSubscriptionDesc => 'View or update your subscription plan';
+  String get settingsManageSubscriptionDesc =>
+      'View or update your subscription plan';
 
   @override
   String get settingsNotetakerAssistant => 'Notetaker Assistant';
@@ -240,7 +248,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'Notetaker Configuration';
 
   @override
-  String get settingsNotetakerConfigurationDesc => 'Customize your Notetaker assistant settings';
+  String get settingsNotetakerConfigurationDesc =>
+      'Customize your Notetaker assistant settings';
 
   @override
   String get settingsGeneral => 'General';
@@ -249,10 +258,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsClearCache => 'Clear Cache';
 
   @override
-  String get settingsClearCacheShortDesc => 'Remove temporary files and cache data';
+  String get settingsClearCacheShortDesc =>
+      'Remove temporary files and cache data';
 
   @override
-  String get settingsClearCacheDesc => 'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.';
+  String get settingsClearCacheDesc =>
+      'This will clear all temporary files and cache data. The app may take longer to load content initially after clearing cache.';
 
   @override
   String get settingsSignOut => 'Sign Out';
@@ -261,31 +272,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSignOutDesc => 'Sign out of your account';
 
   @override
-  String get settingsSignOutConfirmMessage => 'Are you sure you want to sign out?';
+  String get settingsSignOutConfirmMessage =>
+      'Are you sure you want to sign out?';
 
   @override
   String get settingsDeleteAccount => 'Delete Account';
 
   @override
-  String get settingsDeleteAccountShortDesc => 'Permanently delete your account';
+  String get settingsDeleteAccountShortDesc =>
+      'Permanently delete your account';
 
   @override
-  String get settingsDeleteAccountDesc => 'This action cannot be undone. All your data will be permanently deleted.';
+  String get settingsDeleteAccountDesc =>
+      'This action cannot be undone. All your data will be permanently deleted.';
 
   @override
-  String get settingsDeleteAccountRequested => 'Account deletion requested. Please contact support.';
+  String get settingsDeleteAccountRequested =>
+      'Account deletion requested. Please contact support.';
 
   @override
   String get settingsDeleteAccountAction => 'Delete Account';
 
   @override
-  String get welcomeInitializingHealthcare => 'Initializing your healthcare experience...';
+  String get welcomeInitializingHealthcare =>
+      'Initializing your healthcare experience...';
 
   @override
   String get welcomeReadyToConnect => 'Ready to connect your care!';
 
   @override
-  String get welcomeBackendNotHealthyWarning => 'Backend service is not healthy. The application has limited capabilities.';
+  String get welcomeBackendNotHealthyWarning =>
+      'Backend service is not healthy. The application has limited capabilities.';
 
   @override
   String get welcomeContinue => 'Continue';
@@ -315,7 +332,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get login_signInTitle => 'Sign in to your account';
 
   @override
-  String get login_signInSubtitle => 'Enter your credentials to access CareConnect';
+  String get login_signInSubtitle =>
+      'Enter your credentials to access CareConnect';
 
   @override
   String get login_usernameLabel => 'Username';
