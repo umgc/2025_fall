@@ -1,12 +1,16 @@
 package com.careconnect.dto;
 
-import com.careconnect.model.QuestionType;
+// QuestionDTO
+public record QuestionDTO(Long id, String prompt, String type, boolean required, int ordinal) {}
 
-public record QuestionDTO(
-        Long id,
-        String prompt,
-        QuestionType type,
-        boolean required,
-        Integer ordinal,
-        Boolean active
-) { }
+// CreateCheckInRequest
+public record CreateCheckInRequest(Long patientId, java.util.List<Long> selectedQuestionIds) {}
+
+// CheckInSummaryDTO (for history card)
+public record CheckInSummaryDTO(
+        Long id, String clinicianName, String type, String status,
+        java.time.OffsetDateTime startedAt, Integer durationMinutes,
+        String moodLabel, java.time.OffsetDateTime nextCheckIn, String summary) {}
+
+// AnswerUpsertDTO  (send one per answered question)
+public record AnswerUpsertDTO(Long questionId, String valueText, Boolean valueBoolean, java.math.BigDecimal valueNumber) {}

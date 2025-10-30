@@ -8,9 +8,14 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
 
     // Return all active/inactive questions
     List<Question> findByActive(Boolean active);
+    List<Question> findAllByActiveTrueOrderByOrdinalAsc();
 
     // (Optional niceties)
     List<Question> findAllByActiveTrue();
     List<Question> findAllByActiveFalse();
+
+    List<Question> findAllByOrderByOrdinalAsc();
+
+    List<Question> findAllByActiveFalseOrderByOrdinalAsc();
 }
 

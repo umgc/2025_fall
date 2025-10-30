@@ -1,8 +1,8 @@
 package com.careconnect.model;
 
 import com.careconnect.dto.QuestionDTO;
-import com.careconnect.dto.QuestionUpsertDTO;
 import com.careconnect.dto.QuestionMapper;
+import com.careconnect.dto.QuestionUpsertDTO;
 import com.careconnect.repository.QuestionRepository;
 import com.careconnect.service.QuestionService;
 import org.springframework.stereotype.Service;
@@ -24,10 +24,28 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     @Transactional(readOnly = true)
     public List<QuestionDTO> listQuestions(Boolean active) {
-        List<Question> all = (active == null)
-                ? repo.findAll()
-                : repo.findByActive(active); // <-- add this method to repo; see below
-        return all.stream().map(QuestionMapper::toDto).toList();
+        List<Question> src;
+        if (active == null) {
+            // all questions ordered by ordinal
+            src = repo.findAllByOrderByOrdinalAsc();
+        } else if (active) {
+            // only active, ordered
+            src = repo.findAllByActiveTrueOrderByOrdinalAsc();
+        } else {
+            // only inactive, ordered
+            src = repo.findAllByActiveFalseOrderByOrdinalAsc();
+        }
+        return src.stream().map(QuestionMapper::toDto).toList();
+    }
+
+    // #3: used by /v1/api/checkins/{id}/questions
+    @Override
+    @Transactional(readOnly = true)
+    public List<QuestionDTO> findActiveOrdered() {
+        return repo.findAllByActiveTrueOrderByOrdinalAsc()
+                .stream()
+                .map(QuestionMapper::toDto)
+                .toList();
     }
 
     @Override
@@ -40,19 +58,16 @@ public class QuestionServiceImpl implements QuestionService {
     public QuestionDTO create(QuestionUpsertDTO body) {
         Question q = new Question();
         QuestionMapper.applyUpsert(q, body);
-
-        // ensure new questions default to active
         q.setActive(true);
-
         q = repo.save(q);
         return QuestionMapper.toDto(q);
     }
-
 
     @Override
     public Optional<QuestionDTO> update(Long id, QuestionUpsertDTO body) {
         return repo.findById(id).map(existing -> {
             QuestionMapper.applyUpsert(existing, body);
+            existing = repo.save(existing);
             return QuestionMapper.toDto(existing);
         });
     }
@@ -61,6 +76,7 @@ public class QuestionServiceImpl implements QuestionService {
     public Optional<QuestionDTO> setActive(Long id, boolean active) {
         return repo.findById(id).map(existing -> {
             existing.setActive(active);
+            existing = repo.save(existing);
             return QuestionMapper.toDto(existing);
         });
     }

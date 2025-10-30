@@ -12,4 +12,7 @@ public interface QuestionService {
     QuestionDTO create(QuestionUpsertDTO body);
     Optional<QuestionDTO> update(Long id, QuestionUpsertDTO body);
     Optional<QuestionDTO> setActive(Long id, boolean active);
+
+    // If your controller calls this, declare it too:
+    List<QuestionDTO> findActiveOrdered();
 }
