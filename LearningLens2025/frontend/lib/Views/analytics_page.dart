@@ -945,7 +945,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           if (selectedLLM == LlmType.LOCAL) ...[
             const SizedBox(height: 6),
             const Text(
-              "Running a Large Language Model (LLM) requires substantial hardware resources.\nWhile 7B or higher thinking (Qwen) models can be used to generate the analysis, it may produce inaccurate or misleading responses. Additionally, it will not generate any reference.\nFor optimal results, we strongly recommend using the external API for this task.\nPlease use the local LLM responsibly and independently verify any critical information.",
+              "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nWe recommend using 7B or higher thinking (Qwen) models to generate the analysis. \nFor best results, we strongly recommend using the external LLM for this task.\nPlease use the local LLM responsibly and independently verify any critical information.",
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.black54,

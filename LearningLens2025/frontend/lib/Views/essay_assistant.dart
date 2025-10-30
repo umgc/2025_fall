@@ -59,6 +59,8 @@ import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/services/LLMContextBuilder.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/prompt_builder_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 2) Top-level types / utilities
@@ -193,6 +195,8 @@ class _EssayAssistantState extends State<EssayAssistant> {
       _currentSession != null; // Check if a session is active
   String get essayID => _currentSession?.id ?? ''; // Current essay/session ID
 
+  bool _localLlmAvail = !kIsWeb;
+
   /// Start or continue a session for the given essay.
   Future<void> _startSessionFor(Assignment essay, {bool replay = true}) async {
     // Get EssayKey
@@ -260,6 +264,12 @@ class _EssayAssistantState extends State<EssayAssistant> {
   /// Cancel any ongoing streaming LLM response.
   void _cancelStreaming() async {
     if (!_isStreaming) return;
+
+    // local LLM has its own cancel
+    if (_selectedLLM == LlmType.LOCAL) {
+      LocalLLMService().cancel();
+      return;
+    }
 
     _isStreaming = false;
     await _streamSub?.cancel();
@@ -627,8 +637,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         if (key.isEmpty) return _appendError('Deepseek key missing');
         aiModel = DeepseekLLM(key);
       case LlmType.LOCAL:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        aiModel = LocalLLMService();
     }
     final fullContext = generateContext(
       permTokens: permContext,
@@ -1693,7 +1702,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         underline: const SizedBox.shrink(),
                         onChanged: (LlmType? newValue) {
                           if (newValue == null) return;
-                          if (_hasKeyFor(newValue)) {
+                          if (newValue == LlmType.LOCAL ||
+                              _hasKeyFor(newValue)) {
                             setState(() => _selectedLLM = newValue);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1704,7 +1714,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                           }
                         },
                         items: LlmType.values.map((llm) {
-                          final enabled = _hasKeyFor(llm);
+                          final enabled = (llm == LlmType.LOCAL &&
+                                  LocalStorageService.getLocalLLMPath() != "" &&
+                                  _localLlmAvail) ||
+                              _hasKeyFor(llm);
                           return DropdownMenuItem<LlmType>(
                             value: llm,
                             enabled: enabled,
