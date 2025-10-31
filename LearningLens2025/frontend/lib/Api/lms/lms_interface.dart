@@ -121,4 +121,9 @@ Future<void> saveReflectionQuestions({
   }) {
     throw UnimplementedError();
   }
+
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
+    throw UnimplementedError();
+  }
 }
