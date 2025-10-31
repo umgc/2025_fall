@@ -80,7 +80,7 @@ class RecentSymptomsSection extends StatelessWidget {
                 'Recent Symptoms',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: cs.primary,
+                  color: cs.primary, // teal to match the app theme
                 ),
               ),
             ],
@@ -119,11 +119,21 @@ class _SymptomTile extends StatelessWidget {
       return cs.primary;
     }
 
+    // ⬇️ Match PainLevelCard / CurrentMedications card styling
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withOpacity(.25)),
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withOpacity(.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,21 +172,18 @@ class _SymptomTile extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Symptom name “pill”
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.outlineVariant),
-              ),
-              child: Text(
-                entry.name,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cs.outlineVariant),
+            ),
+            child: Text(
+              entry.name,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
               ),
             ),
           ),
