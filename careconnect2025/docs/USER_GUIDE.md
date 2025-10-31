@@ -20,9 +20,10 @@
 16. [Device Integration](#device-integration)
 17. [Notifications and Alerts](#notifications-and-alerts)
 18. [Emergency Features](#emergency-features)
-19. [Privacy and Security](#privacy-and-security)
-20. [Troubleshooting](#troubleshooting)
-21. [Support and Contact](#support-and-contact)
+19. [Invoice Assistant](#invoice-assistant)
+20. [Privacy and Security](#privacy-and-security)
+21. [Troubleshooting](#troubleshooting)
+22. [Support and Contact](#support-and-contact)
 
 ## Introduction
 
@@ -996,6 +997,11 @@ The CareConnect dashboard is your central hub for all activities and information
    - Mental health professionals
    - Emergency services
    - Support group contacts
+
+## Invoice Assistant
+### Invoice Dashboard
+### Upload Invoices
+### Invoice List
 
 ## Privacy and Security
 
