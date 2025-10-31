@@ -17,6 +17,7 @@ import 'package:learninglens_app/Games/matching_game.dart';
 import 'package:learninglens_app/Games/flashcard_game.dart';
 import 'package:learninglens_app/services/ai_file_service.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
 
 class GamificationView extends StatefulWidget {
   const GamificationView({super.key});
@@ -34,6 +35,7 @@ class _GamificationViewState extends State<GamificationView> {
   List<Map<String, dynamic>>? _generatedGameData;
   LlmType? _selectedLLM;
   bool _gameNeedsRefresh = false;
+  bool _localLlmAvail = !kIsWeb;
 
   @override
   void initState() {
@@ -170,17 +172,33 @@ class _GamificationViewState extends State<GamificationView> {
               items: LlmType.values.map((LlmType llm) {
                 return DropdownMenuItem<LlmType>(
                   value: llm,
-                  enabled: LocalStorageService.userHasLlmKey(llm),
+                  enabled: (llm == LlmType.LOCAL &&
+                          LocalStorageService.getLocalLLMPath() != "" &&
+                          _localLlmAvail) ||
+                      LocalStorageService.userHasLlmKey(llm),
                   child: Text(
                     llm.displayName,
                     style: TextStyle(
-                      color: LocalStorageService.userHasLlmKey(llm)
+                      color: (llm == LlmType.LOCAL &&
+                                  LocalStorageService.getLocalLLMPath() != "" &&
+                                  _localLlmAvail) ||
+                              LocalStorageService.userHasLlmKey(llm)
                           ? Colors.black87
                           : Colors.grey,
                     ),
                   ),
                 );
               }).toList()),
+          if (_selectedLLM == LlmType.LOCAL) ...[
+            const SizedBox(height: 6),
+            const Text(
+              "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nWe recommend using 7B or higher thinking (Qwen) models to create the game. \nFor best results, we recommend using external LLM.\nPlease use the local LLM responsibly and independently verify any critical information.",
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black54,
+              ),
+            ),
+          ],
           const SizedBox(height: 40),
           Center(
             child: ElevatedButton(
@@ -224,6 +242,8 @@ class _GamificationViewState extends State<GamificationView> {
                     aiModel = GrokLLM(LocalStorageService.getGrokKey());
                   } else if (_selectedLLM == LlmType.DEEPSEEK) {
                     aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+                  } else if (_selectedLLM == LlmType.LOCAL) {
+                    aiModel = LocalLLMService();
                   } else {
                     aiModel =
                         PerplexityLLM(LocalStorageService.getPerplexityKey());
@@ -232,7 +252,8 @@ class _GamificationViewState extends State<GamificationView> {
                   if (_selectedLLM == LlmType.CHATGPT ||
                       _selectedLLM == LlmType.DEEPSEEK ||
                       _selectedLLM == LlmType.PERPLEXITY ||
-                      _selectedLLM == LlmType.GROK) {
+                      _selectedLLM == LlmType.GROK ||
+                      _selectedLLM == LlmType.LOCAL) {
                     if (_selectedGameType == 'Quiz Game') {
                       response = await generateGameFromText(text, aiModel);
                     } else if (_selectedGameType == 'Matching') {

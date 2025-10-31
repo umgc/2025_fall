@@ -158,7 +158,7 @@ class LocalLLMService implements LLM {
 
     int requestId = await fllamaChat(request, (response, responseJson, done) {
       responseBuff.add(response);
-      //print(response);
+      print(response);
       if (done) {
         _runningRequestId = null;
         finalResponse = _getFinalResponse(responseBuff);
@@ -343,8 +343,8 @@ class LocalLLMService implements LLM {
         builder: (context) => AlertDialog(
           title: const Text('⚠️Warning:'),
           content: Text(
-            'The currently loaded Local LLM does not consistently generate a valid XML needed for rubric geneartion.\n'
-            'Proceeding could result in invalid XML output error.\n\n'
+            'The currently loaded Local LLM does not consistently generate a valid XML or json files used in Learning Management System.\n'
+            'Proceeding could result in invalid XML or json output error.\n\n'
             'The recommended model for this task is 7B or higher reasoning models (Qwen).\n'
             'Do you want to continue anyway?',
           ),
@@ -526,15 +526,106 @@ class LocalLLMService implements LLM {
     return modelKeys;
   }
 
+  // method for outputting stream.
   @override
   Stream<String> chatStream(
       {List<Map<String, dynamic>>? context,
       String? prompt,
-      double temperature = 0.7,
-      double topP = 1.0,
-      double frequencyPenalty = 0.0,
-      double presencePenalty = 0.0}) {
-    // TODO: implement chatStream
-    throw UnimplementedError();
+      double? temperature,
+      double? topP,
+      double? frequencyPenalty,
+      double? presencePenalty}) async* {
+    try {
+      model = LocalStorageService.getLocalLLMPath();
+
+      List<Message>? convertedContext = context?.map((entry) {
+        final role = Role.values.firstWhere((r) => r.name == entry['role']);
+        final message = entry['content'] as String;
+        return Message(role, message);
+      }).toList();
+
+      double temperatureInput = temperature ?? 0.7;
+
+      // model id for the web build (DO NOT use WEB for now / WIP).
+      String mlcModelId = MlcModelId.qwen05b;
+
+      // model path for the desktop build.
+      String mmprojPath = "";
+
+      final request = OpenAiRequest(
+        tools: [
+          if (_tool != null)
+            Tool(
+              name: _tool!.name,
+              jsonSchema: _tool!.parametersAsString,
+            ),
+        ],
+        maxTokens: maxOutputTokens.round(),
+        messages: convertedContext!,
+        numGpuLayers: 99,
+        /* this seems to have no adverse effects in environments w/o GPU support, ex. Android and web */
+        modelPath: kIsWeb ? mlcModelId : model,
+        mmprojPath: mmprojPath,
+        frequencyPenalty: 0.0,
+        // Don't use below 1.1, LLMs without a repeat penalty
+        // will repeat the same token.
+        presencePenalty: 1.1,
+        topP: _topP,
+        // 22.9s for 249 input tokens with 20K context for SmolLM3.
+        // 22.9s for 249 input tokens with 4K context for SmolLM3.
+        contextSize: contextSize,
+        // Don't use 0.0, some models will repeat
+        // the same token.
+        temperature: temperatureInput,
+        logger: (log) {
+          if (log.contains('<unused')) {
+            // 25-03-11: Added because Gemma 3 outputs so many that it
+            // can break the VS Code log viewer.
+            return;
+          }
+          if (log.contains('ggml_')) {
+            // 25-03-11: Added because that's the biggest clutter-er left
+            // when trying to get logs reduced down to compare Gemma 3 working vs.
+            // not-working cases.
+            return;
+          }
+          // ignore: avoid_print
+          print('[llama.cpp] $log');
+        },
+      );
+
+      // This is required, otherwise the fllama will crash if using fllamaChat
+      await fllamaChatTemplateGet(model);
+
+      final controller = StreamController<String>();
+      String previous = '';
+      int requestId = await fllamaChat(request, (response, responseJson, done) {
+        if (!controller.isClosed) {
+          if (response.isNotEmpty) {
+            if (response.startsWith(previous)) {
+              controller.add(response.substring(previous.length));
+              previous = response;
+            } else {
+              // In case it doesn't follow pattern (rare)
+              controller.add(response);
+              previous = response;
+            }
+          }
+          if (done) {
+            controller.close();
+            _runningRequestId = null;
+          }
+        }
+      });
+
+      _runningRequestId = requestId;
+      yield* controller.stream;
+
+      while (_runningRequestId != null) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+    } catch (e) {
+      print(e);
+    }
   }
 }

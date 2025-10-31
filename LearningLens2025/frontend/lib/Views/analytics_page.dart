@@ -945,7 +945,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           if (selectedLLM == LlmType.LOCAL) ...[
             const SizedBox(height: 6),
             const Text(
-              "Running a Large Language Model (LLM) requires substantial hardware resources.\nWhile 7B or higher thinking (Qwen) models can be used to generate the analysis, it may produce inaccurate or misleading responses. Additionally, it will not generate any reference.\nFor optimal results, we strongly recommend using the external API for this task.\nPlease use the local LLM responsibly and independently verify any critical information.",
+              "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nWe recommend using 7B or higher thinking (Qwen) models to generate the analysis. \nFor best results, we strongly recommend using the external LLM for this task.\nPlease use the local LLM responsibly and independently verify any critical information.",
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.black54,
@@ -1000,13 +1000,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 bool decision = await LocalLLMService()
                     .showCancelConfirmationDialog(count: 10);
                 if (decision) {
-                  canceled = true;
-                  isLoading = false;
-                  _isAnalyzingSuccess = false;
-                  _isAnalyzingFail = false;
-                  _isAnalyzingAssignment = false;
-                  _isAnalyzingAi = false;
-                  _isAnalyzingStudents = false;
+                  setState(() {
+                    canceled = true;
+                    isLoading = false;
+                    _isAnalyzingSuccess = false;
+                    _isAnalyzingFail = false;
+                    _isAnalyzingAssignment = false;
+                    _isAnalyzingAi = false;
+                    _isAnalyzingStudents = false;
+                  });
                 }
               },
               style: TextButton.styleFrom(
@@ -2001,12 +2003,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
       return;
     }
-    canceled = false;
     Participant? selectedParticipant =
         participantsData.firstWhereOrNull((p) => p.id == selectedStudentId);
 
     try {
       setState(() {
+        canceled = false;
         _aiAnalysisAi = [];
         _aiAnalysisSuccess = [];
         _aiAnalysisFail = [];
@@ -2042,8 +2044,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         String studentGrades = studentCourseData.map((data) {
           return "Student: ${data['Student Name']}, Assignment: ${data['Assessment']}, Type: ${data['Type']}, Grade: ${data['Grade']}, Due Date: ${DateTime.fromMillisecondsSinceEpoch(int.parse(data['Due Date']!))}";
         }).join("\n");
-
-        futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+        if (selectedLLM != LlmType.LOCAL) {
+          futures.add(_analyzeStudentTrend(studentGrades, selectedGradeLevel));
+        } else {
+          await _analyzeStudentTrend(studentGrades, selectedGradeLevel);
+        }
       } else {
         setState(() {
           _isAnalyzingStudents = false;
@@ -2091,12 +2096,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         }).join("\n");
 
         if (studentSummary.trim().isNotEmpty) {
-          futures.addAll([
-            _analyzeEssaySuccess(selectedAssessment.name, assignmentDescription,
-                studentSummary, selectedGradeLevel),
-            _analyzeEssayMisunderstanding(selectedAssessment.name,
-                assignmentDescription, studentSummary, selectedGradeLevel),
-          ]);
+          if (selectedLLM != LlmType.LOCAL) {
+            futures.addAll([
+              _analyzeEssaySuccess(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel),
+              _analyzeEssayMisunderstanding(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel),
+            ]);
+          } else {
+            await _analyzeEssaySuccess(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel);
+            await _analyzeEssayMisunderstanding(selectedAssessment.name,
+                assignmentDescription, studentSummary, selectedGradeLevel);
+          }
         } else {
           setState(() {
             _isAnalyzingSuccess = false;
@@ -2105,8 +2117,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         }
 
         if (aiSummary.trim().isNotEmpty) {
-          futures.add(_analyzeEssayAiUse(selectedAssessment.name,
-              assignmentDescription, aiSummary, selectedGradeLevel));
+          if (selectedLLM != LlmType.LOCAL) {
+            futures.add(_analyzeEssayAiUse(selectedAssessment.name,
+                assignmentDescription, aiSummary, selectedGradeLevel));
+          } else {
+            await _analyzeEssayAiUse(selectedAssessment.name,
+                assignmentDescription, aiSummary, selectedGradeLevel);
+          }
         } else {
           setState(() {
             _isAnalyzingAi = false;
@@ -2134,20 +2151,35 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           }).join("\n");
 
           if (studentSummary.trim().isNotEmpty) {
-            await Future.wait([
-              _analyzeStudentQuizSuccess(
+            if (selectedLLM != LlmType.LOCAL) {
+              futures.addAll([
+                _analyzeStudentQuizSuccess(
+                    selectedAssessment.name,
+                    assignmentDescription,
+                    studentSummary,
+                    selectedParticipant.fullname,
+                    selectedGradeLevel),
+                _analyzeStudentQuizMisunderstanding(
+                    selectedAssessment.name,
+                    assignmentDescription,
+                    studentSummary,
+                    selectedParticipant.fullname,
+                    selectedGradeLevel)
+              ]);
+            } else {
+              await _analyzeStudentQuizSuccess(
                   selectedAssessment.name,
                   assignmentDescription,
                   studentSummary,
                   selectedParticipant.fullname,
-                  selectedGradeLevel),
-              _analyzeStudentQuizMisunderstanding(
+                  selectedGradeLevel);
+              await _analyzeStudentQuizMisunderstanding(
                   selectedAssessment.name,
                   assignmentDescription,
                   studentSummary,
                   selectedParticipant.fullname,
-                  selectedGradeLevel)
-            ]);
+                  selectedGradeLevel);
+            }
           } else {
             setState(() {
               _isAnalyzingSuccess = false;
@@ -2159,12 +2191,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             return "Question: ${q.questionText}, Percent Correct: ${computePercentCorrect(q).toStringAsFixed(2)}%, Number Correct: ${q.numCorrect}, Number Incorrect: ${q.numIncorrect}, Total Attempts: ${q.totalAttempts}";
           }).join("\n");
           if (studentSummary.trim().isNotEmpty) {
-            futures.addAll([
-              _analyzeCourseQuizSuccess(selectedAssessment.name,
-                  assignmentDescription, studentSummary, selectedGradeLevel),
-              _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
-                  assignmentDescription, studentSummary, selectedGradeLevel)
-            ]);
+            if (selectedLLM != LlmType.LOCAL) {
+              futures.addAll([
+                _analyzeCourseQuizSuccess(selectedAssessment.name,
+                    assignmentDescription, studentSummary, selectedGradeLevel),
+                _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
+                    assignmentDescription, studentSummary, selectedGradeLevel)
+              ]);
+            } else {
+              await _analyzeCourseQuizSuccess(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel);
+              await _analyzeCourseQuizMisunderstanding(selectedAssessment.name,
+                  assignmentDescription, studentSummary, selectedGradeLevel);
+            }
           } else {
             setState(() {
               _isAnalyzingSuccess = false;
@@ -2173,9 +2212,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           }
         }
       }
-      if (!canceled) {
-        await Future.wait(futures);
-        await Future.wait([
+      if (selectedLLM != LlmType.LOCAL) {
+        List<Future> futures2 = [
           _analyzeAssignmentImprovements(
               selectedAssessment.name,
               selectedCourse.fullName,
@@ -2194,11 +2232,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   : _aiAnalysisSuccess[0]["Summary"],
               _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
               selectedGradeLevel)
-        ]);
-        setState(() {
-          _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
-        });
+        ];
+        await Future.wait(futures);
+        await Future.wait(futures2);
+      } else {
+        await _analyzeAssignmentImprovements(
+            selectedAssessment.name,
+            selectedCourse.fullName,
+            assignmentDescription,
+            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+            selectedGradeLevel);
+        await _analyzeCourseImprovements(
+            selectedAssessment.name,
+            selectedCourse.fullName,
+            assignmentDescription,
+            _aiAnalysisSuccess.isEmpty ? "" : _aiAnalysisSuccess[0]["Summary"],
+            _aiAnalysisFail.isEmpty ? "" : _aiAnalysisFail[0]["Summary"],
+            selectedGradeLevel);
       }
+      setState(() {
+        _lastAnalysisCompletionTime = DateFormat.yMd().format(DateTime.now());
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -7,10 +7,10 @@ class ViewReflectionPage extends StatelessWidget {
   final Submission submission;
 
   const ViewReflectionPage({
-    Key? key,
+    super.key,
     required this.participant,
     required this.submission,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
