@@ -62,6 +62,15 @@ class _MatchingGameState extends State<MatchingGame> {
     rightItems.shuffle();
   }
 
+  String? _matchedTermForDefinition(String definition) {
+    for (final entry in userMatches.entries) {
+      if (entry.value == definition) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
   void _reportCompletion() {
     if (_completionReported || widget.previewMode) return;
     _completionReported = true;
@@ -132,6 +141,7 @@ class _MatchingGameState extends State<MatchingGame> {
                     shrinkWrap: true,
                     itemBuilder: (context, index) {
                       final term = leftItems[index];
+                      final isMatched = userMatches.containsKey(term);
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Draggable<String>(
@@ -144,15 +154,36 @@ class _MatchingGameState extends State<MatchingGame> {
                                   style: const TextStyle(color: Colors.white)),
                             ),
                           ),
-                          childWhenDragging:
-                              Opacity(opacity: 0.5, child: Text(term)),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
+                          childWhenDragging: Opacity(
+                            opacity: 0.5,
+                            child: _MatchChip(
+                              label: term,
                               color: Colors.blue.shade50,
                             ),
-                            child: Text(term),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: isMatched
+                                  ? Colors.greenAccent.withOpacity(0.6)
+                                  : Colors.blue.shade50,
+                              border: Border.all(
+                                color: isMatched
+                                    ? Colors.green.shade700
+                                    : Colors.blue.shade200,
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                term,
+                                style: TextStyle(
+                                  fontWeight: isMatched
+                                      ? FontWeight.w600
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -169,31 +200,52 @@ class _MatchingGameState extends State<MatchingGame> {
                     shrinkWrap: true,
                     itemBuilder: (context, index) {
                       final definition = rightItems[index];
-                      final matchedTerm = userMatches.entries
-                          .firstWhere((e) => e.value == definition,
-                              orElse: () => MapEntry('', ''))
-                          .key;
+                      final matchedTerm = _matchedTermForDefinition(definition);
                       return DragTarget<String>(
                         builder: (context, candidateData, rejectedData) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: matchedTerm.isNotEmpty
-                                  ? Colors.greenAccent
-                                  : Colors.grey.shade200,
-                            ),
-                            child: Text(
-                              matchedTerm.isNotEmpty
-                                  ? '$matchedTerm → $definition'
-                                  : definition,
-                              style: const TextStyle(fontSize: 14),
+                          final isDropping = candidateData.isNotEmpty;
+                          final hasMatch = matchedTerm != null;
+                          return GestureDetector(
+                            onTap: hasMatch
+                                ? () {
+                                    setState(() {
+                                      userMatches.remove(matchedTerm);
+                                    });
+                                  }
+                                : null,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: hasMatch
+                                    ? Colors.greenAccent
+                                    : isDropping
+                                        ? Colors.blue.shade100
+                                        : Colors.grey.shade200,
+                                border: Border.all(
+                                  color: hasMatch
+                                      ? Colors.green.shade700
+                                      : Colors.grey.shade400,
+                                ),
+                              ),
+                              child: Text(
+                                hasMatch
+                                    ? '$matchedTerm → $definition'
+                                    : definition,
+                                style: const TextStyle(fontSize: 14),
+                              ),
                             ),
                           );
                         },
                         onAccept: (term) {
                           setState(() {
+                            final existingTerm =
+                                _matchedTermForDefinition(definition);
+                            if (existingTerm != null) {
+                              userMatches.remove(existingTerm);
+                            }
+                            userMatches.remove(term);
                             userMatches[term] = definition;
                           });
                         },
@@ -233,6 +285,28 @@ class _MatchingGameState extends State<MatchingGame> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _MatchChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _MatchChip({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: color,
+      ),
+      padding: const EdgeInsets.all(8),
+      child: Text(label),
     );
   }
 }

@@ -1,13 +1,9 @@
-
 import 'dart:convert';
-import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
-
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,25 +31,30 @@ class GamificationView extends StatefulWidget {
 }
 
 class _GamificationViewState extends State<GamificationView> {
-
   List<AssignedGame> assignedGames = [];
-  final String _localAssignedGamesKey = 'assigned_games_json';
   PlatformFile? _selectedFile;
   String? _selectedGameType;
   String? _selectedDifficulty;
-  bool isTeacher = true;
   bool _isGameCreated = false;
   List<Map<String, dynamic>>? _generatedGameData;
   LlmType? _selectedLLM;
   bool _gameNeedsRefresh = false;
-  String? _currentGameId;
+  bool _isLoadingAssignments = false;
+  final GamificationService _gamificationService = GamificationService();
+  String? _assignmentsError;
+  int _studentCompletedCount = 0;
+  bool _hasStudentScores = false;
+  final Map<int, String> _courseNameCache = {};
+  final Map<int, String> _studentNameCache = {};
+  bool _isClearingAssignments = false;
+  bool _coursesLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _selectedLLM = LlmType.values
         .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
-    _loadAssignedGamesFromLocal();
+    _refreshAssignments();
   }
 
   void showLoadingDialog(BuildContext context) {
@@ -70,6 +71,61 @@ class _GamificationViewState extends State<GamificationView> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshAssignments() async {
+    final userIdStr = LocalStorageService.getUserId();
+    final role = LocalStorageService.getUserRole();
+    if (userIdStr == null || userIdStr.isEmpty) {
+      setState(() {
+        assignedGames = [];
+        _assignmentsError = 'User id not available.';
+      });
+      return;
+    }
+
+    final userId = int.tryParse(userIdStr);
+    if (userId == null) {
+      setState(() {
+        assignedGames = [];
+        _assignmentsError = 'Unable to parse user id.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingAssignments = true;
+      _assignmentsError = null;
+    });
+
+    try {
+      List<AssignedGame> games;
+      if (role == UserRole.teacher) {
+        games = await _gamificationService.getGamesForTeacher(userId);
+        await _ensureCourseNames();
+        setState(() {
+          assignedGames = games;
+          _isLoadingAssignments = false;
+        });
+      } else {
+        games = await _gamificationService.getGamesForStudent(userId);
+        final completed = games.where((g) => g.score != null).toList();
+        final pending = games.where((g) => g.score == null).toList();
+        await _ensureCourseNames();
+        setState(() {
+          assignedGames = pending;
+          _studentCompletedCount = completed.length;
+          _hasStudentScores = completed.isNotEmpty;
+          _isLoadingAssignments = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        assignedGames = [];
+        _assignmentsError = e.toString();
+        _isLoadingAssignments = false;
+      });
+    }
   }
 
   @override
@@ -109,6 +165,7 @@ class _GamificationViewState extends State<GamificationView> {
               final result = await FilePicker.platform.pickFiles(
                 type: FileType.custom,
                 allowedExtensions: ['pdf'],
+                withData: true,
               );
 
               if (result != null) {
@@ -203,118 +260,93 @@ class _GamificationViewState extends State<GamificationView> {
               }).toList()),
           const SizedBox(height: 40),
           Center(
-              child: ElevatedButton(
-                child: const Text('Create Game'),
-                onPressed: () async {
-                  if (_selectedFile == null || _selectedGameType == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text(
-                              'Please upload a file and select a game type.')),
-                    );
-                    return;
-                  }
-                  if (_selectedLLM == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please select an LLM model.')),
-                    );
-                    return;
-                  }
+            child: ElevatedButton(
+              child: const Text('Create Game'),
+              onPressed: () async {
+                if (_selectedFile == null || _selectedGameType == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'Please upload a file and select a game type.')),
+                  );
+                  return;
+                }
+                if (_selectedLLM == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Please select an LLM model.')),
+                  );
+                  return;
+                }
 
-                  showLoadingDialog(context);
+                showLoadingDialog(context);
 
                 try {
-                  final Uint8List? bytes;
-                  if (kIsWeb) {
-                    bytes = _selectedFile!.bytes;
+                  final Uint8List? bytes = _selectedFile!.bytes;
+                  if (bytes == null) {
+                    throw Exception("No file content found");
+                  }
+
+                  final text = await AIFileService.extractTextFromPDF(bytes);
+                  late final List<Map<String, dynamic>> response;
+
+                  LLM aiModel;
+                  if (_selectedLLM == LlmType.CHATGPT) {
+                    aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
+                  } else if (_selectedLLM == LlmType.GROK) {
+                    aiModel = GrokLLM(LocalStorageService.getGrokKey());
+                  } else if (_selectedLLM == LlmType.DEEPSEEK) {
+                    aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
                   } else {
-                    bytes = File(_selectedFile!.path!).readAsBytesSync();
+                    aiModel =
+                        PerplexityLLM(LocalStorageService.getPerplexityKey());
                   }
 
-                  if (bytes == null) throw Exception("No file content found");
-
-                    final text = await AIFileService.extractTextFromPDF(bytes);
-                    late final List<Map<String, dynamic>> response;
-
-                    LLM aiModel;
-                    if (_selectedLLM == LlmType.CHATGPT) {
-                      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-                    } else if (_selectedLLM == LlmType.GROK) {
-                      aiModel = GrokLLM(LocalStorageService.getGrokKey());
-                    } else if (_selectedLLM == LlmType.DEEPSEEK) {
-                      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+                  if (_selectedLLM == LlmType.CHATGPT ||
+                      _selectedLLM == LlmType.DEEPSEEK ||
+                      _selectedLLM == LlmType.PERPLEXITY ||
+                      _selectedLLM == LlmType.GROK) {
+                    if (_selectedGameType == 'Quiz Game') {
+                      response = await generateGameFromText(text, aiModel);
+                    } else if (_selectedGameType == 'Matching') {
+                      response =
+                          await generateMatchingPairsFromText(text, aiModel);
+                    } else if (_selectedGameType == 'Flashcards') {
+                      response =
+                          await generateFlashcardsFromText(text, aiModel);
                     } else {
-                      aiModel =
-                          PerplexityLLM(LocalStorageService.getPerplexityKey());
+                      throw Exception("Unknown game type: $_selectedGameType");
                     }
-
-                    if (_selectedLLM == LlmType.CHATGPT ||
-                        _selectedLLM == LlmType.DEEPSEEK ||
-                        _selectedLLM == LlmType.PERPLEXITY ||
-                        _selectedLLM == LlmType.GROK) {
-                      if (_selectedGameType == 'Quiz Game') {
-                        response = await generateGameFromText(text, aiModel);
-                      } else if (_selectedGameType == 'Matching') {
-                        response =
-                            await generateMatchingPairsFromText(text, aiModel);
-                      } else if (_selectedGameType == 'Flashcards') {
-                        response =
-                            await generateFlashcardsFromText(text, aiModel);
-                      } else {
-                        throw Exception("Unknown game type: $_selectedGameType");
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            backgroundColor: Colors.red,
-                            content: Text(
-                                '${_selectedLLM!.name} is not yet supported.')),
-                      );
-                      return;
-                    }
-
-                    final gameId = DateTime.now().millisecondsSinceEpoch.toString();
-                    setState(() {
-                      _generatedGameData = response;
-                      _isGameCreated = true;
-                      _gameNeedsRefresh = false;
-                      _currentGameId = gameId;
-                    });
-
-                    // Assign game to all students after creation
-                    final lmsService = LmsFactory.getLmsService();
-                    final teacherCourses = await lmsService.getUserCourses();
-
-                    if (teacherCourses.isEmpty) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No courses found for this teacher.')),
-                      );
-                      return;
-                    }
-
-                    final courseId = teacherCourses.first.id; // Or show a dropdown for course selection if needed
-                    _saveGameContent(gameId, _selectedGameType!, List<Map<String, dynamic>>.from(response));
-                    await assignGameToAllStudents(
-                      gameId,
-                      'Generated Game: $_selectedGameType',
-                      _selectedGameType!,
-                      courseId,
-                    );
-
-                    Navigator.pop(context);
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Game Created!')),
+                      SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text(
+                              '${_selectedLLM!.name} is not yet supported.')),
                     );
-                  } catch (e) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
-                    );
+                    return;
                   }
-                },
-              ),
+
+                  setState(() {
+                    _generatedGameData = response;
+                    _isGameCreated = true;
+                    _gameNeedsRefresh = false;
+                  });
+
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'Game generated! Preview or assign it when ready.')),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: ${e.toString()}')),
+                  );
+                }
+              },
+            ),
           ),
           if (_isGameCreated) ...[
             const SizedBox(height: 20),
@@ -389,12 +421,39 @@ class _GamificationViewState extends State<GamificationView> {
             const Divider(),
           ],
           const SizedBox(height: 20),
-          Center(
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.leaderboard),
-              label: const Text('View Student Scores'),
-              onPressed: _showScoreboardDialog,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.leaderboard),
+                label: const Text('View Student Scores'),
+                onPressed: _showScoreboardDialog,
+              ),
+              if (LocalStorageService.getUserRole() == UserRole.teacher)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12.0),
+                  child: OutlinedButton.icon(
+                    icon: _isClearingAssignments
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete_forever),
+                    label: Text(
+                      _isClearingAssignments
+                          ? 'Clearing...'
+                          : 'Clear All Assigned Games',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                    ),
+                    onPressed: _isClearingAssignments
+                        ? null
+                        : _confirmAndClearAssignments,
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -421,6 +480,17 @@ class _GamificationViewState extends State<GamificationView> {
 
   Widget _buildStudentUI() {
     print('🧠 Student UI loading with ${assignedGames.length} assigned games.');
+    if (_isLoadingAssignments) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_assignmentsError != null) {
+      return Center(
+        child: Text(
+          _assignmentsError!,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
     if (assignedGames.isEmpty) {
       return const Center(
         child: Text('No games assigned yet.'),
@@ -432,13 +502,29 @@ class _GamificationViewState extends State<GamificationView> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text(
-            '👋 Welcome back, ready to play?',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.deepPurple,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '👋 Welcome back, ready to play?',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
+                ),
+              ),
+              if (_hasStudentScores)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Completed $_studentCompletedCount game${_studentCompletedCount == 1 ? '' : 's'}.',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.deepPurpleAccent,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         Expanded(
@@ -446,18 +532,23 @@ class _GamificationViewState extends State<GamificationView> {
             itemCount: assignedGames.length,
             itemBuilder: (context, index) {
               final game = assignedGames[index];
-              // Choose emoji based on game type
-              String emoji;
-              if (game.gameType == 'Quiz Game') {
-                emoji = '🧩';
-              } else if (game.gameType == 'Matching') {
-                emoji = '🔗';
-              } else if (game.gameType == 'Flashcards') {
-                emoji = '🃏';
-              } else {
-                emoji = '🕹️';
+              final emoji = _emojiForGameType(game.gameType);
+              final formattedDate =
+                  DateFormat.yMMMd().format(game.assignedDate);
+              final courseName = _courseNameCache[game.courseId];
+              final gameTypeLabel = _labelForGameType(game.gameType);
+              final titleText = courseName != null && courseName.isNotEmpty
+                  ? '$courseName: $gameTypeLabel'
+                  : '${game.title}: $gameTypeLabel';
+              final subtitleParts = <String>[];
+              if (courseName == null || courseName.isEmpty) {
+                subtitleParts.add('Course ID: ${game.courseId}');
+              } else if (!game.title
+                  .toLowerCase()
+                  .contains(courseName.toLowerCase())) {
+                subtitleParts.add(game.title);
               }
-              final formattedDate = DateFormat.yMMMd().format(game.assignedDate);
+              subtitleParts.add('📅 Assigned: $formattedDate');
               return Card(
                 color: Colors.deepPurple[50],
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -467,39 +558,47 @@ class _GamificationViewState extends State<GamificationView> {
                 child: ListTile(
                   leading: Text(emoji, style: TextStyle(fontSize: 30)),
                   title: Text(
-                    game.title,
+                    titleText,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: Text('📅 Assigned: $formattedDate'),
+                  subtitle: Text(subtitleParts.join('\n')),
                   trailing: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
-                      final content = _loadGameContent(game.gameData);
+                      final content = _decodeGameData(game.gameData);
                       if (content == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('No content found for this game. Ask your teacher to reassign it.')),
+                          const SnackBar(
+                              content: Text(
+                                  'No content found for this game. Ask your teacher to reassign it.')),
                         );
                         return;
                       }
 
-                      final type = content['gameType']?.toString() ?? game.gameType;
-                      final List<Map<String, dynamic>> data = List<Map<String, dynamic>>.from(content['data'] ?? const []);
+                      final type =
+                          _parseGameType(content['gameType'] ?? game.gameType);
+                      final List<Map<String, dynamic>> data =
+                          List<Map<String, dynamic>>.from(
+                              content['data'] ?? const []);
 
                       if (data.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Game content is empty. Ask your teacher to regenerate it.')),
+                          const SnackBar(
+                              content: Text(
+                                  'Game content is empty. Ask your teacher to regenerate it.')),
                         );
                         return;
                       }
 
                       Widget gameView;
                       switch (type) {
-                        case 'Quiz Game':
+                        case GameType.QUIZ:
                           gameView = QuizGame(
                             questions: data,
                             onComplete: (result) {
@@ -508,7 +607,7 @@ class _GamificationViewState extends State<GamificationView> {
                             previewMode: false,
                           );
                           break;
-                        case 'Matching':
+                        case GameType.MATCHING:
                           gameView = MatchingGame(
                             pairs: data,
                             onComplete: (result) {
@@ -517,8 +616,20 @@ class _GamificationViewState extends State<GamificationView> {
                             previewMode: false,
                           );
                           break;
-                        case 'Flashcards':
-                          gameView = FlashcardGame(questions: data, onComplete: () {}, previewMode: false);
+                        case GameType.FLASHCARD:
+                          gameView = FlashcardGame(
+                            questions: data,
+                            onComplete: () {
+                              _recordGameResult(
+                                game,
+                                GamePlayResult(
+                                  score: data.length,
+                                  maxScore: data.length,
+                                ),
+                              );
+                            },
+                            previewMode: false,
+                          );
                           break;
                         default:
                           gameView = const Text('Game type not supported.');
@@ -733,80 +844,85 @@ $text
 
   // Assign game to all students in a course, preventing duplicate global assignments
   Future<bool> assignGameToAllStudents(
-    String gameId,
     String title,
     String gameType,
     int courseId, {
     Set<int>? specificStudentIds,
   }) async {
+    if (_generatedGameData == null || _generatedGameData!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content:
+                Text('Please generate the game content before assigning.')),
+      );
+      return false;
+    }
     final lmsService = LmsFactory.getLmsService();
-    final students = await lmsService.getCourseParticipants(courseId.toString());
+    final students =
+        await lmsService.getCourseParticipants(courseId.toString());
     final targetStudents = specificStudentIds == null
         ? students
-        : students.where((student) => specificStudentIds.contains(student.id)).toList();
+        : students
+            .where((student) => specificStudentIds.contains(student.id))
+            .toList();
 
     if (targetStudents.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No students selected for this assignment.')),
+        const SnackBar(
+            content: Text('No students selected for this assignment.')),
+      );
+      return false;
+    }
+
+    final teacherIdStr = LocalStorageService.getUserId();
+    final teacherId = int.tryParse(teacherIdStr ?? '');
+    if (teacherId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to determine teacher id.')),
       );
       return false;
     }
 
     final now = DateTime.now();
+    final gameTypeEnum = _gameTypeFromLabel(gameType);
+    final contentPayload = jsonEncode({
+      'gameType': gameType,
+      'data': _generatedGameData ?? [],
+    });
 
-    // Create a unique assignment list for this course and gameId
-    final List<Map<String, dynamic>> newAssignments = [];
+    try {
+      await Future.wait(targetStudents.map((student) {
+        final assignedGame = AssignedGame(
+          uuid: null,
+          studentId: student.id,
+          courseId: courseId,
+          gameType: gameTypeEnum,
+          title: title,
+          gameData: contentPayload,
+          assignedDate: now,
+          assignedBy: teacherId,
+          studentName: '${student.firstname} ${student.lastname}'.trim(),
+        );
+        return _gamificationService.createGame(assignedGame);
+      }));
 
-    for (final student in targetStudents) {
-      // Save to student-specific local storage
-      final studentKey = 'assigned_games_student_${student.id}';
-      final existingData = LocalStorageService.getString(studentKey);
-      List<dynamic> studentList = existingData != null ? jsonDecode(existingData) : [];
+      await _refreshAssignments();
 
-      // Only add if not already assigned
-      final alreadyExists = studentList.any((item) => item['gameId'] == gameId);
-      if (!alreadyExists) {
-        final assignmentPayload = {
-          'gameId': gameId,
-          'studentId': student.id,
-          'courseId': courseId,
-          'gameType': gameType,
-          'title': title,
-          'assignedDate': now.toIso8601String(),
-        };
-        studentList.add(assignmentPayload);
-        LocalStorageService.setString(studentKey, jsonEncode(studentList));
-        newAssignments.add(assignmentPayload);
-      }
-    }
-
-    if (newAssignments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Game "$title" is already assigned to the selected students.')),
+        SnackBar(
+          content: Text(
+              'Game "$title" assigned to ${targetStudents.length} student${targetStudents.length > 1 ? 's' : ''}.'),
+        ),
       );
-      _loadAssignedGamesFromLocal();
+      return true;
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to assign game: $e')),
+      );
       return false;
     }
-
-    // Update global assignments without duplicates
-    const globalKey = 'assigned_games_global';
-    final globalExisting = LocalStorageService.getString(globalKey);
-    List<dynamic> globalList = globalExisting != null ? jsonDecode(globalExisting) : [];
-    for (final assignment in newAssignments) {
-      final duplicate = globalList.any((g) =>
-          g['gameId'] == assignment['gameId'] && g['studentId'] == assignment['studentId']);
-      if (!duplicate) {
-        globalList.add(assignment);
-      }
-    }
-    LocalStorageService.setString(globalKey, jsonEncode(globalList));
-
-    _loadAssignedGamesFromLocal();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Game "$title" assigned to ${newAssignments.length} student${newAssignments.length > 1 ? 's' : ''}.')),
-    );
-    return true;
   }
+
   // Show a popup/modal to assign game to students in a course
   void _showAssignPopup(BuildContext context) async {
     final selectedGameType = _selectedGameType;
@@ -908,8 +1024,9 @@ $text
                         onChanged: (checked) {
                           setState(() {
                             if (checked == true) {
-                              selectedStudentIds =
-                                  students!.map((student) => student.id).toSet();
+                              selectedStudentIds = students!
+                                  .map((student) => student.id)
+                                  .toSet();
                             } else {
                               selectedStudentIds.clear();
                             }
@@ -980,24 +1097,10 @@ $text
                             return;
                           }
 
-                          final currentGameId = _currentGameId;
-                          if (currentGameId == null) {
-                            setState(() {
-                              isAssigning = false;
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text(
-                                      'Please create a game before assigning it.')),
-                            );
-                            return;
-                          }
-
                           final title = 'Generated Game: $selectedGameType';
                           final gameType = selectedGameType ?? 'Unknown';
                           final courseId = selectedCourseId!;
                           final didAssign = await assignGameToAllStudents(
-                            currentGameId,
                             title,
                             gameType,
                             courseId,
@@ -1026,283 +1129,452 @@ $text
     );
   }
 
-  List<Map<String, dynamic>> _getResultList(String key) {
-    final raw = LocalStorageService.getString(key);
-    if (raw == null) return [];
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+  String _serializeGameType(GameType type) {
+    switch (type) {
+      case GameType.QUIZ:
+        return 'Quiz Game';
+      case GameType.MATCHING:
+        return 'Matching';
+      case GameType.FLASHCARD:
+        return 'Flashcards';
+    }
   }
 
-  void _recordGameResult(AssignedGame game, GamePlayResult result) {
-    if (!mounted) return;
-    final username = LocalStorageService.getUsername();
-    final entry = {
-      'gameId': game.uuid,
-      'studentId': game.studentId,
-      'courseId': game.courseId,
-      'title': game.title,
-      'gameType': game.gameType,
-      'score': result.score,
-      'maxScore': result.maxScore,
-      'completedAt': result.completedAt.toIso8601String(),
-      'studentName': username.isNotEmpty
-          ? username
-          : 'Student ${game.studentId}',
-    };
+  Future<void> _confirmAndClearAssignments() async {
+    final role = LocalStorageService.getUserRole();
+    if (role != UserRole.teacher) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only teachers can clear assignments.')),
+      );
+      return;
+    }
 
-    final studentKey = 'game_results_student_${game.studentId}';
-    final studentResults = _getResultList(studentKey)
-      ..removeWhere((item) => item['gameId'] == game.uuid);
-    studentResults.add(entry);
-    LocalStorageService.setString(studentKey, jsonEncode(studentResults));
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Clear Assigned Games'),
+            content: const Text(
+              'This will remove all games you have assigned from the database. '
+              'Students will no longer see them. Continue?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Clear'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
 
-    const globalKey = 'game_results_global';
-    final globalResults = _getResultList(globalKey)
-      ..removeWhere((item) =>
-          item['gameId'] == game.uuid &&
-          item['studentId'].toString() == game.studentId.toString());
-    globalResults.add(entry);
-    LocalStorageService.setString(globalKey, jsonEncode(globalResults));
+    if (!confirmed) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Score saved: ${result.score}/${result.maxScore}',
+    final teacherIdStr = LocalStorageService.getUserId();
+    final teacherId = int.tryParse(teacherIdStr ?? '');
+    if (teacherId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to determine teacher id.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isClearingAssignments = true;
+    });
+
+    try {
+      final games = await _gamificationService.getGamesForTeacher(teacherId);
+      final deletions = games
+          .where((game) => game.uuid != null)
+          .map((game) => _gamificationService.deleteGame(game.uuid!));
+      await Future.wait(deletions);
+      await _refreshAssignments();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Cleared ${games.length} assigned game${games.length == 1 ? '' : 's'}'),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to clear assignments: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClearingAssignments = false;
+        });
+      }
+    }
+  }
+
+  GameType _parseGameType(dynamic value) {
+    if (value is GameType) return value;
+    if (value is int) {
+      if (value >= 0 && value < GameType.values.length) {
+        return GameType.values[value];
+      }
+    }
+    final raw = value?.toString().toLowerCase() ?? '';
+    if (raw.contains('match')) return GameType.MATCHING;
+    if (raw.contains('flash')) return GameType.FLASHCARD;
+    return GameType.QUIZ;
+  }
+
+  GameType _gameTypeFromLabel(String label) {
+    final normalized = label.toLowerCase();
+    if (normalized.contains('match')) return GameType.MATCHING;
+    if (normalized.contains('flash')) return GameType.FLASHCARD;
+    return GameType.QUIZ;
+  }
+
+  Map<String, dynamic>? _decodeGameData(String raw) {
+    if (raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+      return null;
+    } catch (e) {
+      debugPrint('⚠️ Failed to decode game data: $e');
+      return null;
+    }
+  }
+
+  String _emojiForGameType(GameType type) {
+    switch (type) {
+      case GameType.QUIZ:
+        return '🧩';
+      case GameType.MATCHING:
+        return '🔗';
+      case GameType.FLASHCARD:
+        return '🃏';
+    }
+  }
+
+  String _labelForGameType(GameType type) {
+    switch (type) {
+      case GameType.QUIZ:
+        return 'Quiz Game';
+      case GameType.MATCHING:
+        return 'Matching Game';
+      case GameType.FLASHCARD:
+        return 'Flashcards';
+    }
+  }
+
+  double _scorePercentFromGame(AssignedGame game) {
+    if (game.maxScore != null &&
+        game.maxScore! > 0 &&
+        game.rawCorrect != null) {
+      return (game.rawCorrect! / game.maxScore!) * 100.0;
+    }
+    final raw = game.score ?? 0;
+    final percent = raw <= 1 ? raw * 100 : raw;
+    return percent;
+  }
+
+  Future<void> _recordGameResult(
+      AssignedGame game, GamePlayResult result) async {
+    if (!mounted || game.uuid == null) return;
+    final normalizedScore =
+        result.maxScore == 0 ? 0.0 : result.score / result.maxScore;
+    try {
+      final response = await _gamificationService.completeGame(
+        game.uuid!,
+        normalizedScore,
+        rawCorrect: result.score,
+        maxScore: result.maxScore,
+      );
+      if (response.statusCode != 200) {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+      await _refreshAssignments();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Score saved: ${(normalizedScore * 100).toStringAsFixed(0)}%',
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save score: $e')),
+      );
+    }
+  }
+
+  Future<Map<int, String>> _buildStudentNameMap(
+      List<AssignedGame> games) async {
+    final names = Map<int, String>.from(_studentNameCache);
+    final lmsService = LmsFactory.getLmsService();
+    final uniqueCourseIds = games.map((g) => g.courseId).toSet();
+
+    for (final courseId in uniqueCourseIds) {
+      try {
+        final participants =
+            await lmsService.getCourseParticipants(courseId.toString());
+        for (final participant in participants) {
+          final fullName =
+              '${participant.firstname} ${participant.lastname}'.trim();
+          if (fullName.isNotEmpty) {
+            names[participant.id] = fullName;
+          }
+        }
+      } catch (_) {
+        // Ignore failures; we'll fall back to the student id label.
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _studentNameCache.addAll(names);
+      });
+    }
+    return names;
+  }
+
+  Future<void> _ensureCourseNames() async {
+    if (_coursesLoaded) return;
+    final lmsService = LmsFactory.getLmsService();
+    try {
+      final courses = await lmsService.getUserCourses();
+      for (final course in courses) {
+        _courseNameCache[course.id] = course.fullName;
+      }
+      _coursesLoaded = true;
+    } catch (e) {
+      debugPrint('⚠️ Failed to load course names: $e');
+    }
   }
 
   void _showScoreboardDialog() {
-    const globalKey = 'game_results_global';
-    final raw = LocalStorageService.getString(globalKey);
-    if (raw == null) {
+    if (LocalStorageService.getUserRole() != UserRole.teacher) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No game results recorded yet.')),
+        const SnackBar(content: Text('Only teachers can view the scoreboard.')),
       );
       return;
     }
 
-    final decoded = jsonDecode(raw);
-    if (decoded is! List || decoded.isEmpty) {
+    final teacherIdStr = LocalStorageService.getUserId();
+    final teacherId = int.tryParse(teacherIdStr ?? '');
+    if (teacherId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No game results recorded yet.')),
-      );
-      return;
-    }
-
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (final item in decoded) {
-      if (item is! Map) continue;
-      final map = Map<String, dynamic>.from(item);
-      final gameId = map['gameId']?.toString() ?? 'unknown';
-      grouped.putIfAbsent(gameId, () => []).add(map);
-    }
-
-    if (grouped.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No game results recorded yet.')),
+        const SnackBar(content: Text('Unable to determine teacher id.')),
       );
       return;
     }
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (context) {
-        final List<MapEntry<String, List<Map<String, dynamic>>>> games =
-            grouped.entries.toList()
-              ..sort((a, b) => b.value.length.compareTo(a.value.length));
+        return FutureBuilder<List<AssignedGame>>(
+          future: _gamificationService.getGamesForTeacher(teacherId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const AlertDialog(
+                content: SizedBox(
+                  height: 80,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
 
-        return AlertDialog(
-          title: const Text('Student Scores'),
-          content: SizedBox(
-            width: 420,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: games.map((entry) {
-                  final scores = entry.value
-                    ..sort((a, b) {
-                      final scoreCompare =
-                          (b['score'] ?? 0).compareTo(a['score'] ?? 0);
-                      if (scoreCompare != 0) return scoreCompare;
-                      final aTime =
-                          DateTime.tryParse(a['completedAt']?.toString() ?? '') ??
-                              DateTime.fromMillisecondsSinceEpoch(0);
-                      final bTime =
-                          DateTime.tryParse(b['completedAt']?.toString() ?? '') ??
-                              DateTime.fromMillisecondsSinceEpoch(0);
-                      return aTime.compareTo(bTime);
-                    });
-                  final gameTitle = scores.first['title']?.toString() ?? 'Game';
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          gameTitle,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...scores.asMap().entries.map((scoreEntry) {
-                          final data = scoreEntry.value;
-                          final rank = scoreEntry.key + 1;
-                          final studentName =
-                              data['studentName']?.toString() ??
-                                  'Student ${data['studentId']}';
-                          final completedAt =
-                              DateTime.tryParse(data['completedAt']?.toString() ?? '');
-                          final formattedTime = completedAt != null
-                              ? DateFormat.yMMMd().add_jm().format(completedAt)
-                              : '—';
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Text(
-                              '$rank. $studentName — ${data['score']}/${data['maxScore']} (Completed: $formattedTime)',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          );
-                        }).toList(),
-                      ],
+            if (snapshot.hasError) {
+              return AlertDialog(
+                title: const Text('Student Scores'),
+                content: Text('Failed to load scores: ${snapshot.error}'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              );
+            }
+
+            final games = snapshot.data ?? [];
+            if (games.isEmpty) {
+              return AlertDialog(
+                title: const Text('Student Scores'),
+                content: const Text('No assignments found yet.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              );
+            }
+
+            return FutureBuilder<Map<int, String>>(
+              future: _buildStudentNameMap(games),
+              builder: (context, nameSnapshot) {
+                if (nameSnapshot.connectionState == ConnectionState.waiting) {
+                  return const AlertDialog(
+                    content: SizedBox(
+                      height: 80,
+                      child: Center(child: CircularProgressIndicator()),
                     ),
                   );
-                }).toList(),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
+                }
+
+                final nameMap = nameSnapshot.data ??
+                    Map<int, String>.from(_studentNameCache);
+
+                final groupedByStudent = <int, List<AssignedGame>>{};
+                for (final game in games) {
+                  groupedByStudent
+                      .putIfAbsent(game.studentId, () => [])
+                      .add(game);
+                }
+
+                final rows = <_ScoreRow>[];
+                for (final entry in groupedByStudent.entries) {
+                  final studentId = entry.key;
+                  final studentName =
+                      nameMap[studentId] ?? 'Student $studentId';
+                  final studentGames = entry.value
+                    ..sort((a, b) => b.assignedDate.compareTo(a.assignedDate));
+                  for (final game in studentGames) {
+                    final hasRaw = game.rawCorrect != null &&
+                        game.maxScore != null &&
+                        game.maxScore! > 0;
+                    final isCompleted = game.score != null;
+                    final statusText = isCompleted
+                        ? hasRaw
+                            ? 'Completed ${game.rawCorrect}/${game.maxScore}'
+                            : 'Completed'
+                        : 'Pending';
+                    rows.add(
+                      _ScoreRow(
+                        studentName: studentName,
+                        gameTitle: game.title,
+                        gameType: _labelForGameType(game.gameType),
+                        statusText: statusText,
+                        assignedDate: game.assignedDate,
+                        isCompleted: isCompleted,
+                      ),
+                    );
+                  }
+                }
+
+                return AlertDialog(
+                  title: const Text('Student Scores'),
+                  content: SizedBox(
+                    width: 560,
+                    child: rows.isEmpty
+                        ? const Text('No scored assignments yet.')
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            child: DataTable(
+                              columnSpacing: 16,
+                              headingRowHeight: 36,
+                              dataRowHeight: 40,
+                              columns: const [
+                                DataColumn(
+                                  label: Text(
+                                    'Student',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Game',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Type',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Status',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Assigned',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                              rows: rows
+                                  .map(
+                                    (row) => DataRow(
+                                      cells: [
+                                        DataCell(Text(row.studentName)),
+                                        DataCell(Text(row.gameTitle)),
+                                        DataCell(Text(row.gameType)),
+                                        DataCell(
+                                          Text(
+                                            row.statusText,
+                                            style: TextStyle(
+                                              color: row.isCompleted
+                                                  ? Colors.green.shade700
+                                                  : Colors.orange.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            DateFormat.yMMMd()
+                                                .format(row.assignedDate),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         );
       },
     );
   }
+}
 
-  void _saveAssignedGamesToLocal() {
-    final encoded = assignedGames.map((game) => {
-      'gameId': game.uuid,
-      'studentId': game.studentId,
-      'courseId': game.courseId,
-      'gameType': game.gameType,
-      'title': game.title,
-      'assignedDate': game.assignedDate.toIso8601String(),
-    }).toList();
-    LocalStorageService.setString(_localAssignedGamesKey, jsonEncode(encoded));
-  }
+class _ScoreRow {
+  final String studentName;
+  final String gameTitle;
+  final String gameType;
+  final String statusText;
+  final DateTime assignedDate;
+  final bool isCompleted;
 
-  void _loadAssignedGamesFromLocal() {
-    final currentUserId = LocalStorageService.getUserId();
-    final currentUserIdStr = currentUserId?.toString();
-
-    // 1️⃣ Try per-student assignments first
-    if (currentUserIdStr != null) {
-      final userKey = 'assigned_games_student_$currentUserIdStr';
-      final raw = LocalStorageService.getString(userKey);
-      if (raw != null) {
-        final List<dynamic> decoded = jsonDecode(raw);
-        setState(() {
-          assignedGames = decoded.map((item) {
-            return AssignedGame(
-              uuid: item['gameId'],
-              gameData: "",
-              assignedBy: 0,
-              studentId: int.tryParse(item['studentId'].toString()) ?? 0,
-              courseId: int.tryParse(item['courseId'].toString()) ?? 0,
-              gameType: item['gameType'],
-              title: item['title'],
-              assignedDate: DateTime.parse(item['assignedDate']),
-            );
-          }).toList();
-        });
-        print('📂 Loaded ${assignedGames.length} games for student key $userKey');
-        return;
-      }
-    }
-
-    // 2️⃣ Fallback: try global assignments
-    print('⚠️ No assigned games found for user ID ${currentUserIdStr ?? 'null'} — attempting global fallback');
-    const globalKey = 'assigned_games_global';
-    final globalRaw = LocalStorageService.getString(globalKey);
-    if (globalRaw != null) {
-      final List<dynamic> globalDecoded = jsonDecode(globalRaw);
-
-      // Filter by studentId if possible; otherwise show all (demo-safe)
-      final List<dynamic> filtered = currentUserIdStr != null
-          ? globalDecoded
-              .where((item) => item['studentId'].toString() == currentUserIdStr)
-              .toList()
-          : globalDecoded;
-
-      if (filtered.isNotEmpty) {
-        setState(() {
-          assignedGames = filtered.map((item) {
-            return AssignedGame(
-              uuid: item['gameId'],
-                            gameData: "",
-              assignedBy: 0,
-              studentId: int.tryParse(item['studentId'].toString()) ?? 0,
-              courseId: int.tryParse(item['courseId'].toString()) ?? 0,
-              gameType: item['gameType'],
-              title: item['title'],
-              assignedDate: DateTime.parse(item['assignedDate']),
-            );
-          }).toList();
-        });
-        print('📦 Restored ${assignedGames.length} games from global for user ${currentUserIdStr ?? 'null'}');
-        return;
-      }
-    }
-
-    // 3️⃣ Nothing found
-    print('🚫 Global fallback also empty for user ${currentUserIdStr ?? 'null'}');
-    setState(() {
-      assignedGames = [];
-    });
-  }
-
-  void _saveGameContent(String gameId, String gameType, List<Map<String, dynamic>> data) {
-    final payload = {
-      'gameType': gameType,
-      'data': data,
-    };
-    LocalStorageService.setString('game_content_$gameId', jsonEncode(payload));
-    print('💾 Saved content for gameId=$gameId (type=$gameType, items=${data.length})');
-  }
-
-  Map<String, dynamic>? _loadGameContent(String gameId) {
-    final raw = LocalStorageService.getString('game_content_$gameId');
-    if (raw == null) return null;
-    try {
-      return Map<String, dynamic>.from(jsonDecode(raw));
-    } catch (_) {
-      print('⚠️ Could not decode content for gameId=$gameId');
-      return null;
-    }
-  }
-
-  void _appendToGlobalAssignments(Map<String, dynamic> item) {
-    const globalKey = 'assigned_games_global';
-    final existing = LocalStorageService.getString(globalKey);
-    List<dynamic> list = existing != null ? jsonDecode(existing) : [];
-
-    final alreadyExists = list.any((existingItem) =>
-        existingItem['gameId'] == item['gameId'] &&
-        existingItem['studentId'] == item['studentId']);
-    if (!alreadyExists) {
-      list.add(item);
-      LocalStorageService.setString(globalKey, jsonEncode(list));
-      print('✅ Added new assignment to global storage.');
-    } else {
-      print('⚠️ Duplicate assignment skipped for studentId ${item['studentId']}');
-    }
-  }
+  const _ScoreRow({
+    required this.studentName,
+    required this.gameTitle,
+    required this.gameType,
+    required this.statusText,
+    required this.assignedDate,
+    required this.isCompleted,
+  });
 }

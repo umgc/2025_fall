@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -10,7 +8,6 @@ import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
-import 'package:learninglens_app/services/gamification_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/program_assessment_service.dart';
 import 'package:provider/provider.dart';
@@ -33,38 +30,6 @@ void main() async {
   await AILoggingSingleton().createDb();
   await AILoggingSingleton().clearOldDatabaseEntries();
   await ProgramAssessmentService.createDb();
-  await GamificationService.createDb();
-
-  // TODO Remove test code
-  await GamificationService().createGame(AssignedGame(studentId: 0, courseId: 0, gameType: GameType.MATCHING, title: "Game 1", gameData: jsonEncode({"game" : "data"}), assignedDate: DateTime.now(), assignedBy: 0));
-  await GamificationService().createGame(AssignedGame(studentId: 1, courseId: 0, gameType: GameType.MATCHING, title: "Game 1", gameData: jsonEncode({"game" : "data"}), assignedDate: DateTime.now(), assignedBy: 0));
-  await GamificationService().createGame(AssignedGame(studentId: 0, courseId: 0, gameType: GameType.QUIZ, title: "Game 2", gameData: jsonEncode({"game" : "data"}), assignedDate: DateTime.now(), assignedBy: 1));
-  await GamificationService().createGame(AssignedGame(studentId: 1, courseId: 0, gameType: GameType.QUIZ, title: "Game 2", gameData: jsonEncode({"game" : "data"}), assignedDate: DateTime.now(), assignedBy: 1));
-
-  final gamesForStudent0 = await GamificationService().getGamesForStudent(0);
-
-
-  for (AssignedGame g in gamesForStudent0) {
-    print(g.title);
-    await GamificationService().completeGame(g.uuid!, .75);
-  }
-  final gamesForTeacher1 = await GamificationService().getGamesForTeacher(1);
-  for (AssignedGame g in gamesForTeacher1) {
-    print(g.title);
-    print(g.score);
-  }
-  for (AssignedGame g in gamesForStudent0) {
-    print(g.uuid!);
-    await GamificationService().deleteGame(g.uuid!);
-  }
-  for (AssignedGame g in gamesForTeacher1) {
-    await GamificationService().deleteGame(g.uuid!);
-  }
-
-  final gamesForStudent1 = await GamificationService().getGamesForStudent(1);
-  for (AssignedGame g in gamesForStudent1) {
-    await GamificationService().deleteGame(g.uuid!);
-  }
 
   runApp(
     MultiProvider(
@@ -133,7 +98,7 @@ class MyApp extends StatelessWidget {
         '/user': (context) => UserSettings(),
         //'/send_essay_to_moodle': (context) => EssayAssignmentSettings(''),
         '/assessments': (context) => AssessmentsView(),
-        // '/viewExams': (context) => const ViewExamPage(),
+        // '/viewExams': (context) => const View Exam Page(),
         // '/settings': (context) => Setting(themeModeNotifier: _themeModeNotifier)
         '/gamification': (context) => GamificationView(),
         '/evaluate': (context) => ProgramAssessmentView()

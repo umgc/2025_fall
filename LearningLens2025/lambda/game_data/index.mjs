@@ -70,10 +70,19 @@ export const handler = async (event, context) => {
       title VARCHAR,
       data VARCHAR,
       game_type SMALLINT,
-      score DECIMAL(2),
+      score NUMERIC(5,2),
+      raw_correct SMALLINT,
+      max_score SMALLINT,
       assigned_by BIGINT,
       assigned_date TIMESTAMP
     );`;
+    try {
+      await client`ALTER TABLE GAMES ALTER COLUMN score TYPE NUMERIC(5,2);`;
+      await client`ALTER TABLE GAMES ADD COLUMN IF NOT EXISTS raw_correct SMALLINT;`;
+      await client`ALTER TABLE GAMES ADD COLUMN IF NOT EXISTS max_score SMALLINT;`;
+    } catch (alterError) {
+      console.warn("Skipping score column alter: ", alterError);
+    }
     }
     catch (error) {
       console.error("Failed to create database table: ", error);
@@ -94,7 +103,7 @@ export const handler = async (event, context) => {
 
   async function getGamesForStudent(client, studentId) {
     try {
-      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, assigned_by, assigned_date FROM GAMES WHERE
+      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES WHERE
       student_id = ${studentId};`;
     }
     catch (error) {
@@ -105,7 +114,7 @@ export const handler = async (event, context) => {
 
     async function getGamesForTeacher(client, assignedBy) {
     try {
-      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, assigned_by, assigned_date FROM GAMES WHERE
+      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES WHERE
       assigned_by = ${assignedBy};`;
     }
     catch (error) {
@@ -118,16 +127,30 @@ export const handler = async (event, context) => {
     try {
       let log = JSON.parse(body);
       return await client`
-      INSERT INTO GAMES VALUES (
-      gen_random_uuid(),
-      ${log.courseId},
-      ${log.studentId},
-      ${log.title},
-      ${log.data},
-      ${log.gameType},
-      NULL,
-      ${log.assignedBy},
-      ${log.assignedDate}
+      INSERT INTO GAMES (
+        game_id,
+        course_id,
+        student_id,
+        title,
+        data,
+        game_type,
+        score,
+        raw_correct,
+        max_score,
+        assigned_by,
+        assigned_date
+      ) VALUES (
+        gen_random_uuid(),
+        ${log.courseId},
+        ${log.studentId},
+        ${log.title},
+        ${log.data},
+        ${log.gameType},
+        NULL,
+        NULL,
+        NULL,
+        ${log.assignedBy},
+        ${log.assignedDate}
       );`;
     }
     catch (error) {
@@ -139,9 +162,32 @@ export const handler = async (event, context) => {
       async function completeGame(client, body) {
     try {
       let log = JSON.parse(body);
+      let rawScore = Number(log.score);
+      if (!Number.isFinite(rawScore)) {
+        rawScore = 0;
+      }
+      const normalizedScore = Math.max(
+        0,
+        Math.min(rawScore > 1 ? rawScore / 100 : rawScore, 1)
+      );
+
+      let rawCorrect = Number.isFinite(Number(log.rawCorrect))
+        ? Number(log.rawCorrect)
+        : null;
+      if (rawCorrect !== null) {
+        rawCorrect = Math.max(0, Math.round(rawCorrect));
+      }
+      let maxScore = Number.isFinite(Number(log.maxScore))
+        ? Number(log.maxScore)
+        : null;
+      if (maxScore !== null) {
+        maxScore = Math.max(0, Math.round(maxScore));
+      }
       return await client`
       UPDATE GAMES
-      SET score = ${log.score}
+      SET score = ${normalizedScore},
+          raw_correct = ${rawCorrect},
+          max_score = ${maxScore}
       WHERE game_id = ${log.gameId};`;
     }
     catch (error) {
