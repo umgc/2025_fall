@@ -341,14 +341,12 @@ class LocalStorageService {
   }
 
   static String getGameUrl() {
-    String url =
-        _prefs.getString('GAME_URL') ?? dotenv.env['GAME_URL'] ?? '';
+    String url = _prefs.getString('GAME_URL') ?? dotenv.env['GAME_URL'] ?? '';
     if (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
     return url;
   }
-
 
   static void clearAILoggingUrl() {
     _prefs.remove('AI_LOGGING_URL');

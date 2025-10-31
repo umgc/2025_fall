@@ -19,7 +19,6 @@ import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
-
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class MoodleLmsService implements LmsInterface {
   // ****************************************************************************************

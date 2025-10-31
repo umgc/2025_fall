@@ -652,8 +652,6 @@ class _GamificationViewState extends State<GamificationView> {
                             previewMode: false,
                           );
                           break;
-                        default:
-                          gameView = const Text('Game type not supported.');
                       }
 
                       showDialog(
@@ -957,11 +955,11 @@ $text
     bool isAssigning = false;
 
     // Helper to refresh state in the dialog
-    void refresh(void Function() fn) {
-      // ignore: invalid_use_of_protected_member
-      (context as Element).markNeedsBuild();
-      fn();
-    }
+    // void refresh(void Function() fn) {
+    //   // ignore: invalid_use_of_protected_member
+    //   (context as Element).markNeedsBuild();
+    //   fn();
+    // }
 
     await showDialog(
       context: context,
@@ -1150,16 +1148,16 @@ $text
     );
   }
 
-  String _serializeGameType(GameType type) {
-    switch (type) {
-      case GameType.QUIZ:
-        return 'Quiz Game';
-      case GameType.MATCHING:
-        return 'Matching';
-      case GameType.FLASHCARD:
-        return 'Flashcards';
-    }
-  }
+  // String _serializeGameType(GameType type) {
+  //   switch (type) {
+  //     case GameType.QUIZ:
+  //       return 'Quiz Game';
+  //     case GameType.MATCHING:
+  //       return 'Matching';
+  //     case GameType.FLASHCARD:
+  //       return 'Flashcards';
+  //   }
+  // }
 
   Future<void> _confirmAndClearAssignments() async {
     final role = LocalStorageService.getUserRole();
@@ -1290,16 +1288,16 @@ $text
     }
   }
 
-  double _scorePercentFromGame(AssignedGame game) {
-    if (game.maxScore != null &&
-        game.maxScore! > 0 &&
-        game.rawCorrect != null) {
-      return (game.rawCorrect! / game.maxScore!) * 100.0;
-    }
-    final raw = game.score ?? 0;
-    final percent = raw <= 1 ? raw * 100 : raw;
-    return percent;
-  }
+  // double _scorePercentFromGame(AssignedGame game) {
+  //   if (game.maxScore != null &&
+  //       game.maxScore! > 0 &&
+  //       game.rawCorrect != null) {
+  //     return (game.rawCorrect! / game.maxScore!) * 100.0;
+  //   }
+  //   final raw = game.score ?? 0;
+  //   final percent = raw <= 1 ? raw * 100 : raw;
+  //   return percent;
+  // }
 
   Future<void> _recordGameResult(
       AssignedGame game, GamePlayResult result) async {
