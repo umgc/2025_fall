@@ -8,8 +8,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for managing Question entities.
+ *
+ * Matches frontend routes:
+ *   GET  /v1/api/questions
+ *   GET  /v1/api/questions/{id}
+ *   POST /v1/api/questions
+ *   PUT  /v1/api/questions/{id}
+ *   PATCH /v1/api/questions/{id}/active
+ */
 @RestController
-@RequestMapping("/api/questions")
+@RequestMapping("/v1/api/questions")
 public class QuestionController {
 
     private final QuestionService questions;
@@ -18,11 +28,13 @@ public class QuestionController {
         this.questions = questions;
     }
 
+    /** GET /v1/api/questions?active=true|false */
     @GetMapping
     public List<QuestionDTO> list(@RequestParam(required = false) Boolean active) {
         return questions.listQuestions(active);
     }
 
+    /** GET /v1/api/questions/{id} */
     @GetMapping("/{id}")
     public ResponseEntity<QuestionDTO> one(@PathVariable Long id) {
         return questions.getOne(id)
@@ -30,12 +42,14 @@ public class QuestionController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** POST /v1/api/questions */
     @PostMapping
     public ResponseEntity<QuestionDTO> create(@RequestBody QuestionUpsertDTO body) {
         QuestionDTO created = questions.create(body);
         return ResponseEntity.ok(created);
     }
 
+    /** PUT /v1/api/questions/{id} */
     @PutMapping("/{id}")
     public ResponseEntity<QuestionDTO> update(@PathVariable Long id,
                                               @RequestBody QuestionUpsertDTO body) {
@@ -44,6 +58,7 @@ public class QuestionController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** PATCH /v1/api/questions/{id}/active?active=true|false */
     @PatchMapping("/{id}/active")
     public ResponseEntity<QuestionDTO> setActive(@PathVariable Long id,
                                                  @RequestParam boolean active) {

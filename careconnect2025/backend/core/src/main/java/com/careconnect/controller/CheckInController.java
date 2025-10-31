@@ -13,7 +13,7 @@ import java.util.List;
 public class CheckInController {
 
 //    CheckIn
-    
+
     @PostMapping("/create")
     // TODO - add body
     public ResponseEntity<CheckIn> patientCheckIn()
