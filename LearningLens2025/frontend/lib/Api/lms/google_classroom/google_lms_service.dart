@@ -274,9 +274,6 @@ class GoogleLmsService extends LmsInterface {
       headers: {'Authorization': 'Bearer $_userToken'},
     );
 
-    // TODO: remove after testing.
-    // print('Google: ${response.body}');
-
     if (response.statusCode != 200) {
       throw HttpException(response.body);
     }
@@ -374,9 +371,53 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<void> importQuiz(String courseid, String quizXml) async {
-    // TODO: implement google api code
-    throw UnimplementedError(
-        'This feature is not supported by Google Classroom. Please contact the developer.');
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+    if (courseid.isEmpty) {
+      throw ArgumentError('courseid must not be empty');
+    }
+    if (quizXml.trim().isEmpty) {
+      throw ArgumentError('quizXml must not be empty');
+    }
+
+    final quiz = Quiz.fromXmlString(quizXml);
+    final quizName = (quiz.name != null && quiz.name!.trim().isNotEmpty)
+        ? quiz.name!
+        : 'Imported Quiz';
+    final quizDescription = quiz.description ?? '';
+
+    if (courses == null || courses!.isEmpty) {
+      try {
+        await getCourses();
+      } catch (e) {
+        print('Unable to import quiz: $e');
+      }
+    }
+
+    final dueDate =
+        quiz.timeClose ?? DateTime.now().add(const Duration(days: 7));
+    final formattedDueDate = formatDueDate(dueDate);
+
+    final success = await createAndAssignQuizFromXml(
+      courseid,
+      quizName,
+      quizDescription,
+      quizXml,
+      formattedDueDate,
+    );
+
+    if (!success) {
+      throw HttpException('Failed to import quiz into Google Classroom');
+    }
+  }
+
+  String formatDueDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day-$hour-$minute';
   }
 
   @override
