@@ -1,27 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Api
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
 
 // beans
 import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
-import 'package:learninglens_app/beans/essay_assistant_session.dart';
-import 'package:learninglens_app/beans/participant.dart';
-import 'package:learninglens_app/beans/submission.dart';
-
-// services
-import 'package:learninglens_app/services/LLMContextBuilder.dart';
-import 'package:learninglens_app/services/local_storage_service.dart';
-import 'package:learninglens_app/services/prompt_builder_service.dart';
-
 
 enum ReflectionStatus { notStarted, inProgress, submitted }
 
@@ -65,9 +53,7 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
     try {
       final allEssays = await getAllEssays(courseId);
 
-      final filteredEssays = allEssays
-          .where((a) => !_isOverdue(a))
-          .toList()
+      final filteredEssays = allEssays.where((a) => !_isOverdue(a)).toList()
         ..sort((a, b) {
           final ad = _effectiveDue(a);
           final bd = _effectiveDue(b);
@@ -129,7 +115,9 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
     final savedAnswers = jsonDecode(jsonString) as Map<String, dynamic>;
 
     setState(() {
-      _controllers[id] ??= {for (var q in _questions) q: TextEditingController()};
+      _controllers[id] ??= {
+        for (var q in _questions) q: TextEditingController()
+      };
       _controllers[id]!.forEach((q, controller) {
         if (savedAnswers[q] != null) controller.text = savedAnswers[q];
       });
@@ -140,7 +128,9 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
     final id = essay.id.toString();
     setState(() {
       _essayStatus[id] = ReflectionStatus.inProgress;
-      _controllers[id] ??= {for (var q in _questions) q: TextEditingController()};
+      _controllers[id] ??= {
+        for (var q in _questions) q: TextEditingController()
+      };
     });
 
     await _loadSavedReflection(essay);
@@ -212,8 +202,8 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2))
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.refresh),
                         ),
                       ],

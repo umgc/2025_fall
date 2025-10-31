@@ -362,8 +362,10 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Reflections',
           'description': 'Reflect on your use of AI for your assignments.',
-          'onPressed': () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => StudentReflectionsPage())),
+          'onPressed': () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => StudentReflectionsPage())),
           'icon': Icons.note_add_outlined
         },
       ];

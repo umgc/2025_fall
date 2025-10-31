@@ -64,11 +64,11 @@ abstract class LmsInterface {
   Future<int?> getContextId(int assignmentId, String courseId);
 
 // Reflections
-Future<void> saveReflectionQuestions({
-  required String courseId,
-  required List<String> questions,
-  required String assignmentId,
-});
+  Future<void> saveReflectionQuestions({
+    required String courseId,
+    required List<String> questions,
+    required String assignmentId,
+  });
 
   // Submission and grading methods
   Future<List<Submission>> getAssignmentSubmissions(int assignmentId);

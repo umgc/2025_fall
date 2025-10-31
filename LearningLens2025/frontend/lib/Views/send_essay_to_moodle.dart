@@ -530,43 +530,50 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                       SizedBox(
                         width: buttonWidth,
                         child: ElevatedButton.icon(
-                        onPressed: () async {
-                          // Get course ID from selected course
-                          Course? selectedCourseObj =
-                              courses.firstWhere((c) => c.fullName == selectedCourse, orElse: () => Course(0, '', '', '', DateTime.now(), DateTime.now()));
-                          if (selectedCourseObj.id == 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Please select a course first.')),
-                            );
-                            return;
-                          }
+                          onPressed: () async {
+                            // Get course ID from selected course
+                            Course? selectedCourseObj = courses.firstWhere(
+                                (c) => c.fullName == selectedCourse,
+                                orElse: () => Course(0, '', '', '',
+                                    DateTime.now(), DateTime.now()));
+                            if (selectedCourseObj.id == 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Please select a course first.')),
+                              );
+                              return;
+                            }
 
-                          String assignmentId = _assignmentNameController.text.isNotEmpty
-                              ? _assignmentNameController.text
-                              : 'temp_assignment';
+                            String assignmentId =
+                                _assignmentNameController.text.isNotEmpty
+                                    ? _assignmentNameController.text
+                                    : 'temp_assignment';
 
-                          final updatedQuestions = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditReflectionQuestionsPage(
-                                courseId: selectedCourseObj.id.toString(),
-                                assignmentId: assignmentId,
-                                initialQuestions: [],
+                            final updatedQuestions = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditReflectionQuestionsPage(
+                                  courseId: selectedCourseObj.id.toString(),
+                                  assignmentId: assignmentId,
+                                  initialQuestions: [],
+                                ),
                               ),
-                            ),
-                          );
+                            );
 
-                          if (updatedQuestions != null && updatedQuestions is List<String>) {
-                            // Store the questions locally in state
-                            setState(() {
-                              reflectionQuestions = updatedQuestions;
-                            });
-                          }
-                        },
-                        icon: Icon(Icons.edit),
-                        label: Text('Edit Reflection Questions'),
+                            if (updatedQuestions != null &&
+                                updatedQuestions is List<String>) {
+                              // Store the questions locally in state
+                              setState(() {
+                                reflectionQuestions = updatedQuestions;
+                              });
+                            }
+                          },
+                          icon: Icon(Icons.edit),
+                          label: Text('Edit Reflection Questions'),
+                        ),
                       ),
-                    ),
                     ],
                   ),
                 ],
