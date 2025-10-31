@@ -1,14 +1,20 @@
 name: care_connect_app
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.2
+  sdk: ">=3.9.0 <4.0.0"
+  flutter: ">=3.24.0"
 
-# Dependencies specify other packages that your package needs in order to work.
 dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # chat / files / storage / http
   flutter_chat_core: ^2.0.0
   flutter_chat_ui: ^2.0.0
   uuid: ^4.2.1
@@ -18,82 +24,68 @@ dependencies:
   dio: ^5.9.0
   cookie_jar: ^4.0.8
   dio_cookie_manager: ^3.3.0
-  confetti: ^0.8.0
-  url_launcher: ^6.3.2  # For OAuth redirects
-  crypto: ^3.0.6        # For generating state parameter
-  pointycastle: ^4.0.0  # For RSA key operations
-  app_links: ^6.4.1     # For handling deep links from OAuth callback (replaced uni_links)
+  http: ^1.2.2
+  url_launcher: ^6.3.2
+  http_parser: ^4.0.2
+  universal_html: ^2.2.4
+  open_filex: ^4.7.0
+  image: ^4.2.0
 
-  # -- Astha - start
+  # crypto / links
+  crypto: ^3.0.6
+  pointycastle: ^4.0.0
+  app_links: ^6.4.1
+
+  # permissions (was missing)
+  permission_handler: ^12.0.1
+
+  # device & media & pdf
   path_provider: ^2.1.5
   mime: ^2.0.0
   image_picker: ^1.2.0
-  # jitsi_meet_flutter_sdk: ^11.4.0   # (temporarily disabled for faster builds)
-  permission_handler: ^12.0.1
-  flutter_localizations:
-    sdk: flutter
-  intl: ^0.20.2
   camera: ^0.11.1
   pdf: ^3.11.3
-
-  # firebase_* and mlkit packages temporarily disabled for faster builds
-
-  # Agora / WebRTC temporarily commented out
-  # agora_rtc_engine: ^6.5.2
-  # flutter_webrtc: ^1.2.0
-  # socket_io_client: ^3.1.2
-
-  # telephony: ^0.2.0+1  # Temporarily disabled due to namespace issue
-
-  platform: ^3.1.6
-  sqflite: ^2.4.2
-  provider: ^6.1.5+1
-  go_router: ^16.2.1
-  geolocator: ^14.0.2
-  google_maps_flutter: ^2.13.1
-  fl_chart: ^1.1.0
-
-  # AI Voice Commands
-  porcupine_flutter: ^3.0.5
-  speech_to_text: ^7.3.0
-
-  # device integration
-  fitbitter: ^2.0.6
-  health: ^13.2.0
   mobile_scanner: ^7.0.1
   share_plus: ^12.0.0
-
-  cupertino_icons: ^1.0.8
-  http: ^1.5.0
-  universal_html: ^2.2.4
   flutter_secure_storage: ^9.2.4
 
-  # Flutter SDK as a dependency
-  flutter:
-    sdk: flutter
+  # i18n / charts / maps / routing / state
+  intl: ^0.20.2
+  fl_chart: ^1.1.0
+  google_maps_flutter: ^2.13.1
+  geolocator: ^14.0.2
+  go_router: ^16.2.1
+  provider: ^6.1.5+1
+  platform: ^3.1.6
+  sqflite: ^2.4.2
 
-  flutter_svg: ^2.0.9
-  web: ^1.1.0
+  # health / fitness
+  fitbitter: ^2.0.6
+  health: ^13.2.0
 
-  # speech to text, voice recognition, and diarization
+  # voice & audio
+  porcupine_flutter: ^3.0.5
+  speech_to_text: ^7.3.0
   sherpa_onnx: ^1.12.14
   record: ^6.1.1
   new_simple_audio_trimmer: ^0.1.5
-  table_calendar: ^3.2.0
 
-  # Team D - Dependencies Begin
+  # UI / widgets
+  confetti: ^0.8.0
+  table_calendar: ^3.2.0
+  flutter_svg: ^2.0.9
+  web: ^1.1.0
+  cupertino_icons: ^1.0.8
+
+  # Team D
   syncfusion_flutter_pdfviewer: ^31.2.3
   qr_flutter: ^4.1.0
-  http_parser: ^4.0.2
-  image: ^4.2.0
   json_schema: ^5.2.1
   flutter_staggered_grid_view: ^0.7.0
   excel: ^4.0.6
-  open_filex: ^4.7.0
   connectivity_plus: ^6.0.5
   device_info_plus: ^12.1.0
   flutter_local_notifications: ^17.2.1
-  # Team D - Dependencies End
 
 dependency_overrides:
   calendar_view: ^1.0.0

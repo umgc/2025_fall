@@ -26,7 +26,8 @@ import '../widgets/virtual_check_in_config_sheet.dart';
 import '../widgets/virtual_check_in_history_card.dart';
 import '../models/virtual_check_in_question.dart';
 
-// Use ONLY the widget version of SymptomEntry/RecentSymptomsSection
+// 👉 Alias BOTH sides to avoid type clashes
+import '../models/symptom_entry.dart' as model;
 import '../widgets/recent_symptom_card.dart' as sympt;
 
 class PatientDetailsPage extends StatelessWidget {
@@ -77,36 +78,48 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // Build the UI SymptomEntry list (widget type)
-    final symptomEntries = <sympt.SymptomEntry>[
-      sympt.SymptomEntry(
+    // MODEL entries
+    final modelSymptomEntries = <model.SymptomEntry>[
+      model.SymptomEntry(
         id: 's4',
         date: DateTime(2024, 12, 27),
         name: 'Fatigue, Headache, Joint pain',
         severity: 'Moderate',
         note: 'Symptoms worsened during holiday stress',
       ),
-      sympt.SymptomEntry(
+      model.SymptomEntry(
         id: 's3',
         date: DateTime(2024, 12, 25),
         name: 'Fatigue, Nausea',
         severity: 'Severe',
         note: 'Emergency contact needed due to severe symptoms',
       ),
-      sympt.SymptomEntry(
+      model.SymptomEntry(
         id: 's2',
         date: DateTime(2024, 12, 23),
         name: 'Mild headache',
         severity: 'Mild',
-        note: '', // empty note is fine
+        note: null, // demo of nullable
       ),
-      sympt.SymptomEntry(
+      model.SymptomEntry(
         id: 's1',
         date: DateTime(2024, 12, 21),
         name: 'No symptoms reported',
         severity: 'Mild',
         note: 'Feeling much better, no symptoms reported',
       ),
+    ];
+
+    // Convert to the WIDGET type
+    final uiSymptomEntries = <sympt.SymptomEntry>[
+      for (final s in modelSymptomEntries)
+        sympt.SymptomEntry(
+          id: s.id,
+          date: s.date,
+          name: s.name,
+          severity: s.severity,
+          note: s.note ?? '', // <-- fix: ensure non-null String
+        ),
     ];
 
     final medicationEntries = <MedicationEntry>[
@@ -279,17 +292,15 @@ class PatientDetailsPage extends StatelessWidget {
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      sympt.RecentSymptomsSection(
-                        entries: symptomEntries,
-                        // Pain Level card appears inside the Recent Symptoms card
-                        extraTop: const PainLevelCard(
-                          lastReportedText: '6 hours ago',
-                          currentPain: 4,
-                          location: 'Lower back',
-                          dizziness: 2,
-                          fatigue: 7,
-                        ),
+                      const PainLevelCard(
+                        lastReportedText: '6 hours ago',
+                        currentPain: 4,
+                        location: 'Lower back',
+                        dizziness: 2,
+                        fatigue: 7,
                       ),
+                      // Recent Symptoms (UI-typed list)
+                      sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
                       CurrentMedicationsSection(entries: medicationEntries),
                     ],
