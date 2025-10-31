@@ -471,30 +471,37 @@ class UserSettingsState extends State<UserSettings> {
         messageColor = Colors.green;
         icon = Icons.check_circle;
         message =
-            'Your system meets the recommended hardware requirements for running a local large language model (LLM). '
-            'A discrete GPU with at least 8 GB of VRAM has been detected, providing acceptable performance for 7B models, which are recommended for both efficiency and accuracy. '
-            'As a general guideline, each 1 billion (1B) model parameters typically requires about 1 GB of VRAM. Your GPU may not be optimal for models larger than 7B, so please ensure your system has enough VRAM before attempting to run larger models. '
-            'Ensure your graphics drivers are up to date and that sufficient resources are available for optimal operation. '
-            'For the best performance and accuracy, using an API-hosted LLM is still recommended.';
+            '''Your system meets the recommended hardware requirements for running a Local Large Language model (LLM).
+A discrete GPU with at least 8 GB of VRAM has been detected, providing acceptable performance for 7B models - the minimum recommended size for using the local LLM function.
+
+As a general guideline, each 1 billion (1B) model parameters typically requires about 1 GB of VRAM.
+For every 1 GB of VRAM that is unavailable, an additional 2 GB of system memory (RAM) is recommended to compensate. 
+
+Your GPU may not be optimal for models larger than 7B, so please ensure your system has enough memory before attempting to run larger models. 
+Ensure your graphics drivers are up to date and that sufficient resources are available for optimal operation.
+
+For the best performance and accuracy, using and external LLM is still recommended.''';
       } else {
         messageColor = Colors.orange;
         icon = Icons.warning;
         message =
-            'A discrete GPU has been detected; however, the available VRAM appears to be below 8 GB. '
-            'Running larger models locally may result in slow performance, instability, or loading failures. '
-            'As a general guideline, each 1 billion (1B) model parameter typically requires about 1 GB of VRAM. '
-            'Smaller models may still operate, but responsiveness and quality may be limited. '
-            'For the best performance and accuracy, using an API-hosted LLM is recommended.';
+            '''A discrete GPU has been detected; however, the available VRAM appears to be below 8 GB.
+            Running larger models locally may result in slow performance, instability, or loading failures.
+            As a general guideline, each 1 billion (1B) model parameter typically requires about 1 GB of VRAM.
+            For every 1 GB of VRAM that is unavailable, an additional 2 GB of system memory (RAM) is recommended to compensate.
+
+            Smaller models may still operate, but responsiveness and quality may be limited. Please ensure your system has enough memory before attempting to run larger models.'
+            For the best performance and accuracy, using an external LLM is recommended.''';
       }
     } else {
       messageColor = Colors.redAccent;
       icon = Icons.dangerous;
       message =
-          'Warning: No discrete GPU was detected, or GPU information is unavailable. '
-          'Running a local large language model (LLM) on integrated graphics or low-memory systems is not recommended. '
-          'This configuration may lead to severe lag, instability, or complete failure to load models. '
-          'Small models (1B) may still operate, but responsiveness and quality may be limited. '
-          'For the best performance and accuracy, using an API-hosted LLM is strongly recommended.';
+          '''Warning: No discrete GPU was detected, or GPU information is unavailable.
+          Running a local large language model (LLM) on integrated graphics or low-memory systems is not recommended.
+          This configuration may lead to severe lag, instability, or complete failure of the application.
+          Small models (1B) may still operate, but responsiveness and quality may be limited.
+          For the best performance and accuracy, using an external LLM is strongly recommended.''';
     }
 
     return Padding(
@@ -548,6 +555,97 @@ class UserSettingsState extends State<UserSettings> {
     );
   }
 
+  void showModelDetails(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Information about different local models'),
+        content: SingleChildScrollView(
+          child: RichText(
+            text: const TextSpan(
+              style: TextStyle(color: Colors.black, fontSize: 15, height: 1.5),
+              children: [
+                TextSpan(
+                  text:
+                      'There are many different local large language models (LLMs) you can run on your own device, each designed for specific strengths.\n'
+                      'Some excel at reasoning and analysis, while others are better for conversation, structured tasks, or coding.\n'
+                      'For EduLense application, we recommend using reasoning models for their accuracy and structured thought.\n\n'
+                      'Here’s a quick overview of the main types and when to use each:\n\n',
+                ),
+
+                // --- Reasoning Models ---
+                TextSpan(
+                  text: 'Reasoning Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Math, logic, and multi-step reasoning.\nExamples: DeepSeek R1/Qwen, Qwen-Math, Llama 3-Reasoning.\nUse when: You need accuracy and structured thought.\n\n',
+                ),
+
+                // --- Balanced / General Models ---
+                TextSpan(
+                  text: 'Balanced / General Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Everyday writing, summarizing, or general chat.\nExamples: Qwen 2.5, DeepSeek-Chat, Llama 3.\nUse when: You want good all-around performance and natural tone.\n\n',
+                ),
+
+                // --- Chat Models ---
+                TextSpan(
+                  text: 'Chat Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Conversations, tutoring, and dialogue.\nExamples: Qwen-Chat, Mistral-Chat, Phi-3.\nUse when: You need fast, fluent, human-like responses.\n\n',
+                ),
+
+                // --- Instruction Models ---
+                TextSpan(
+                  text: 'Instruction Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Structured or formatted outputs (e.g., JSON, XML, Markdown).\nExamples: Llama 3-Instruct, Qwen-Instruct, DeepSeek-Instruct.\nUse when: Tasks require the model to follow directions exactly.\n\n',
+                ),
+
+                // --- Coding Models ---
+                TextSpan(
+                  text: 'Coding Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Code generation, debugging, and technical explanations.\nExamples: DeepSeek-Coder, CodeLlama, Qwen-Coder.\nUse when: Working in programming or automation tasks.\n\n',
+                ),
+
+                // --- Lightweight Models ---
+                TextSpan(
+                  text: 'Lightweight Models\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'Best for: Fast responses on limited hardware.\nExamples: Phi-3-mini, TinyLlama, Mistral 7B.\nUse when: You prioritize speed or have less GPU memory.\n',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
 // Updated GGUF Model Picker
   Widget _buildGGUFModelPicker() {
     // support for web:
@@ -569,7 +667,6 @@ class UserSettingsState extends State<UserSettings> {
           child: CircularProgressIndicator(),
         );
       }
-
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -583,14 +680,14 @@ class UserSettingsState extends State<UserSettings> {
               '''
 ⚠️ Hardware & Model Requirements
 
-This app requires a reasoning model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
+EduLense recommends using a reasoning model with at least 7B parameters to reliably generate structured content (e.g., JSON, XML) for platforms like Moodle and Google Classroom.
 Only GGUF models are currently supported.
 
-Running such models locally demands high-end hardware:
-• A discrete GPU with at least 8GB or more VRAM is recommended to run 7B models.
-• Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
+Recommended hardware specifications for running local LLMs are:
+• A discrete GPU with at least 8GB or more VRAM
+• 12GB or higher system memory (RAM)
 
-Using the local LLM without the recommended model and hardware may result in unreliable output or total failure.
+Systems using integrated graphics or low-memory setups may experience severe lag, crashes, or complete failure to load.
 For the best performance and accuracy, using an API-hosted LLM is recommended.
 
 Please refer to the information below to better understand your device's GPU and memory specifications.
@@ -624,6 +721,21 @@ Please refer to the information below to better understand your device's GPU and
           const Text(
             'Load Local LLM:',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 1.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.info_outline),
+                label: const Text(
+                    'Information about different types of local models'),
+                onPressed: () => showModelDetails(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 1.0),
+                ),
+              ),
+            ),
           ),
           Row(
             children: [
