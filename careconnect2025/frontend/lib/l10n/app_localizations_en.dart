@@ -69,6 +69,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settings => 'Settings';
 
   @override
+  String get fallDetection => 'Fall Detection';
+
+  @override
+  String get informedDelivery => 'Informed Delivery';
+
+  @override
+  String get smartDevices => 'Smart Devices';
+
+  @override
   String get pleaseLogIn => 'Please log in';
 
   @override

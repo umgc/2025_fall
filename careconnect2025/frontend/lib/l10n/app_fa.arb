@@ -1,0 +1,140 @@
+{
+  "@@locale": "fa",
+  "systemDefault": "پیش‌فرض سیستم",
+  "menuTitle": "منو",
+  "yourShortcuts": "میانبرهای شما",
+  "preferences": "تنظیمات",
+  "darkMode": "حالت تاریک",
+  "language": "زبان",
+  "logout": "خروج",
+  "tools": "ابزارها",
+  "customize": "شخصی‌سازی",
+  "search": "جستجو",
+  "invoiceAssistant": "دستیار فاکتور",
+  "evv": "EVV",
+  "calendarAssistant": "دستیار تقویم",
+  "medicationManagement": "مدیریت دارو",
+  "socialFeed": "خوراک اجتماعی",
+  "gamification": "بازی‌وارسازی",
+  "wearables": "پوشیدنی‌ها",
+  "fileManagement": "مدیریت فایل",
+  "addPatient": "افزودن بیمار",
+  "settings": "تنظیمات",
+  "fallDetection": "تشخیص سقوط",
+  "informedDelivery": "تحویل آگاهانه",
+  "smartDevices": "دستگاه‌های هوشمند",
+  "pleaseLogIn": "لطفاً وارد شوید",
+  "loginRequiredMessage": "برای دسترسی به منو باید وارد شوید",
+  "login": "ورود",
+  "customizeShortcuts": "شخصی‌سازی میانبرها",
+  "cancel": "لغو",
+  "save": "ذخیره",
+  "fallbackUser": "کاربر",
+
+  "dashboard": "داشبورد",
+
+  "shortcut_dashboard": "داشبورد",
+  "shortcut_invoices": "فاکتورها",
+  "shortcut_calendar": "تقویم",
+  "shortcut_feed": "خوراک",
+  "shortcut_meds": "داروها",
+  "shortcut_evv": "EVV",
+  "shortcut_wearables": "پوشیدنی‌ها",
+  "shortcut_files": "فایل‌ها",
+  "shortcut_gamification": "بازی‌وارسازی",
+
+  "navHome": "خانه",
+  "navSymptoms": "علائم",
+  "navHealth": "سلامت",
+  "navMessages": "پیام‌ها",
+  "navMenu": "منو",
+  "navPatientList": "لیست بیماران",
+  "navAnalytics": "تحلیل‌ها",
+  "navMore": "بیشتر",
+
+  "notetakerAssistant": "دستیار یادداشت‌بردار",
+
+  "settingsTitle": "تنظیمات",
+
+  "settingsAppearance": "ظاهر",
+  "settingsNotifications": "اعلان‌ها",
+  "settingsLoadingNotificationSettings": "در حال بارگذاری تنظیمات اعلان...",
+  "settingsUnableToLoadNotificationSettings": "امکان بارگذاری تنظیمات اعلان وجود ندارد",
+  "settingsRefresh": "تازه‌سازی",
+
+  "settingsDarkMode": "حالت تاریک",
+  "settingsToggleThemeDesc": "تغییر بین حالت روشن و تاریک",
+
+  "settingsNotifEmergency": "هشدارهای اضطراری",
+  "settingsNotifEmergencyDesc": "هشدارهای بحرانی سلامت و فوریت‌ها",
+  "settingsNotifVideoCall": "اعلان تماس تصویری",
+  "settingsNotifVideoCallDesc": "اعلان تماس‌های تصویری ورودی",
+  "settingsNotifAudioCall": "اعلان تماس صوتی",
+  "settingsNotifAudioCallDesc": "اعلان تماس‌های صوتی ورودی",
+  "settingsNotifSignificantVitals": "علائم حیاتی مهم",
+  "settingsNotifSignificantVitalsDesc": "تغییرات مهم در علائم حیاتی",
+  "settingsNotifSMS": "اعلان پیامک",
+  "settingsNotifSMSDesc": "اعلان پیام متنی به تلفن شما",
+  "settingsNotifGamification": "بازی‌وارسازی",
+  "settingsNotifGamificationDesc": "اعلان‌های پیشرفت و دستاورد",
+
+  "settingsSnackUpdated": "تنظیمات اعلان به‌روزرسانی شد",
+  "settingsSnackUpdateFailed": "به‌روزرسانی تنظیمات انجام نشد",
+  "settingsCacheCleared": "حافظه موقت با موفقیت پاک شد",
+
+  "settingsAIAssistant": "دستیار هوش مصنوعی",
+  "settingsAIConfiguration": "پیکربندی هوش مصنوعی",
+  "settingsAIConfigurationDesc": "شخصی‌سازی تنظیمات دستیار هوش مصنوعی شما",
+
+  "settingsSubscription": "اشتراک",
+  "settingsManageSubscription": "مدیریت اشتراک",
+  "settingsManageSubscriptionDesc": "مشاهده یا به‌روزرسانی طرح اشتراک شما",
+
+  "settingsNotetakerAssistant": "دستیار یادداشت‌بردار",
+  "settingsNotetakerConfiguration": "پیکربندی یادداشت‌بردار",
+  "settingsNotetakerConfigurationDesc": "شخصی‌سازی تنظیمات دستیار یادداشت‌بردار",
+
+  "settingsGeneral": "عمومی",
+  "settingsClearCache": "پاک کردن حافظه موقت",
+  "settingsClearCacheShortDesc": "حذف فایل‌های موقت و داده‌های کش",
+  "settingsClearCacheDesc": "با این کار تمام فایل‌های موقت و داده‌های کش پاک می‌شوند. ممکن است برنامه برای بارگذاری اولیه محتوای جدید کمی بیشتر زمان ببرد.",
+
+  "settingsSignOut": "خروج از حساب",
+  "settingsSignOutDesc": "خروج از حساب کاربری شما",
+  "settingsSignOutConfirmMessage": "آیا مطمئن هستید که می‌خواهید خارج شوید؟",
+
+  "settingsDeleteAccount": "حذف حساب",
+  "settingsDeleteAccountShortDesc": "حذف دائمی حساب کاربری شما",
+  "settingsDeleteAccountDesc": "این عملیات غیرقابل بازگشت است. تمام داده‌های شما برای همیشه حذف خواهند شد.",
+  "settingsDeleteAccountRequested": "درخواست حذف حساب ارسال شد. لطفاً با پشتیبانی تماس بگیرید.",
+  "settingsDeleteAccountAction": "حذف حساب",
+
+
+  "welcomeInitializingHealthcare": "در حال راه‌اندازی تجربه مراقبت سلامت شما...",
+  "welcomeReadyToConnect": "آماده برای اتصال به مراقبت!",
+  "welcomeBackendNotHealthyWarning": "سرویس پشتیبان فعال نیست. قابلیت‌های برنامه محدود است.",
+  "welcomeContinue": "ادامه",
+  "welcomeComplianceBadgeHipaa": "🔒 سازگار با HIPAA",
+  "welcomeComplianceBadgeWcag": "♿ WCAG AA",
+  "welcomeComplianceBadgeSecure": "🛡️ امن",
+  "welcome_subtitle": "اتصال مراقبت، توانمندسازی سلامت",
+  "welcome_description": "همراه سلامت شما برای",
+  "welcome_tagline": "مراقبت بهتر • نتایج بهتر • زندگی بهتر",
+
+  "login_tagline": "با مراقبت متصل شوید، با اطمینان پیگیری کنید",
+  "login_signInTitle": "ورود به حساب کاربری",
+  "login_signInSubtitle": "برای دسترسی به CareConnect اطلاعات خود را وارد کنید",
+  "login_usernameLabel": "نام کاربری",
+  "login_usernameHint": "نام کاربری خود را وارد کنید",
+  "login_passwordLabel": "رمز عبور",
+  "login_passwordHint": "رمز عبور خود را وارد کنید",
+  "login_forgotPassword": "رمز عبور را فراموش کرده‌اید؟",
+  "login_signInCta": "ورود",
+  "login_noAccountPrompt": "حساب کاربری ندارید؟",
+  "login_createAccountCta": "ایجاد حساب",
+  "login_badgeSecure": "امن",
+  "login_badgeHipaa": "سازگار با HIPAA",
+  "login_badgeAccessible": "قابل دسترسی",
+  "login_e2eEncrypted": "رمزگذاری سرتاسری",
+  "login_wcagAACompliant": "سازگار با WCAG AA"
+}

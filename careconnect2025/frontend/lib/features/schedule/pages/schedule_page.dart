@@ -221,14 +221,12 @@ class _SchedulePageState extends State<SchedulePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('EVV Visit Schedules'),
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
+ 
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshAllData,
-            tooltip: 'Refresh',
-            color: cs.onPrimary,
+            tooltip: 'Refresh', 
           ),
         ],
       ),

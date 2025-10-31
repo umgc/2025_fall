@@ -56,10 +56,8 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
   bool _isLoading = true;
   String? _error;
 
-  // Compact style
+  // spacing
   static const double _kPad = 10.0;
-  TextStyle get _labelSm => const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black54);
-  TextStyle get _valueMd => const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87);
 
   @override
   void initState() {
@@ -67,9 +65,15 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     _loadPatientDetails();
   }
 
+  // ---------- data ----------
+  Future<void> _loadOffline(VoidCallback done) async {
+    if (!mounted) return;
+    setState(done);
+  }
+
   Future<void> _loadPatientDetails() async {
     try {
-      setState(() {
+      await _loadOffline(() {
         _isLoading = true;
         _error = null;
       });
@@ -94,6 +98,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
             }
             final patient = Patient.fromJson(patientJson);
             if (patient.id == widget.patientId) {
+              if (!mounted) return;
               setState(() {
                 _selectedPatient = patient;
                 _isLoading = false;
@@ -107,6 +112,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
         throw Exception('Failed to load patient details: ${response.statusCode}');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -114,8 +120,9 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     }
   }
 
-  String _formatAddress(Patient patient) {
-    final a = patient.address;
+  // ---------- formatting ----------
+  String _formatAddress(Patient p) {
+    final a = p.address;
     if (a == null) return 'Address not available';
     final parts = <String>[
       if ((a.line1 ?? '').isNotEmpty) a.line1!,
@@ -143,16 +150,16 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
   String _formatTime(DateTime t) {
     final h = t.hour > 12 ? t.hour - 12 : t.hour;
     final display = h == 0 ? 12 : h;
-    final ampm = t.hour >= 12 ? 'PM' : 'AM';
-    return '$display:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')} $ampm';
+    final am = t.hour >= 12 ? 'PM' : 'AM';
+    return '$display:${t.minute.toString().padLeft(2, '0')}:${t.second.toString().padLeft(2, '0')} $am';
   }
 
-  String _formatLocation(String locationType, double? lat, double? lng, Patient patient) {
-    if (locationType.toLowerCase() == 'gps' && lat != null && lng != null) {
+  String _formatLocation(String type, double? lat, double? lng, Patient p) {
+    if (type.toLowerCase() == 'gps' && lat != null && lng != null) {
       return 'GPS ${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}';
     }
-    if (locationType.toLowerCase() == 'gps') return 'GPS (coords unavailable)';
-    return _formatAddress(patient);
+    if (type.toLowerCase() == 'gps') return 'GPS (coords unavailable)';
+    return _formatAddress(p);
   }
 
   String _uniqueFileName(String base) {
@@ -161,12 +168,15 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     return '${base}_${ts}_$rand.edi';
   }
 
+  // ---------- actions ----------
   void _goToDashboard() => context.go('/dashboard?role=CAREGIVER');
 
   Future<void> _exportVisitData() async {
     try {
       if (_selectedPatient == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Patient data not available for export'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Patient data not available for export'), backgroundColor: Colors.red),
+        );
         return;
       }
       final edi = _generateEDIContent();
@@ -185,36 +195,36 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
         html.Url.revokeObjectUrl(url);
       } else {
         final fileName = _uniqueFileName('visit_${_selectedPatient!.id}');
-        String? downloadsPath;
         try {
-          downloadsPath = '/storage/emulated/0/Download';
-          final downloadsDir = Directory(downloadsPath);
-          if (!await downloadsDir.exists()) {
+          String downloadsPath = '/storage/emulated/0/Download';
+          if (!await Directory(downloadsPath).exists()) {
             final ext = await getExternalStorageDirectory();
-            downloadsPath = ext?.path;
+            downloadsPath = ext?.path ?? downloadsPath;
           }
           final savePath = '$downloadsPath/$fileName';
-          final file = File(savePath);
-          await file.writeAsBytes(Uint8List.fromList(bytes), flush: true);
+          await File(savePath).writeAsBytes(Uint8List.fromList(bytes), flush: true);
           await OpenFilex.open(savePath);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to: $savePath')));
         } catch (_) {
-          final tempDir = await getTemporaryDirectory();
-          final tempPath = '${tempDir.path}/$fileName';
-          await File(tempPath).writeAsBytes(Uint8List.fromList(bytes), flush: true);
-          final xfile = XFile(tempPath, mimeType: 'text/plain', name: fileName);
+          final tmp = await getTemporaryDirectory();
+          final path = '${tmp.path}/$fileName';
+          await File(path).writeAsBytes(Uint8List.fromList(bytes), flush: true);
+          final xfile = XFile(path, mimeType: 'text/plain', name: fileName);
           await Share.shareXFiles([xfile], text: 'EVV EDI export');
         }
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Visit data exported successfully'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Visit data exported successfully'), backgroundColor: Colors.green),
+        );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -226,6 +236,9 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final border = cs.outlineVariant;
+        final bg = cs.surfaceContainerHighest;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -233,15 +246,15 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Preview EDI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Preview EDI', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 Container(
                   constraints: const BoxConstraints(maxHeight: 320),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: bg,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: border),
                   ),
                   child: SingleChildScrollView(
                     child: SelectableText(edi, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
@@ -279,6 +292,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     );
   }
 
+  // ---------- EDI ----------
   String _generateEDIContent() {
     final patient = _selectedPatient!;
     final maNumber = patient.maNumber ?? 'SUBSCR${patient.id.toString().padLeft(5, '0')}';
@@ -294,8 +308,8 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     String patientDob = '19700101';
     if (patient.dob.isNotEmpty) {
       try {
-        final dobDate = DateTime.parse(patient.dob);
-        patientDob = '${dobDate.year}${dobDate.month.toString().padLeft(2, '0')}${dobDate.day.toString().padLeft(2, '0')}';
+        final dob = DateTime.parse(patient.dob);
+        patientDob = '${dob.year}${dob.month.toString().padLeft(2, '0')}${dob.day.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
 
@@ -351,17 +365,20 @@ IEA*1*$controlNumber~
     return ediContent;
   }
 
+  // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         title: const Text('Visit Completed'),
+       
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/evv'),
-            icon: const Icon(Icons.cancel, color: Colors.red),
-            label: const Text('Close', style: TextStyle(color: Colors.red)),
+            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            icon: Icon(Icons.cancel, color: cs.error),
+            label: Text('Close', style: TextStyle(color: cs.error)),
           ),
         ],
       ),
@@ -397,13 +414,14 @@ IEA*1*$controlNumber~
   }
 
   Widget _buildPatientNotFoundState() {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_off, size: 64, color: Theme.of(context).hintColor),
+            Icon(Icons.person_off, size: 64, color: cs.onSurfaceVariant),
             const SizedBox(height: 16),
             const Text('Patient Not Found', style: AppTheme.headingSmall, textAlign: TextAlign.center),
             const SizedBox(height: 8),
@@ -416,8 +434,10 @@ IEA*1*$controlNumber~
     );
   }
 
-  // ---------- COMPACT SUCCESS PAGE ----------
   Widget _buildSuccessPage() {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
     final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
@@ -427,133 +447,201 @@ IEA*1*$controlNumber~
     final inLoc = _formatLocation(widget.checkinLocationType, widget.checkinLatitude, widget.checkinLongitude, patient);
     final outLoc = _formatLocation(widget.checkoutLocationType, widget.checkoutLatitude, widget.checkoutLongitude, patient);
 
+    // success banner colors that work in dark and light
+    final successColor = Colors.green;
+    final successText = isDark ? Colors.green.shade200 : Colors.green.shade800;
+    final successBg = successColor.withOpacity(isDark ? 0.20 : 0.12);
+    final successBorder = successColor.withOpacity(isDark ? 0.35 : 0.25);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(_kPad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // compact success banner
+          // Banner
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.green[50],
+              color: successBg,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.green[200]!, width: 1),
+              border: Border.all(color: successBorder),
             ),
-            child: Text('Visit completed and ready for submission', style: TextStyle(color: Colors.green[800], fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text('Visit completed and ready for submission',
+                style: TextStyle(color: successText, fontSize: 13, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: 8),
 
-          // EVV compact
-          _evvCompact(inLoc, outLoc),
+          // EVV section
+          _evvCompact(context, inLoc, outLoc),
 
           const SizedBox(height: 8),
 
-          // two tight cards
           LayoutBuilder(builder: (c, cons) {
             final isWide = cons.maxWidth >= 640;
 
-            final left = _cardTight(children: [
-              Row(children: [const Icon(Icons.person_outline, size: 18, color: Colors.black54), const SizedBox(width: 6), Text('Patient & Service', style: _labelSm)]),
-              const SizedBox(height: 6),
-              Text(fullName, style: _valueMd),
-              const SizedBox(height: 4),
-              _chip(maNumber),
-              const SizedBox(height: 6),
-              Text(addr, style: const TextStyle(fontSize: 12, color: Colors.black87)),
-              const Divider(height: 16),
-              Text('Service Type', style: _labelSm),
-              const SizedBox(height: 2),
-              Text(widget.serviceType, style: _valueMd),
-            ]);
+            final left = _card(
+              context: context,
+              children: [
+                _sectionHeader(context, Icons.person_outline, 'Patient & Service'),
+                const SizedBox(height: 6),
+                Text(fullName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                _chip(context, maNumber),
+                const SizedBox(height: 6),
+                Text(addr, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                const Divider(height: 16),
+                Text('Service Type', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(widget.serviceType, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700)),
+              ],
+            );
 
-            final right = _cardTight(children: [
-              Row(children: [const Icon(Icons.schedule, size: 18, color: Colors.black54), const SizedBox(width: 6), Text('Time & Duration', style: _labelSm)]),
-              const SizedBox(height: 6),
-              Row(children: [
-                Expanded(child: _kvTight('Check-In', _formatTime(widget.checkinTime))),
-                Expanded(child: _kvTight('Check-Out', _formatTime(widget.checkoutTime))),
-              ]),
-              const SizedBox(height: 4),
-              _kvTight('Total', _formatDuration(duration)),
-              Text('(${_formatDurationDetailed(duration)})', style: const TextStyle(fontSize: 11, color: Colors.black54)),
-            ]);
+            final right = _card(
+              context: context,
+              children: [
+                _sectionHeader(context, Icons.schedule, 'Time & Duration'),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(child: _kv(context, 'Check-In', _formatTime(widget.checkinTime))),
+                    Expanded(child: _kv(context, 'Check-Out', _formatTime(widget.checkoutTime))),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                _kv(context, 'Total', _formatDuration(duration)),
+                Text('(${_formatDurationDetailed(duration)})',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+              ],
+            );
 
             if (!isWide) return Column(children: [left, right]);
-            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: left), const SizedBox(width: 8), Expanded(child: right)]);
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: left),
+              const SizedBox(width: 8),
+              Expanded(child: right),
+            ]);
           }),
 
-          // compact actions
-          _compactActions(),
+          // Actions
+          _actionsRow(context),
         ],
       ),
     );
   }
 
-  // ---------- SMALL HELPERS ----------
-  Widget _kvTight(String label, String value) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: _labelSm),
-        const SizedBox(height: 1),
-        Text(value, style: _valueMd),
-      ]);
-
-  Widget _chip(String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
-        child: Text(text, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-      );
-
-  Widget _cardTight({required List<Widget> children}) => Card(
-        elevation: 0,
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children)),
-      );
-
-  Widget _evvCompact(String inLoc, String outLoc) {
-    String badge(String type) => type.toLowerCase() == 'gps' ? 'GPS' : 'PATIENT ADDRESS';
-    Color badgeColor(String type) => type.toLowerCase() == 'gps' ? Colors.blue : Colors.green;
-
-    return _cardTight(children: [
-      Row(children: [const Icon(Icons.verified, size: 18, color: Colors.blue), const SizedBox(width: 6), Text('EVV Location Verification', style: _labelSm)]),
-      const SizedBox(height: 6),
-      Row(children: [
-        Icon(widget.checkinLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home, size: 16, color: badgeColor(widget.checkinLocationType)),
-        const SizedBox(width: 6),
-        Text('Check-In', style: _labelSm),
-        const SizedBox(width: 6),
-        _tinyBadge(badge(widget.checkinLocationType), badgeColor(widget.checkinLocationType)),
-      ]),
-      const SizedBox(height: 2),
-      Padding(padding: const EdgeInsets.only(left: 22), child: Text(inLoc, style: const TextStyle(fontSize: 12))),
-      const SizedBox(height: 8),
-      Row(children: [
-        Icon(widget.checkoutLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home, size: 16, color: badgeColor(widget.checkoutLocationType)),
-        const SizedBox(width: 6),
-        Text('Check-Out', style: _labelSm),
-        const SizedBox(width: 6),
-        _tinyBadge(badge(widget.checkoutLocationType), badgeColor(widget.checkoutLocationType)),
-      ]),
-      const SizedBox(height: 2),
-      Padding(padding: const EdgeInsets.only(left: 22), child: Text(outLoc, style: const TextStyle(fontSize: 12))),
-      const SizedBox(height: 8),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.shade100)),
-        child: const Text('EVV compliance confirmed for this visit.', style: TextStyle(fontSize: 12)),
+  // ---------- pieces ----------
+  Widget _card({required BuildContext context, required List<Widget> children}) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      color: cs.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
       ),
-    ]);
+      child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children)),
+    );
   }
 
-  Widget _tinyBadge(String text, Color c) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: c.withOpacity(0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: c.withOpacity(0.25))),
-        child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: c)),
-      );
+  Widget _sectionHeader(BuildContext context, IconData icon, String title) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: cs.onSurfaceVariant),
+        const SizedBox(width: 6),
+        Text(title, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
 
-  Widget _compactActions() {
+  Widget _kv(BuildContext context, String label, String value) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 1),
+        Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  Widget _chip(BuildContext context, String text) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = cs.outlineVariant.withOpacity(isDark ? 0.28 : 0.18);
+    final border = cs.outlineVariant.withOpacity(isDark ? 0.45 : 0.35);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
+      child: Text(text, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _badge(BuildContext context, String label, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(isDark ? 0.20 : 0.14),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(isDark ? 0.40 : 0.28)),
+      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
+    );
+  }
+
+  Widget _evvCompact(BuildContext context, String inLoc, String outLoc) {
+    final cs = Theme.of(context).colorScheme;
+    final okText = Theme.of(context).brightness == Brightness.dark ? Colors.blue.shade200 : Colors.blue.shade700;
+    final okBg = Colors.blue.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.12);
+    final okBorder = Colors.blue.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.40 : 0.28);
+
+    return _card(
+      context: context,
+      children: [
+        _sectionHeader(context, Icons.verified, 'EVV Location Verification'),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(widget.checkinLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home,
+                size: 16, color: cs.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text('Check-In', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 6),
+            _badge(context, widget.checkinLocationType.toLowerCase() == 'gps' ? 'GPS' : 'PATIENT ADDRESS', Colors.blue),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Padding(padding: const EdgeInsets.only(left: 22), child: Text(inLoc, style: Theme.of(context).textTheme.bodySmall)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(widget.checkoutLocationType.toLowerCase() == 'gps' ? Icons.gps_fixed : Icons.home,
+                size: 16, color: cs.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text('Check-Out', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 6),
+            _badge(context, widget.checkoutLocationType.toLowerCase() == 'gps' ? 'GPS' : 'PATIENT ADDRESS', Colors.blue),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Padding(padding: const EdgeInsets.only(left: 22), child: Text(outLoc, style: Theme.of(context).textTheme.bodySmall)),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: okBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: okBorder)),
+          child: Text('EVV compliance confirmed for this visit.', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: okText)),
+        ),
+      ],
+    );
+  }
+
+  Widget _actionsRow(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(10));
     return Padding(
       padding: const EdgeInsets.fromLTRB(_kPad, 6, _kPad, 14),
@@ -564,7 +652,7 @@ IEA*1*$controlNumber~
               onPressed: _exportVisitData,
               style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10), shape: shape),
               icon: const Icon(Icons.file_download_outlined, size: 18),
-              label: const Text('Export EDI', style: TextStyle(fontSize: 13)),
+              label: const Text('Export EDI'),
             ),
           ),
           const SizedBox(width: 8),
@@ -574,16 +662,16 @@ IEA*1*$controlNumber~
                 onPressed: _previewVisitEdi,
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10), shape: shape),
                 icon: const Icon(Icons.remove_red_eye_outlined, size: 18),
-                label: const Text('Preview', style: TextStyle(fontSize: 13)),
+                label: const Text('Preview'),
               ),
             ),
           if (!kIsWeb) const SizedBox(width: 8),
           Expanded(
-            child: ElevatedButton.icon(
+            child: FilledButton.icon(
               onPressed: _goToDashboard,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10), shape: shape, backgroundColor: Colors.blueGrey.shade700, foregroundColor: Colors.white, elevation: 1),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10), shape: shape, backgroundColor: cs.secondary),
               icon: const Icon(Icons.dashboard_customize_outlined, size: 18),
-              label: const Text('Dashboard', style: TextStyle(fontSize: 13)),
+              label: Text('Dashboard', style: TextStyle(color: cs.onSecondary)),
             ),
           ),
         ],
