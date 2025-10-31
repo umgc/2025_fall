@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'game_result.dart';
+
 class QuizGame extends StatefulWidget {
   final List<Map<String, dynamic>> questions;
-  final VoidCallback onComplete;
+  final void Function(GamePlayResult result) onComplete;
   final bool previewMode;
 
   const QuizGame({
@@ -23,6 +25,7 @@ class _QuizGameState extends State<QuizGame> {
   bool? wasCorrect;
   List<Map<String, String>> userAnswers = [];
   String? previewSelected;
+  bool _completionReported = false;
 
   void checkAnswer(String selected) {
     final correctAnswerIndex = widget.questions[currentIndex]['answer'] as int;
@@ -69,13 +72,26 @@ class _QuizGameState extends State<QuizGame> {
         currentIndex++;
         showResult = true;
       });
+      _reportCompletion(questions.length);
     }
+  }
+
+  void _reportCompletion(int totalQuestions) {
+    if (_completionReported || widget.previewMode) return;
+    _completionReported = true;
+    widget.onComplete(
+      GamePlayResult(
+        score: score,
+        maxScore: totalQuestions,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final questions = widget.questions.take(5).toList();
     if (currentIndex >= questions.length) {
+      _reportCompletion(questions.length);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
