@@ -17,6 +17,7 @@ import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/beans/submission_status.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class MoodleLmsService implements LmsInterface {
@@ -120,7 +121,13 @@ class MoodleLmsService implements LmsInterface {
     fullName = userData['fullname'];
     profileImage = userData['userpictureurl'];
 
-    userId = userData['userid'] as int?;
+    final userId = userData['userid'];
+    if (userId != null) {
+      LocalStorageService.saveUserId(userId.toString());
+    } else {
+      LocalStorageService.clearUserId();
+      print('?? Moodle site info did not include userId');
+    }
 
     // 4) Optionally load user courses right away
     courses = await getUserCourses();

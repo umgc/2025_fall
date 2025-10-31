@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
         '/user': (context) => UserSettings(),
         //'/send_essay_to_moodle': (context) => EssayAssignmentSettings(''),
         '/assessments': (context) => AssessmentsView(),
-        // '/viewExams': (context) => const ViewExamPage(),
+        // '/viewExams': (context) => const View Exam Page(),
         // '/settings': (context) => Setting(themeModeNotifier: _themeModeNotifier)
         '/gamification': (context) => GamificationView(),
         '/evaluate': (context) => ProgramAssessmentView()
