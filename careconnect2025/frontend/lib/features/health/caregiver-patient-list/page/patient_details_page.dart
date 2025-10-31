@@ -247,11 +247,11 @@ class PatientDetailsPage extends StatelessWidget {
                 'Chronic Fatigue Syndrome',
               ],
               allergies: const ['Penicillin', 'Shellfish'],
-              heartRateBpm: 72,
+              /*heartRateBpm: 72,
               bpSystolic: 120,
               bpDiastolic: 80,
               oxygenPercent: 98,
-              temperatureF: 98.0,
+              temperatureF: 98.0,*/
               emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
