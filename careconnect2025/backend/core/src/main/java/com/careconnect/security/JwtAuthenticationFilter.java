@@ -23,15 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    // No-arg constructor for Spring or frameworks that require it
-    public JwtAuthenticationFilter() {
-        this.jwt = null;
-        this.uds = null;
-    }
-
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String COOKIE_NAME = "AUTH";
-    
+
     // Paths that should be excluded from JWT authentication
     private static final List<String> EXCLUDED_PATHS = Arrays.asList(
         "/swagger-ui",

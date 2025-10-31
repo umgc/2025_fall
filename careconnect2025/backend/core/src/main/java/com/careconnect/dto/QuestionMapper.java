@@ -12,10 +12,9 @@ public final class QuestionMapper {
         return new QuestionDTO(
                 q.getId(),
                 q.getPrompt(),
-                q.getType(),
+                q.getType().name(),  // Convert QuestionType enum to String
                 q.isRequired(),
-                q.getOrdinal(),
-                q.isActive()
+                q.getOrdinal()
         );
     }
 
