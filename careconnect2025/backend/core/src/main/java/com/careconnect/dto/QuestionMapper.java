@@ -1,7 +1,5 @@
 package com.careconnect.dto;
 
-import com.careconnect.dto.QuestionDTO;
-import com.careconnect.dto.QuestionUpsertDTO;
 import com.careconnect.model.Question;
 
 public final class QuestionMapper {
