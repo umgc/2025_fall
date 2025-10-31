@@ -19,6 +19,7 @@ import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:xml/xml.dart' as xml;
+import 'package:intl/intl.dart';
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class GoogleLmsService extends LmsInterface {
@@ -852,7 +853,26 @@ class GoogleLmsService extends LmsInterface {
     return null;
   }
 
+  DateTime? _parsePickerDate(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    final stringDate = DateTime.tryParse(trimmed);
+    if (stringDate != null) {
+      return stringDate;
+    }
+
+    try {
+      final formatter = DateFormat('dd MMMM yyyy HH:mm', 'en_US');
+      return formatter.parseStrict(trimmed);
+    } on FormatException {
+      print('Failed to parse date string: $raw');
+      return null;
+    }
+  }
+
   @override
+  // TODO - google API doesn't have an endpoint to pass in the rubric like Moodle
   Future<Map<String, dynamic>?> createAssignment(
     String courseid,
     String sectionid,
@@ -868,8 +888,84 @@ class GoogleLmsService extends LmsInterface {
     print('Assignment Name: $assignmentName');
     print('Start Date: $startdate');
     print('End Date: $enddate');
-    // TODO: implement google api code
-    throw UnimplementedError();
+    final token = _userToken ?? await _getToken();
+    if (token == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    final dueDateTime = _parsePickerDate(enddate);
+    final availabilityDate = _parsePickerDate(startdate);
+
+    final body = <String, dynamic>{
+      'title': assignmentName,
+      'description': description,
+      'workType': 'ASSIGNMENT',
+    };
+
+    if (dueDateTime != null) {
+      body['dueDate'] = {
+        'year': dueDateTime.year,
+        'month': dueDateTime.month,
+        'day': dueDateTime.day,
+      };
+      body['dueTime'] = {
+        'hours': dueDateTime.hour,
+        'minutes': dueDateTime.minute,
+        'seconds': dueDateTime.second,
+      };
+    }
+
+    if (availabilityDate != null) {
+      body['scheduledTime'] = availabilityDate.toUtc().toIso8601String();
+    }
+
+    if (sectionid.trim().isNotEmpty) {
+      if (sectionid.trim().startsWith('http')) {
+        body['materials'] = [
+          {
+            'link': {'url': sectionid.trim()}
+          }
+        ];
+      } else {
+        final resolvedTopicId =
+            await _classroomApi.getTopicId(courseid, sectionid.trim());
+        final topicIdCandidate = resolvedTopicId ??
+            (RegExp(r'^\d+$').hasMatch(sectionid.trim())
+                ? sectionid.trim()
+                : null);
+        if (topicIdCandidate != null) {
+          body['topicId'] = topicIdCandidate;
+        }
+      }
+    }
+
+    final url = Uri.parse('$apiURL/courses/$courseid/courseWork');
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+
+    try {
+      final response =
+          await http.post(url, headers: headers, body: jsonEncode(body));
+
+      print('Create assignment response: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('Body: ${response.body}');
+        return null;
+      }
+
+      final courseWorkResponse = jsonDecode(response.body);
+      if (courseWorkResponse is Map<String, dynamic>) {
+        return courseWorkResponse;
+      }
+
+      return {'data': courseWorkResponse};
+    } catch (e, st) {
+      print('Error creating assignment in Google Classroom: $e');
+      print(st);
+      return null;
+    }
   }
 
   @override
