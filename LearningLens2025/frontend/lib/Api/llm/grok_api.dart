@@ -10,13 +10,15 @@ class GrokLLM implements LLM {
   @override
   final String url = 'https://api.x.ai/v1/chat/completions';
   @override
-  final String model = 'grok-2-latest';
+  final String model = 'grok-3-latest';
   @override
   final double tokenCount = 0.25;
   @override
   final int contextSize;
   @override
   final int maxOutputTokens;
+
+  final parsedUrl = Uri.parse('https://api.x.ai/v1/chat/completions');
 
   GrokLLM(
     this.apiKey, {
@@ -200,16 +202,211 @@ class GrokLLM implements LLM {
         .trim(); // Adjust based on actual response structure
   }
 
+  // New method for passing prompts to the AI model and getting responses.
+  // Options for both chat context(List<Map<String, dynamic>>) and String prompts.
+  // Uses named parameters for flexibility and clarity. IE: chat(context: myContext) or chat(prompt: myPrompt)
+  // Set optional parameters to control generation behavior. IE: chat(prompt: myPrompt, temperature: 0.3, topP: 0.9)
   @override
   Future<String> chat({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+
+    /// **Optional generation parameters:**
+
+    /// * [temperature] — Controls randomness / creativity.
+    ///   - Range: 0.0–2.0
+    ///   - Lower → more deterministic and focused.
+    ///   - Higher → more creative or “loose” output.
+    ///   - Default: 0.7
+
+    double temperature = 0.7,
+
+    /// * [topP] — Nucleus sampling threshold (diversity control).
+    ///   - Range: 0.0–1.0
+    ///   - Lower values limit how many words the model can choose from.
+    ///   - Use either `temperature` or `topP`, not both low at once.
+    ///   - Default: 1.0
+    ///
+    double topP = 1.0,
+
+    /// * [frequencyPenalty] — Reduces repetition of identical words/phrases.
+    ///   - Range: -2.0–2.0
+    ///   - Higher values discourage reusing the same words.
+    ///   - Useful for long explanations or summaries.
+    ///   - Default: 0.0
+    ///
+    double frequencyPenalty = 0.0,
+
+    /// * [presencePenalty] — Reduces repetition of ideas or topics.
+    ///   - Range: -2.0–2.0
+    ///   - Higher values push the model to introduce new ideas.
+    ///   - Too high can make the response drift off-topic.
+    ///   - Default: 0.0
+
+    double presencePenalty = 0.0,
+
+    /// * [stream] — Whether to stream tokens as they’re generated.
+    ///   - `false` → Wait for full response (simpler, default).
+    ///   - `true` → Receive partial chunks (useful for live chat UIs).
+    ///   - Default: false
+
+    bool stream = false,
+  }) async {
+    // Validate input
+    final hasContext = context != null && context.isNotEmpty;
+    final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
+    // Ensure only one of messages or prompt is provided
+    if (!hasContext && !singlePrompt) {
+      throw ArgumentError('Either messages or prompt must be provided.');
+    }
+    if (hasContext && singlePrompt) {
+      throw ArgumentError('Provide either messages or prompt, not both.');
+    }
+    // Build Headers
+    final headers = {
+      'Authorization': 'Bearer $apiKey',
+      'Content-Type': 'application/json',
+    };
+    // Build Body based on input type
+    Map<String, dynamic> body;
+
+    if (prompt != null) {
+      // Single prompt case
+      body = {
+        'model': model,
+        'messages': [
+          {
+            'role': 'system',
+            'content': 'You are a helpful assistant. Be precise and concise.'
+          },
+          {'role': 'user', 'content': prompt},
+        ],
+        'temperature': temperature,
+        'top_p': topP,
+        'frequency_penalty': frequencyPenalty,
+        'presence_penalty': presencePenalty,
+        'max_tokens': maxOutputTokens,
+        'stream': stream,
+      };
+    } else {
+      // Context messages case
+      body = {
+        'model': model,
+        'messages': context,
+        'temperature': temperature,
+        'top_p': topP,
+        'frequency_penalty': frequencyPenalty,
+        'presence_penalty': presencePenalty,
+        'max_tokens': maxOutputTokens,
+        'stream': stream,
+      };
+    }
+    // Convert body to JSON
+    final bodyJson = jsonEncode(body);
+
+    //Send HTTP POST request
+    final response =
+        await http.post(parsedUrl, headers: headers, body: bodyJson);
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Grok API error: ${response.statusCode} - ${response.body}');
+    }
+    // Parse and return the response content
+    final data = jsonDecode(response.body);
+
+    // Adjust based on actual response structure
+    return data['choices'][0]['message']['content'].toString().trim();
+  }
+
+  /// Methiod used to enable Streaming responses from the AI model.
+  @override
+  Stream<String> chatStream({
     List<Map<String, dynamic>>? context,
     String? prompt,
     double temperature = 0.7,
     double topP = 1.0,
     double frequencyPenalty = 0.0,
     double presencePenalty = 0.0,
-    bool stream = false,
-  }) async {
-    return "Not implemented yet";
+  }) async* {
+    final hasContext = context != null && context.isNotEmpty;
+    final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
+    if (!hasContext && !singlePrompt) {
+      throw ArgumentError('Either messages or prompt must be provided.');
+    }
+    if (hasContext && singlePrompt) {
+      throw ArgumentError('Provide either messages or prompt, not both.');
+    }
+
+    final headers = {
+      'Authorization': 'Bearer $apiKey',
+      'Content-Type': 'application/json',
+    };
+
+    final body = {
+      'model': model,
+      'messages': singlePrompt
+          ? [
+              {
+                'role': 'system',
+                'content':
+                    'You are a helpful assistant. Be precise and concise.'
+              },
+              {'role': 'user', 'content': prompt}
+            ]
+          : context,
+      'temperature': temperature,
+      'frequency_penalty': frequencyPenalty,
+      'presence_penalty': presencePenalty,
+      'max_tokens': maxOutputTokens,
+      'stream': true, // critical for SSE
+    };
+    print("Streaming body: $body");
+    final client = http.Client();
+    try {
+      final req = http.Request('POST', parsedUrl)
+        ..headers.addAll(headers)
+        ..body = jsonEncode(body);
+
+      final streamedResponse = await client.send(req);
+      if (streamedResponse.statusCode != 200) {
+        final errBody = await streamedResponse.stream.bytesToString();
+        throw Exception(
+            'API stream error: ${streamedResponse.statusCode} - $errBody');
+      }
+
+      final lineStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in lineStream) {
+        if (line.isEmpty) continue;
+        if (!line.startsWith('data:')) continue;
+
+        final payload = line.substring(5).trim();
+        if (payload == '[DONE]') break;
+
+        dynamic jsonLine;
+        try {
+          jsonLine = jsonDecode(payload);
+        } catch (_) {
+          continue;
+        }
+
+        final choices = jsonLine['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final choice = choices[0];
+          final delta = choice['delta'];
+          if (delta is Map && delta.containsKey('content')) {
+            final token = (delta['content'] ?? '').toString();
+            if (token.isNotEmpty) yield token;
+          } else if (choice['message'] is Map &&
+              (choice['message']['content'] ?? '').toString().isNotEmpty) {
+            yield choice['message']['content'].toString();
+          }
+        }
+      }
+    } finally {
+      client.close();
+    }
   }
 }

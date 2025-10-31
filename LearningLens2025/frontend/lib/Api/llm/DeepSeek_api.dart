@@ -25,7 +25,7 @@ class DeepseekLLM implements LLM {
     this.apiKey, {
     int? contextSize,
     int? maxOutputTokens,
-  })  : contextSize = contextSize ?? 4000,
+  })  : contextSize = contextSize ?? 16000,
         maxOutputTokens = maxOutputTokens ?? 1000;
 
   /// Converts the HTTP response string to a JSON object.
@@ -280,6 +280,126 @@ class DeepseekLLM implements LLM {
 
     // Adjust based on actual response structure
     return data['choices'][0]['message']['content'].toString().trim();
+  }
+
+  /// Game generation method (similar to OpenAI's)
+  Future<String> generateGameFromText(String inputText) async {
+    final prompt = '''
+You are an AI that generates educational quiz games for students. Based on the input text below, return a quiz formatted in XML using the following structure:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question>
+    <text>What is the capital of France?</text>
+    <options>
+      <option>A. Berlin</option>
+      <option>B. Paris</option>
+      <option>C. Madrid</option>
+      <option>D. Rome</option>
+    </options>
+    <answer>B</answer>
+  </question>
+</quiz>
+
+The quiz must be related to the content provided and follow this XML format strictly. Here is the input:
+
+$inputText
+''';
+
+    final result = await generate(prompt);
+    return result;
+  }
+
+  /// Methiod used to enable Streaming responses from the AI model.
+  @override
+  Stream<String> chatStream({
+    List<Map<String, dynamic>>? context,
+    String? prompt,
+    double temperature = 0.7,
+    double topP = 1.0,
+    double frequencyPenalty = 0.0,
+    double presencePenalty = 0.0,
+  }) async* {
+    final hasContext = context != null && context.isNotEmpty;
+    final singlePrompt = prompt != null && prompt.trim().isNotEmpty;
+    if (!hasContext && !singlePrompt) {
+      throw ArgumentError('Either messages or prompt must be provided.');
+    }
+    if (hasContext && singlePrompt) {
+      throw ArgumentError('Provide either messages or prompt, not both.');
+    }
+
+    final headers = {
+      'Authorization': 'Bearer $apiKey',
+      'Content-Type': 'application/json',
+    };
+
+    final body = {
+      'model': model,
+      'messages': singlePrompt
+          ? [
+              {
+                'role': 'system',
+                'content':
+                    'You are a helpful assistant. Be precise and concise.'
+              },
+              {'role': 'user', 'content': prompt}
+            ]
+          : context,
+      'temperature': temperature,
+      'frequency_penalty': frequencyPenalty,
+      'presence_penalty': presencePenalty,
+      'max_tokens': maxOutputTokens,
+      'stream': true, // critical for SSE
+    };
+    print("Streaming body: $body");
+    final client = http.Client();
+    try {
+      final req = http.Request('POST', parsedUrl)
+        ..headers.addAll(headers)
+        ..body = jsonEncode(body);
+
+      final streamedResponse = await client.send(req);
+      if (streamedResponse.statusCode != 200) {
+        final errBody = await streamedResponse.stream.bytesToString();
+        throw Exception(
+            'API stream error: ${streamedResponse.statusCode} - $errBody');
+      }
+
+      final lineStream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in lineStream) {
+        if (line.isEmpty) continue;
+        if (!line.startsWith('data:')) continue;
+
+        final payload = line.substring(5).trim();
+        if (payload == '[DONE]') break;
+
+        dynamic jsonLine;
+        try {
+          jsonLine = jsonDecode(payload);
+        } catch (_) {
+          continue;
+        }
+
+        final choices = jsonLine['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final choice = choices[0];
+          final delta = choice['delta'];
+          if (delta is Map && delta.containsKey('content')) {
+            final token = (delta['content'] ?? '').toString();
+            if (token.isNotEmpty) yield token;
+          } else if (choice['message'] is Map &&
+              (choice['message']['content'] ?? '').toString().isNotEmpty) {
+            yield choice['message']['content'].toString();
+          }
+        }
+      }
+    } finally {
+      client.close();
+    }
   }
 
   /// Method used in the Quiz feature to parse the AI response to extract quiz data in XML format.

@@ -1,17 +1,19 @@
 import { DescribeTaskDefinitionCommand, ECSClient, RunTaskCommand } from "@aws-sdk/client-ecs";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import postgres from "postgres";
-import { createSubmissionsZip, updateGrade } from './moodle.js';
+import { createSubmissionsZip } from './moodle.js';
 
 /**
  * Starts the ECS task to evaluate student submissions
  * @param {string} s3Uri s3Uri S3 URI for zip file containing student submissions
  * @param {string|number} assignmentId 
  * @param {string|number} courseId 
+ * @param {string} language 
+ * @param {number} timeoutSeconds 
  * @returns 
  */
-async function startECSTask(s3Uri, assignmentId, courseId){
+async function startECSTask(s3Uri, assignmentId, courseId, language, timeoutSeconds){
     const ecsClient = new ECSClient({ region: process.env.AWS_REGION });
     const subnets = process.env.SUBNET_IDS.split(",");
     const securityGroups = process.env.SECURITY_GROUP_IDS.split(",");
@@ -53,6 +55,8 @@ async function startECSTask(s3Uri, assignmentId, courseId){
                             { name: "LAMBDA_NAME", value: functionName },
                             { name: "ASSIGNMENT_ID", value: assignmentId.toString() },
                             { name: "COURSE_ID", value: courseId.toString() },
+                            { name: "LANGUAGE", value: language },
+                            { name: "TIMEOUT_SECONDS", value: timeoutSeconds },
                         ],
                     },
                 ],
@@ -69,12 +73,12 @@ async function startECSTask(s3Uri, assignmentId, courseId){
     }
 }
 
-async function startEvaluation(body){
-    const { assignmentId, courseId, expectedOutput } = body
-    const zipFile = await createSubmissionsZip(assignmentId)
-    const s3Client = new S3Client({ region: "us-east-1" });
+async function startEvaluation(bodyJson){
+    const { assignmentId, courseId, input, expectedOutput, language, timeoutSeconds } = bodyJson
+    const zipFile = await createSubmissionsZip(assignmentId, expectedOutput, input)
+    const s3Client = new S3Client({ region: "us-east-1" })
     console.log('uploading to S3')
-    const key = `${courseId}/${assignmentId}/submissions.zip`;
+    const key = `${courseId}/${assignmentId}/submissions.zip`
     
     const bucket = process.env.S3_BUCKET;
     await s3Client.send(
@@ -84,18 +88,18 @@ async function startEvaluation(body){
             Body: zipFile,
             ContentType: "application/zip",
         })
-    );
+    )
 
-    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId)
+    return await startECSTask(`s3://${bucket}/${key}`, assignmentId, courseId, language, timeoutSeconds)
 }
 
 
 /**
  * 
  * @param {postgres.Sql<{}>} client 
- * @param {*} courseId 
- * @param {*} assignmentId 
- * @param {*} evaluation 
+ * @param {string} courseId 
+ * @param {string} assignmentId 
+ * @param {Array<Object>} evaluation 
  */
 async function storeEvaluationResults(client, courseId, assignmentId, evaluation){
     await client`
@@ -105,24 +109,33 @@ async function storeEvaluationResults(client, courseId, assignmentId, evaluation
         WHERE course_id = ${courseId}
         AND assignment_id = ${assignmentId};
     `
+    const s3Client = new S3Client({ region: "us-east-1" })
+    const bucket = process.env.S3_BUCKET
+    const key = `${courseId}/${assignmentId}/submissions.zip`
+    
+    await s3Client.send(
+        new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: key,
+        })
+    )
+}
 
-    const rows = await client`
-        SELECT expected_output FROM code_evaluation
-        WHERE course_id = ${courseId}
-        AND assignment_id = ${assignmentId}
+/**
+ * Retrieves the results of code evaluations for a course
+ * @param {postgres.Sql} client 
+ * @param {object} event 
+ * @param {object} context 
+ */
+async function handleDELETE(client, event, context){
+    const bodyJson = JSON.parse(event.body)
+    console.log('Removing code evaluation', bodyJson)
+    return await client`
+        DELETE FROM code_evaluation
+        WHERE course_id = ${bodyJson.courseId}
+        AND assignment_id = ${bodyJson.assignmentId}
+        AND username = ${bodyJson.username}
     `
-
-    console.log(rows)
-    const expectedOutput = rows[0].expected_output
-
-    for(const result of evaluation){
-        if(result['output'] == expectedOutput){
-            await updateGrade(result['studentId'], assignmentId, 100, 'Output matched what was expected')
-        }
-        else{
-            await updateGrade(result['studentId'], assignmentId, 0, 'Output did not match what was expected')
-        }
-    }
 }
 
 /**
@@ -143,19 +156,14 @@ async function handleGET(client, event, context){
                     language varchar NOT NULL,
                     username varchar NOT NULL,
                     status varchar NOT NULL,
+                    input varchar,
+                    timeout_seconds int NOT NULL,
                     results_json text,
                     start_time timestamptz NOT NULL DEFAULT now(),
                     finish_time timestamptz,
+                    suggested_grade int,
                     primary key (course_id, assignment_id, username)
                 );`
-           /*  case 'start':
-                const body = JSON.parse(event.body)
-                const taskDef = await startEvaluation(body)
-                
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify(taskDef)
-                } */
         }
     }
 
@@ -180,9 +188,9 @@ async function handleGET(client, event, context){
  * @param {object} context 
  */
 async function handlePOST(client, event, context){
-    const body = JSON.parse(event.body)
-    
-    if(!body.assignmentId || !body.courseId){
+    const bodyJson = JSON.parse(event.body)
+    console.log('event.body', bodyJson)
+    if(!bodyJson.assignmentId || !bodyJson.courseId){
         return {
             statusCode: 400,
             body: 'Missing assignmentId, courseId, or both',
@@ -197,23 +205,27 @@ async function handlePOST(client, event, context){
      */
     await client`
         INSERT INTO code_evaluation VALUES (
-            ${body.courseId},
-            ${body.assignmentId},
-            ${body.expectedOutput},
-            ${body.language},
-            ${body.username},
-            'JOB STARTED'
+            ${bodyJson.courseId},
+            ${bodyJson.assignmentId},
+            ${bodyJson.expectedOutput},
+            ${bodyJson.language},
+            ${bodyJson.username},
+            'JOB STARTED',
+            ${bodyJson.input ?? null},
+            ${parseInt(bodyJson.timeoutSeconds)}
         )
         ON CONFLICT (assignment_id, course_id, username) DO UPDATE
         SET status = EXCLUDED.status,
+            input = EXCLUDED.input,
             expected_output = EXCLUDED.expected_output,
             language = EXCLUDED.language,
+            timeout_seconds = EXCLUDED.timeout_seconds,
             results_json = NULL,
             start_time = now(),
             finish_time = NULL;
     `
 
-    const taskDef = await startEvaluation(body)
+    const taskDef = await startEvaluation(bodyJson)
     console.log('Task Definition', taskDef)
     
     return {
@@ -253,12 +265,17 @@ export const handler = async (event, context) => {
     }
 
     const method = event["requestContext"]["http"]["method"];
-
+    console.log('Request method', method)
+    
     if(method === 'POST'){
         return await handlePOST(client, event, context)
     }
 
     if(method === 'GET'){
         return await handleGET(client, event, context)
+    }
+
+    if(method === 'DELETE'){
+        return await handleDELETE(client, event, context)
     }
 };

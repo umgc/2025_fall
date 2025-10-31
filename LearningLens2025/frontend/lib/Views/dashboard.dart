@@ -6,6 +6,7 @@ import 'package:learninglens_app/Views/about_page.dart';
 import 'package:learninglens_app/Views/analytics_page.dart';
 import 'package:learninglens_app/Views/assessments_view.dart';
 import 'package:learninglens_app/Views/course_list.dart';
+import 'package:learninglens_app/Views/essay_assistant.dart';
 import 'package:learninglens_app/Views/essays_view.dart';
 import 'package:learninglens_app/Views/g_lesson_plan.dart';
 import 'package:learninglens_app/Views/iep_page.dart';
@@ -284,8 +285,9 @@ class TeacherDashboard extends StatelessWidget {
         'icon': Icons.architecture_outlined
       },
       {
-        'title': 'Analytics',
-        'description': 'View performance analytics.',
+        'title': 'Actionable Analytics',
+        'description':
+            "View AI-powered insights into student performance and potential action items.",
         'onPressed': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AnalyticsPage()),
@@ -321,12 +323,16 @@ class TeacherDashboard extends StatelessWidget {
       },
       {
         'title': 'Program Assessment',
-        'description':
-            'Automatically evaluate student programming assignments.',
-        'onPressed': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProgramAssessmentView()),
-            ),
+        'description': isMoodle()
+            ? 'Automatically evaluate student programming assignments.'
+            : 'Not implemented for Google Classroom',
+        'onPressed': isMoodle()
+            ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ProgramAssessmentView()),
+                )
+            : null,
         'icon': Icons.terminal_outlined
       },
     ];
@@ -336,7 +342,8 @@ class TeacherDashboard extends StatelessWidget {
         {
           'title': 'Essay Assistant',
           'description': 'Utilize AI to help complete essay assignments.',
-          'onPressed': null,
+          'onPressed': () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => EssayAssistant())),
           'icon': Icons.assistant_outlined
         },
         {

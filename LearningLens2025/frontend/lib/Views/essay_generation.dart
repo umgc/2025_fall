@@ -10,6 +10,8 @@ import '../Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 // Required Components:
 // 2 Dropdowns: 1 for the Grade Level and 1 for the Point Scale
@@ -33,8 +35,12 @@ class _EssayGenerationState extends State<EssayGeneration> {
   String _selectedGradeLevel = LearningLensConstants
       .gradeLevels.last; // Default value for GradeLevelDropdown
   bool _isLoading = false;
+  bool canceled = false;
   // String? selectedLLM = 'Perplexity'; // default
   LlmType? selectedLLM;
+
+  // disable local LLM for a web build for now.
+  bool _localLlmAvail = !kIsWeb;
 
   // llm options
   final List<String> llmOptions = [
@@ -105,32 +111,36 @@ class _EssayGenerationState extends State<EssayGeneration> {
   }
 
   Future<dynamic> pingApi(String inputs) async {
-    try {
-      setState(() {
-        _isLoading = true; // Set loading state to true
-      });
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+      try {
+        setState(() {
+          _isLoading = true; // Set loading state to true
+        });
 
-      String apiKey =
-          getApiKey(); // Get the correct API key based on the selected LLM
-      if (apiKey.isEmpty) {
-        throw Exception("API key is missing");
-      }
+        String apiKey =
+            getApiKey(); // Get the correct API key based on the selected LLM
+        if (apiKey.isEmpty) {
+          throw Exception("API key is missing");
+        }
 
-      // Dynamically instantiate the appropriate LLM class based on the selectedLLM
-      dynamic llmInstance;
-      if (selectedLLM == LlmType.CHATGPT) {
-        llmInstance = OpenAiLLM(getApiKey());
-      } else if (selectedLLM == LlmType.GROK) {
-        llmInstance = GrokLLM(getApiKey());
-      } else if (selectedLLM == LlmType.PERPLEXITY) {
-        llmInstance = PerplexityLLM(getApiKey()); // Perplexity API class
-      } else if (selectedLLM == LlmType.DEEPSEEK) {
-        llmInstance = DeepseekLLM(LocalStorageService.getDeepseekKey());
-      } else {
-        throw Exception('Invalid LLM selected.');
-      }
+        // Dynamically instantiate the appropriate LLM class based on the selectedLLM
+        dynamic llmInstance;
+        if (selectedLLM == LlmType.CHATGPT) {
+          llmInstance = OpenAiLLM(getApiKey());
+        } else if (selectedLLM == LlmType.GROK) {
+          llmInstance = GrokLLM(getApiKey());
+        } else if (selectedLLM == LlmType.PERPLEXITY) {
+          llmInstance = PerplexityLLM(getApiKey()); // Perplexity API class
+        } else if (selectedLLM == LlmType.DEEPSEEK) {
+          llmInstance = DeepseekLLM(LocalStorageService.getDeepseekKey());
+        } else if (selectedLLM == LlmType.LOCAL) {
+          llmInstance = LocalLLMService();
+        } else {
+          throw Exception('Invalid LLM selected.');
+        }
 
-      String queryPrompt = '''
+        String queryPrompt = '''
         I am building a program that creates rubrics when provided with assignment information. I will provide you with the following information about the assignment that needs a rubric:
         Difficulty level, point scale, assignment objective, assignment description. You may also receive additional customization rules.
         Using this information, you will reply with a rubric that includes 4 criteria. Your reply must only contain the JSON information, and begin with a {.
@@ -151,26 +161,36 @@ class _EssayGenerationState extends State<EssayGeneration> {
         #CriteriaName must be replaced with the name of the criteria.
         #WeightPercentage must be replaced with the weight of this criterion as a number (total of all criteria should sum to 100).
         #CriteriaDef must be replaced with a detailed description of what meeting that criteria would look like for each scale value.
-        #ScoreValue must be replaced with a percentage label (like "20%", "40%", "60%", "80%", "100%") based on the selected point scale.
-        For example:
-        - If the selected point scale is 5, create levels for 20%, 40%, 60%, 80%, and 100%.
-        - If the selected point scale is 4, create levels for 25%, 50%, 75%, and 100%.
-        You should create as many "levels" objects as there are point scale values, and ensure the percentages are evenly distributed from 0% up to 100%.
+        #ScoreValue must be replaced with a percentage label starting at "0%" and ending at "100%", with all intermediate percentages evenly calculated based on the selected point scale.
+          For example:
+          - If the selected point scale is 5, create levels for 0%, 25%, 50%, 75%, and 100%.
+          - If the selected point scale is 4, create levels for 0%, 33%, 67%, and 100%.
+          - If the selected point scale is 3, create levels for 0%, 50%, and 100%.
+          - If the selected point scale is 2, create levels for 0% and 100%.
+          - If the selected point scale is 1, create a single level at 100%.
+          Ensure the percentages always start at 0% and end at 100%, and that all levels are evenly distributed in between.
+        You should create as many "levels" objects as there are point scale values, and ensure the percentages are evenly distributed from 0% up to 100%.The percentage must always start at 0% and end with 100%.
         Make sure the JSON exactly matches the format above, or you will receive an error.
         Do not include any additional information in your response.
         Here is the assignment information:
         $inputs
       ''';
-      globalRubric = await llmInstance.postToLlm(queryPrompt);
-      globalRubric = globalRubric.replaceAll('```', '').trim();
-      return jsonDecode(globalRubric);
-    } catch (e) {
-      print("Error in API request: $e");
-      return null;
-    } finally {
-      setState(() {
-        _isLoading = false; // Reset loading state to false
-      });
+        globalRubric = await llmInstance.postToLlm(queryPrompt);
+
+        if (canceled) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        globalRubric = globalRubric.replaceAll('```', '').trim();
+        return jsonDecode(globalRubric);
+      } catch (e) {
+        print("Error in API request: $e");
+        return null;
+      } finally {
+        setState(() {
+          _isLoading = false; // Reset loading state to false
+        });
+      }
     }
   }
 
@@ -249,18 +269,33 @@ class _EssayGenerationState extends State<EssayGeneration> {
                         items: LlmType.values.map((LlmType llm) {
                           return DropdownMenuItem<LlmType>(
                             value: llm,
-                            enabled: LocalStorageService.userHasLlmKey(llm),
+                            enabled: (llm == LlmType.LOCAL &&
+                                    LocalStorageService.getLocalLLMPath() !=
+                                        "" &&
+                                    _localLlmAvail) ||
+                                LocalStorageService.userHasLlmKey(llm),
                             child: Text(
                               llm.displayName,
                               style: TextStyle(
-                                color: LocalStorageService.userHasLlmKey(llm)
+                                color: (llm == LlmType.LOCAL &&
+                                            LocalStorageService
+                                                    .getLocalLLMPath() !=
+                                                "" &&
+                                            _localLlmAvail) ||
+                                        LocalStorageService.userHasLlmKey(llm)
                                     ? Colors.black87
                                     : Colors.grey,
                               ),
                             ),
                           );
                         }).toList()),
-
+                    if (selectedLLM == LlmType.LOCAL) ...[
+                      const SizedBox(height: 6),
+                      const Text(
+                        "The recommended model for Rubric Generation is a 7B or higher reasoning (Qwen) model.\nRunning a Large Language Model (LLM) requires substantial hardware resources. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\n",
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // Standard/objective
@@ -348,6 +383,25 @@ class _EssayGenerationState extends State<EssayGeneration> {
                                             fontSize: 18,
                                             color: Colors.black54),
                                       ),
+                                      if (selectedLLM == LlmType.LOCAL)
+                                        TextButton(
+                                          onPressed: () async {
+                                            bool decision = await LocalLLMService()
+                                                .showCancelConfirmationDialog();
+                                            if (decision) {
+                                              canceled = true;
+                                            }
+                                          },
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.redAccent,
+                                          ),
+                                          child: const Text(
+                                            'Cancel Generation',
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 )

@@ -92,9 +92,11 @@ async function downloadFile(url) {
 /**
  * Creates a zip file containing the submissions
  * @param {string|number} assignmentId 
+ * @param {string} expectedOutput
+ * @param {string | undefined} input
  * @returns An in-memory stream of the zip 
  */
-export async function createSubmissionsZip(assignmentId) {
+export async function createSubmissionsZip(assignmentId, expectedOutput, input) {
   // 1. Get submissions from Moodle
     const token = await getAuthToken()
     const submissions = await getAssignmentSubmissions(token, assignmentId);
@@ -106,6 +108,24 @@ export async function createSubmissionsZip(assignmentId) {
     archive.pipe(zipStream);
 
     zipStream.on("data", chunk => chunks.push(chunk));
+
+    let inputs = input.length > 0 ? input.split('\n') : []
+    let outputs = expectedOutput
+        .split("\n")
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+
+    const inputOutputJson  = outputs.map((output, idx) => {
+        const obj = { 'expectedOutput': output }
+        
+        if(inputs.length > 0){
+            obj['input'] = inputs[idx]
+        }
+
+        return obj
+    })
+
+    archive.append(JSON.stringify(inputOutputJson), { name: 'expectedOutput' })
 
     // 3. Loop through each submission
     for (const submission of submissions) {
@@ -127,28 +147,4 @@ export async function createSubmissionsZip(assignmentId) {
     // 4. Finalize the archive
     await archive.finalize();
     return Buffer.concat(chunks)
-}
-
-export async function updateGrade(studentId, assignmentId, grade, feedback){
-    console.log('Updating grade for student', studentId, assignmentId)
-    const token = await getAuthToken()
-
-    const params = new URLSearchParams({
-        wstoken: token,
-        wsfunction: "mod_assign_save_grade",
-        moodlewsrestformat: "json",
-    });
-
-    params.append("assignmentid", assignmentId);
-    params.append("userid", studentId);
-    params.append("grade", grade);
-    params.append("attemptnumber", -1); // -1 = latest attempt
-    params.append("addattempt", 0);
-    params.append("workflowstate", "released"); // ✅ Immediately visible to student
-    params.append("applytoall", 0);
-    params.append("plugindata[assignfeedbackcomments_editor][text]", feedback);
-    params.append("plugindata[assignfeedbackcomments_editor][format]", 1);
-
-    const res = await fetch(`${MOODLE_API}?${params}`)
-    console.log('Response', await res.json())
 }

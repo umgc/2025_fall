@@ -1,14 +1,28 @@
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
 import "package:flutter/material.dart";
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:learninglens_app/Api/llm/DeepSeek_api.dart';
+import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
+import 'package:learninglens_app/Api/llm/grok_api.dart';
+import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
+import 'package:learninglens_app/Api/llm/openai_api.dart';
+import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
 import "package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart";
 import "package:learninglens_app/Controller/custom_appbar.dart";
+import 'package:learninglens_app/Controller/html_converter.dart';
+import 'package:learninglens_app/beans/assessment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz.dart';
 import 'package:learninglens_app/beans/assignment.dart';
-import 'package:learninglens_app/beans/quiz_override';
 import 'package:learninglens_app/beans/override.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class IepPage extends StatefulWidget {
   IepPage();
@@ -20,50 +34,53 @@ class IepPage extends StatefulWidget {
 }
 
 class _IepPageState extends State<IepPage> {
-  TextEditingController _dateController = TextEditingController();
-  TextEditingController _cutoffDateController = TextEditingController();
   bool? isChecked1 = false;
   bool? isChecked2 = false;
   String? selectedCourse;
-  String? selectedAssignment;
   String? selectedEssay;
-  int? essayId;
-  int? quizId;
   int? userId;
   int? newEndTime;
   String selectedDate = 'Select a Date';
   Future<List<Participant>>? participants;
-  Future<List<Assignment>>? essay;
-  Future<List<Quiz>>? quiz;
-  List<String> type = ['Quiz', 'Essay'];
-  double? epochTime;
-  double? epochTime2;
-  List<String> attempts = [
-    'Unlimited',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '10'
-  ];
-  int? selectedAttempt;
+  Future<List<Assessment>>? assignments;
+  Assessment? selectedAssignment;
+  int? epochTime;
+  int? epochTime2;
+  int? attempts;
+  List<Override>? overrides = [];
+  TextEditingController _attemptsController = TextEditingController();
+  bool _isAIRecommending = false;
+  TextEditingController iepSummaryController = TextEditingController();
+  String iepSummary = "";
+  TextEditingController iepRecommendation = TextEditingController();
+
+  LlmType? selectedLLM;
+  bool _localLlmAvail = !kIsWeb;
+  bool canceled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    overrides = MoodleLmsService().overrides;
+    overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
+    selectedLLM = LlmType.values
+        .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
+  }
 
   void _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      initialDate: epochTime != null
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime!.toInt() * 1000)
+          : selectedAssignment!.dueDate ?? DateTime.now(),
+      firstDate: selectedAssignment!.dueDate ?? DateTime.now(),
+      lastDate: epochTime2 != null && selectedAssignment!.type == "essay"
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime2! * 1000)
+          : DateTime(2100),
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _dateController.text = "${picked.toLocal()}".split(' ')[0];
-        epochTime = picked.millisecondsSinceEpoch / 1000.round();
+        epochTime = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
   }
@@ -71,14 +88,19 @@ class _IepPageState extends State<IepPage> {
   void _selectCutOffDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
+      initialDate: epochTime2 != null
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime2!.toInt() * 1000)
+          : epochTime != null
+              ? DateTime.fromMillisecondsSinceEpoch(epochTime! * 1000)
+              : selectedAssignment!.dueDate ?? DateTime.now(),
+      firstDate: epochTime != null
+          ? DateTime.fromMillisecondsSinceEpoch(epochTime! * 1000)
+          : selectedAssignment!.dueDate ?? DateTime.now(),
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != DateTime.now()) {
       setState(() {
-        _cutoffDateController.text = "${picked.toLocal()}".split(' ')[0];
-        epochTime2 = picked.millisecondsSinceEpoch / 1000.round();
+        epochTime2 = (picked.millisecondsSinceEpoch / 1000).round();
       });
     }
   }
@@ -136,6 +158,7 @@ class _IepPageState extends State<IepPage> {
         userprofileurl: LmsFactory.getLmsService().profileImage ?? '',
       ),
       body: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 0, 0, 0),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return Row(
@@ -170,25 +193,21 @@ class _IepPageState extends State<IepPage> {
                       onSelected: (String? selectedValue) {
                         setState(() {
                           selectedCourse = selectedValue;
+                          selectedAssignment = null;
+                          userId = null;
                         });
                         participants = handleSelection(selectedValue);
                         if (selectedValue != null) {
-                          essay =
-                              handleEssaySelection(int.parse(selectedValue));
+                          assignments = handleAssessmentSelection(
+                              int.parse(selectedValue));
                         } else {
                           print('Selected Value is Null');
                         }
-                        if (selectedValue != null) {
-                          quiz = handleQuizSelection(int.parse(selectedValue));
-                        } else {
-                          print('Selected Value is Null');
-                        }
+                        resetForm(true);
                       },
                     ),
                     SizedBox(height: 10),
-                    Visibility(
-                      visible: selectedCourse != null,
-                      child: FutureBuilder<List<Participant>>(
+                    FutureBuilder<List<Participant>>(
                         future: participants,
                         builder: (BuildContext context,
                             AsyncSnapshot<List<Participant>> snapshot) {
@@ -197,15 +216,17 @@ class _IepPageState extends State<IepPage> {
                             return CircularProgressIndicator();
                           } else if (snapshot.hasError) {
                             return Text('Error: ${snapshot.error}');
-                          } else if (snapshot.hasData) {
+                          } else {
                             List<DropdownMenuEntry<String>> dropdownEntries =
-                                snapshot.data!.map((Participant participant) {
-                              return DropdownMenuEntry<String>(
-                                value: participant.id.toString(),
-                                label: participant.fullname,
-                              );
-                            }).toList();
+                                snapshot.data?.map((Participant participant) {
+                                      return DropdownMenuEntry<String>(
+                                        value: participant.id.toString(),
+                                        label: participant.fullname,
+                                      );
+                                    }).toList() ??
+                                    [];
                             return DropdownMenu(
+                              enabled: snapshot.hasData,
                               label: Text('Participants'),
                               // helperText: 'Participants',
                               hintText: 'Select Participants',
@@ -219,319 +240,340 @@ class _IepPageState extends State<IepPage> {
                                     print('No Participants were selected');
                                   }
                                 });
+                                resetForm(true);
                               },
                             );
-                          } else {
-                            return DropdownMenu(
-                              label: Text('Participants'),
-                              hintText: 'Select A Course To View Participants',
-                              // helperText: 'Participants',
-                              width: 350,
-                              dropdownMenuEntries: [],
-                            );
                           }
-                        },
-                      ),
-                    ),
+                        }),
                     SizedBox(height: 10),
-                    Visibility(
-                      visible: userId != null,
-                      child: DropdownMenu(
-                        width: 350,
-                        label: Text('Assignment'),
-                        // helperText: 'Assignment',
-                        hintText: 'Select Quiz or Essay',
-                        dropdownMenuEntries:
-                            type.map<DropdownMenuEntry<String>>((String value) {
-                          return DropdownMenuEntry<String>(
-                            value: value,
-                            label: value,
-                          );
-                        }).toList(),
-                        onSelected: (String? selectedValue) {
-                          setState(() {
-                            selectedAssignment = selectedValue;
-                            essayId = null;
-                            quizId = null;
-                            _dateController.clear();
-                            _cutoffDateController.clear();
-                            epochTime = null;
-                            epochTime2 = null;
-                          });
-                          if (selectedAssignment == 'Essay') {
-                            if (selectedCourse != null) {
-                              handleEssaySelection(int.parse(selectedCourse!));
-                            } else {
-                              print('Selected Course Is Null');
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Visibility(
-                      visible: selectedAssignment == 'Essay',
-                      child: FutureBuilder<List<Assignment>>(
-                        future: essay,
+                    FutureBuilder<List<Assessment>>(
+                        future: assignments,
                         builder: (BuildContext context,
-                            AsyncSnapshot<List<Assignment>> snapshot) {
+                            AsyncSnapshot<List<Assessment>> snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return CircularProgressIndicator();
                           } else if (snapshot.hasError) {
                             return Text('Error: ${snapshot.error}');
-                          } else if (snapshot.hasData) {
-                            List<DropdownMenuEntry<String>> dropdownEntries =
-                                snapshot.data!.map((Assignment assignment) {
-                              return DropdownMenuEntry<String>(
-                                value: assignment.id.toString(),
-                                label: assignment.name,
-                              );
-                            }).toList();
+                          } else {
+                            List<DropdownMenuEntry<Assessment>>
+                                dropdownEntries =
+                                snapshot.data?.map((Assessment assignment) {
+                                      return DropdownMenuEntry<Assessment>(
+                                        value: assignment,
+                                        label:
+                                            "${assignment.name} (${assignment.type.toUpperCase()})",
+                                      );
+                                    }).toList() ??
+                                    [];
                             return DropdownMenu(
-                              label: Text('Essays'),
+                              enabled: snapshot.hasData,
+                              label: Text('Assignment'),
                               // helperText: 'Essays',
-                              hintText: 'Select Essay',
+                              hintText: 'Select Assignment',
                               width: 350,
                               dropdownMenuEntries: dropdownEntries,
-                              onSelected: (String? selectedEssayId) {
+                              onSelected: (Assessment? selectedAssessment) {
                                 setState(() {
-                                  if (selectedEssayId != null) {
-                                    essayId = int.parse(selectedEssayId);
+                                  if (selectedAssessment != null) {
+                                    selectedAssignment = selectedAssessment;
+                                    if (selectedAssessment.type == "essay") {
+                                      _attemptsController.value =
+                                          TextEditingValue.empty;
+                                      attempts = null;
+                                    } else {
+                                      epochTime2 = null;
+                                    }
+                                    resetForm(false);
                                   } else {
-                                    print('Essay ID was Null');
+                                    print('Assessment was Null');
                                   }
                                 });
                               },
                             );
-                          } else {
-                            return DropdownMenu(
-                              hintText: 'Select A Course To View Essays',
-                              label: Text('Essays'),
-                              // helperText: 'Essays',
-                              width: 350,
-                              dropdownMenuEntries: [],
-                            );
                           }
-                        },
-                      ),
-                    ),
+                        }),
                     SizedBox(height: 10),
-                    Visibility(
-                      visible: selectedAssignment == 'Quiz',
-                      child: FutureBuilder<List<Quiz>>(
-                        future: quiz,
-                        builder: (BuildContext context,
-                            AsyncSnapshot<List<Quiz>> snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return CircularProgressIndicator();
-                          } else if (snapshot.hasError) {
-                            return Text('Error: ${snapshot.error}');
-                          } else if (snapshot.hasData) {
-                            List<DropdownMenuEntry<String>> dropdownEntries =
-                                snapshot.data!.map((Quiz quiz) {
-                              return DropdownMenuEntry<String>(
-                                value: quiz.id.toString(),
-                                label: quiz.name!,
-                              );
-                            }).toList();
-                            return DropdownMenu(
-                              label: Text('Quiz'),
-                              // helperText: 'Quiz',
-                              hintText: 'Select Quiz',
-                              width: 350,
-                              dropdownMenuEntries: dropdownEntries,
-                              onSelected: (String? selectedQuizId) {
-                                setState(() {
-                                  if (selectedQuizId != null) {
-                                    quizId = int.parse(selectedQuizId);
-                                  } else {
-                                    print('Quiz Id is null');
-                                  }
-                                });
-                              },
-                            );
-                          } else {
-                            return DropdownMenu(
-                              hintText: 'Select A Course To View Quizzes',
-                              label: Text('Quizzes'),
-                              // helperText: 'Quizzes',
-                              width: 350,
-                              dropdownMenuEntries: [],
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Visibility(
-                      visible: quizId != null,
-                      child: DropdownMenu(
+                    SizedBox(
                         width: 350,
-                        label: Text('Attempts'),
-                        // helperText: 'Attempts',
-                        hintText: 'Select Number of Attempts',
-                        dropdownMenuEntries: attempts
-                            .map<DropdownMenuEntry<String>>((String attempts) {
-                          return DropdownMenuEntry<String>(
-                            value: attempts,
-                            label: attempts,
-                          );
-                        }).toList(),
-                        onSelected: (String? selectedValue) {
-                          setState(() {
-                            if (selectedValue == 'Unlimited') {
-                              selectedAttempt = 0;
-                            } else {
-                              selectedAttempt = int.parse(selectedValue!);
-                            }
-                          });
-                        },
-                      ),
-                    ),
+                        child: TextField(
+                          enabled: selectedAssignment != null && userId != null,
+                          decoration: InputDecoration(
+                              alignLabelWithHint: true,
+                              labelText: "IEP Summary",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                          controller: iepSummaryController,
+                          onChanged: (value) => setState(() {
+                            iepSummary = value;
+                          }),
+                          textAlignVertical: TextAlignVertical.top,
+                          keyboardType: TextInputType.multiline,
+                          minLines: 10,
+                          maxLines: 10,
+                        )),
                     SizedBox(height: 10),
-                    Visibility(
-                      visible: selectedAttempt != null &&
-                          selectedAssignment == 'Quiz',
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 250,
-                            margin: EdgeInsets.only(right: 20),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 20),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.black),
-                            ),
+                    SizedBox(
+                        width: 350,
+                        child: Align(
+                            alignment: AlignmentGeometry.topRight,
+                            child: Text("LLM: "))),
+                    SizedBox(
+                        width: 350,
+                        child: Align(
+                            alignment: AlignmentGeometry.topRight,
+                            child: DropdownButton<LlmType>(
+                                value: selectedLLM,
+                                onChanged: (LlmType? newValue) {
+                                  setState(() {
+                                    selectedLLM = newValue;
+                                  });
+                                },
+                                items: LlmType.values.map((LlmType llm) {
+                                  return DropdownMenuItem<LlmType>(
+                                    value: llm,
+                                    enabled: (llm == LlmType.LOCAL &&
+                                            LocalStorageService
+                                                    .getLocalLLMPath() !=
+                                                "" &&
+                                            _localLlmAvail) ||
+                                        LocalStorageService.userHasLlmKey(llm),
+                                    child: Text(
+                                      llm.displayName,
+                                      style: TextStyle(
+                                        color: (llm == LlmType.LOCAL &&
+                                                    LocalStorageService
+                                                            .getLocalLLMPath() !=
+                                                        "" &&
+                                                    _localLlmAvail) ||
+                                                LocalStorageService
+                                                    .userHasLlmKey(llm)
+                                            ? Colors.black87
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                  );
+                                }).toList()))),
+                    if (selectedLLM == LlmType.LOCAL) ...[
+                      const SizedBox(
+                          width: 350,
+                          child: Align(
+                            alignment: AlignmentGeometry.topRight,
                             child: Text(
-                              _dateController.text,
-                              style: TextStyle(fontSize: 20),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => _selectDate(
-                                context), // Correct usage of named parameter `onTap`
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 15, horizontal: 10),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Select Date',
+                              "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                          )),
+                    ],
+                    SizedBox(
+                        width: 350,
+                        child: Align(
+                            alignment: AlignmentGeometry.topRight,
+                            child: ElevatedButton(
+                                onPressed: selectedAssignment != null &&
+                                        userId != null &&
+                                        iepSummary.isNotEmpty &&
+                                        selectedLLM != null
+                                    ? () => recommendIEP(
+                                        selectedAssignment!, iepSummary)
+                                    : null,
+                                child: _isAIRecommending
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                          if (selectedLLM == LlmType.LOCAL)
+                                            TextButton(
+                                              onPressed: () async {
+                                                bool decision =
+                                                    await LocalLLMService()
+                                                        .showCancelConfirmationDialog();
+                                                if (decision) {
+                                                  canceled = true;
+                                                }
+                                              },
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    Colors.redAccent,
+                                              ),
+                                              child: const Text(
+                                                'Cancel Generation',
+                                                style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.w500),
+                                              ),
+                                            ),
+                                        ],
+                                      )
+                                    : const Text('Recommend IEP')))),
+
+                    SizedBox(
+                        width: 350,
+                        child: TextField(
+                          decoration: InputDecoration(
+                              alignLabelWithHint: true,
+                              enabled: iepRecommendation.value.text.isNotEmpty,
+                              labelText: "IEP Recommendations",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                          controller: iepRecommendation,
+                          readOnly: true,
+                          textAlignVertical: TextAlignVertical.top,
+                          keyboardType: TextInputType.multiline,
+                          minLines: 10,
+                          maxLines: 10,
+                        )),
+                    SizedBox(height: 10),
+                    SizedBox(
+                        width: 350,
+                        child: TextField(
+                          controller: _attemptsController,
+                          onChanged: (value) => setState(() {
+                            int? val = int.tryParse(value);
+                            if (val != null && (val < 0 || val > 10)) {
+                              _attemptsController.value = TextEditingValue(
+                                  text: val.clamp(0, 10).toString());
+                              return;
+                            }
+                            attempts = int.tryParse(value)?.clamp(0, 10);
+                          }),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          enabled: selectedAssignment?.type == "quiz",
+                          decoration: InputDecoration(
+                              alignLabelWithHint: true,
+                              labelText: "Attempts (0 for Unlimited to 10)",
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                          textAlignVertical: TextAlignVertical.top,
+                        )),
+                    SizedBox(height: 10),
                     // SizedBox(height: 10),
-                    Visibility(
-                      visible: essayId != null && selectedAssignment == 'Essay',
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 250,
-                                margin: EdgeInsets.only(right: 20),
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 20),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.black),
-                                ),
-                                child: Text(
-                                  _dateController.text,
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _selectDate(
-                                    context), // Correct usage of named parameter `onTap`
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            Opacity(
+                                opacity:
+                                    selectedAssignment != null && userId != null
+                                        ? 1
+                                        : .5,
                                 child: Container(
+                                  width: 250,
+                                  margin: EdgeInsets.only(right: 20),
                                   padding: EdgeInsets.symmetric(
-                                      vertical: 15, horizontal: 18),
+                                      vertical: 10, horizontal: 20),
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.black),
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.black),
                                   ),
+                                  child: Text(
+                                    epochTime == null
+                                        ? ""
+                                        : DateFormat.yMd().format(
+                                            DateTime.fromMillisecondsSinceEpoch(
+                                                epochTime! * 1000)),
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                )),
+                            SizedBox(
+                                width: 180,
+                                child: ElevatedButton(
+                                  onPressed: selectedAssignment != null &&
+                                          userId != null
+                                      ? () => _selectDate(context)
+                                      : null, // Correct usage of named parameter `onTap`
                                   child: Text(
                                     'Select Due Date',
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Container(
-                                width: 250,
-                                margin: EdgeInsets.only(right: 20),
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 20),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.black),
-                                ),
-                                child: Text(
-                                  _cutoffDateController.text,
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _selectCutOffDate(
-                                    context), // Correct usage of named parameter `onTap`
+                                )),
+                          ],
+                        ),
+                        SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Opacity(
+                                opacity: selectedAssignment?.type == "essay" &&
+                                        userId != null
+                                    ? 1
+                                    : .5,
                                 child: Container(
+                                  width: 250,
+                                  margin: EdgeInsets.only(right: 20),
                                   padding: EdgeInsets.symmetric(
-                                      vertical: 15, horizontal: 10),
+                                      vertical: 10, horizontal: 20),
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.black),
                                     borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.black),
                                   ),
                                   child: Text(
-                                    'Select Cutoff Date',
+                                    epochTime2 == null
+                                        ? ""
+                                        : DateFormat.yMd().format(
+                                            DateTime.fromMillisecondsSinceEpoch(
+                                                epochTime2! * 1000)),
+                                    style: TextStyle(fontSize: 20),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'Cutoff Date: Last day it can be submitted late',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                                )),
+                            SizedBox(
+                                width: 180,
+                                child: ElevatedButton(
+                                  onPressed: selectedAssignment?.type ==
+                                              "essay" &&
+                                          userId != null
+                                      ? () => _selectCutOffDate(context)
+                                      : null, // Correct usage of named parameter `onTap`
+                                  child: Text(
+                                    'Select Deadline Date',
+                                  ),
+                                )),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'Cutoff Date: Last day it can be submitted late',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 10),
-                    Visibility(
-                      visible: epochTime != null,
-                      child: Container(
-                        padding: EdgeInsets.only(top: 50, left: 160),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (selectedAssignment == 'Quiz') {
-                              quizOver(
-                                  epochTime, quizId, userId, selectedAttempt);
-                              Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => IepPage()));
-                            } else if (selectedAssignment == 'Essay') {
-                              essayOver(epochTime, essayId, userId, epochTime2);
-                              Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => IepPage()));
-                            }
-                          },
-                          child: Text('Submit'),
-                        ),
+                    Container(
+                      padding: EdgeInsets.only(top: 10, left: 160, bottom: 20),
+                      child: ElevatedButton(
+                        onPressed: selectedAssignment != null &&
+                                userId != null &&
+                                epochTime != null &&
+                                (selectedAssignment?.type != "quiz" ||
+                                    attempts != null) &&
+                                (selectedAssignment?.type != "essay" ||
+                                    epochTime2 != null)
+                            ? () {
+                                if (selectedAssignment?.type == 'quiz') {
+                                  quizOver(epochTime!, selectedAssignment!.id,
+                                      userId!, attempts!);
+                                } else if (selectedAssignment?.type ==
+                                    'essay') {
+                                  essayOver(epochTime!, selectedAssignment!.id,
+                                      userId!, epochTime2!);
+                                }
+                                resetForm(false);
+                              }
+                            : null,
+                        child: Text('Submit'),
                       ),
                     ),
                   ],
@@ -545,7 +587,7 @@ class _IepPageState extends State<IepPage> {
                             fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       Container(
-                        margin: EdgeInsets.only(left: 10),
+                        margin: EdgeInsets.only(right: 20),
                         width: constraints.maxWidth * 0.7,
                         height: 830,
                         decoration: BoxDecoration(
@@ -576,8 +618,8 @@ class _IepPageState extends State<IepPage> {
   // Build the simplified table for smaller screens
   DataTable _buildSimplifiedTable(BuildContext context) {
     return DataTable(
-      headingRowColor:
-          MaterialStateProperty.all(const Color.fromARGB(255, 77, 195, 89)),
+      headingRowColor: MaterialStateProperty.all(
+          Theme.of(context).colorScheme.primary.withOpacity(.3)),
       columns: [
         DataColumn(
             label: Text('Student Name',
@@ -589,12 +631,21 @@ class _IepPageState extends State<IepPage> {
             label: Text('Actions',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
       ],
-      rows: (getOverrides() ?? [])
+      rows: (overrides ?? [])
           .asMap()
           .map((index, override) {
             return MapEntry(
                 index,
                 DataRow(
+                  color: WidgetStateProperty.resolveWith<Color?>(
+                      (Set<WidgetState> states) {
+                    return index % 2 == 0
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withOpacity(.55)
+                        : null; // Use the default value.
+                  }),
                   cells: [
                     DataCell(Text(override.fullname)),
                     DataCell(Text(override.courseName)),
@@ -615,8 +666,8 @@ class _IepPageState extends State<IepPage> {
   // Build the full table for larger screens
   DataTable _buildFullTable(BuildContext context) {
     return DataTable(
-      headingRowColor:
-          MaterialStateProperty.all(const Color.fromARGB(255, 77, 195, 89)),
+      headingRowColor: MaterialStateProperty.all(
+          Theme.of(context).colorScheme.primary.withOpacity(.3)),
       columns: [
         DataColumn(
             label: Text('Student Name',
@@ -634,7 +685,7 @@ class _IepPageState extends State<IepPage> {
             label: Text('Attempts',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
       ],
-      rows: (getOverrides() ?? [])
+      rows: (overrides ?? [])
           .asMap()
           .map((index, override) {
             return MapEntry(index, buildDataRow(override, index));
@@ -643,120 +694,277 @@ class _IepPageState extends State<IepPage> {
           .toList(),
     );
   }
-}
 
-List<Course>? getAllCourses() {
-  List<Course>? result;
-  result = MoodleLmsService().courses;
-  return result;
-}
-
-Future<List<Participant>>? getAllParticipants(String courseID) async {
-  List<Participant>? participants;
-  participants = await MoodleLmsService().getCourseParticipants(courseID);
-  return participants;
-}
-
-Future<List<Participant>> handleSelection(String? courseID) async {
-  if (courseID != null) {
-    List<Participant>? participants = await getAllParticipants(courseID);
-    if (participants == null) {
-      return [];
-    } else {
-      return participants;
-    }
-  } else {
-    print('Course ID was Null.');
-    return [];
+  List<Course>? getAllCourses() {
+    List<Course>? result;
+    result = MoodleLmsService().courses;
+    return result;
   }
-}
 
-Future<List<Assignment>> handleEssaySelection(int? courseID) async {
-  if (courseID != null) {
-    List<Assignment>? essays = await MoodleLmsService().getEssays(courseID);
-    if (essays.isNotEmpty) {
-      return essays;
+  Future<List<Participant>>? getAllParticipants(String courseID) async {
+    List<Participant>? participants;
+    participants = await MoodleLmsService().getCourseParticipants(courseID);
+    return participants;
+  }
+
+  Future<List<Participant>> handleSelection(String? courseID) async {
+    if (courseID != null) {
+      List<Participant>? participants = await getAllParticipants(courseID);
+      if (participants == null) {
+        return [];
+      } else {
+        return participants;
+      }
     } else {
+      print('Course ID was Null.');
       return [];
     }
-  } else {
-    return [];
   }
-}
 
-Future<List<Quiz>> handleQuizSelection(int? courseID) async {
-  if (courseID != null) {
-    List<Quiz>? quizzes = await MoodleLmsService().getQuizzes(courseID);
-    if (quizzes.isNotEmpty) {
-      return quizzes;
+  Future<List<Assessment>> handleAssessmentSelection(int? courseID) async {
+    if (courseID != null) {
+      List<Assignment> essayList = await MoodleLmsService().getEssays(courseID);
+      // Fetch quizzes (if available).
+      List<Quiz> quizList = [];
+      try {
+        quizList = await MoodleLmsService().getQuizzes(courseID);
+      } catch (e) {
+        print("getQuizzes not available or failed: $e");
+      }
+      // Combine them into one list
+      List<Assessment> assessments = [
+        ...essayList.map((a) => Assessment(assessment: a, type: "essay")),
+        ...quizList.map((q) => Assessment(assessment: q, type: "quiz"))
+      ];
+      if (assessments.isNotEmpty) {
+        return assessments;
+      } else {
+        return [];
+      }
     } else {
       return [];
     }
-  } else {
-    return [];
   }
-}
 
-void quizOver(epochTime, quizId, userId, attempts) async {
-  QuizOverride override = await MoodleLmsService().addQuizOverride(
-      quizId: quizId, userId: userId, timeClose: epochTime, attempts: attempts);
-  print('Override: $override');
-}
-
-void essayOver(epochTime, essayId, userId, epochTime2) async {
-  String essayOverride = await MoodleLmsService().addEssayOverride(
-      assignid: essayId,
-      userId: userId,
-      dueDate: epochTime,
-      cutoffDate: epochTime2);
-  print('Override: $essayOverride');
-}
-
-List<Override>? getOverrides() {
-  List<Override>? overrides;
-  overrides = MoodleLmsService().overrides;
-  return overrides;
-}
-
-String formatDate(String? dateString) {
-  if (dateString == null) {
-    return 'N/A';
+  void resetForm(bool clearIEPSummary) {
+    setState(() {
+      epochTime = null;
+      epochTime2 = null;
+      if (clearIEPSummary) {
+        iepSummaryController.value = TextEditingValue.empty;
+        iepSummary = "";
+      }
+      iepRecommendation.value = TextEditingValue.empty;
+      _attemptsController.value = TextEditingValue.empty;
+      attempts = null;
+    });
   }
-  DateFormat dateFormat = DateFormat('MMM d yyyy hh:mm a');
-  return dateFormat.format(DateTime.parse(dateString));
-}
 
-DataRow buildDataRow(Override override, int index) {
-  return DataRow(
-    color: MaterialStateProperty.resolveWith<Color>((states) {
-      return index % 2 == 0 ? Colors.grey[400]! : Colors.white;
-    }),
-    cells: [
-      DataCell(Text(override.fullname)),
-      DataCell(Text(override.courseName)),
-      DataCell(
-        Text(
-          "${override.type}: ${override.assignmentName}",
-          style: TextStyle(fontWeight: FontWeight.bold),
+  void quizOver(int epochTime, int quizId, int userId, int attempts) async {
+    await MoodleLmsService().addQuizOverride(
+        quizId: quizId,
+        userId: userId,
+        timeClose: epochTime,
+        attempts: attempts);
+    await MoodleLmsService().refreshOverrides();
+    setState(() {
+      overrides = MoodleLmsService().overrides;
+      overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Successfully created quiz IEP.")),
+    );
+  }
+
+  void essayOver(int epochTime, int essayId, int userId, int epochTime2) async {
+    await MoodleLmsService().addEssayOverride(
+        assignid: essayId,
+        userId: userId,
+        dueDate: epochTime,
+        cutoffDate: epochTime2);
+    await MoodleLmsService().refreshOverrides();
+    setState(() {
+      overrides = MoodleLmsService().overrides;
+      overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Successfully created essay IEP.")),
+    );
+  }
+
+  String formatDate(String? dateString) {
+    if (dateString == null) {
+      return 'N/A';
+    }
+    DateFormat dateFormat = DateFormat('MMM d yyyy hh:mm a');
+    return dateFormat.format(DateTime.parse(dateString));
+  }
+
+  DataRow buildDataRow(Override override, int index) {
+    return DataRow(
+      color: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+        return index % 2 == 0
+            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(.55)
+            : null; // Use the default value.
+      }),
+      cells: [
+        DataCell(Text(override.fullname)),
+        DataCell(Text(override.courseName)),
+        DataCell(
+          Text(
+            "${override.assignmentName} (${override.type.toUpperCase()})",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-      ),
-      DataCell(
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Extended: ${formatDate(override.endTime?.toString())}",
-              style: TextStyle(fontSize: 14),
-            ),
-            SizedBox(height: 4),
-            Text(
-              "Cut off: ${formatDate(override.cutoffTime?.toString())}",
-              style: TextStyle(fontSize: 14),
-            ),
-          ],
+        DataCell(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Extended: ${formatDate(override.endTime?.toString())}",
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "Cut off: ${formatDate(override.cutoffTime?.toString())}",
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
         ),
-      ),
-      DataCell(Text(override.attempts?.toString() ?? 'N/A')),
-    ],
-  );
+        DataCell(Text(override.attempts?.toString() ?? 'N/A')),
+      ],
+    );
+  }
+
+  Future<void> recommendIEP(Assessment selectedAssignment, String text) async {
+    if (selectedLLM == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                "No AI credentials found. Please log in to an AI platform.")),
+      );
+      return;
+    }
+    setState(() {
+      _isAIRecommending = true;
+    });
+    LLM aiModel;
+    if (selectedLLM == LlmType.CHATGPT) {
+      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
+    } else if (selectedLLM == LlmType.GROK) {
+      aiModel = GrokLLM(LocalStorageService.getGrokKey());
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
+    } else {
+      aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+    }
+    String prompt =
+        'Perform an analysis on a student individualized education plan to customize the provided assignment for a student with accommodations.\n'
+        'Student Accommodations: "$text"\n'
+        'Assignment Name: "${selectedAssignment.name}"\n'
+        'Assignment Summary: "${selectedAssignment.description}"\n'
+        'Assignment Type: "${selectedAssignment.type}"\n'
+        'Assignment Due Date: "${selectedAssignment.dueDate}"\n'
+        'Provide a textual summary. Additionally, suggest a number of attempts to provide the student as an integer from 0 to 10, with 0 representing no limit on the number of attempts. '
+        'Finally, suggest both a new Due Date and Final Deadline that are after the original due date and the necessary accommodations. '
+        'Format dates in the format "MM/DD/YYYY". '
+        'Return your analysis as a JSON array where the textual summary is an object with key "Summary". '
+        'The suggested number of attempts should be returned as an object with key "Attempts". '
+        'The suggested Due Date should be returned as an object with key "Due Date". '
+        'The suggested Deadline should be returned as an object with key "Deadline". '
+        'An example of a properly formatted JSON array is:\n'
+        '[\n'
+        '{\n'
+        '"Summary": "A textual summary of the analysis."\n'
+        '},\n'
+        '{\n'
+        '"Attempts": 5\n'
+        '},\n'
+        '{\n'
+        '"Due Date": "10/31/2025"\n'
+        '},\n'
+        '{\n'
+        '"Deadline": "11/07/2025"\n'
+        '}\n'
+        ']\n';
+
+    String summary = "";
+    DateTime? due;
+    DateTime? deadline;
+    int? newAttempts;
+
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+      try {
+        var result =
+            await aiModel.postToLlm(HtmlConverter.convert(prompt) ?? "");
+        String normalizedResult = result.trim();
+        if (!canceled) {
+          // Remove markdown code block wrappers if present.
+          if (normalizedResult.startsWith("```json")) {
+            normalizedResult = normalizedResult.substring(7);
+          }
+          if (normalizedResult.endsWith("```")) {
+            normalizedResult =
+                normalizedResult.substring(0, normalizedResult.length - 3);
+          }
+          normalizedResult = normalizedResult.trim();
+          print(normalizedResult);
+          var jsonData = json.decode(normalizedResult);
+          List<Map<String, dynamic>>? jsonList;
+          if (jsonData is List) {
+            jsonList = List<Map<String, dynamic>>.from(jsonData);
+            if (jsonList.isNotEmpty && jsonList[0].containsKey("Summary")) {
+              summary = jsonList[0]["Summary"].toString();
+            }
+            if (jsonList.length > 1 &&
+                selectedAssignment.type == "quiz" &&
+                jsonList[1].containsKey("Attempts")) {
+              newAttempts = jsonList[1]["Attempts"];
+            }
+            if (jsonList.length > 2 && jsonList[2].containsKey("Due Date")) {
+              due = DateFormat.yMd().tryParse(jsonList[2]["Due Date"]) ??
+                  DateTime.now();
+            }
+            if (jsonList.length > 3 &&
+                selectedAssignment.type == "essay" &&
+                jsonList[3].containsKey("Deadline")) {
+              deadline = DateFormat.yMd().tryParse(jsonList[3]["Deadline"]) ??
+                  DateTime.now();
+              if (due != null && deadline.isBefore(due)) {
+                deadline = due;
+              }
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content:
+                      Text("AI analysis did not return a valid JSON array.")),
+            );
+          }
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error during AI analysis: $e")),
+        );
+      }
+    }
+    setState(() {
+      _isAIRecommending = false;
+      setState(() {
+        iepRecommendation.value = TextEditingValue(text: summary);
+        _attemptsController.value = TextEditingValue(
+            text: newAttempts == null ? "" : newAttempts.toString());
+        attempts = newAttempts;
+        epochTime =
+            due == null ? null : (due.millisecondsSinceEpoch / 1000).round();
+        epochTime2 = deadline == null
+            ? null
+            : (deadline.millisecondsSinceEpoch / 1000).round();
+      });
+    });
+  }
 }
