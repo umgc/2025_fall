@@ -997,6 +997,24 @@ The CareConnect dashboard is your central hub for all activities and information
    - Emergency services
    - Support group contacts
 
+##Invoice Assistant
+### Invoice Dashboard
+   - Total invoices
+   - Total amount
+   - Pending payments
+   - Overdue bills
+   - Recent activity
+     
+### Upload Invoices
+   - Upload PNG, JPEG, JPG, PDF
+   - Take a photo of an invoice or bill
+   - Manually enter invoice or bill details
+     
+### Invoice List
+   - Search for stored invoices
+   - Export stored invoices
+   - Filter results by amount, due date, or service date
+
 ## Privacy and Security
 
 ### Data Protection
