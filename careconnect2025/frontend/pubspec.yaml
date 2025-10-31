@@ -1,34 +1,13 @@
 name: care_connect_app
 description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
-# The following defines the version and build number for your application.
-# A version number is three numbers separated by dots, like 1.2.43
-# followed by an optional build number separated by a +.
-# Both the version and the builder number may be overridden in flutter
-# build by specifying --build-name and --build-number, respectively.
-# In Android, build-name is used as versionName while build-number used as versionCode.
-# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
-# Read more about iOS versioning at
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
 environment:
   sdk: ^3.9.2
 
-# Performance optimization: Enable null safety and latest features
-
 # Dependencies specify other packages that your package needs in order to work.
-# To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
-# dependencies can be manually updated by changing the version numbers below to
-# the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
 dependencies:
   flutter_chat_core: ^2.0.0
   flutter_chat_ui: ^2.0.0
@@ -41,66 +20,40 @@ dependencies:
   dio_cookie_manager: ^3.3.0
   confetti: ^0.8.0
   url_launcher: ^6.3.2  # For OAuth redirects
-  crypto: ^3.0.6  # For generating state parameter
+  crypto: ^3.0.6        # For generating state parameter
   pointycastle: ^4.0.0  # For RSA key operations
-  app_links: ^6.4.1  # For handling deep links from OAuth callback (replaced uni_links)
+  app_links: ^6.4.1     # For handling deep links from OAuth callback (replaced uni_links)
 
-# -- Astha - start
+  # -- Astha - start
   path_provider: ^2.1.5
   mime: ^2.0.0
-  image_picker: ^1.2.0  # image upload
-  # Temporarily disabled for faster builds
-  # jitsi_meet_flutter_sdk: ^11.4.0
-  permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
+  image_picker: ^1.2.0
+  # jitsi_meet_flutter_sdk: ^11.4.0   # (temporarily disabled for faster builds)
+  permission_handler: ^12.0.1
   flutter_localizations:
     sdk: flutter
-  intl: ^0.20.2 # data formatting
-  camera: ^0.11.1 # emotion detector use
-  pdf: ^3.11.3 # PDF generation
-  # emotion detector use
+  intl: ^0.20.2
+  camera: ^0.11.1
+  pdf: ^3.11.3
 
-  # Temporarily disabled due to iOS dependency conflicts
-  # google_mlkit_face_detection: ^0.11.0
-  # google_mlkit_text_recognition: ^0.13.1
-  # google_mlkit_barcode_scanning: ^0.12.0
-  # google_mlkit_image_labeling: ^0.12.0
-  # Temporarily disabled for faster builds
-  # firebase_core: ^4.1.0
-  # cloud_firestore: ^6.0.1
-  # firebase_messaging: ^16.0.1
-  # firebase_auth: ^6.0.2
-  
-  # Hybrid Video Calling Solution
-  # Agora for mobile platforms (iOS/Android) - Using only core engine to avoid namespace issues
-  # Note: While included in pubspec, conditional imports prevent web loading
-#  agora_rtc_engine: ^6.5.2
-  
-  # WebRTC for web glatform (fallback for web compatibility)
-#  flutter_webrtc: ^1.2.0
-#  socket_io_client: ^3.1.2  # For WebRTC signaling server
-  
-  # Keep existing packages for other functionality
-  
-  # SMS functionality - temporarily disabled due to namespace issue
-  # telephony: ^0.2.0+1  # For Android SMS - updated for namespace compatibility
-  
-  # Platform detection
+  # firebase_* and mlkit packages temporarily disabled for faster builds
+
+  # Agora / WebRTC temporarily commented out
+  # agora_rtc_engine: ^6.5.2
+  # flutter_webrtc: ^1.2.0
+  # socket_io_client: ^3.1.2
+
+  # telephony: ^0.2.0+1  # Temporarily disabled due to namespace issue
+
   platform: ^3.1.6
-# my key storage
-#  flutter_dotenv: ^6.0.0
-  # Local storage for offline messaging
   sqflite: ^2.4.2
-# -- Astha - start
-# ag
   provider: ^6.1.5+1
-  go_router: ^16.2.1 
-#  flutter_stripe: ^10.2.0
+  go_router: ^16.2.1
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
-    
-  # AI Voice Commands 
-  # ag added as a fix
+
+  # AI Voice Commands
   porcupine_flutter: ^3.0.5
   speech_to_text: ^7.3.0
 
@@ -110,56 +63,42 @@ dependencies:
   mobile_scanner: ^7.0.1
   share_plus: ^12.0.0
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   http: ^1.5.0
   universal_html: ^2.2.4
   flutter_secure_storage: ^9.2.4
-  # Flutter SDK
+
+  # Flutter SDK as a dependency
   flutter:
     sdk: flutter
-  flutter_svg: ^2.0.9  # Add this line
 
+  flutter_svg: ^2.0.9
   web: ^1.1.0
-  #speech to text, voice recognition, and diarization
+
+  # speech to text, voice recognition, and diarization
   sherpa_onnx: ^1.12.14
-  #for recording audio samples for speaker recognition
   record: ^6.1.1
-  #for breaking audio into smaller files
   new_simple_audio_trimmer: ^0.1.5
-  #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
-# Team D - Dependencies Begin
+
+  # Team D - Dependencies Begin
   syncfusion_flutter_pdfviewer: ^31.2.3
   qr_flutter: ^4.1.0
-  #llm_toolkit: ^0.0.4
-  #llama_cpp_dart: 
   http_parser: ^4.0.2
   image: ^4.2.0
-  # Required dependencies
-  #flutter_gemma: ^0.9.0
-  #tflite_flutter: ^0.11.0 
-  #fftea: ^1.5.0
   json_schema: ^5.2.1
   flutter_staggered_grid_view: ^0.7.0
-  excel: ^4.0.6         # For creating and manipulating Excel files. 
-  open_filex: ^4.7.0  
-
-  ##EVV Dependencies
+  excel: ^4.0.6
+  open_filex: ^4.7.0
   connectivity_plus: ^6.0.5
   device_info_plus: ^12.1.0
   flutter_local_notifications: ^17.2.1
   # Team D - Dependencies End
+
 dependency_overrides:
-  # llama_cpp_dart:
-  #   git:
-  #     url: https://github.com/netdur/llama_cpp_dart.git
-  #     ref: main
   calendar_view: ^1.0.0
   accordion: ^2.6.0
 
-  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -167,20 +106,10 @@ dev_dependencies:
   build_runner: ^2.4.9
   flutter_launcher_icons: ^0.14.1
   flutter_native_splash: ^2.4.0
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
-flutter: 
-  generate: true  # enables gen-l10n on build
+flutter:
+  generate: true
   uses-material-design: true
   assets:
     - assets/images/banner.png
@@ -192,12 +121,8 @@ flutter:
     - assets/images/CareConnectLogo.png
     - assets/images/CareConnectLogo.svg
     - assets/images/default_avatar.svg
- 
-# -------------------------------------------------------------------
+
 # Splash Screen configuration
-# flutter_native_splash generates native splash screens for your Flutter app on Android, iOS, and web.
-# A splash screen is the image or logo you see immediately when the app opens — before Flutter finishes loading and renders your first frame.
-# -------------------------------------------------------------------
 flutter_native_splash:
   color: "#ffffff"
   image: assets/images/app_icon.png
@@ -207,51 +132,16 @@ flutter_native_splash:
   android_12:
     image: assets/images/app_icon.png
     icon_background_color: "#ffffff"
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
-
-
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
-
-  # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/to/resolution-aware-images
-
-  # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/to/asset-from-package
-
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
 
 # Flutter Launcher Icons Configuration
 flutter_launcher_icons:
   android: true
-  ios: true 
+  ios: true
   image_path: "assets/images/app_icon.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/app_icon.png"
   remove_alpha_ios: true
-  min_sdk_android: 21 # android min sdk min:16, default 21
+  min_sdk_android: 21
   web:
     generate: true
     image_path: "assets/images/app_icon.png"

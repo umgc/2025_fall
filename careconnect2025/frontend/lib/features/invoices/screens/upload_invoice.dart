@@ -26,11 +26,13 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
   Future<void> _watchConnectivity() async {
     final status = await Connectivity().checkConnectivity();
-    if (mounted)
+    if (mounted) {
       setState(() => offline = status.contains(ConnectivityResult.none));
+    }
     Connectivity().onConnectivityChanged.listen((result) {
-      if (mounted)
+      if (mounted) {
         setState(() => offline = result.contains(ConnectivityResult.none));
+      }
     });
   }
 
@@ -138,7 +140,6 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
   }
   // --- END OF MODIFIED FUNCTION ---
 
-
   Future<void> _onTakePhoto() async {
     final first = await ImagePicker().pickImage(
       source: ImageSource.camera,
@@ -150,12 +151,13 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     if (!mounted) return;
 
-    final reviewed = await Navigator.of(context, rootNavigator: true).push<List<XFile>>(
-      MaterialPageRoute(
-        builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
-        fullscreenDialog: true,
-      ),
-    );
+    final reviewed = await Navigator.of(context, rootNavigator: true)
+        .push<List<XFile>>(
+          MaterialPageRoute(
+            builder: (_) => ReviewPhotosScreen(initialPhotos: [first]),
+            fullscreenDialog: true,
+          ),
+        );
     if (!mounted) return;
 
     if (reviewed == null || reviewed.isEmpty) {
@@ -176,9 +178,9 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
   }
 
   Future<void> _handleExtractResult(
-      InvoiceResponseDto? res, {
-        required String failMessage,
-      }) async {
+    InvoiceResponseDto? res, {
+    required String failMessage,
+  }) async {
     if (res == null) {
       _snack(failMessage);
       return;
@@ -214,13 +216,10 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
     // No saving here. Just open detail in create mode.
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(
-          invoice: InvoiceFactories.empty(),
-          isNew: true,
-        ),
+        builder: (_) =>
+            InvoiceDetailPage(invoice: InvoiceFactories.empty(), isNew: true),
       ),
     );
-
   }
 
   void _snack(String msg) {

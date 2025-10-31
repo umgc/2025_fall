@@ -1,6 +1,5 @@
 import 'package:care_connect_app/features/invoices/screens/dashboard/utilis/format.dart';
 import 'package:care_connect_app/features/invoices/screens/dashboard/utilis/metrics.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -10,7 +9,6 @@ import '../../services/invoice_service.dart';
 import 'widgets/overdue_block.dart';
 import 'widgets/kpi_card.dart';
 import 'widgets/activity_and_charts.dart';
- 
 
 class InvoiceDashboardPage extends StatefulWidget {
   const InvoiceDashboardPage({super.key});
@@ -20,8 +18,8 @@ class InvoiceDashboardPage extends StatefulWidget {
 }
 
 class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
-  late final Future<List<Invoice>> _invoicesFuture =
-      InvoiceService.instance.fetchInvoices();
+  late final Future<List<Invoice>> _invoicesFuture = InvoiceService.instance
+      .fetchInvoices();
 
   @override
   Widget build(BuildContext context) {
@@ -49,52 +47,49 @@ class _InvoiceDashboardPageState extends State<InvoiceDashboardPage> {
               }
 
               Widget overdueRail() => ConstrainedBox(
-                    constraints: BoxConstraints.tightFor(width: leftRailWidth),
+                constraints: BoxConstraints.tightFor(width: leftRailWidth),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: OverdueBlock(invoices: invoices, loading: loading),
-                        ),
-                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: OverdueBlock(invoices: invoices, loading: loading),
                     ),
-                  );
+                  ),
+                ),
+              );
 
               Widget gridBody() => _grid(
-                    cols: cols,
-                    gutter: gutter,
-                    invoices: invoices,
-                    metrics: metrics,
-                    loading: loading,
-                    span: span,
-                  );
+                cols: cols,
+                gutter: gutter,
+                invoices: invoices,
+                metrics: metrics,
+                loading: loading,
+                span: span,
+              );
 
               Widget rightGrid({bool scrollable = true}) => Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: maxContentWidth),
-                      child: scrollable
-                          ? SingleChildScrollView(
-                              padding: const EdgeInsets.all(16),
-                              child: gridBody(),
-                            )
-                          : Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: gridBody(),
-                            ),
-                    ),
-                  );
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                  child: scrollable
+                      ? SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: gridBody(),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: gridBody(),
+                        ),
+                ),
+              );
 
               if (!isDesktop) {
                 // Single scroll view on mobile to avoid nested scroll issues
                 return SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      overdueRail(),
-                      rightGrid(scrollable: false),
-                    ],
+                    children: [overdueRail(), rightGrid(scrollable: false)],
                   ),
                 );
               }

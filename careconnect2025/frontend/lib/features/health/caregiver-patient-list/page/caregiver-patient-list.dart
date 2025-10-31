@@ -467,7 +467,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                         ),
                         filled: true,
                         fillColor: theme.colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                            .withOpacity(0.3),
                       ),
                     ),
                   ),

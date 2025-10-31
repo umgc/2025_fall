@@ -4,10 +4,8 @@ import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
-import '../../../../services/auth_token_manager.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
-import 'package:http/http.dart' as http;
 
 class PatientSelectionPage extends StatefulWidget {
   const PatientSelectionPage({super.key});
@@ -36,7 +34,7 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -116,15 +114,15 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return _buildErrorState();
     }
-    
+
     if (_patients.isEmpty) {
       return _buildEmptyState();
     }
-    
+
     return _buildPatientList();
   }
 
@@ -222,10 +220,7 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: theme.dividerColor,
-                  width: 1,
-                ),
+                bottom: BorderSide(color: theme.dividerColor, width: 1),
               ),
             ),
             child: Row(
@@ -267,10 +262,10 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
   Widget _buildPatientCard(Patient patient) {
     final theme = Theme.of(context);
     final fullName = '${patient.firstName} ${patient.lastName}';
-    
+
     // Generate MA number from patient ID
     final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
-    
+
     // Format address
     final address = _formatAddress(patient);
 
@@ -282,8 +277,8 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.brightness == Brightness.dark 
-                ? theme.colorScheme.surface 
+            color: theme.brightness == Brightness.dark
+                ? theme.colorScheme.surface
                 : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -312,7 +307,9 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
                       maNumber,
                       style: TextStyle(
                         fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -321,7 +318,9 @@ class _PatientSelectionPageState extends State<PatientSelectionPage> {
                       address,
                       style: TextStyle(
                         fontSize: 14,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.7,
+                        ),
                       ),
                     ),
                   ],

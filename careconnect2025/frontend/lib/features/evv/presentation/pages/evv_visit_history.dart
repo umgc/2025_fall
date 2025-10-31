@@ -13,18 +13,18 @@ class EvvVisitHistoryPage extends StatefulWidget {
 class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
   final EvvService _evvService = EvvService();
   final _searchFormKey = GlobalKey<FormState>();
-  
+
   // Search form controllers
   final _patientNameController = TextEditingController();
   final _serviceTypeController = TextEditingController();
   final _caregiverIdController = TextEditingController();
-  
+
   // Search parameters
   DateTime? _startDate;
   DateTime? _endDate;
   String _selectedStateCode = '';
   String _selectedStatus = '';
-  
+
   bool _isLoading = false;
   EvvSearchResult? _searchResult;
   int _currentPage = 0;
@@ -47,9 +47,15 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
 
     try {
       final request = EvvSearchRequest(
-        patientName: _patientNameController.text.trim().isEmpty ? null : _patientNameController.text.trim(),
-        serviceType: _serviceTypeController.text.trim().isEmpty ? null : _serviceTypeController.text.trim(),
-        caregiverId: _caregiverIdController.text.trim().isEmpty ? null : int.tryParse(_caregiverIdController.text.trim()),
+        patientName: _patientNameController.text.trim().isEmpty
+            ? null
+            : _patientNameController.text.trim(),
+        serviceType: _serviceTypeController.text.trim().isEmpty
+            ? null
+            : _serviceTypeController.text.trim(),
+        caregiverId: _caregiverIdController.text.trim().isEmpty
+            ? null
+            : int.tryParse(_caregiverIdController.text.trim()),
         startDate: _startDate,
         endDate: _endDate,
         stateCode: _selectedStateCode.isEmpty ? null : _selectedStateCode,
@@ -61,7 +67,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
       );
 
       final result = await _evvService.searchRecords(request);
-      
+
       setState(() {
         _searchResult = result;
         _isLoading = false;
@@ -97,7 +103,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
           ? DateTimeRange(start: _startDate!, end: _endDate!)
           : null,
     );
-    
+
     if (picked != null) {
       setState(() {
         _startDate = picked.start;
@@ -150,9 +156,8 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                       children: [
                         Text(
                           'Search Filters',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
                         TextButton.icon(
@@ -163,7 +168,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // First row
                     Row(
                       children: [
@@ -191,7 +196,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Second row
                     Row(
                       children: [
@@ -218,7 +223,10 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.date_range, color: Colors.grey),
+                                  const Icon(
+                                    Icons.date_range,
+                                    color: Colors.grey,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -226,7 +234,9 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                                           ? '${_formatDate(_startDate!)} - ${_formatDate(_endDate!)}'
                                           : 'Select Date Range',
                                       style: TextStyle(
-                                        color: _startDate != null ? Colors.black : Colors.grey,
+                                        color: _startDate != null
+                                            ? Colors.black
+                                            : Colors.grey,
                                       ),
                                     ),
                                   ),
@@ -238,19 +248,24 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Third row
                     Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _selectedStateCode.isEmpty ? null : _selectedStateCode,
+                            initialValue: _selectedStateCode.isEmpty
+                                ? null
+                                : _selectedStateCode,
                             decoration: const InputDecoration(
                               labelText: 'State',
                               border: OutlineInputBorder(),
                             ),
                             items: [
-                              const DropdownMenuItem(value: '', child: Text('All States')),
+                              const DropdownMenuItem(
+                                value: '',
+                                child: Text('All States'),
+                              ),
                               ...EvvService.stateCodes.map((code) {
                                 String stateName = '';
                                 switch (code) {
@@ -280,18 +295,38 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _selectedStatus.isEmpty ? null : _selectedStatus,
+                            initialValue: _selectedStatus.isEmpty
+                                ? null
+                                : _selectedStatus,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               border: OutlineInputBorder(),
                             ),
                             items: const [
-                              DropdownMenuItem(value: '', child: Text('All Statuses')),
-                              DropdownMenuItem(value: 'PENDING_REVIEW', child: Text('Pending Review')),
-                              DropdownMenuItem(value: 'CONFIRMED', child: Text('Confirmed')),
-                              DropdownMenuItem(value: 'SUBMITTED', child: Text('Submitted')),
-                              DropdownMenuItem(value: 'FAILED_SUBMISSION', child: Text('Failed Submission')),
-                              DropdownMenuItem(value: 'CORRECTED', child: Text('Corrected')),
+                              DropdownMenuItem(
+                                value: '',
+                                child: Text('All Statuses'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'PENDING_REVIEW',
+                                child: Text('Pending Review'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'CONFIRMED',
+                                child: Text('Confirmed'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'SUBMITTED',
+                                child: Text('Submitted'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'FAILED_SUBMISSION',
+                                child: Text('Failed Submission'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'CORRECTED',
+                                child: Text('Corrected'),
+                              ),
                             ],
                             onChanged: (value) {
                               setState(() {
@@ -307,164 +342,191 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
               ),
             ),
           ),
-          
+
           // Results
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchResult == null || _searchResult!.content.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No records found',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Try adjusting your search filters',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    children: [
+                      // Results header
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
                           children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 16),
                             Text(
-                              'No records found',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
+                              'Found ${_searchResult!.totalElements} records',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const Spacer(),
                             Text(
-                              'Try adjusting your search filters',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
+                              'Page ${_currentPage + 1} of ${_searchResult!.totalPages}',
+                              style: const TextStyle(color: Colors.grey),
                             ),
                           ],
                         ),
-                      )
-                    : Column(
-                        children: [
-                          // Results header
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Found ${_searchResult!.totalElements} records',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+
+                      // Records list
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount:
+                              _searchResult!.content.length +
+                              (_searchResult!.last ? 0 : 1),
+                          itemBuilder: (context, index) {
+                            if (index == _searchResult!.content.length) {
+                              // Load more button
+                              return Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                  child: ElevatedButton(
+                                    onPressed: _loadMore,
+                                    child: const Text('Load More'),
+                                  ),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  'Page ${_currentPage + 1} of ${_searchResult!.totalPages}',
-                                  style: const TextStyle(color: Colors.grey),
+                              );
+                            }
+
+                            final record = _searchResult!.content[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: _getStatusColor(
+                                    record.status,
+                                  ),
+                                  child: Icon(
+                                    _getStatusIcon(record.status),
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Records list
-                          Expanded(
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _searchResult!.content.length + (_searchResult!.last ? 0 : 1),
-                              itemBuilder: (context, index) {
-                                if (index == _searchResult!.content.length) {
-                                  // Load more button
-                                  return Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Center(
-                                      child: ElevatedButton(
-                                        onPressed: _loadMore,
-                                        child: const Text('Load More'),
-                                      ),
+                                title: Text(
+                                  record.individualName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${record.serviceType} - ${_formatDate(record.dateOfService)}',
                                     ),
-                                  );
-                                }
-                                
-                                final record = _searchResult!.content[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: _getStatusColor(record.status),
-                                      child: Icon(
-                                        _getStatusIcon(record.status),
-                                        color: Colors.white,
-                                      ),
+                                    Text(
+                                      '${_formatTime(record.timeIn)} - ${_formatTime(record.timeOut)}',
                                     ),
-                                    title: Text(
-                                      record.individualName,
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    Text(
+                                      'MA: ${record.patient?.maNumber ?? 'N/A'}',
                                     ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                    Row(
                                       children: [
-                                        Text('${record.serviceType} - ${_formatDate(record.dateOfService)}'),
-                                        Text('${_formatTime(record.timeIn)} - ${_formatTime(record.timeOut)}'),
-                                        Text('MA: ${record.patient?.maNumber ?? 'N/A'}'),
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: _getStatusColor(record.status).withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _getStatusColor(
+                                              record.status,
+                                            ).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            record.status,
+                                            style: TextStyle(
+                                              color: _getStatusColor(
                                                 record.status,
-                                                style: TextStyle(
-                                                  color: _getStatusColor(record.status),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
                                               ),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.blue.withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                record.stateCode,
-                                                style: const TextStyle(
-                                                  color: Colors.blue,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                            if (record.isOffline) ...[
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.orange.withOpacity(0.2),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: const Text(
-                                                  'OFFLINE',
-                                                  style: TextStyle(
-                                                    color: Colors.orange,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
+                                          ),
                                         ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            record.stateCode,
+                                            style: const TextStyle(
+                                              color: Colors.blue,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        if (record.isOffline) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withOpacity(
+                                                0.2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Text(
+                                              'OFFLINE',
+                                              style: TextStyle(
+                                                color: Colors.orange,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
-                                    trailing: const Icon(Icons.arrow_forward_ios),
-                                    onTap: () => _showRecordDetails(record),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                                  ],
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios),
+                                onTap: () => _showRecordDetails(record),
+                              ),
+                            );
+                          },
+                        ),
                       ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -487,7 +549,10 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
               _buildDetailRow('Date', _formatDate(record.dateOfService)),
               _buildDetailRow('Time In', _formatTime(record.timeIn)),
               _buildDetailRow('Time Out', _formatTime(record.timeOut)),
-              _buildDetailRow('Location', '${record.locationLat?.toStringAsFixed(6)}, ${record.locationLng?.toStringAsFixed(6)}'),
+              _buildDetailRow(
+                'Location',
+                '${record.locationLat?.toStringAsFixed(6)}, ${record.locationLng?.toStringAsFixed(6)}',
+              ),
               _buildDetailRow('Location Source', record.locationSource),
               _buildDetailRow('State', record.stateCode),
               _buildDetailRow('Status', record.status),
@@ -538,9 +603,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );

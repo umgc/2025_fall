@@ -11,11 +11,8 @@ import 'package:http/http.dart' as http;
 
 class StartVisitPage extends StatefulWidget {
   final int patientId;
-  
-  const StartVisitPage({
-    super.key,
-    required this.patientId,
-  });
+
+  const StartVisitPage({super.key, required this.patientId});
 
   @override
   State<StartVisitPage> createState() => _StartVisitPageState();
@@ -54,7 +51,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -65,7 +62,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         // Find the specific patient
         for (var json in data) {
           try {
@@ -93,10 +90,12 @@ class _StartVisitPageState extends State<StartVisitPage> {
             print('Error parsing patient: $e');
           }
         }
-        
+
         throw Exception('Patient not found');
       } else {
-        throw Exception('Failed to load patient details: ${response.statusCode}');
+        throw Exception(
+          'Failed to load patient details: ${response.statusCode}',
+        );
       }
     } catch (e) {
       setState(() {
@@ -118,7 +117,9 @@ class _StartVisitPageState extends State<StartVisitPage> {
     }
 
     // Navigate to Check-In Location page with selected patient and service type
-    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}');
+    context.push(
+      '/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}',
+    );
   }
 
   String _formatAddress(Patient patient) {
@@ -168,15 +169,15 @@ class _StartVisitPageState extends State<StartVisitPage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return _buildErrorState();
     }
-    
+
     if (_selectedPatient == null) {
       return _buildPatientNotFoundState();
     }
-    
+
     return _buildStartVisitForm();
   }
 
@@ -279,10 +280,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: theme.dividerColor,
-                  width: 1,
-                ),
+                bottom: BorderSide(color: theme.dividerColor, width: 1),
               ),
             ),
             child: Row(
@@ -342,9 +340,14 @@ class _StartVisitPageState extends State<StartVisitPage> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.onPrimary.withOpacity(0.2),
+                              color: theme.colorScheme.onPrimary.withOpacity(
+                                0.2,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -381,13 +384,16 @@ class _StartVisitPageState extends State<StartVisitPage> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _selectedServiceType,
+                  initialValue: _selectedServiceType,
                   decoration: InputDecoration(
                     hintText: 'Select service type',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
                   ),
                   items: _serviceTypes.map((String serviceType) {
                     return DropdownMenuItem<String>(
@@ -445,7 +451,8 @@ class _StartVisitPageState extends State<StartVisitPage> {
                             Text(
                               'You\'ll need to provide your location for check-in and check-out to comply with Electronic Visit Verification requirements.',
                               style: TextStyle(
-                                color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                                color: theme.colorScheme.onPrimaryContainer
+                                    .withOpacity(0.8),
                                 fontSize: 13,
                               ),
                             ),
@@ -461,7 +468,10 @@ class _StartVisitPageState extends State<StartVisitPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _continueToCheckIn,
-                    icon: Icon(Icons.location_on, color: theme.colorScheme.onPrimary),
+                    icon: Icon(
+                      Icons.location_on,
+                      color: theme.colorScheme.onPrimary,
+                    ),
                     label: Text(
                       'Continue to Check-In',
                       style: TextStyle(

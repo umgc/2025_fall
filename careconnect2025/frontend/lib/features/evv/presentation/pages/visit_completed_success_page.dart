@@ -23,7 +23,7 @@ class VisitCompletedSuccessPage extends StatefulWidget {
   final int duration; // Duration in seconds
   final DateTime checkinTime;
   final DateTime checkoutTime;
-  
+
   const VisitCompletedSuccessPage({
     super.key,
     required this.patientId,
@@ -41,7 +41,8 @@ class VisitCompletedSuccessPage extends StatefulWidget {
   });
 
   @override
-  State<VisitCompletedSuccessPage> createState() => _VisitCompletedSuccessPageState();
+  State<VisitCompletedSuccessPage> createState() =>
+      _VisitCompletedSuccessPageState();
 }
 
 class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
@@ -64,7 +65,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -75,7 +76,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         // Find the specific patient
         for (var json in data) {
           try {
@@ -103,10 +104,12 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
             print('Error parsing patient: $e');
           }
         }
-        
+
         throw Exception('Patient not found');
       } else {
-        throw Exception('Failed to load patient details: ${response.statusCode}');
+        throw Exception(
+          'Failed to load patient details: ${response.statusCode}',
+        );
       }
     } catch (e) {
       setState(() {
@@ -141,7 +144,7 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes;
     final seconds = duration.inSeconds;
-    
+
     if (minutes > 0) {
       return '${minutes}m';
     } else {
@@ -165,7 +168,12 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
     return '$displayHour:$minute:$second $amPm';
   }
 
-  String _formatLocation(String locationType, double? latitude, double? longitude, Patient patient) {
+  String _formatLocation(
+    String locationType,
+    double? latitude,
+    double? longitude,
+    Patient patient,
+  ) {
     if (locationType == 'gps' && latitude != null && longitude != null) {
       return 'GPS: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
     } else {
@@ -191,17 +199,18 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
       // Generate EDI content
       final ediContent = _generateEDIContent();
-      
+
       // Create blob and download
       final bytes = utf8.encode(ediContent);
       final blob = html.Blob([bytes], 'text/plain');
       final url = html.Url.createObjectUrlFromBlob(blob);
-      
+
       final anchor = html.document.createElement('a') as html.AnchorElement
         ..href = url
         ..style.display = 'none'
-        ..download = 'visit_${_selectedPatient!.id}_${widget.checkinTime.millisecondsSinceEpoch}.edi';
-      
+        ..download =
+            'visit_${_selectedPatient!.id}_${widget.checkinTime.millisecondsSinceEpoch}.edi';
+
       html.document.body?.children.add(anchor);
       anchor.click();
       html.document.body?.children.remove(anchor);
@@ -225,46 +234,64 @@ class _VisitCompletedSuccessPageState extends State<VisitCompletedSuccessPage> {
 
   String _generateEDIContent() {
     final patient = _selectedPatient!;
-    final maNumber = patient.maNumber ?? 'SUBSCR${patient.id.toString().padLeft(5, '0')}';
-    
+    final maNumber =
+        patient.maNumber ?? 'SUBSCR${patient.id.toString().padLeft(5, '0')}';
+
     final now = DateTime.now();
-    final isaDate = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final isaTime = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    final gsDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final gsTime = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    
-    final serviceDate = '${widget.checkinTime.year}${widget.checkinTime.month.toString().padLeft(2, '0')}${widget.checkinTime.day.toString().padLeft(2, '0')}';
-    
+    final isaDate =
+        '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final isaTime =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    final gsDate =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final gsTime =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
+    final serviceDate =
+        '${widget.checkinTime.year}${widget.checkinTime.month.toString().padLeft(2, '0')}${widget.checkinTime.day.toString().padLeft(2, '0')}';
+
     String patientDob = '19700101';
     if (patient.dob.isNotEmpty) {
       try {
         final dobDate = DateTime.parse(patient.dob);
-        patientDob = '${dobDate.year}${dobDate.month.toString().padLeft(2, '0')}${dobDate.day.toString().padLeft(2, '0')}';
+        patientDob =
+            '${dobDate.year}${dobDate.month.toString().padLeft(2, '0')}${dobDate.day.toString().padLeft(2, '0')}';
       } catch (e) {
         patientDob = '19700101';
       }
     }
-    
-    final gender = (patient.gender?.toUpperCase() == 'MALE' || patient.gender?.toUpperCase() == 'M') ? 'M' : 'F';
-    
-    final claimId = '${patient.id}${widget.checkinTime.millisecondsSinceEpoch.toString().substring(0, 10)}';
-    final evvId = 'EVV-${claimId}';
-    final lineEvvId = 'EVV-LINE-${claimId}';
-    
+
+    final gender =
+        (patient.gender?.toUpperCase() == 'MALE' ||
+            patient.gender?.toUpperCase() == 'M')
+        ? 'M'
+        : 'F';
+
+    final claimId =
+        '${patient.id}${widget.checkinTime.millisecondsSinceEpoch.toString().substring(0, 10)}';
+    final evvId = 'EVV-$claimId';
+    final lineEvvId = 'EVV-LINE-$claimId';
+
     final units = ((widget.duration / 15).ceil()).toString();
-    final totalCharge = (30.0 * (widget.duration / 15).ceil()).toStringAsFixed(2);
-    
+    final totalCharge = (30.0 * (widget.duration / 15).ceil()).toStringAsFixed(
+      2,
+    );
+
     final addressLine1 = patient.address?.line1 ?? '123 Main St';
     final city = patient.address?.city ?? 'Richmond';
     final state = patient.address?.state ?? 'VA';
     final zip = patient.address?.zip ?? '23220';
-    
-    final controlNumber = now.millisecondsSinceEpoch.toString().substring(3, 12);
-    
+
+    final controlNumber = now.millisecondsSinceEpoch.toString().substring(
+      3,
+      12,
+    );
+
     // Calculate segment count (base 30 segments + 1 if notes exist)
     final segmentCount = widget.notes.isNotEmpty ? 31 : 30;
 
-    final ediContent = '''ISA*00*          *00*          *ZZ*SUBMIT123      *ZZ*987654321      *$isaDate*$isaTime*^*00501*$controlNumber*0*P*:~
+    final ediContent =
+        '''ISA*00*          *00*          *ZZ*SUBMIT123      *ZZ*987654321      *$isaDate*$isaTime*^*00501*$controlNumber*0*P*:~
 GS*HC*SUBMIT123*987654321*$gsDate*$gsTime*$controlNumber*X*005010X222A1~
 ST*837*0001*005010X222A1~
 BHT*0019*00*$claimId*$gsDate*$gsTime*CH~
@@ -327,15 +354,15 @@ IEA*1*$controlNumber~
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return _buildErrorState();
     }
-    
+
     if (_selectedPatient == null) {
       return _buildPatientNotFoundState();
     }
-    
+
     return _buildSuccessPage();
   }
 
@@ -417,19 +444,19 @@ IEA*1*$controlNumber~
     final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
     final address = _formatAddress(patient);
     final duration = Duration(seconds: widget.duration);
-    
+
     final checkinLocation = _formatLocation(
-      widget.checkinLocationType, 
-      widget.checkinLatitude, 
-      widget.checkinLongitude, 
-      patient
+      widget.checkinLocationType,
+      widget.checkinLatitude,
+      widget.checkinLongitude,
+      patient,
     );
-    
+
     final checkoutLocation = _formatLocation(
-      widget.checkoutLocationType, 
-      widget.checkoutLatitude, 
-      widget.checkoutLongitude, 
-      patient
+      widget.checkoutLocationType,
+      widget.checkoutLatitude,
+      widget.checkoutLongitude,
+      patient,
     );
 
     return SingleChildScrollView(
@@ -443,10 +470,7 @@ IEA*1*$controlNumber~
             decoration: BoxDecoration(
               color: Colors.green[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.green[200]!,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.green[200]!, width: 1),
             ),
             child: Row(
               children: [
@@ -457,11 +481,7 @@ IEA*1*$controlNumber~
                     color: Colors.green,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -514,7 +534,10 @@ IEA*1*$controlNumber~
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(12),
@@ -531,16 +554,10 @@ IEA*1*$controlNumber~
                       const SizedBox(height: 12),
                       Text(
                         address,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 16),
-                      Container(
-                        height: 1,
-                        color: Colors.grey[300],
-                      ),
+                      Container(height: 1, color: Colors.grey[300]),
                       const SizedBox(height: 12),
                       const Text(
                         'Service Type',
@@ -625,10 +642,7 @@ IEA*1*$controlNumber~
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Container(
-                        height: 1,
-                        color: Colors.grey[300],
-                      ),
+                      Container(height: 1, color: Colors.grey[300]),
                       const SizedBox(height: 12),
                       const Text(
                         'Total Duration',
@@ -649,10 +663,7 @@ IEA*1*$controlNumber~
                       ),
                       Text(
                         '(${_formatDurationDetailed(duration)})',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -697,10 +708,7 @@ IEA*1*$controlNumber~
                   padding: const EdgeInsets.only(left: 20),
                   child: Text(
                     checkinLocation,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -730,10 +738,7 @@ IEA*1*$controlNumber~
                   padding: const EdgeInsets.only(left: 20),
                   child: Text(
                     checkoutLocation,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -777,10 +782,7 @@ IEA*1*$controlNumber~
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _exportVisitData,
-                  icon: const Icon(
-                    Icons.download,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.download, color: Colors.white),
                   label: const Text(
                     'Export EDI',
                     style: TextStyle(
@@ -799,17 +801,14 @@ IEA*1*$controlNumber~
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Dashboard Button
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _goToDashboard,
-                  icon: const Icon(
-                    Icons.dashboard,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.dashboard, color: Colors.white),
                   label: const Text(
                     'Return to Dashboard',
                     style: TextStyle(
@@ -862,11 +861,7 @@ IEA*1*$controlNumber~
         children: [
           Row(
             children: [
-              Icon(
-                icon,
-                color: iconColor,
-                size: 20,
-              ),
+              Icon(icon, color: iconColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,

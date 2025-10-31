@@ -120,7 +120,7 @@ class QrScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.shadowColor.withValues(alpha: 0.1),
+                      color: theme.shadowColor.withOpacity(0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

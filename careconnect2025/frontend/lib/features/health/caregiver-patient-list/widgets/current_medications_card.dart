@@ -31,7 +31,7 @@ class CurrentMedicationsSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
+            color: theme.shadowColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -90,7 +90,7 @@ class _MedicationBlock extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.25),
+          color: theme.colorScheme.outline.withOpacity(0.25),
         ),
       ),
       child: Column(
@@ -156,7 +156,7 @@ class _MedicationBlock extends StatelessWidget {
                     minHeight: 8,
                     backgroundColor: theme.colorScheme
                         .surfaceContainerHighest
-                        .withValues(alpha: 0.5),
+                        .withOpacity(0.5),
                     color: _complianceColor(context, pct.toDouble()),
                   ),
                 ),
@@ -169,7 +169,7 @@ class _MedicationBlock extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                    color: theme.colorScheme.onSurface.withOpacity(0.85),
                   ),
                 ),
               ),
@@ -189,7 +189,7 @@ class _MedicationBlock extends StatelessWidget {
           key,
           style: TextStyle(
             fontSize: 12,
-            color: cs.onSurface.withValues(alpha: 0.6),
+            color: cs.onSurface.withOpacity(0.6),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -248,7 +248,7 @@ class _StatusBadge extends StatelessWidget {
           text = 'paused';
           break;
         case MedicationStatus.discontinued:
-          bg = cs.surfaceContainerHighest.withValues(alpha: 0.6);
+          bg = cs.surfaceContainerHighest.withOpacity(0.6);
           fg = cs.onSurface;
           text = 'discontinued';
           break;
@@ -285,7 +285,7 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.25),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

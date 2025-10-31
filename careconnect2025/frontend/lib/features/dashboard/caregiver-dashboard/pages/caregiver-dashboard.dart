@@ -1,7 +1,6 @@
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/careteam-performace-card.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/recent-patient-activity-widget.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/widgets/upcoming-checkins-widget.dart';
-import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/recent_checkin_widget.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/invoices/services/invoice_service.dart';
 import 'package:care_connect_app/features/invoices/widgets/invoice_overview_card.dart';
@@ -74,7 +73,9 @@ class CaregiverDashboard extends StatelessWidget {
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width > 768 ? 600 : double.infinity,
+              maxWidth: MediaQuery.of(context).size.width > 768
+                  ? 600
+                  : double.infinity,
             ),
             builder: (context) => SizedBox(
               height: sheetHeight,

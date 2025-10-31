@@ -118,7 +118,7 @@ class _ChatPageState extends State<ChatPage> {
                 Text(
                   widget.contactRole,
                   style: TextStyle(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+                    color: Theme.of(context).primaryColor.withOpacity(0.6),
                     fontSize: 12,
                     fontWeight: FontWeight.normal,
                   ),

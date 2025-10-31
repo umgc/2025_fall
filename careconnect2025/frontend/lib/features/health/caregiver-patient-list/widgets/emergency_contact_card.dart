@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Patient Details — Emergency Contact
 class EmergencyContactCard extends StatelessWidget {
@@ -7,7 +8,7 @@ class EmergencyContactCard extends StatelessWidget {
   final String? phone; // optional
   final String? email; // optional (shown under phone if provided)
 
-  /// Optional actions
+  /// Optional overrides (if you want to handle actions yourself)
   final VoidCallback? onCall;
   final VoidCallback? onMessage;
 
@@ -20,6 +21,51 @@ class EmergencyContactCard extends StatelessWidget {
     this.onCall,
     this.onMessage,
   });
+
+  // -------- Helpers: phone + sms launchers --------
+  static String _digitsOnly(String? raw) =>
+      (raw ?? '').replaceAll(RegExp(r'[^0-9+]'), '');
+
+  static Future<void> _launchTel(BuildContext context, String? rawPhone) async {
+    final phone = _digitsOnly(rawPhone);
+    if (phone.isEmpty) {
+      _toast(context, 'No phone number available');
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      _toast(context, 'Calling not supported on this device');
+    }
+  }
+
+  static Future<void> _launchSms(
+    BuildContext context, {
+    required String? rawPhone,
+    required String message,
+  }) async {
+    final phone = _digitsOnly(rawPhone);
+    if (phone.isEmpty) {
+      _toast(context, 'No phone number available');
+      return;
+    }
+    // iOS/Android/Web: url_launcher handles sms: scheme where possible
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: message.isEmpty ? null : {'body': message},
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      _toast(context, 'Messaging not supported on this device');
+    }
+  }
+
+  static void _toast(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +107,7 @@ class EmergencyContactCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Inner compact panel (matches mockup)
+          // Inner compact panel
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -111,7 +157,7 @@ class EmergencyContactCard extends StatelessWidget {
                           softWrap: true,
                         ),
 
-                      // Email (optional, shown under phone if you pass it)
+                      // Email (optional)
                       if (_hasValue(email)) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -128,20 +174,14 @@ class EmergencyContactCard extends StatelessWidget {
 
                 const SizedBox(width: 12),
 
-                // RIGHT: action icons (theme-aware)
+                // RIGHT: action buttons
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _ActionIconButton.filled(
                       icon: Icons.phone,
                       tooltip: 'Call',
-                      onTap:
-                          onCall ??
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Call contact tapped'),
-                            ),
-                          ),
+                      onTap: onCall ?? () => _launchTel(context, phone),
                     ),
                     const SizedBox(width: 10),
                     _ActionIconButton.outlined(
@@ -149,11 +189,16 @@ class EmergencyContactCard extends StatelessWidget {
                       tooltip: 'Message',
                       onTap:
                           onMessage ??
-                          () => ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Message contact tapped'),
-                            ),
-                          ),
+                          () async {
+                            // quick compose dialog -> sms:
+                            final msg = await _composeMessage(context);
+                            if (msg == null) return; // cancelled
+                            await _launchSms(
+                              context,
+                              rawPhone: phone,
+                              message: msg,
+                            );
+                          },
                     ),
                   ],
                 ),
@@ -165,10 +210,40 @@ class EmergencyContactCard extends StatelessWidget {
     );
   }
 
-  bool _hasValue(String? s) => s != null && s.trim().isNotEmpty;
+  static bool _hasValue(String? s) => s != null && s.trim().isNotEmpty;
+
+  /// Simple message composer dialog (returns text or null if cancelled)
+  static Future<String?> _composeMessage(BuildContext context) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Send Message'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Type your message…',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/// Small, theme-aware icon buttons used on the right side of the card.
+/// Small, theme-aware buttons used on the right side of the card.
 class _ActionIconButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
@@ -223,22 +298,13 @@ class _ActionIconButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: const SizedBox(
+          child: SizedBox(
             width: 44,
             height: 40,
-            child: Center(
-              child: Icon(Icons.circle, size: 0), // placeholder for semantics
-            ),
+            child: Center(child: Icon(icon, size: 22, color: fg)),
           ),
         ),
       ),
     );
-  }
-
-  // Ensure the correct icon is painted with the right color
-  // without relying on IconTheme overrides from parent widgets.
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
   }
 }

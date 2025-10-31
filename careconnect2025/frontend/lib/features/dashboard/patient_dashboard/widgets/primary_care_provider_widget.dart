@@ -34,7 +34,7 @@ class PrimaryCareProviderWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
+            color: theme.shadowColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -111,14 +111,14 @@ class PrimaryCareProviderWidget extends StatelessWidget {
             phone,
             style: TextStyle(
               fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           Text(
             email,
             style: TextStyle(
               fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           if (nextAppointment != null) ...[
@@ -137,7 +137,7 @@ class PrimaryCareProviderWidget extends StatelessWidget {
                   (appointmentType != null ? ' - $appointmentType' : ''),
               style: TextStyle(
                 fontSize: 14,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],

@@ -6,10 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
- 
-
 class RecentActivityCard extends StatelessWidget {
-  const RecentActivityCard({super.key, required this.invoices, required this.loading});
+  const RecentActivityCard({
+    super.key,
+    required this.invoices,
+    required this.loading,
+  });
   final List<Invoice> invoices;
   final bool loading;
 
@@ -25,13 +27,21 @@ class RecentActivityCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.update, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Recent Invoice Activity', style: theme.textTheme.titleMedium),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.update, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Recent Invoice Activity',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text('Latest updates and submissions', style: theme.textTheme.bodySmall),
+            Text(
+              'Latest updates and submissions',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             if (loading)
               const BlockLoading(height: 160)
@@ -44,15 +54,28 @@ class RecentActivityCard extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      title: Text(i.provider.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      title: Text(
+                        i.provider.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       subtitle: Wrap(
                         spacing: 12,
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(labelForStatus(i.paymentStatus), style: theme.textTheme.bodySmall),
-                          Text(fmt(i.dates.statementDate), style: theme.textTheme.bodySmall),
+                          Text(
+                            labelForStatus(i.paymentStatus),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          Text(
+                            fmt(i.dates.statementDate),
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ],
                       ),
                       trailing: FittedBox(
@@ -61,11 +84,18 @@ class RecentActivityCard extends StatelessWidget {
                           spacing: 8,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            AmountBadge(text: currency(i.amounts.amountDue ?? i.amounts.total ?? 0)),
+                            AmountBadge(
+                              text: currency(
+                                i.amounts.amountDue ?? i.amounts.total ?? 0,
+                              ),
+                            ),
                             OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.of(context, rootNavigator: true).push(
-                                  MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: i)),
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        InvoiceDetailPage(invoice: i),
+                                  ),
                                 );
                               },
                               icon: const Icon(Icons.remove_red_eye, size: 16),
@@ -86,7 +116,11 @@ class RecentActivityCard extends StatelessWidget {
 }
 
 class PaymentProgressCard extends StatelessWidget {
-  const PaymentProgressCard({super.key, required this.metrics, required this.loading});
+  const PaymentProgressCard({
+    super.key,
+    required this.metrics,
+    required this.loading,
+  });
   final Metrics metrics;
   final bool loading;
 
@@ -114,18 +148,26 @@ class PaymentProgressCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.trending_up, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Payment Progress', style: theme.textTheme.titleMedium),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.trending_up, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Payment Progress', style: theme.textTheme.titleMedium),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text('Your payment completion rate', style: theme.textTheme.bodySmall),
+            Text(
+              'Your payment completion rate',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Paid Invoices', style: theme.textTheme.bodySmall),
-              Text('${(pct * 100).round()}%'),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Paid Invoices', style: theme.textTheme.bodySmall),
+                Text('${(pct * 100).round()}%'),
+              ],
+            ),
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
@@ -135,27 +177,53 @@ class PaymentProgressCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Paid', style: theme.textTheme.bodySmall?.copyWith(color: Colors.green)),
-                  FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(currency(paid), style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ]),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('Remaining', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
-                  FittedBox(
-                    alignment: Alignment.centerRight,
-                    fit: BoxFit.scaleDown,
-                    child: Text(currency(remaining), style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                ]),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paid',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.green,
+                      ),
+                    ),
+                    FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        currency(paid),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Remaining',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                    FittedBox(
+                      alignment: Alignment.centerRight,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        currency(remaining),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            Text('Recent Invoice Insights',
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              'Recent Invoice Insights',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 8),
             const Insight(text: 'Contact insurance for claim status'),
             const Insight(text: 'Explore financial assistance programs'),
@@ -168,7 +236,11 @@ class PaymentProgressCard extends StatelessWidget {
 }
 
 class PaymentStatusChartCard extends StatelessWidget {
-  const PaymentStatusChartCard({super.key, required this.invoices, required this.loading});
+  const PaymentStatusChartCard({
+    super.key,
+    required this.invoices,
+    required this.loading,
+  });
   final List<Invoice> invoices;
   final bool loading;
 
@@ -185,9 +257,15 @@ class PaymentStatusChartCard extends StatelessWidget {
       );
     }
 
-    final paid = invoices.where((i) => i.paymentStatus == PaymentStatus.paid).length;
-    final pending = invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
-    final rejected = invoices.where((i) => i.paymentStatus == PaymentStatus.rejectedInsurance).length;
+    final paid = invoices
+        .where((i) => i.paymentStatus == PaymentStatus.paid)
+        .length;
+    final pending = invoices
+        .where((i) => i.paymentStatus == PaymentStatus.pending)
+        .length;
+    final rejected = invoices
+        .where((i) => i.paymentStatus == PaymentStatus.rejectedInsurance)
+        .length;
     final total = (paid + pending + rejected).clamp(1, 1 << 30);
 
     PieChartSectionData section({required double value, required Color color}) {
@@ -196,7 +274,11 @@ class PaymentStatusChartCard extends StatelessWidget {
         color: color,
         title: '',
         radius: 56,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+        titleStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       );
     }
 
@@ -206,13 +288,21 @@ class PaymentStatusChartCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.pie_chart, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Payment Status Distribution', style: theme.textTheme.titleMedium),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.pie_chart, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Payment Status Distribution',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text('Overview of invoice payment statuses', style: theme.textTheme.bodySmall),
+            Text(
+              'Overview of invoice payment statuses',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             AspectRatio(
               aspectRatio: kIsWeb ? 1.8 : 1.5,
@@ -221,7 +311,10 @@ class PaymentStatusChartCard extends StatelessWidget {
                   sections: [
                     section(value: paid.toDouble(), color: Colors.green),
                     section(value: pending.toDouble(), color: Colors.orange),
-                    section(value: rejected.toDouble(), color: Colors.red.shade600),
+                    section(
+                      value: rejected.toDouble(),
+                      color: Colors.red.shade600,
+                    ),
                   ],
                   centerSpaceRadius: 46,
                   sectionsSpace: 4,
@@ -238,7 +331,10 @@ class PaymentStatusChartCard extends StatelessWidget {
               children: [
                 LegendDot(color: Colors.green, label: 'Paid ($paid)'),
                 LegendDot(color: Colors.orange, label: 'Pending ($pending)'),
-                LegendDot(color: Colors.red.shade600, label: 'Rejected ($rejected)'),
+                LegendDot(
+                  color: Colors.red.shade600,
+                  label: 'Rejected ($rejected)',
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -251,7 +347,11 @@ class PaymentStatusChartCard extends StatelessWidget {
 }
 
 class MonthlyInvoiceTrendsCard extends StatelessWidget {
-  const MonthlyInvoiceTrendsCard({super.key, required this.invoices, required this.loading});
+  const MonthlyInvoiceTrendsCard({
+    super.key,
+    required this.invoices,
+    required this.loading,
+  });
   final List<Invoice> invoices;
   final bool loading;
 
@@ -276,7 +376,9 @@ class MonthlyInvoiceTrendsCard extends StatelessWidget {
       return _MonthBucket(key: key, label: label, date: d);
     });
 
-    final counts = Map<String, int>.fromEntries(months.map((m) => MapEntry(m.key, 0)));
+    final counts = Map<String, int>.fromEntries(
+      months.map((m) => MapEntry(m.key, 0)),
+    );
     for (final inv in invoices) {
       final d = inv.dates.statementDate;
       final key = '${d.year}-${d.month.toString().padLeft(2, '0')}';
@@ -284,19 +386,25 @@ class MonthlyInvoiceTrendsCard extends StatelessWidget {
     }
 
     final bars = months
-        .map((m) => BarChartGroupData(
-              x: months.indexOf(m),
-              barRods: [
-                BarChartRodData(
-                  toY: (counts[m.key] ?? 0).toDouble(),
-                  width: 18,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ))
+        .map(
+          (m) => BarChartGroupData(
+            x: months.indexOf(m),
+            barRods: [
+              BarChartRodData(
+                toY: (counts[m.key] ?? 0).toDouble(),
+                width: 18,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          ),
+        )
         .toList();
 
-    final maxY = (counts.values.isEmpty ? 0 : counts.values.reduce((a, b) => a > b ? a : b)).toDouble();
+    final maxY =
+        (counts.values.isEmpty
+                ? 0
+                : counts.values.reduce((a, b) => a > b ? a : b))
+            .toDouble();
     final yMax = (maxY <= 5) ? 6.0 : maxY + 2.0;
 
     return Card(
@@ -305,24 +413,40 @@ class MonthlyInvoiceTrendsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.bar_chart, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Monthly Invoice Trends', style: theme.textTheme.titleMedium),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.bar_chart, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Monthly Invoice Trends',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text('Invoice volume and amounts over time', style: theme.textTheme.bodySmall),
+            Text(
+              'Invoice volume and amounts over time',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             SizedBox(
               height: 260,
               child: BarChart(
                 BarChartData(
-                  gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 2),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 2,
+                  ),
                   borderData: FlBorderData(show: false),
                   barGroups: bars,
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: true, interval: 2, reservedSize: 28),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 2,
+                        reservedSize: 28,
+                      ),
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
@@ -334,13 +458,20 @@ class MonthlyInvoiceTrendsCard extends StatelessWidget {
                           }
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(months[idx].label, style: const TextStyle(fontSize: 12)),
+                            child: Text(
+                              months[idx].label,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           );
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   barTouchData: BarTouchData(enabled: true),
                   maxY: yMax,
@@ -361,11 +492,13 @@ class Insight extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      const Icon(Icons.check_circle_outline, size: 18),
-      const SizedBox(width: 6),
-      Expanded(child: Text(text)),
-    ]);
+    return Row(
+      children: [
+        const Icon(Icons.check_circle_outline, size: 18),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text)),
+      ],
+    );
   }
 }
 
@@ -378,13 +511,15 @@ class AmountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant.withOpacity(.8),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.8),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: theme.colorScheme.outline.withOpacity(.4)),
       ),
       child: Text(
         text,
-        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -396,11 +531,18 @@ class LegendDot extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-      const SizedBox(width: 6),
-      Text(label),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label),
+      ],
+    );
   }
 }
 

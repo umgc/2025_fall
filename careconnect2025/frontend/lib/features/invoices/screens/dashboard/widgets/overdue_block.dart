@@ -99,7 +99,7 @@ class OverdueTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha:.05),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.colorScheme.error..withValues(alpha: 0.15)),
+        border: Border.all(color: theme.colorScheme.error..withOpacity(0.15)),
       ),
       child: Wrap(
         spacing: 8,

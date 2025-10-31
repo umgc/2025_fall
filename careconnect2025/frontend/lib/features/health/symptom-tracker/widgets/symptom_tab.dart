@@ -3,7 +3,7 @@ import 'symptom_input_form.dart';
 import 'symptom_card.dart';
 
 class SymptomTab extends StatefulWidget {
-  const SymptomTab({Key? key}) : super(key: key);
+  const SymptomTab({super.key});
 
   @override
   State<SymptomTab> createState() => _SymptomTabState();
@@ -16,48 +16,48 @@ class _SymptomTabState extends State<SymptomTab> {
   void initState() {
     super.initState();
     _symptoms = [
-    {
-      'title': 'Suicidal thoughts',
-      'severity': 'severe',
-      'time': 'Today at 2:15 PM',
-      'description':
-          'Patient expressing thoughts of self-harm. Immediate intervention required.',
-      'requiresAttention': true,
-      'caregiverAlert': true,
-    },
-    {
-      'title': 'Anxiety',
-      'severity': 'moderate',
-      'time': 'Yesterday at 6:30 PM',
-      'description': 'Increased worry about upcoming medical appointment',
-      'requiresAttention': false,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Depression',
-      'severity': 'moderate',
-      'time': '2 days ago at 10:45 AM',
-      'description': 'Persistent feelings of sadness and hopelessness',
-      'requiresAttention': true,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Sleep disturbance',
-      'severity': 'mild',
-      'time': '3 days ago at 11:30 PM',
-      'description': 'Difficulty falling asleep, frequent nightmares',
-      'requiresAttention': false,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Panic attack',
-      'severity': 'severe',
-      'time': '4 days ago at 3:20 PM',
-      'description': 'Sudden onset of intense fear with physical symptoms',
-      'requiresAttention': true,
-      'caregiverAlert': true,
-    },
-  ];
+      {
+        'title': 'Suicidal thoughts',
+        'severity': 'severe',
+        'time': 'Today at 2:15 PM',
+        'description':
+            'Patient expressing thoughts of self-harm. Immediate intervention required.',
+        'requiresAttention': true,
+        'caregiverAlert': true,
+      },
+      {
+        'title': 'Anxiety',
+        'severity': 'moderate',
+        'time': 'Yesterday at 6:30 PM',
+        'description': 'Increased worry about upcoming medical appointment',
+        'requiresAttention': false,
+        'caregiverAlert': false,
+      },
+      {
+        'title': 'Depression',
+        'severity': 'moderate',
+        'time': '2 days ago at 10:45 AM',
+        'description': 'Persistent feelings of sadness and hopelessness',
+        'requiresAttention': true,
+        'caregiverAlert': false,
+      },
+      {
+        'title': 'Sleep disturbance',
+        'severity': 'mild',
+        'time': '3 days ago at 11:30 PM',
+        'description': 'Difficulty falling asleep, frequent nightmares',
+        'requiresAttention': false,
+        'caregiverAlert': false,
+      },
+      {
+        'title': 'Panic attack',
+        'severity': 'severe',
+        'time': '4 days ago at 3:20 PM',
+        'description': 'Sudden onset of intense fear with physical symptoms',
+        'requiresAttention': true,
+        'caregiverAlert': true,
+      },
+    ];
   }
 
   void _addSymptom(Map<String, dynamic> symptomData) {

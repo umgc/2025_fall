@@ -35,7 +35,7 @@ class CurrentMoodWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
+            color: theme.shadowColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -96,7 +96,7 @@ class CurrentMoodWidget extends StatelessWidget {
                 date == null ? 'Today' : _formatDate(date!),
                 style: TextStyle(
                   fontSize: 14,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -118,7 +118,7 @@ class CurrentMoodWidget extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                        color: theme.colorScheme.primary.withOpacity(0.3),
                         width: 1,
                       ),
                     ),

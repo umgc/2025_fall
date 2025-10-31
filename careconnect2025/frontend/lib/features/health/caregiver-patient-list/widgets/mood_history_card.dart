@@ -36,7 +36,7 @@ class MoodHistorySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cardBg = theme.colorScheme.surface;
-    final border = theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
+    final border = theme.colorScheme.outlineVariant.withOpacity(0.35);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -97,7 +97,7 @@ class MoodHistorySection extends StatelessWidget {
                   child: Text(
                     'Missing score for ${e.label} on ${_fmtDate(e.date)}',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 );
@@ -125,7 +125,7 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.25),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -206,7 +206,7 @@ class _MoodRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -218,7 +218,7 @@ class _MoodRow extends StatelessWidget {
             child: Text(
               _fmtDate(date),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                color: theme.colorScheme.onSurface.withOpacity(0.55),
               ),
             ),
           ),
@@ -228,11 +228,11 @@ class _MoodRow extends StatelessWidget {
             width: 36, height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.9),
+              color: Colors.white.withOpacity(0.9),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: Colors.black.withOpacity(0.04),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -263,7 +263,7 @@ class _MoodRow extends StatelessWidget {
                     Text(
                       'Score: $score5/5',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -278,7 +278,7 @@ class _MoodRow extends StatelessWidget {
                   Text(
                     note!,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                      color: theme.colorScheme.onSurface.withOpacity(0.75),
                     ),
                   ),
                 ],
@@ -299,7 +299,7 @@ class _ProgressLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bg = theme.colorScheme.primary.withValues(alpha: 0.15);
+    final bg = theme.colorScheme.primary.withOpacity(0.15);
     final fg = theme.colorScheme.primary;
 
     return LayoutBuilder(

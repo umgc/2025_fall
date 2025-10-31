@@ -283,7 +283,7 @@ Map<String, String> _mergedQueryParamsFromUriBase() {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
+                          color: Colors.black.withOpacity(0.08),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -579,7 +579,7 @@ Map<String, String> _mergedQueryParamsFromUriBase() {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xff1e3a8a),
                             disabledBackgroundColor:
-                                const Color(0xff1e3a8a).withValues(alpha: 0.6),
+                                const Color(0xff1e3a8a).withOpacity(0.6),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),

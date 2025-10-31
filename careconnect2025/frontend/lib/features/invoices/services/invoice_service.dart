@@ -26,21 +26,27 @@ class InvoiceService {
   }) async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(ApiConstants.invoices).replace(queryParameters: _cleanQueryParams({
-        'search': _nz(search),
-        'status': status == null || status.isEmpty ? null : status.map(_paymentStatusToWire).join(','),
-        'providerName': _nz(providerName),
-        'patientName': _nz(patientName),
-        'dueStart': dueRange == null ? null : _dateOnly(dueRange.start),
-        'dueEnd': dueRange == null ? null : _dateOnly(dueRange.end),
-        'amountMin': amountRange == null ? null : amountRange.start.toString(),
-        'amountMax': amountRange == null ? null : amountRange.end.toString(),
-        'sort': _nz(sort),
-        'page': page?.toString(),
-        'pageSize': pageSize?.toString(),
-      }));
+      final uri = Uri.parse(ApiConstants.invoices).replace(
+        queryParameters: _cleanQueryParams({
+          'search': _nz(search),
+          'status': status == null || status.isEmpty
+              ? null
+              : status.map(_paymentStatusToWire).join(','),
+          'providerName': _nz(providerName),
+          'patientName': _nz(patientName),
+          'dueStart': dueRange == null ? null : _dateOnly(dueRange.start),
+          'dueEnd': dueRange == null ? null : _dateOnly(dueRange.end),
+          'amountMin': amountRange?.start.toString(),
+          'amountMax': amountRange?.end.toString(),
+          'sort': _nz(sort),
+          'page': page?.toString(),
+          'pageSize': pageSize?.toString(),
+        }),
+      );
 
-      final resp = await http.get(uri, headers: headers).timeout(const Duration(seconds: 20));
+      final resp = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 20));
       if (resp.statusCode != 200) {
         print('Failed to fetch invoices: ${resp.statusCode} ${resp.body}');
         return <Invoice>[];
@@ -48,7 +54,9 @@ class InvoiceService {
 
       final body = jsonDecode(resp.body);
       if (body is List) {
-        return body.map<Invoice>((e) => _invoiceFromJson(e as Map<String, dynamic>)).toList();
+        return body
+            .map<Invoice>((e) => _invoiceFromJson(e as Map<String, dynamic>))
+            .toList();
       }
       if (body is Map && body['items'] is List) {
         return (body['items'] as List)
@@ -69,7 +77,9 @@ class InvoiceService {
       final headers = await AuthTokenManager.getAuthHeaders();
       final uri = Uri.parse('${ApiConstants.invoices}/$id');
 
-      final resp = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+      final resp = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
       if (resp.statusCode != 200) {
         print('Failed to fetch invoice $id: ${resp.statusCode}');
         return null;
@@ -121,7 +131,9 @@ class InvoiceService {
           .timeout(const Duration(seconds: 20));
 
       if (resp.statusCode != 200) {
-        print('Failed to update invoice ${invoice.id}: ${resp.statusCode} ${resp.body}');
+        print(
+          'Failed to update invoice ${invoice.id}: ${resp.statusCode} ${resp.body}',
+        );
         return null;
       }
       final map = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -137,7 +149,9 @@ class InvoiceService {
       final headers = await AuthTokenManager.getAuthHeaders();
       final uri = Uri.parse('${ApiConstants.invoices}/$id');
 
-      final resp = await http.delete(uri, headers: headers).timeout(const Duration(seconds: 15));
+      final resp = await http
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
       if (resp.statusCode == 204 || resp.statusCode == 200) {
         return true;
       }
@@ -192,9 +206,13 @@ class InvoiceService {
   }) async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse('${ApiConstants.invoices}/$invoiceId/payments/$paymentId');
+      final uri = Uri.parse(
+        '${ApiConstants.invoices}/$invoiceId/payments/$paymentId',
+      );
 
-      final resp = await http.delete(uri, headers: headers).timeout(const Duration(seconds: 15));
+      final resp = await http
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
       if (resp.statusCode != 200) {
         print('Failed to delete payment: ${resp.statusCode} ${resp.body}');
         return null;
@@ -209,7 +227,8 @@ class InvoiceService {
 
   // ---------- PDF helpers (optional) ----------
 
-  String pdfDownloadUrl(String invoiceId) => '${ApiConstants.invoices}/$invoiceId/pdf';
+  String pdfDownloadUrl(String invoiceId) =>
+      '${ApiConstants.invoices}/$invoiceId/pdf';
 
   Future<bool> openPdf(String invoiceId) async {
     final url = pdfDownloadUrl(invoiceId);
@@ -255,7 +274,9 @@ class InvoiceService {
       paymentStatus: _paymentStatusFromWire(j['paymentStatus'] as String?),
       billedToInsurance: j['billedToInsurance'] as bool? ?? false,
       amounts: _amountsFromJson(j['amounts'] as Map<String, dynamic>?),
-      paymentReferences: _payRefsFromJson(j['paymentReferences'] as Map<String, dynamic>?),
+      paymentReferences: _payRefsFromJson(
+        j['paymentReferences'] as Map<String, dynamic>?,
+      ),
       checkPayableTo: j['checkPayableTo'] == null
           ? null
           : _checkPayableFromJson(j['checkPayableTo'] as Map<String, dynamic>),
@@ -287,7 +308,9 @@ class InvoiceService {
       'billedToInsurance': i.billedToInsurance,
       'amounts': _amountsToJson(i.amounts),
       'paymentReferences': _payRefsToJson(i.paymentReferences),
-      'checkPayableTo': i.checkPayableTo == null ? null : _checkPayableToJson(i.checkPayableTo!),
+      'checkPayableTo': i.checkPayableTo == null
+          ? null
+          : _checkPayableToJson(i.checkPayableTo!),
       'createdAt': i.createdAt,
       'updatedAt': i.updatedAt,
       'createdBy': i.createdBy,
@@ -305,123 +328,126 @@ class InvoiceService {
   }
 
   ProviderInfo _providerFromJson(Map<String, dynamic> j) => ProviderInfo(
-        name: j['name'] as String? ?? '',
-        address: j['address'] as String? ?? '',
-        phone: j['phone'] as String? ?? '',
-        email: j['email'] as String?,
-      );
+    name: j['name'] as String? ?? '',
+    address: j['address'] as String? ?? '',
+    phone: j['phone'] as String? ?? '',
+    email: j['email'] as String?,
+  );
 
   Map<String, dynamic> _providerToJson(ProviderInfo p) => {
-        'name': p.name,
-        'address': p.address,
-        'phone': p.phone,
-        'email': p.email,
-      };
+    'name': p.name,
+    'address': p.address,
+    'phone': p.phone,
+    'email': p.email,
+  };
 
   PatientInfo _patientFromJson(Map<String, dynamic> j) => PatientInfo(
-        name: j['name'] as String? ?? '',
-        address: j['address'] as String?,
-        accountNumber: j['accountNumber'] as String?,
-        billingAddress: j['billingAddress'] as String?,
-      );
+    name: j['name'] as String? ?? '',
+    address: j['address'] as String?,
+    accountNumber: j['accountNumber'] as String?,
+    billingAddress: j['billingAddress'] as String?,
+  );
 
   Map<String, dynamic> _patientToJson(PatientInfo p) => {
-        'name': p.name,
-        'address': p.address,
-        'accountNumber': p.accountNumber,
-        'billingAddress': p.billingAddress,
-      };
+    'name': p.name,
+    'address': p.address,
+    'accountNumber': p.accountNumber,
+    'billingAddress': p.billingAddress,
+  };
 
   InvoiceDates _datesFromJson(Map<String, dynamic> j) => InvoiceDates(
-        statementDate: _parseDate(j['statementDate']),
-        dueDate: _parseDate(j['dueDate']),
-        paidDate: j['paidDate'] == null ? null : _parseDate(j['paidDate']),
-      );
+    statementDate: _parseDate(j['statementDate']),
+    dueDate: _parseDate(j['dueDate']),
+    paidDate: j['paidDate'] == null ? null : _parseDate(j['paidDate']),
+  );
 
   Map<String, dynamic> _datesToJson(InvoiceDates d) => {
-        'statementDate': d.statementDate.toIso8601String(),
-        'dueDate': d.dueDate.toIso8601String(),
-        'paidDate': d.paidDate?.toIso8601String(),
-      };
+    'statementDate': d.statementDate.toIso8601String(),
+    'dueDate': d.dueDate.toIso8601String(),
+    'paidDate': d.paidDate?.toIso8601String(),
+  };
 
   ServiceLine _serviceFromJson(Map<String, dynamic> j) => ServiceLine(
-        description: j['description'] as String?,
-        serviceCode: j['serviceCode'] as String?,
-        serviceDate: j['serviceDate'] == null ? null : _parseDate(j['serviceDate']),
-        charge: _asDouble(j['charge']),
-        patientBalance: _asDouble(j['patientBalance']),
-        insuranceAdjustments: _asDouble(j['insuranceAdjustments']),
-      );
+    description: j['description'] as String?,
+    serviceCode: j['serviceCode'] as String?,
+    serviceDate: j['serviceDate'] == null ? null : _parseDate(j['serviceDate']),
+    charge: _asDouble(j['charge']),
+    patientBalance: _asDouble(j['patientBalance']),
+    insuranceAdjustments: _asDouble(j['insuranceAdjustments']),
+  );
 
   Map<String, dynamic> _serviceToJson(ServiceLine s) => {
-        'description': s.description,
-        'serviceCode': s.serviceCode,
-        'serviceDate': s.serviceDate?.toIso8601String(),
-        'charge': s.charge,
-        'patientBalance': s.patientBalance,
-        'insuranceAdjustments': s.insuranceAdjustments,
-      };
+    'description': s.description,
+    'serviceCode': s.serviceCode,
+    'serviceDate': s.serviceDate?.toIso8601String(),
+    'charge': s.charge,
+    'patientBalance': s.patientBalance,
+    'insuranceAdjustments': s.insuranceAdjustments,
+  };
 
   Amounts _amountsFromJson(Map<String, dynamic>? j) => Amounts(
-        totalCharges: _asDouble(j?['totalCharges']),
-        totalAdjustments: _asDouble(j?['totalAdjustments']),
-        total: _asDouble(j?['total']),
-        amountDue: _asDouble(j?['amountDue']),
-      );
+    totalCharges: _asDouble(j?['totalCharges']),
+    totalAdjustments: _asDouble(j?['totalAdjustments']),
+    total: _asDouble(j?['total']),
+    amountDue: _asDouble(j?['amountDue']),
+  );
 
   Map<String, dynamic> _amountsToJson(Amounts a) => {
-        'totalCharges': a.totalCharges,
-        'totalAdjustments': a.totalAdjustments,
-        'total': a.total,
-        'amountDue': a.amountDue,
-      };
+    'totalCharges': a.totalCharges,
+    'totalAdjustments': a.totalAdjustments,
+    'total': a.total,
+    'amountDue': a.amountDue,
+  };
 
-  PaymentReferences _payRefsFromJson(Map<String, dynamic>? j) => PaymentReferences(
+  PaymentReferences _payRefsFromJson(Map<String, dynamic>? j) =>
+      PaymentReferences(
         paymentLink: j?['paymentLink'] as String?,
         qrCodeUrl: j?['qrCodeUrl'] as String?,
         notes: j?['notes'] as String?,
-        supportedMethods: (j?['supportedMethods'] as List?)
+        supportedMethods:
+            (j?['supportedMethods'] as List?)
                 ?.map<String>((e) => e.toString())
                 .toList() ??
             const <String>[],
       );
 
   Map<String, dynamic> _payRefsToJson(PaymentReferences p) => {
-        'paymentLink': p.paymentLink,
-        'qrCodeUrl': p.qrCodeUrl,
-        'notes': p.notes,
-        'supportedMethods': p.supportedMethods.toList(),
-      };
+    'paymentLink': p.paymentLink,
+    'qrCodeUrl': p.qrCodeUrl,
+    'notes': p.notes,
+    'supportedMethods': p.supportedMethods.toList(),
+  };
 
-  CheckPayableTo _checkPayableFromJson(Map<String, dynamic> j) => CheckPayableTo(
+  CheckPayableTo _checkPayableFromJson(Map<String, dynamic> j) =>
+      CheckPayableTo(
         name: j['name'] as String? ?? '',
         address: j['address'] as String? ?? '',
         reference: j['reference'] as String? ?? '',
       );
 
   Map<String, dynamic> _checkPayableToJson(CheckPayableTo c) => {
-        'name': c.name,
-        'address': c.address,
-        'reference': c.reference,
-      };
+    'name': c.name,
+    'address': c.address,
+    'reference': c.reference,
+  };
 
   HistoryEntry _historyFromJson(Map<String, dynamic> j) => HistoryEntry(
-        version: (j['version'] as num?)?.toInt() ?? 1,
-        changes: j['changes'] as String? ?? '',
-        userId: j['userId'] as String? ?? '',
-        action: j['action'] as String? ?? '',
-        details: j['details'] as String? ?? '',
-        timestamp: j['timestamp'] as String? ?? DateTime.now().toIso8601String(),
-      );
+    version: (j['version'] as num?)?.toInt() ?? 1,
+    changes: j['changes'] as String? ?? '',
+    userId: j['userId'] as String? ?? '',
+    action: j['action'] as String? ?? '',
+    details: j['details'] as String? ?? '',
+    timestamp: j['timestamp'] as String? ?? DateTime.now().toIso8601String(),
+  );
 
   Map<String, dynamic> _historyToJson(HistoryEntry h) => {
-        'version': h.version,
-        'changes': h.changes,
-        'userId': h.userId,
-        'action': h.action,
-        'details': h.details,
-        'timestamp': h.timestamp,
-      };
+    'version': h.version,
+    'changes': h.changes,
+    'userId': h.userId,
+    'action': h.action,
+    'details': h.details,
+    'timestamp': h.timestamp,
+  };
 
   // ---------- Low-level utils ----------
 

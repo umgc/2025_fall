@@ -36,13 +36,13 @@ class AlertNotification extends StatelessWidget {
     final theme = Theme.of(context);
     switch (type) {
       case AlertType.important:
-        return theme.colorScheme.error.withValues(alpha: 0.3);
+        return theme.colorScheme.error.withOpacity(0.3);
       case AlertType.reminder:
-        return theme.colorScheme.secondary.withValues(alpha: 0.3);
+        return theme.colorScheme.secondary.withOpacity(0.3);
       case AlertType.success:
-        return theme.colorScheme.outline.withValues(alpha: 0.3);
+        return theme.colorScheme.outline.withOpacity(0.3);
       case AlertType.info:
-        return theme.colorScheme.primary.withValues(alpha: 0.3);
+        return theme.colorScheme.primary.withOpacity(0.3);
     }
   }
 
@@ -111,7 +111,7 @@ class AlertNotification extends StatelessWidget {
                   TextSpan(
                     text: message,
                     style: TextStyle(
-                      color: _getTextColor(context).withValues(alpha: 0.8),
+                      color: _getTextColor(context).withOpacity(0.8),
                       fontSize: 14,
                     ),
                   ),

@@ -426,7 +426,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: theme.colorScheme.error.withValues(alpha: 0.6),
+                    color: theme.colorScheme.error.withOpacity(0.6),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -718,9 +718,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: primaryColorLight.withValues(alpha: 0.1),
+          color: primaryColorLight.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+          border: Border.all(color: primaryColor.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

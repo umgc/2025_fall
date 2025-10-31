@@ -2,11 +2,11 @@ import 'dart:io';
 import 'package:care_connect_app/features/invoices/services/ocr_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
- 
+
 class OcrReviewScreen extends StatefulWidget {
   final List<XFile> images;
 
-  const OcrReviewScreen({Key? key, required this.images}) : super(key: key);
+  const OcrReviewScreen({super.key, required this.images});
 
   @override
   State<OcrReviewScreen> createState() => _OcrReviewScreenState();
@@ -111,14 +111,18 @@ class _OcrReviewScreenState extends State<OcrReviewScreen> {
             onPressed: _busy || _images.isEmpty
                 ? null
                 : () => setState(() => _showBoxes = !_showBoxes),
-            icon: Icon(_showBoxes ? Icons.crop_square : Icons.crop_square_outlined),
+            icon: Icon(
+              _showBoxes ? Icons.crop_square : Icons.crop_square_outlined,
+            ),
           ),
           TextButton(
             onPressed: (_busy || _images.isEmpty) ? null : _finish,
             child: Text(
               'Done',
               style: TextStyle(
-                color: (_busy || _images.isEmpty) ? cs.onSurface.withOpacity(0.38) : cs.onPrimary,
+                color: (_busy || _images.isEmpty)
+                    ? cs.onSurface.withOpacity(0.38)
+                    : cs.onPrimary,
               ),
             ),
           ),
@@ -127,124 +131,142 @@ class _OcrReviewScreenState extends State<OcrReviewScreen> {
       body: _busy
           ? const Center(child: CircularProgressIndicator())
           : _images.isEmpty
-              ? const Center(child: Text('No images'))
-              : Column(
-                  children: [
-                    if (_error != null)
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: cs.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
+          ? const Center(child: Text('No images'))
+          : Column(
+              children: [
+                if (_error != null)
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: cs.onErrorContainer),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: cs.onErrorContainer),
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.error_outline, color: cs.onErrorContainer),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _error!,
-                                style: TextStyle(color: cs.onErrorContainer),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _runOcr,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                        TextButton(
+                          onPressed: _runOcr,
+                          child: const Text('Retry'),
                         ),
-                      ),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _images.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                        itemBuilder: (context, i) {
-                          final img = _images[i];
-                          final path = img.path;
-                          final controller = _controllers[path] ?? TextEditingController();
-                          _controllers[path] = controller;
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _images.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    itemBuilder: (context, i) {
+                      final img = _images[i];
+                      final path = img.path;
+                      final controller =
+                          _controllers[path] ?? TextEditingController();
+                      _controllers[path] = controller;
 
-                          final rich = _richByPath[path];
-                          final boxes = rich?.lines.map((e) => e.box).toList() ?? const <BBox>[];
-                          final qrs = rich?.qrcodes ?? const <OcrQr>[];
+                      final rich = _richByPath[path];
+                      final boxes =
+                          rich?.lines.map((e) => e.box).toList() ??
+                          const <BBox>[];
+                      final qrs = rich?.qrcodes ?? const <OcrQr>[];
 
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Stack(
                                 children: [
-                                  Stack(
-                                    children: [
-                                      AspectRatio(
-                                        aspectRatio: 4 / 3,
-                                        child: Image.file(File(path), fit: BoxFit.cover),
+                                  AspectRatio(
+                                    aspectRatio: 4 / 3,
+                                    child: Image.file(
+                                      File(path),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  if (_showBoxes && boxes.isNotEmpty)
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: CustomPaint(
+                                          painter: BoxesPainter(boxes),
+                                        ),
                                       ),
-                                      if (_showBoxes && boxes.isNotEmpty)
-                                        Positioned.fill(
-                                          child: IgnorePointer(
-                                            child: CustomPaint(painter: BoxesPainter(boxes)),
+                                    ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Re-run OCR',
+                                          onPressed: _busy
+                                              ? null
+                                              : () => _rerunSingle(i),
+                                          icon: const Icon(Icons.refresh),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Remove',
+                                          onPressed: _busy
+                                              ? null
+                                              : () => _removeAt(i),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
                                           ),
                                         ),
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              tooltip: 'Re-run OCR',
-                                              onPressed: _busy ? null : () => _rerunSingle(i),
-                                              icon: const Icon(Icons.refresh),
-                                            ),
-                                            IconButton(
-                                              tooltip: 'Remove',
-                                              onPressed: _busy ? null : () => _removeAt(i),
-                                              icon: const Icon(Icons.delete_outline),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (qrs.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: qrs
-                                          .map(
-                                            (q) => InputChip(
-                                              label: Text(q.value.isEmpty ? '(empty)' : q.value),
-                                              onPressed: () {
-                                                // optionally copy or open URLs here
-                                              },
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 12),
-                                  TextField(
-                                    controller: controller,
-                                    minLines: 3,
-                                    maxLines: 12,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Extracted text',
-                                      border: OutlineInputBorder(),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                              if (qrs.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: qrs
+                                      .map(
+                                        (q) => InputChip(
+                                          label: Text(
+                                            q.value.isEmpty
+                                                ? '(empty)'
+                                                : q.value,
+                                          ),
+                                          onPressed: () {
+                                            // optionally copy or open URLs here
+                                          },
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: controller,
+                                minLines: 3,
+                                maxLines: 12,
+                                decoration: const InputDecoration(
+                                  labelText: 'Extracted text',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
+              ],
+            ),
       bottomNavigationBar: _busy || _images.isEmpty
           ? null
           : SafeArea(

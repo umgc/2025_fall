@@ -682,7 +682,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -782,7 +782,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -1070,7 +1070,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: deviceColor.withValues(alpha: 0.1),
+                color: deviceColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -1115,7 +1115,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
+                    color: Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Text(
@@ -1134,7 +1134,7 @@ class _WearablesScreenState extends State<WearablesScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: Colors.red.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

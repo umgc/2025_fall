@@ -49,24 +49,28 @@ class InvoiceOcrLlmApi {
 
     // PDFs (from paths)
     for (final path in pdfPaths) {
-      req.files.add(await http.MultipartFile.fromPath(
-        'files',
-        path,
-        filename: p.basename(path),
-        contentType: MediaType('application', 'pdf'),
-      ));
+      req.files.add(
+        await http.MultipartFile.fromPath(
+          'files',
+          path,
+          filename: p.basename(path),
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
     }
 
     // <-- 2. NEW LOGIC BLOCK ADDED HERE
     // PDFs (from bytes)
     int pdfBytesCounter = 0;
     for (final bytes in pdfBytes) {
-      req.files.add(http.MultipartFile.fromBytes(
-        'files',
-        bytes,
-        filename: 'upload_${pdfBytesCounter++}.pdf', // Generate a filename
-        contentType: MediaType('application', 'pdf'),
-      ));
+      req.files.add(
+        http.MultipartFile.fromBytes(
+          'files',
+          bytes,
+          filename: 'upload_${pdfBytesCounter++}.pdf', // Generate a filename
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
     }
     // END OF NEW LOGIC BLOCK
 
@@ -80,7 +84,9 @@ class InvoiceOcrLlmApi {
 
     // New shape: { invoice: {...}, duplicate: bool, message, duplicateId, duplicateInvoiceNumber }
     if (body is Map && body['invoice'] is Map) {
-      final inv = _mapInvoiceDtoToClient(body['invoice'] as Map<String, dynamic>);
+      final inv = _mapInvoiceDtoToClient(
+        body['invoice'] as Map<String, dynamic>,
+      );
       return InvoiceResponseDto(
         invoice: inv,
         duplicate: body['duplicate'] == true,
@@ -136,12 +142,13 @@ MediaType _mediaTypeFromString(String mime) {
   return MediaType('application', 'octet-stream');
 }
 
-
 String _normalizedNameForMime(String original, MediaType media) {
   final base = p.basenameWithoutExtension(original);
   final ext = () {
     if (media.type == 'image' && media.subtype == 'png') return '.png';
-    if (media.type == 'image' && (media.subtype == 'jpeg' || media.subtype == 'jpg')) return '.jpg';
+    if (media.type == 'image' &&
+        (media.subtype == 'jpeg' || media.subtype == 'jpg'))
+      return '.jpg';
     if (media.type == 'application' && media.subtype == 'pdf') return '.pdf';
     return p.extension(original).isEmpty ? '.bin' : p.extension(original);
   }();
@@ -160,7 +167,9 @@ bool _looksLikeHeic(Uint8List bytes, String? ext, String? mime) {
         sig.startsWith('ftypheix') ||
         sig.startsWith('ftyphevc') ||
         sig.startsWith('ftypmif1') ||
-        sig.startsWith('ftypmsf1')) return true;
+        sig.startsWith('ftypmsf1')) {
+      return true;
+    }
   }
   return false;
 }
@@ -177,7 +186,7 @@ Future<Uint8List> _heicBytesToPng(Uint8List heic) async {
 
 // Maps server InvoiceDto -> client Invoice model
 Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
-  T? _m<T>(String k) => j[k] as T?;
+  T? m<T>(String k) => j[k] as T?;
 
   final providerMap = j['provider'] as Map<String, dynamic>?;
   final patientMap = j['patient'] as Map<String, dynamic>?;
@@ -240,10 +249,10 @@ Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
 
   final check = (checkPayable != null)
       ? CheckPayableTo(
-    name: _str(checkPayable['name']),
-    address: _str(checkPayable['address']),
-    reference: _str(checkPayable['reference']),
-  )
+          name: _str(checkPayable['name']),
+          address: _str(checkPayable['address']),
+          reference: _str(checkPayable['reference']),
+        )
       : null;
 
   final history = historyList.map<HistoryEntry>((e) {
@@ -274,25 +283,25 @@ Invoice _mapInvoiceDtoToClient(Map<String, dynamic> j) {
   final recActions = _stringList(j['recommendedActions']);
 
   return Invoice(
-    id: _m<String>('id') ?? '',
-    invoiceNumber: _m<String>('invoiceNumber') ?? '',
+    id: m<String>('id') ?? '',
+    invoiceNumber: m<String>('invoiceNumber') ?? '',
     provider: provider,
     patient: patient,
     dates: dates,
     services: services,
-    paymentStatus: _paymentStatusFromWire(_m<String>('paymentStatus')),
+    paymentStatus: _paymentStatusFromWire(m<String>('paymentStatus')),
     billedToInsurance: j['billedToInsurance'] as bool? ?? false,
     amounts: amounts,
     paymentReferences: refs,
     checkPayableTo: check,
-    createdAt: _m<String>('createdAt') ?? nowIso,
-    updatedAt: _m<String>('updatedAt') ?? nowIso,
-    createdBy: _m<String>('createdBy') ?? 'system',
-    updatedBy: _m<String>('updatedBy') ?? 'system',
-    documentLink: _m<String>('documentLink'),
+    createdAt: m<String>('createdAt') ?? nowIso,
+    updatedAt: m<String>('updatedAt') ?? nowIso,
+    createdBy: m<String>('createdBy') ?? 'system',
+    updatedBy: m<String>('updatedBy') ?? 'system',
+    documentLink: m<String>('documentLink'),
     history: history,
     payments: payments,
-    aiSummary: _m<String>('aiSummary'),
+    aiSummary: m<String>('aiSummary'),
     recommendedActions: recActions,
   );
 }
@@ -325,21 +334,21 @@ List<String> _stringList(Object? v) {
 
 PaymentStatus _paymentStatusFromWire(String? s) {
   switch ((s ?? '').toLowerCase()) {
-  case 'pending':
-  return PaymentStatus.pending;
-  case 'overdue':
-  return PaymentStatus.overdue;
-  case 'pendinginsurance':
-  return PaymentStatus.pendingInsurance;
-  case 'sent':
-  return PaymentStatus.sent;
-  case 'paid':
-  return PaymentStatus.paid;
-  case 'partialpayment':
-  return PaymentStatus.partialPayment;
-  case 'rejectedinsurance':
-  return PaymentStatus.rejectedInsurance;
-  default:
-  return PaymentStatus.pending;
+    case 'pending':
+      return PaymentStatus.pending;
+    case 'overdue':
+      return PaymentStatus.overdue;
+    case 'pendinginsurance':
+      return PaymentStatus.pendingInsurance;
+    case 'sent':
+      return PaymentStatus.sent;
+    case 'paid':
+      return PaymentStatus.paid;
+    case 'partialpayment':
+      return PaymentStatus.partialPayment;
+    case 'rejectedinsurance':
+      return PaymentStatus.rejectedInsurance;
+    default:
+      return PaymentStatus.pending;
   }
 }

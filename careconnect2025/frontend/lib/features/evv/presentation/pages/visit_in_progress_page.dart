@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
 import '../../../../config/theme/app_theme.dart';
@@ -15,7 +14,7 @@ class VisitInProgressPage extends StatefulWidget {
   final String locationType;
   final double? latitude;
   final double? longitude;
-  
+
   const VisitInProgressPage({
     super.key,
     required this.patientId,
@@ -35,7 +34,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
   String? _error;
   String _checkInLocation = '';
   DateTime? _checkInTime;
-  
+
   // Timer variables
   Timer? _timer;
   Duration _elapsedTime = Duration.zero;
@@ -63,7 +62,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
     setState(() {
       _isTimerRunning = true;
     });
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _elapsedTime = Duration(seconds: _elapsedTime.inSeconds + 1);
@@ -80,7 +79,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -91,7 +90,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         // Find the specific patient
         for (var json in data) {
           try {
@@ -113,7 +112,7 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
                 _selectedPatient = patient;
                 _isLoading = false;
               });
-              
+
               // Set check-in location based on location type
               _setCheckInLocation(patient);
               return;
@@ -122,10 +121,12 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
             print('Error parsing patient: $e');
           }
         }
-        
+
         throw Exception('Patient not found');
       } else {
-        throw Exception('Failed to load patient details: ${response.statusCode}');
+        throw Exception(
+          'Failed to load patient details: ${response.statusCode}',
+        );
       }
     } catch (e) {
       setState(() {
@@ -141,9 +142,12 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
       setState(() {
         _checkInLocation = address;
       });
-    } else if (widget.locationType == 'gps' && widget.latitude != null && widget.longitude != null) {
+    } else if (widget.locationType == 'gps' &&
+        widget.latitude != null &&
+        widget.longitude != null) {
       setState(() {
-        _checkInLocation = 'GPS: ${widget.latitude!.toStringAsFixed(6)}, ${widget.longitude!.toStringAsFixed(6)}';
+        _checkInLocation =
+            'GPS: ${widget.latitude!.toStringAsFixed(6)}, ${widget.longitude!.toStringAsFixed(6)}';
       });
     }
   }
@@ -188,7 +192,9 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
 
   void _readyToCheckOut() {
     // Navigate to Check-Out Location page
-    context.push('/evv/checkout-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(widget.serviceType)}&locationType=${widget.locationType}&notes=${Uri.encodeComponent(_notesController.text)}&duration=${_elapsedTime.inSeconds}');
+    context.push(
+      '/evv/checkout-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(widget.serviceType)}&locationType=${widget.locationType}&notes=${Uri.encodeComponent(_notesController.text)}&duration=${_elapsedTime.inSeconds}',
+    );
   }
 
   @override
@@ -216,15 +222,15 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return _buildErrorState();
     }
-    
+
     if (_selectedPatient == null) {
       return _buildPatientNotFoundState();
     }
-    
+
     return _buildVisitInProgress();
   }
 
@@ -339,9 +345,14 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
                 ),
                 // Timer
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -390,11 +401,16 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 _buildDetailRow('Patient:', fullName),
                 _buildDetailRow('MA Number:', maNumber),
                 _buildDetailRow('Service:', widget.serviceType),
-                _buildDetailRow('Check-in Time:', _checkInTime != null ? _formatCheckInTime(_checkInTime!) : 'Unknown'),
+                _buildDetailRow(
+                  'Check-in Time:',
+                  _checkInTime != null
+                      ? _formatCheckInTime(_checkInTime!)
+                      : 'Unknown',
+                ),
                 _buildDetailRow('Check-in Location:', _checkInLocation),
               ],
             ),
@@ -493,7 +509,9 @@ class _VisitInProgressPageState extends State<VisitInProgressPage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onPrimaryContainer.withOpacity(0.7),
               ),
             ),
           ),

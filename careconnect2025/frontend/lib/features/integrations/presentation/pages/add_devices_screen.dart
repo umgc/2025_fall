@@ -559,7 +559,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: (platform['color'] as Color).withValues(alpha: 0.1),
+                                            color: (platform['color'] as Color).withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
@@ -624,7 +624,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     height: 80,
                     decoration: BoxDecoration(
                       color: (selectedPlatformData['color'] as Color)
-                          .withValues(alpha: 0.1),
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
@@ -714,7 +714,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: Colors.red.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.error, color: Colors.red, size: 30),
@@ -772,7 +772,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
+              color: Colors.green.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(

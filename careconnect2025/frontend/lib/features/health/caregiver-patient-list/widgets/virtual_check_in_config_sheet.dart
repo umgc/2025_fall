@@ -36,7 +36,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final border = cs.outlineVariant.withValues(alpha: .35);
+    final border = cs.outlineVariant.withOpacity(.35);
 
     return SafeArea(
       top: false,
@@ -134,7 +134,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                                     context,
                                     label: '#${i + 1}',
                                     borderColor: cs.surfaceContainerHighest
-                                        .withValues(alpha: .25),
+                                        .withOpacity(.25),
                                     textColor: cs.onSurfaceVariant,
                                   ),
 
@@ -164,7 +164,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                               Text(
                                 _typeHelperText(q.type),
                                 style: theme.textTheme.labelSmall?.copyWith(
-                                  color: cs.onSurface.withValues(alpha: 0.70),
+                                  color: cs.onSurface.withOpacity(0.70),
                                 ),
                               ),
                             ],
@@ -190,7 +190,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                             child: Text(
                               'Question Type',
                               style: theme.textTheme.labelLarge?.copyWith(
-                                color: cs.onSurface.withValues(alpha: .8),
+                                color: cs.onSurface.withOpacity(.8),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -200,7 +200,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                             child: Text(
                               'Options',
                               style: theme.textTheme.labelLarge?.copyWith(
-                                color: cs.onSurface.withValues(alpha: .8),
+                                color: cs.onSurface.withOpacity(.8),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -290,7 +290,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                       Text(
                         'Question Text',
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: cs.onSurface.withValues(alpha: .8),
+                          color: cs.onSurface.withOpacity(.8),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -330,13 +330,13 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                             shape: const StadiumBorder(),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                ? Theme.of(context).colorScheme.primary.withValues(alpha: .25) // darker, higher contrast
-                                : Theme.of(context).colorScheme.primary.withValues(alpha: .12), // light subtle tint
+                                ? Theme.of(context).colorScheme.primary.withOpacity(.25) // darker, higher contrast
+                                : Theme.of(context).colorScheme.primary.withOpacity(.12), // light subtle tint
                             foregroundColor: Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white // white label + icon in dark
                                 : Theme.of(context).colorScheme.primary, // primary label + icon in light
                             disabledBackgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: .45),
+                            disabledForegroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(.45),
                           ),
                           onPressed: _newTextCtrl.text.trim().isEmpty
                               ? null
@@ -373,7 +373,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                         style: OutlinedButton.styleFrom(
                           shape: const StadiumBorder(),
                           side: BorderSide(
-                            color: Theme.of(context).colorScheme.outline.withValues(alpha: .8),
+                            color: Theme.of(context).colorScheme.outline.withOpacity(.8),
                             width: 1.2,
                           ),
                           foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -426,11 +426,11 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isDark
-            ? cs.surfaceContainerHighest.withValues(alpha: .18) // soft gray for dark
+            ? cs.surfaceContainerHighest.withOpacity(.18) // soft gray for dark
             : Colors.white,                                     // white for light
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: isDark ? cs.outlineVariant.withValues(alpha: .45) : borderColor,
+          color: isDark ? cs.outlineVariant.withOpacity(.45) : borderColor,
         ),
       ),
       child: Text(

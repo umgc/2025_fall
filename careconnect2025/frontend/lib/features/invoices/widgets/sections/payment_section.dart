@@ -58,7 +58,7 @@ class PaymentSection extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 DropdownButtonFormField<PaymentStatus>(
-                  value: value.paymentStatus,
+                  initialValue: value.paymentStatus,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Payment Status',
@@ -263,29 +263,28 @@ class PaymentSection extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,                
-                              borderRadius: BorderRadius.circular(8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          child: QrImageView(
+                            data: refs.qrCodeUrl!.trim(),
+                            version: QrVersions.auto,
+                            size: 140,
+                            gapless: true,
+                            backgroundColor: Colors.white,
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: Colors.black,
                             ),
-                            padding: const EdgeInsets.all(12),   
-                            child: QrImageView(
-                              data: refs.qrCodeUrl!.trim(),      
-                              version: QrVersions.auto,
-                              size: 140,
-                              gapless: true,
-                              backgroundColor: Colors.white,    
-                              dataModuleStyle: const QrDataModuleStyle(
-                                dataModuleShape: QrDataModuleShape.square,
-                                color: Colors.black,            
-                              ),
-                              eyeStyle: const QrEyeStyle(
-                                eyeShape: QrEyeShape.square,
-                                color: Colors.black,
-                              ),
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: Colors.black,
                             ),
-                          )
-                          ,
+                          ),
+                        ),
                         Expanded(
                           child: Text(
                             'Scan this QR code to open the destination URL.',
@@ -305,34 +304,32 @@ class PaymentSection extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,             
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.all(12),   
-                    child: QrImageView(
-                      data: refs.qrCodeUrl!.trim(),     
-                      version: QrVersions.auto,
-                      size: 140,
-                      gapless: true,
-                      backgroundColor: Colors.white,     
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Colors.black,            
-                      ),
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  SizedBox( height: 10,),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          child: QrImageView(
+                            data: refs.qrCodeUrl!.trim(),
+                            version: QrVersions.auto,
+                            size: 140,
+                            gapless: true,
+                            backgroundColor: Colors.white,
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: Colors.black,
+                            ),
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 10),
                         Expanded(
                           child: Column(
-                            
-                            crossAxisAlignment: CrossAxisAlignment.start, 
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (canOpenPaymentLink)
                                 OutlinedButton.icon(
@@ -582,14 +579,12 @@ class PaymentSection extends StatelessWidget {
     final t = s.trim();
     if (t.isEmpty) return false;
     final uri = Uri.tryParse(t);
-    return uri != null;// && (uri.isScheme('http') || uri.isScheme('https'));
+    return uri != null; // && (uri.isScheme('http') || uri.isScheme('https'));
   }
 
   static Future<void> _openUrl(String url) async {
-     final link = url.trim();
-     final normalized = link.startsWith('http')
-                              ? link
-                              : 'https://$link';
+    final link = url.trim();
+    final normalized = link.startsWith('http') ? link : 'https://$link';
     if (await canLaunchUrlString(normalized)) {
       await launchUrlString(normalized, mode: LaunchMode.externalApplication);
     }
@@ -693,7 +688,7 @@ class _RecordPaymentDialogState extends State<_RecordPaymentDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _methodKey,
+              initialValue: _methodKey,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
@@ -749,7 +744,7 @@ class _RecordPaymentDialogState extends State<_RecordPaymentDialog> {
             ),
             if (_plan)
               DropdownButtonFormField<int>(
-                value: _months,
+                initialValue: _months,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Payment Plan Frequency',
@@ -758,7 +753,7 @@ class _RecordPaymentDialogState extends State<_RecordPaymentDialog> {
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                   ),
                 ),
-                items: const [1, 3, 6, 9, 12,24,36]
+                items: const [1, 3, 6, 9, 12, 24, 36]
                     .map(
                       (m) =>
                           DropdownMenuItem(value: m, child: Text('$m months')),

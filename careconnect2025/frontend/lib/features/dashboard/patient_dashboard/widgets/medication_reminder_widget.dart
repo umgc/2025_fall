@@ -37,7 +37,7 @@ class MedicationRemindersWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
+            color: theme.shadowColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -70,7 +70,7 @@ class MedicationRemindersWidget extends StatelessWidget {
             _formatScheduledTime(reminder.scheduledTime),
             style: TextStyle(
               fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 12),
@@ -97,7 +97,7 @@ class MedicationRemindersWidget extends StatelessWidget {
                   reminder.status,
                   style: TextStyle(
                     fontSize: 14,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -14,7 +14,7 @@ class MessagesListPage extends StatelessWidget {
       body: Column(
         children: [
           Container(
-            color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: .1),
+            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(.1),
             margin: EdgeInsets.all(16),
             // decoration: BoxDecoration(
             //   color: Colors.red,
@@ -88,7 +88,7 @@ class MessagesListPage extends StatelessWidget {
         );
       },
       child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: .01),
+        color: Theme.of(context).scaffoldBackgroundColor.withOpacity(.01),
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [

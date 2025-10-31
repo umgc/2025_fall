@@ -451,7 +451,7 @@ class _AddMedicationModalState extends State<AddMedicationModal> {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -512,7 +512,7 @@ class _AddMedicationModalState extends State<AddMedicationModal> {
                   style: TextStyle(
                     color: date != null
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ],

@@ -1,7 +1,5 @@
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:flutter/material.dart';
-import 'package:care_connect_app/pages/patient_check_in.dart';
-
 
 class PatientVirtualCheckIn extends StatefulWidget {
   const PatientVirtualCheckIn({super.key});
@@ -25,10 +23,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBarHelper.createAppBar(
-        context,
-        title: 'Daily Check-In',
-      ),
+      appBar: AppBarHelper.createAppBar(context, title: 'Daily Check-In'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -42,9 +37,9 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                   Text(
                     "💙 Daily Check-In",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -58,7 +53,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
               // Mood selection card
               Card(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -68,9 +64,10 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                       Text(
                         "How are you feeling today?",
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[600]),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[600],
+                        ),
                       ),
                       const SizedBox(height: 12),
                       GridView.count(
@@ -112,7 +109,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                                     mood["label"],
                                     style: const TextStyle(fontSize: 12),
                                     textAlign: TextAlign.center,
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
@@ -128,7 +125,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
               // Symptoms/notes card
               Card(
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -138,9 +136,10 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                       Text(
                         "Any symptoms or notes?",
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[600]),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[600],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -176,7 +175,8 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                           // Mock submit
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text("Check-in submitted (mock)!")),
+                              content: Text("Check-in submitted (mock)!"),
+                            ),
                           );
                         },
                   style: ElevatedButton.styleFrom(
@@ -198,7 +198,7 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                     style: TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
-                )
+                ),
             ],
           ),
         ),

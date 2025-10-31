@@ -34,7 +34,7 @@ class OfflineNotification extends StatelessWidget {
         children: [
           Icon(
             Icons.wifi_off,
-            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+            color: theme.colorScheme.primary.withOpacity(0.7),
             size: 24,
           ),
           const SizedBox(width: 12),

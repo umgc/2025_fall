@@ -134,7 +134,7 @@ class _MedicationCardState extends State<MedicationCard> {
         border: Border.all(
           color: widget.medication.isActive
               ? Theme.of(context).dividerColor
-              : Colors.orange.withValues(alpha: 0.5),
+              : Colors.orange.withOpacity(0.5),
         ),
         boxShadow: [
           BoxShadow(
@@ -165,7 +165,7 @@ class _MedicationCardState extends State<MedicationCard> {
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -202,9 +202,9 @@ class _MedicationCardState extends State<MedicationCard> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
@@ -239,7 +239,7 @@ class _MedicationCardState extends State<MedicationCard> {
                 size: 16,
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                ).colorScheme.onSurface.withOpacity(0.6),
               ),
               const SizedBox(width: 8),
               Text(
@@ -247,7 +247,7 @@ class _MedicationCardState extends State<MedicationCard> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -284,7 +284,7 @@ class _MedicationCardState extends State<MedicationCard> {
                   size: 16,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -293,7 +293,7 @@ class _MedicationCardState extends State<MedicationCard> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ),
@@ -312,7 +312,7 @@ class _MedicationCardState extends State<MedicationCard> {
                   size: 16,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -321,7 +321,7 @@ class _MedicationCardState extends State<MedicationCard> {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ).colorScheme.onSurface.withOpacity(0.6),
                       fontStyle: FontStyle.italic,
                     ),
                   ),

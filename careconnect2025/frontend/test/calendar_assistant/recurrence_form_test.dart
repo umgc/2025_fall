@@ -43,7 +43,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: RecurrenceForm(onChanged: mockCallback)),
+          home: Scaffold(body: RecurrenceForm(onChanged: mockCallback.call)),
         ),
       );
 
@@ -61,7 +61,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: RecurrenceForm(onChanged: mockCallback)),
+          home: Scaffold(body: RecurrenceForm(onChanged: mockCallback.call)),
         ),
       );
 
@@ -87,7 +87,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecurrenceForm(
-              onChanged: mockCallback,
+              onChanged: mockCallback.call,
               initialIsRecurring: true,
               initialRecurrenceType: 'Weekly',
             ),
@@ -111,7 +111,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecurrenceForm(
-              onChanged: mockCallback,
+              onChanged: mockCallback.call,
               initialIsRecurring: true,
               initialRecurrenceType: 'Monthly',
             ),
@@ -137,7 +137,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecurrenceForm(
-              onChanged: mockCallback,
+              onChanged: mockCallback.call,
               initialIsRecurring: true,
               initialRecurrenceType: 'Daily',
               showApplyToSeries: true,
@@ -161,7 +161,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecurrenceForm(
-              onChanged: mockCallback,
+              onChanged: mockCallback.call,
               initialIsRecurring: true,
               initialRecurrenceType: 'Yearly',
               initialStartDate: now,
@@ -191,7 +191,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: RecurrenceForm(
-              onChanged: mockCallback,
+              onChanged: mockCallback.call,
               initialIsRecurring: true,
             ),
           ),

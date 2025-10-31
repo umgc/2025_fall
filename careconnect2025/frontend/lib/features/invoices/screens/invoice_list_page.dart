@@ -135,8 +135,9 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
       (sum, i) => sum + (i.amounts.amountDue ?? i.amounts.total ?? 0),
     );
 
-    final pendingCount =
-        _invoices.where((i) => i.paymentStatus == PaymentStatus.pending).length;
+    final pendingCount = _invoices
+        .where((i) => i.paymentStatus == PaymentStatus.pending)
+        .length;
 
     return Scaffold(
       body: _loading
@@ -173,8 +174,9 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                                 children: [
                                   Text(
                                     'Invoice Results',
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   if (_invoices.isNotEmpty)
                                     Chip(
@@ -182,7 +184,8 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                                       materialTapTargetSize:
                                           MaterialTapTargetSize.shrinkWrap,
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6),
+                                        horizontal: 6,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -201,8 +204,10 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                           label: const Text('Export'),
                           onPressed: () {
                             // THIS IS THE UPDATED CODE
-                            ExcelService.instance
-                                .exportInvoices(_invoices, context);
+                            ExcelService.instance.exportInvoices(
+                              _invoices,
+                              context,
+                            );
                           },
                         ),
                       ],
@@ -242,10 +247,12 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
 
   void _openDetail(Invoice invoice) async {
     // Push onto the app-level (root) navigator
-    final updated =
-        await Navigator.of(context, rootNavigator: true).push<Invoice>(
-      MaterialPageRoute(builder: (_) => InvoiceDetailPage(invoice: invoice)),
-    );
+    final updated = await Navigator.of(context, rootNavigator: true)
+        .push<Invoice>(
+          MaterialPageRoute(
+            builder: (_) => InvoiceDetailPage(invoice: invoice),
+          ),
+        );
     if (updated != null) {
       await InvoiceService.instance.upsert(updated);
       _fetch();
@@ -256,10 +263,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     // Same idea, but start on the Payment tab
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (_) => InvoiceDetailPage(
-          invoice: invoice,
-          initialTabIndex: 2,
-        ),
+        builder: (_) => InvoiceDetailPage(invoice: invoice, initialTabIndex: 2),
       ),
     );
   }
@@ -290,27 +294,38 @@ class _FilterBar extends StatelessWidget {
             final stacked = c.maxWidth < 520;
 
             final sortField = DropdownButtonFormField<String>(
-              value: sort,
+              initialValue: sort,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Sort By'),
               items: const [
                 DropdownMenuItem(
-                    value: 'recently_added', child: Text('Recently Added')),
+                  value: 'recently_added',
+                  child: Text('Recently Added'),
+                ),
                 DropdownMenuItem(
-                    value: 'service_date_desc',
-                    child: Text('Service Date (Newest)')),
+                  value: 'service_date_desc',
+                  child: Text('Service Date (Newest)'),
+                ),
                 DropdownMenuItem(
-                    value: 'service_date_asc',
-                    child: Text('Service Date (Oldest)')),
+                  value: 'service_date_asc',
+                  child: Text('Service Date (Oldest)'),
+                ),
                 DropdownMenuItem(
-                    value: 'due_date_desc', child: Text('Due Date (Latest)')),
+                  value: 'due_date_desc',
+                  child: Text('Due Date (Latest)'),
+                ),
                 DropdownMenuItem(
-                    value: 'due_date_asc', child: Text('Due Date (Earliest)')),
+                  value: 'due_date_asc',
+                  child: Text('Due Date (Earliest)'),
+                ),
                 DropdownMenuItem(
-                    value: 'amount_desc',
-                    child: Text('Amount (High to Low)')),
+                  value: 'amount_desc',
+                  child: Text('Amount (High to Low)'),
+                ),
                 DropdownMenuItem(
-                    value: 'amount_asc', child: Text('Amount (Low to High)')),
+                  value: 'amount_asc',
+                  child: Text('Amount (Low to High)'),
+                ),
               ],
               onChanged: (v) => onChangeSort(v ?? 'recently_added'),
             );

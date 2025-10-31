@@ -109,10 +109,10 @@ class _WelcomePageState extends State<WelcomePage> {
                           horizontal: isMobile ? 10 : 12,
                           vertical: isMobile ? 6 : 8,
                         ),
-                        backgroundColor: Colors.white.withValues(alpha: 0.12),
+                        backgroundColor: Colors.white.withOpacity(0.12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                          side: BorderSide(color: Colors.white.withOpacity(0.25)),
                         ),
                       ),
                     ),
@@ -125,7 +125,7 @@ class _WelcomePageState extends State<WelcomePage> {
                   width: isMobile ? 100 : 200,
                   height: isMobile ? 100 : 200,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Center(
@@ -164,7 +164,7 @@ class _WelcomePageState extends State<WelcomePage> {
               AppLocalizations.of(context)!.welcome_subtitle,
               style: TextStyle(
                 fontSize: isMobile ? 18 : 20,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -177,7 +177,7 @@ class _WelcomePageState extends State<WelcomePage> {
               AppLocalizations.of(context)!.welcome_description,
               style: TextStyle(
                 fontSize: isMobile ? 16 : 18,
-                color: Colors.white.withValues(alpha: 0.8),
+                color: Colors.white.withOpacity(0.8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -204,7 +204,7 @@ class _WelcomePageState extends State<WelcomePage> {
                     t.welcomeInitializingHealthcare,
                     style: TextStyle(
                       fontSize: isMobile ? 16 : 18,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -235,10 +235,10 @@ class _WelcomePageState extends State<WelcomePage> {
                       margin: EdgeInsets.only(bottom: isMobile ? 16 : 20),
                       padding: EdgeInsets.all(isMobile ? 12 : 16),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.2),
+                        color: Colors.orange.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.5),
+                          color: Colors.orange.withOpacity(0.5),
                           width: 1.5,
                         ),
                       ),
@@ -335,17 +335,17 @@ class _WelcomePageState extends State<WelcomePage> {
           vertical: isMobile ? 4 : 6,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withOpacity(0.3),
             width: 1,
           ),
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.9),
+            color: Colors.white.withOpacity(0.9),
             fontSize: isMobile ? 10 : 12,
             fontWeight: FontWeight.w500,
           ),

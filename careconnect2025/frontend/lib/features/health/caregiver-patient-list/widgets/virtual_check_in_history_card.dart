@@ -25,7 +25,7 @@ class VirtualCheckInHistoryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.10),
+            color: theme.shadowColor.withOpacity(0.10),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -62,8 +62,8 @@ class VirtualCheckInHistoryCard extends StatelessWidget {
                         : cs.primary,  // blue in light mode
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     backgroundColor: Theme.of(context).brightness == Brightness.dark
-                        ? cs.primary.withValues(alpha: .08)
-                        : cs.primary.withValues(alpha: .05),
+                        ? cs.primary.withOpacity(.08)
+                        : cs.primary.withOpacity(.05),
                   ),
                   onPressed: onConfigure,
                   icon: const Icon(Icons.settings, size: 18),
@@ -97,7 +97,7 @@ class _VirtualCheckInTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final border = cs.outlineVariant.withValues(alpha: .35);
+    final border = cs.outlineVariant.withOpacity(.35);
 
     final (badgeLabel, badgeBg, badgeFg) = _badgeFor(entry.type, cs);
 
@@ -165,7 +165,7 @@ class _VirtualCheckInTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: .25),
+              color: cs.surfaceContainerHighest.withOpacity(.25),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -220,7 +220,7 @@ class _FactsGrid extends StatelessWidget {
       children: [
         Text(label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: cs.onSurface.withValues(alpha: .7),
+              color: cs.onSurface.withOpacity(.7),
               fontWeight: FontWeight.w600,
             )),
         const SizedBox(height: 4),
@@ -293,7 +293,7 @@ class _EmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: cs.surfaceContainerHighest.withOpacity(0.25),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

@@ -31,7 +31,7 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) return;
 
       // Search all records without status filter
@@ -41,9 +41,9 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
         sortBy: 'createdAt',
         sortDirection: 'DESC',
       );
-      
+
       final result = await _evvService.searchRecords(request);
-      
+
       setState(() {
         _allRecords = result.content;
         _filteredRecords = result.content;
@@ -54,9 +54,9 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading records: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading records: $e')));
       }
     }
   }
@@ -67,12 +67,18 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
       if (status == 'ALL') {
         _filteredRecords = _allRecords;
       } else {
-        _filteredRecords = _allRecords.where((record) => record.status == status).toList();
+        _filteredRecords = _allRecords
+            .where((record) => record.status == status)
+            .toList();
       }
     });
   }
 
-  Future<void> _reviewRecord(EvvRecord record, bool approve, String? comment) async {
+  Future<void> _reviewRecord(
+    EvvRecord record,
+    bool approve,
+    String? comment,
+  ) async {
     try {
       await _evvService.reviewRecord(
         recordId: record.id,
@@ -86,7 +92,9 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(approve ? 'Record approved' : 'Record returned for review'),
+            content: Text(
+              approve ? 'Record approved' : 'Record returned for review',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -106,17 +114,18 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
   void _exportEDI(EvvRecord record) {
     try {
       final ediContent = _generateEDIContent(record);
-      
+
       // Create blob and download
       final bytes = utf8.encode(ediContent);
       final blob = html.Blob([bytes], 'text/plain');
       final url = html.Url.createObjectUrlFromBlob(blob);
-      
+
       final anchor = html.document.createElement('a') as html.AnchorElement
         ..href = url
         ..style.display = 'none'
-        ..download = 'evv_record_${record.id}_${DateTime.now().millisecondsSinceEpoch}.edi';
-      
+        ..download =
+            'evv_record_${record.id}_${DateTime.now().millisecondsSinceEpoch}.edi';
+
       html.document.body?.children.add(anchor);
       anchor.click();
       html.document.body?.children.remove(anchor);
@@ -140,48 +149,67 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
 
   String _generateEDIContent(EvvRecord record) {
     final patientId = record.patient?.id ?? record.id;
-    final maNumber = record.patient?.maNumber ?? 'SUBSCR${patientId.toString().padLeft(5, '0')}';
-    
+    final maNumber =
+        record.patient?.maNumber ??
+        'SUBSCR${patientId.toString().padLeft(5, '0')}';
+
     final now = DateTime.now();
-    final isaDate = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final isaTime = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    final gsDate = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final gsTime = '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    
-    final serviceDate = '${record.dateOfService.year}${record.dateOfService.month.toString().padLeft(2, '0')}${record.dateOfService.day.toString().padLeft(2, '0')}';
-    
+    final isaDate =
+        '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final isaTime =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    final gsDate =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final gsTime =
+        '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+
+    final serviceDate =
+        '${record.dateOfService.year}${record.dateOfService.month.toString().padLeft(2, '0')}${record.dateOfService.day.toString().padLeft(2, '0')}';
+
     String patientDob = '19700101';
     if (record.patient?.dob != null && record.patient!.dob.isNotEmpty) {
       try {
         final dobDate = DateTime.parse(record.patient!.dob);
-        patientDob = '${dobDate.year}${dobDate.month.toString().padLeft(2, '0')}${dobDate.day.toString().padLeft(2, '0')}';
+        patientDob =
+            '${dobDate.year}${dobDate.month.toString().padLeft(2, '0')}${dobDate.day.toString().padLeft(2, '0')}';
       } catch (e) {
         patientDob = '19700101';
       }
     }
-    
-    final gender = (record.patient?.gender?.toUpperCase() == 'MALE' || record.patient?.gender?.toUpperCase() == 'M') ? 'M' : 'F';
-    
-    final claimId = '$patientId${record.dateOfService.millisecondsSinceEpoch.toString().substring(0, 10)}';
-    final evvId = 'EVV-${claimId}';
-    final lineEvvId = 'EVV-LINE-${claimId}';
-    
+
+    final gender =
+        (record.patient?.gender?.toUpperCase() == 'MALE' ||
+            record.patient?.gender?.toUpperCase() == 'M')
+        ? 'M'
+        : 'F';
+
+    final claimId =
+        '$patientId${record.dateOfService.millisecondsSinceEpoch.toString().substring(0, 10)}';
+    final evvId = 'EVV-$claimId';
+    final lineEvvId = 'EVV-LINE-$claimId';
+
     final duration = record.timeOut.difference(record.timeIn).inMinutes;
     final units = ((duration / 15).ceil()).toString();
     final totalCharge = (30.0 * (duration / 15).ceil()).toStringAsFixed(2);
-    
+
     final patientName = record.individualName.split(' ');
-    final lastName = patientName.length > 1 ? patientName.last : record.individualName;
+    final lastName = patientName.length > 1
+        ? patientName.last
+        : record.individualName;
     final firstName = patientName.length > 1 ? patientName.first : '';
-    
+
     final addressLine1 = record.patient?.address?.line1 ?? '123 Main St';
     final city = record.patient?.address?.city ?? 'Richmond';
     final state = record.patient?.address?.state ?? record.stateCode;
     final zip = record.patient?.address?.zip ?? '23220';
-    
-    final controlNumber = now.millisecondsSinceEpoch.toString().substring(3, 12);
 
-    final ediContent = '''ISA*00*          *00*          *ZZ*SUBMIT123      *ZZ*987654321      *$isaDate*$isaTime*^*00501*$controlNumber*0*P*:~
+    final controlNumber = now.millisecondsSinceEpoch.toString().substring(
+      3,
+      12,
+    );
+
+    final ediContent =
+        '''ISA*00*          *00*          *ZZ*SUBMIT123      *ZZ*987654321      *$isaDate*$isaTime*^*00501*$controlNumber*0*P*:~
 GS*HC*SUBMIT123*987654321*$gsDate*$gsTime*$controlNumber*X*005010X222A1~
 ST*837*0001*005010X222A1~
 BHT*0019*00*$claimId*$gsDate*$gsTime*CH~
@@ -221,7 +249,7 @@ IEA*1*$controlNumber~
 
   void _showReviewDialog(EvvRecord record) {
     final commentController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -288,9 +316,9 @@ IEA*1*$controlNumber~
           children: [
             Text(
               'Record Details',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             _buildDetailRow('Service Type', record.serviceType),
@@ -298,7 +326,10 @@ IEA*1*$controlNumber~
             _buildDetailRow('Date', _formatDate(record.dateOfService)),
             _buildDetailRow('Time In', _formatTime(record.timeIn)),
             _buildDetailRow('Time Out', _formatTime(record.timeOut)),
-            _buildDetailRow('Location', '${record.locationLat?.toStringAsFixed(4)}, ${record.locationLng?.toStringAsFixed(4)}'),
+            _buildDetailRow(
+              'Location',
+              '${record.locationLat?.toStringAsFixed(4)}, ${record.locationLng?.toStringAsFixed(4)}',
+            ),
             _buildDetailRow('State', record.stateCode),
             _buildDetailRow('Status', record.status),
             if (record.isOffline)
@@ -333,9 +364,7 @@ IEA*1*$controlNumber~
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -362,22 +391,46 @@ IEA*1*$controlNumber~
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Text('Filter by Status:', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text(
+                  'Filter by Status:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedStatusFilter,
+                    initialValue: _selectedStatusFilter,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'ALL', child: Text('All Statuses')),
-                      DropdownMenuItem(value: 'PENDING_REVIEW', child: Text('Pending Review')),
-                      DropdownMenuItem(value: 'CONFIRMED', child: Text('Confirmed')),
-                      DropdownMenuItem(value: 'SUBMITTED', child: Text('Submitted')),
-                      DropdownMenuItem(value: 'FAILED_SUBMISSION', child: Text('Failed Submission')),
-                      DropdownMenuItem(value: 'CORRECTED', child: Text('Corrected')),
+                      DropdownMenuItem(
+                        value: 'ALL',
+                        child: Text('All Statuses'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'PENDING_REVIEW',
+                        child: Text('Pending Review'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CONFIRMED',
+                        child: Text('Confirmed'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'SUBMITTED',
+                        child: Text('Submitted'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'FAILED_SUBMISSION',
+                        child: Text('Failed Submission'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CORRECTED',
+                        child: Text('Corrected'),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -389,128 +442,145 @@ IEA*1*$controlNumber~
               ],
             ),
           ),
-          
+
           // Records List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredRecords.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.rate_review_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _allRecords.isEmpty ? 'No records found' : 'No records match this filter',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _allRecords.isEmpty 
-                                  ? 'Start creating EVV records to see them here'
-                                  : 'Try selecting a different status filter',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.rate_review_outlined,
+                          size: 64,
+                          color: Colors.grey,
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredRecords.length,
-                        itemBuilder: (context, index) {
-                          final record = _filteredRecords[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: _getStatusColor(record.status),
-                          child: Icon(
-                            _getStatusIcon(record.status),
-                            color: Colors.white,
+                        const SizedBox(height: 16),
+                        Text(
+                          _allRecords.isEmpty
+                              ? 'No records found'
+                              : 'No records match this filter',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
                           ),
                         ),
-                        title: Text(
-                          record.individualName,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        const SizedBox(height: 8),
+                        Text(
+                          _allRecords.isEmpty
+                              ? 'Start creating EVV records to see them here'
+                              : 'Try selecting a different status filter',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('${record.serviceType} - ${_formatDate(record.dateOfService)}'),
-                            Text('${_formatTime(record.timeIn)} - ${_formatTime(record.timeOut)}'),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(record.status).withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    record.status,
-                                    style: TextStyle(
-                                      color: _getStatusColor(record.status),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    record.stateCode,
-                                    style: const TextStyle(
-                                      color: Colors.blue,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                if (record.isOffline) ...[
-                                  const SizedBox(width: 8),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredRecords.length,
+                    itemBuilder: (context, index) {
+                      final record = _filteredRecords[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: _getStatusColor(record.status),
+                            child: Icon(
+                              _getStatusIcon(record.status),
+                              color: Colors.white,
+                            ),
+                          ),
+                          title: Text(
+                            record.individualName,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${record.serviceType} - ${_formatDate(record.dateOfService)}',
+                              ),
+                              Text(
+                                '${_formatTime(record.timeIn)} - ${_formatTime(record.timeOut)}',
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.2),
+                                      color: _getStatusColor(
+                                        record.status,
+                                      ).withOpacity(0.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text(
-                                      'OFFLINE',
+                                    child: Text(
+                                      record.status,
                                       style: TextStyle(
-                                        color: Colors.orange,
+                                        color: _getStatusColor(record.status),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      record.stateCode,
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  if (record.isOffline) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'OFFLINE',
+                                        style: TextStyle(
+                                          color: Colors.orange,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios),
+                          onTap: () => _showReviewDialog(record),
                         ),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: () => _showReviewDialog(record),
-                      ),
-                          );
-                        },
-                      ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
