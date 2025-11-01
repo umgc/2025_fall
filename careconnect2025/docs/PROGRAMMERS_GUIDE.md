@@ -624,15 +624,15 @@ CC_BACKEND_TOKEN=your_backend_token
 
 ```properties
 # Database Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/careconnect?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+spring.datasource.url=jdbc:postgresql://localhost:5432/careconnect
 spring.datasource.username=careconnect
 spring.datasource.password=your_password
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.driver-class-name=org.postgresql.Driver
 
 # JPA Configuration
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # Server Configuration
 server.port=8080
@@ -2605,7 +2605,7 @@ public CorsConfigurationSource corsConfigurationSource() {
 
 ## Real-time Communication with WebSocket
 
-CareConnect implements a comprehensive WebSocket-based real-time communication system specifically designed for healthcare applications where timely information delivery can be critical to patient safety. The system uses a **dual-mode architecture** that automatically switches between local development (embedded WebSocket server) and AWS production (API Gateway WebSocket) environments.
+CareConnect implements a comprehensive WebSocket-based real-time communication system. This system is specifically designed for healthcare applications where timely information delivery can be critical to patient safety. The system uses a **dual-mode architecture** that automatically switches between local development (embedded WebSocket server) and AWS production (API Gateway WebSocket) environments.
 
 ### Why WebSocket for Healthcare?
 
@@ -5438,12 +5438,13 @@ jobs:
         working-directory: backend/core
 
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15
         env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: careconnect_test
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: careconnect
+          POSTGRES_DB: careconnect_test
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - uses: actions/checkout@v3
@@ -5461,8 +5462,8 @@ jobs:
     - name: Run tests
       run: ./mvnw test
       env:
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/careconnect_test
-        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/careconnect_test
+        SPRING_DATASOURCE_USERNAME: careconnect
         SPRING_DATASOURCE_PASSWORD: test
 
   deploy-staging:
@@ -5822,7 +5823,7 @@ cd ../backend/core
 ./mvnw clean install
 
 # Setup database
-mysql -u root -p < scripts/init-db.sql
+psql -U postgres < scripts/init-db.sql
 
 # Run tests
 flutter test  # Frontend
