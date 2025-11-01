@@ -126,10 +126,6 @@ test_video_calls.dart
 **/test/**/*secret*
 **/test/**/*key*
 
-**/linux/flutter/generated_*
-**/macos/Flutter/GeneratedPluginRegistrant.swift
-**/windows/flutter/generated_*
-
 # Donn't check AI models
 *.onnx
 *.GGUF
