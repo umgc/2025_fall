@@ -349,6 +349,21 @@ export S3_BUCKET=careconnect-prod-files
 
 #### Main Infrastructure Configuration
 
+This main Terraform configuration file orchestrates all infrastructure components for CareConnect. Rather than defining resources directly, it uses a modular approach where each major component (VPC, database, compute) is encapsulated in its own module. This separation provides several benefits:
+
+**Why Modular Architecture**: 
+- **Reusability**: The same VPC module can be used for dev, staging, and prod environments with different parameters
+- **Maintainability**: Changes to database configuration don't require touching networking code
+- **Testing**: Each module can be tested independently before integration
+- **Team Collaboration**: Different team members can work on different modules without conflicts
+
+**State Management**: The `backend "s3"` configuration stores Terraform state remotely in S3, which is critical for team collaboration. Without this, each developer would have their own local state file, leading to infrastructure drift and conflicts. DynamoDB locking prevents two people from running Terraform simultaneously, which could corrupt the state.
+
+**Why These Specific Module Parameters Matter**:
+- `multi_az = var.environment == "prod" ? true : false`: Production databases span multiple availability zones for high availability, but dev environments use single-AZ to reduce costs
+- `backup_retention_period = var.environment == "prod" ? 30 : 7`: Production keeps 30 days of backups for compliance, dev only needs 7
+- `deletion_protection = var.environment == "prod" ? true : false`: Prevents accidental deletion of production database
+
 ```hcl
 # terraform_aws/main.tf
 terraform {
@@ -548,7 +563,43 @@ module "monitoring" {
 }
 ```
 
+**Understanding the Module Structure**:
+
+Each `module` block creates a set of related resources. For example, `module "vpc"` creates the entire networking infrastructure (VPC, subnets, NAT gateways, route tables). The module receives inputs via parameters and returns outputs that other modules can use.
+
+**Critical Module Dependencies**:
+1. **VPC** must be created first (provides `vpc_id` needed by others)
+2. **Security Groups** need the VPC ID to define network rules
+3. **RDS** needs both VPC and security groups before it can launch
+4. **ECS** needs VPC, security groups, and connects to RDS/ElastiCache
+5. **ALB** sits in front of ECS, routing traffic to containers
+6. **Monitoring** observes all the above components
+
+This dependency chain is why we use Terraform's module system—it automatically handles creation order based on resource dependencies.
+
 #### VPC Module
+
+The VPC (Virtual Private Cloud) module creates isolated networking infrastructure for CareConnect. Think of it as creating a private data center in AWS—complete with multiple network zones, internet gateways, and routing rules.
+
+**Network Architecture Philosophy**:
+
+CareConnect uses a **three-tier network design** to balance security and accessibility:
+1. **Public Subnets**: Host load balancers that accept traffic from the internet
+2. **Private Subnets**: Host application containers (ECS tasks) that should NOT be directly accessible from internet
+3. **Database Subnets**: Host RDS instances in the most isolated layer, accessible only from application tier
+
+**Why Three Tiers**: This follows the principle of defense-in-depth. Even if an attacker compromises the load balancer, they can't directly access the application layer. Even if they compromise an application container, they can't directly access the database.
+
+**Multi-AZ Design**: Each subnet type is created in multiple Availability Zones (us-east-1a, us-east-1b, etc.). If one AZ fails (rare but happens), the other AZs continue serving traffic. This is why `count = length(var.availability_zones)` appears throughout—we're creating resources in each AZ.
+
+**NAT Gateway Strategy**: Private subnets need internet access for downloading packages and reaching external APIs, but shouldn't accept inbound connections. NAT gateways provide one-way internet access: outbound traffic is allowed, inbound is blocked.
+
+**CIDR Block Math**: The `cidrsubnet(var.vpc_cidr, 8, count.index + 1)` function divides the VPC's IP address space into smaller subnets. For a VPC with CIDR `10.0.0.0/16`, this creates:
+- Public subnets: `10.0.1.0/24`, `10.0.2.0/24`, `10.0.3.0/24`
+- Private subnets: `10.0.11.0/24`, `10.0.12.0/24`, `10.0.13.0/24` (note the +10 offset)
+- Database subnets: `10.0.21.0/24`, `10.0.22.0/24`, `10.0.23.0/24` (note the +20 offset)
+
+The offsets ensure no IP overlap between subnet types.
 
 ```hcl
 # terraform_aws/modules/vpc/main.tf
@@ -690,7 +741,51 @@ resource "aws_route_table_association" "database" {
 }
 ```
 
+**Key VPC Module Concepts Explained**:
+
+**Internet Gateway**: The bridge between our VPC and the public internet. Without this, nothing in the VPC could reach the internet, and the internet couldn't reach our load balancers.
+
+**Route Tables**: Define how traffic flows within the VPC. The public route table says "send `0.0.0.0/0` (all traffic) to the internet gateway." The private route table says "send `0.0.0.0/0` to the NAT gateway" (for outbound-only access).
+
+**Route Table Associations**: Connect subnets to route tables. Public subnets use the public route table (bidirectional internet), private and database subnets use private route tables (outbound-only via NAT).
+
+**Why `depends_on` Matters**: NAT gateways can't be created until the internet gateway exists, because they need a way to route traffic. Terraform's `depends_on` ensures resources are created in the correct order.
+
+**Cost Optimization Note**: NAT gateways are expensive (~$0.045/hour each + $0.045/GB data). We create one per AZ for high availability, but in development environments, you might create just one to save costs (at the expense of AZ resilience).
+
 #### ECS Module
+
+The ECS (Elastic Container Service) module defines how CareConnect's Spring Boot backend runs in production. ECS is AWS's container orchestration service—think of it as the system that ensures your Docker containers are always running, automatically replaces failed containers, and scales up/down based on load.
+
+**Why Fargate Over EC2**: ECS can run containers on EC2 instances (you manage the VMs) or Fargate (AWS manages the infrastructure). We chose Fargate because:
+- **No Server Management**: AWS handles patching, scaling, and maintaining the underlying VMs
+- **Pay-Per-Container**: You're billed only for container resources used, not idle VM capacity
+- **Security**: Each Fargate task runs in its own isolated micro-VM, stronger isolation than shared EC2 instances
+- **Healthcare Compliance**: Less infrastructure to audit and secure = easier HIPAA compliance
+
+**Container Insights**: The `containerInsights = "enabled"` setting turns on detailed CloudWatch metrics for every container. This visibility is critical for diagnosing production issues—you can see exactly which container is consuming CPU, making database calls, or experiencing errors.
+
+**Capacity Providers**: The `FARGATE` and `FARGATE_SPOT` configuration allows ECS to use spot instances (cheaper but can be interrupted) for non-critical workloads while using standard Fargate for production traffic. The `base = 1, weight = 100` means "always run at least 1 task on standard Fargate, but prefer standard for all tasks."
+
+**Task Definition Breakdown**:
+
+A "task definition" is like a Docker Compose file—it defines which containers to run, how much CPU/memory they need, environment variables, and health checks. The task definition is versioned, so you can roll back to previous versions if a deployment fails.
+
+**Network Mode `awsvpc`**: Each container gets its own elastic network interface (ENI) with a private IP address. This provides stronger network isolation and allows security groups to control traffic to individual containers (not just the host EC2 instance).
+
+**IAM Roles Explained**:
+- **Execution Role** (`ecs_execution_role`): Permissions ECS needs to launch the container (pull from ECR, write to CloudWatch logs, read secrets from Secrets Manager)
+- **Task Role** (`ecs_task_role`): Permissions the application code needs at runtime (access S3 buckets, send SNS notifications, etc.)
+
+Separating these roles follows the principle of least privilege—ECS can start containers without giving the application excessive permissions.
+
+**Environment vs. Secrets**: Environment variables are for non-sensitive config (`ENVIRONMENT=prod`). Secrets are pulled from AWS Secrets Manager at runtime and never logged. This prevents accidentally exposing database passwords in CloudWatch Logs.
+
+**Health Check Strategy**: The health check `curl -f http://localhost:${var.container_port}/actuator/health` calls Spring Boot's health endpoint. If this fails 3 times (`retries = 3`), ECS kills the container and starts a new one. The `startPeriod = 60` gives the application 60 seconds to start before health checks begin—important because Spring Boot takes time to initialize.
+
+**Deployment Circuit Breaker**: The `deployment_circuit_breaker` with `rollback = true` is a safety mechanism. If a new deployment causes containers to repeatedly fail health checks, ECS automatically rolls back to the previous version. This prevents a bad deployment from taking down the entire application.
+
+**Auto Scaling Logic**: The `aws_appautoscaling_policy` monitors CPU utilization and automatically scales containers. When average CPU exceeds 70%, ECS launches more containers. When it drops below 70%, ECS terminates excess containers. This balances cost (don't run more containers than needed) with performance (scale up before users notice slowness).
 
 ```hcl
 # terraform_aws/modules/ecs/main.tf
@@ -894,9 +989,39 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 ```
 
+**ECS Module Key Concepts**:
+
+**Service Discovery**: The `service_registries` block registers each container in AWS Cloud Map (service discovery). This allows containers to find each other using DNS names rather than hard-coding IP addresses. When container IP addresses change (due to scaling or failures), service discovery automatically updates the DNS.
+
+**Load Balancer Integration**: The `load_balancer` block connects ECS to the Application Load Balancer. The ALB distributes incoming HTTP requests across all healthy containers. If a container fails its health check, the ALB stops sending traffic to it until it recovers or is replaced.
+
+**Deployment Strategy**: The `maximum_percent = 200, minimum_healthy_percent = 100` configuration enables **blue-green deployments**. When deploying a new version:
+1. ECS starts new containers (up to 200% of desired count, e.g., 6 containers if you normally run 3)
+2. Once new containers pass health checks, ECS drains traffic from old containers
+3. After old containers finish existing requests, ECS terminates them
+4. You're left with 100% new containers (the desired count of 3)
+
+This ensures zero downtime during deployments—old containers keep serving requests until new ones are ready.
+
+**Why This Complexity Is Worth It**: While this ECS configuration is extensive, it provides enterprise-grade reliability with automatic recovery, rolling deployments, and autoscaling. In a healthcare application where downtime could impact patient care, these safeguards justify the complexity.
+
 ### Deployment Commands
 
 #### Initial Infrastructure Deployment
+
+These commands provision the entire AWS infrastructure from scratch. You'll run this once when setting up a new environment (dev, staging, prod) and rarely thereafter (infrastructure changes are typically done through Terraform updates, not teardown/rebuild).
+
+**Terraform Initialization**: `terraform init` downloads provider plugins (AWS) and sets up the backend (S3 state storage). This must be run whenever you clone the repo or change provider versions.
+
+**Workspaces for Multi-Environment**: Terraform workspaces allow managing multiple environments (dev, staging, prod) with the same configuration but separate state files. `terraform workspace new prod` creates an isolated state for production, preventing accidental changes to dev when you meant to modify prod.
+
+**The Plan-Apply Workflow**: This two-step process is critical for safety:
+1. **terraform plan**: Shows what Terraform WOULD do without actually doing it. Review this carefully—if it says "destroy database," something is wrong!
+2. **terraform apply**: Actually makes the changes. Only run this after reviewing the plan.
+
+The `-var-file` flag loads environment-specific variables (prod.tfvars) so the same code can deploy different-sized resources for each environment.
+
+**Why Save Outputs**: `terraform output > infrastructure-outputs.txt` captures important values (database endpoint, load balancer DNS) needed by the application. Without this, you'd have to manually look up these values in the AWS console.
 
 ```bash
 # Navigate to terraform directory
@@ -920,6 +1045,24 @@ terraform output > ../infrastructure-outputs.txt
 ```
 
 #### Environment-Specific Variables
+
+These variable files (`.tfvars`) allow the same Terraform code to create different infrastructure for each environment. Production uses larger, more resilient resources; development uses smaller, cheaper resources.
+
+**Critical Variable Choices Explained**:
+
+**Database Instance Class**: `db.r6g.large` for production is a memory-optimized instance (16 GB RAM) because PostgreSQL performance is heavily memory-dependent. Dev environments might use `db.t4g.micro` (1 GB RAM) to save costs—acceptable for testing but would be too slow for production traffic.
+
+**Storage Auto-Scaling**: `db_max_allocated_storage = 1000` allows PostgreSQL to automatically grow from 100GB to 1TB as data accumulates. This prevents "disk full" failures without pre-allocating expensive storage you don't need yet.
+
+**ECS Auto-Scaling Limits**: `ecs_min_capacity = 2, ecs_max_capacity = 10` means:
+- Always run at least 2 containers (for high availability—if one fails, the other handles traffic)
+- Never run more than 10 containers (cost control—prevents runaway scaling from attacks or bugs)
+
+Production should always have `min_capacity >= 2` because running a single container means downtime during deployments or failures.
+
+**CPU/Memory Allocation**: `ecs_cpu = 1024, ecs_memory = 2048` allocates 1 vCPU and 2GB RAM per container. Fargate charges based on these values, so right-sizing is important. Too little = out-of-memory errors; too much = wasted money.
+
+**Why Separate Container Images**: `backend_container_image` uses the full ECR URL, not just a tag. This ensures you're pulling from your own private registry, not Docker Hub (where malicious images could exist with similar names).
 
 ```hcl
 # terraform_aws/environments/prod.tfvars
@@ -961,7 +1104,25 @@ backend_container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/careconn
 
 ### Backend Deployment
 
+Deploying the Spring Boot backend involves building a Docker container image, pushing it to AWS's Elastic Container Registry (ECR), and updating the ECS service to use the new image.
+
+**Why Containers for Backend**: Containers ensure the application runs identically in all environments. If it works on your laptop, it works in production—eliminating "works on my machine" problems. The container includes the exact JDK version, dependencies, and configuration.
+
 #### Docker Build and Push
+
+**The Build Process Explained**:
+
+1. **Maven Build** (`./mvnw clean package`): Compiles Java code, runs tests (skip with `-DskipTests` for faster builds, but NOT recommended for production deployments), and packages everything into a JAR file.
+
+2. **Docker Build**: Uses the Dockerfile in `backend/core/` to create a container image. This typically starts with a base image (e.g., `openjdk:17-jdk-slim`), copies the JAR file, and defines how to run the application.
+
+3. **Tagging**: `docker tag` creates an alias pointing to the same image. We tag as both `latest` (for convenience) and with the ECR repository URL (required for pushing to ECR).
+
+4. **ECR Login**: AWS ECR requires authentication. `get-login-password` retrieves a temporary token valid for 12 hours. Docker uses this to authenticate push operations.
+
+5. **Push to ECR**: Uploads the container image layers to ECR. Only changed layers are uploaded (not the entire image each time), speeding up subsequent pushes.
+
+**Security Note**: Never push `:latest` to production without also tagging with a specific version (e.g., `:v1.2.3` or commit SHA). The `:latest` tag can change, making rollbacks difficult. Always use immutable tags in production.
 
 ```bash
 # Build backend Docker image
@@ -985,6 +1146,22 @@ docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/careconnect-backend:lat
 
 #### ECS Service Update
 
+After pushing a new container image to ECR, you must tell ECS to deploy it.
+
+**Force New Deployment**: The `--force-new-deployment` flag tells ECS to pull the latest image and replace existing containers, even if the task definition hasn't changed. This is useful when you push a new image with the same tag (e.g., `:latest`).
+
+**How the Deployment Works**:
+1. ECS pulls the new container image from ECR
+2. Starts new tasks (containers) running the new image
+3. Waits for new tasks to pass health checks (the Spring Boot `/actuator/health` endpoint)
+4. Once healthy, updates the load balancer to send traffic to new tasks
+5. Drains connections from old tasks (waits for in-flight requests to complete)
+6. Terminates old tasks
+
+This entire process takes 2-5 minutes typically. The `aws ecs wait services-stable` command monitors the deployment and only returns when it's complete (or fails).
+
+**Monitoring During Deployment**: Watch CloudWatch Logs for errors from new tasks. If new tasks fail health checks repeatedly, ECS's circuit breaker will automatically roll back to the previous version.
+
 ```bash
 # Update ECS service with new image
 aws ecs update-service \
@@ -1000,7 +1177,24 @@ aws ecs wait services-stable \
 
 ### Frontend Deployment
 
+The Flutter web app is deployed as static files (HTML, JavaScript, CSS) to S3 and distributed globally via CloudFront CDN. Mobile apps follow platform-specific release processes through app stores.
+
 #### Build and Deploy to S3
+
+**Flutter Web Build Process**:
+
+`flutter build web --release` compiles Dart code to optimized JavaScript, minifies assets, and generates a production-ready web app in the `build/web/` directory. The `--release` flag enables:
+- Code minification (smaller files = faster load times)
+- Dead code elimination (removes unused functions)
+- Optimization passes (faster JavaScript execution)
+
+Never deploy a debug build to production—they're 10x larger and include debug symbols attackers could exploit.
+
+**S3 Sync Strategy**: `aws s3 sync` is smarter than `aws s3 cp`. It only uploads files that changed (based on content hash), making deployments faster. The `--delete` flag removes files from S3 that no longer exist locally (e.g., if you renamed a page).
+
+**Why Invalidate CloudFront**: CloudFront caches files at edge locations worldwide (for fast delivery). After deploying new files to S3, CloudFront doesn't automatically know—it might serve old cached versions for hours. The `create-invalidation` command tells CloudFront "discard all cached copies, fetch fresh from S3." The `/*` path means "invalidate everything."
+
+**Cost Note**: CloudFront invalidations cost $0.005 per path invalidated. Invalidating `/*` counts as ~1000 paths. Use specific paths in production to save costs: `--paths "/index.html" "/main.js"`.
 
 ```bash
 cd frontend
@@ -1022,6 +1216,14 @@ aws cloudfront create-invalidation \
 
 #### Mobile App Deployment
 
+**Android App Bundle**: `flutter build appbundle` creates an `.aab` file optimized for Google Play. App bundles allow Google Play to generate APKs customized for each device (different screen sizes, architectures) rather than one giant APK containing everything.
+
+**iOS Archive**: `flutter build ios` generates an Xcode archive (`.ipa` file). This must be signed with your Apple Developer certificate before upload to App Store Connect.
+
+**Why Manual Upload**: Unlike web deployments (fully automated), mobile app stores require human review. You upload through the platform's console, fill out release notes, screenshots, and privacy info, then submit for review. Google typically reviews in hours; Apple in 1-3 days.
+
+**Versioning Strategy**: Always increment version numbers in `pubspec.yaml` before building. App stores reject uploads with duplicate version numbers. Use semantic versioning (e.g., 1.2.3 → 1.2.4 for bug fix, → 1.3.0 for new feature).
+
 ```bash
 # Android
 flutter build appbundle --release
@@ -1038,7 +1240,43 @@ flutter build ios --release
 
 ### Blue-Green Deployment Strategy
 
+Blue-green deployment is a technique for achieving zero-downtime deployments by running two identical production environments ("blue" and "green") and switching traffic between them. For CareConnect, ECS handles much of this automatically, but understanding the process helps troubleshoot deployment issues.
+
+**What "Blue-Green" Means**: 
+- **Blue** = Current production version serving live traffic
+- **Green** = New version being deployed
+- **Switchover**: Once green is healthy, traffic switches from blue to green
+- **Rollback**: If green has issues, immediately switch back to blue
+
+ECS's deployment configuration (`maximum_percent = 200, minimum_healthy_percent = 100`) implements this automatically, but the script below gives you manual control for complex deployments.
+
 #### Automated Blue-Green Deployment
+
+**Script Workflow Explained**:
+
+1. **Fetch Current Task Definition**: Gets the currently running task definition (which includes container image, environment variables, resource limits). This is the "blue" version.
+
+2. **Create New Task Definition**: Uses `jq` to modify the JSON, replacing the old container image with the new one. All other settings (CPU, memory, environment variables) stay the same. This creates the "green" version.
+
+3. **Register New Task Definition**: ECS assigns a new revision number (e.g., `careconnect-backend:42` becomes `:43`).
+
+4. **Update Service**: Tells ECS to use the new task definition. ECS then:
+   - Starts new tasks (green)
+   - Waits for them to pass health checks
+   - Adds them to the load balancer
+   - Drains blue tasks
+   - Terminates blue tasks
+
+5. **Wait for Stability**: The `aws ecs wait services-stable` command monitors the deployment. It returns when all desired tasks are running and healthy.
+
+6. **Post-Deployment Health Check**: Even after ECS says tasks are healthy, this script performs an additional health check by calling the actual API. This catches issues ECS health checks might miss (e.g., database connection errors that occur after startup).
+
+**Rollback Logic**: If health checks fail after 10 attempts (5 minutes), the script should roll back by updating the service to use the old task definition. In practice, ECS's circuit breaker would have already rolled back by this point, but this provides an additional safety net.
+
+**Why This Manual Script**: While ECS deployments are usually automatic (via CI/CD), having this script allows manual control for:
+- Debugging deployment issues
+- Testing deployment procedures
+- Emergency rollbacks when automation fails
 
 ```bash
 #!/bin/bash
@@ -1108,9 +1346,31 @@ echo "Blue-green deployment completed successfully!"
 
 ## Database Management
 
+Managing a PostgreSQL database in production requires careful attention to user permissions, performance tuning, and migration strategies. In healthcare applications, the database is the most critical component—patient data integrity and availability directly impact care quality.
+
 ### Database Initialization
 
+Initial database setup involves more than just creating a database. We create multiple users with different permission levels, following the principle of least privilege: each user gets only the permissions needed for their role.
+
 #### Production Database Setup
+
+**User Roles Strategy**:
+
+1. **careconnect_app**: The application user. Has full CRUD permissions on tables but CANNOT create/drop tables or modify schema. This prevents a compromised application from destroying the database structure.
+
+2. **careconnect_readonly**: For analytics and reporting tools. Can only SELECT data, preventing accidental modifications during report generation.
+
+3. **careconnect_backup**: For backup tools. Can SELECT all data but cannot modify anything. Some backup tools need database credentials, and this ensures they can't accidentally corrupt data.
+
+**Why Not Use `postgres` Superuser**: The default `postgres` user has unrestricted access, including the ability to drop the entire database. If an attacker compromises the application and finds database credentials, limiting permissions reduces damage.
+
+**Performance Parameters Explained**:
+
+- `shared_buffers = '1GB'`: Memory PostgreSQL uses for caching. More memory = fewer disk reads = faster queries. Rule of thumb: 25% of system RAM.
+- `max_connections = 200`: Maximum concurrent database connections. Each connection consumes memory, so this must balance capacity with resource constraints.
+- `log_min_duration_statement = 2000`: Logs any query taking longer than 2 seconds. This helps identify slow queries without logging every query (which would fill disk space quickly).
+
+**Character Encoding**: `UTF8` encoding supports international characters (accents, non-Latin scripts) which is important for patient names and medical terminology from any language.
 
 ```sql
 -- scripts/init-prod-db.sql
@@ -1152,7 +1412,22 @@ SELECT pg_reload_conf();
 
 ### Database Migration Strategy
 
+Database migrations allow you to evolve the database schema over time while preserving data. Flyway is a migration tool that tracks which schema changes have been applied, ensuring migrations run exactly once in the correct order.
+
+**Why Flyway Over Manual SQL**: Without a migration tool, you'd have to manually track which SQL scripts ran in each environment (dev, staging, prod). Missed scripts lead to schema drift—dev has columns prod doesn't, causing deployment failures. Flyway solves this by maintaining a `flyway_schema_history` table that records every migration.
+
 #### Flyway Migration Setup
+
+**How Flyway Works**:
+1. **Version-Named Files**: Migrations are SQL files named `V001__description.sql`, `V002__another_change.sql`. The version number determines execution order.
+2. **Checksum Validation**: Flyway calculates a checksum of each migration file. If you modify a file after it's been applied, Flyway detects the change and fails—preventing accidental modifications to historical migrations.
+3. **Automatic Execution**: On application startup (or via Maven command), Flyway checks which migrations haven't run yet and executes them in order.
+
+**Configuration Parameters**:
+- `baselineOnMigrate=true`: If the database already has tables (e.g., you're adding Flyway to an existing database), this treats the current schema as "version 0" instead of failing.
+- `validateOnMigrate=true`: Before running migrations, verifies all previously applied migrations haven't been modified. Prevents database corruption from changing historical migrations.
+
+**Common Pitfall**: Never modify a migration file after it's been deployed. If you need to change something, create a NEW migration file that reverses or corrects the previous one.
 
 ```xml
 <!-- backend/core/pom.xml - Flyway plugin -->
