@@ -543,6 +543,7 @@ public class AuthController {
                 System.out.println("✅ Successfully linked Alexa for patient " + patient.getId());
                 System.out.println("🔑 Refresh token expires at: " + expiresAt);
                 System.out.println("🔑 Refresh token: " + plainRefreshToken);
+                System.out.println("alexaLinkedValue: " + patient.getAlexaLinked());
 
                 // 📤 Return PLAIN TEXT token to Alexa (NOT hashed!)
                 return ResponseEntity.ok(Map.of(
