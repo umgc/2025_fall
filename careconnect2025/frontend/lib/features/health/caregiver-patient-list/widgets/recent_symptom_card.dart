@@ -1,36 +1,136 @@
 import 'package:flutter/material.dart';
-import '../models/symptom_entry.dart';
 
-/// Patient Details → Health tab (Symptoms)
+class SymptomEntry {
+  final String id;
+  final DateTime date;
+  final String name; // comma-separated symptom names for the chip pill
+  final String severity; // Mild | Moderate | Severe (any text supported)
+  final String note; // description line under chips
+
+  SymptomEntry({
+    required this.id,
+    required this.date,
+    required this.name,
+    required this.severity,
+    required this.note,
+  });
+}
+
+/// Recent Symptoms section (single card).
+/// Pass [extraTop] to render a widget directly under the section header
+/// (use this to place PainLevelCard inside this card).
 class RecentSymptomsSection extends StatelessWidget {
-  final List<SymptomEntry> entries;
-  final String title; // default: 'Recent Symptoms'
-
   const RecentSymptomsSection({
     super.key,
     required this.entries,
-    this.title = 'Recent Symptoms',
+    this.extraTop,
   });
+
+  final List<SymptomEntry> entries;
+  final Widget? extraTop;
+
+  Color _severityColor(ColorScheme cs, String s) {
+    final t = s.toLowerCase();
+    if (t.contains('severe')) return const Color(0xFFE65757); // red-ish
+    if (t.contains('moderate')) return const Color(0xFFF29B1D); // orange
+    if (t.contains('mild')) return const Color(0xFF4CAF50); // green
+    return cs.primary; // default
+  }
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[d.month - 1]} ${d.day}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // newest first (do not mutate caller list)
-    final items = List<SymptomEntry>.from(entries)
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final cs = theme.colorScheme;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withOpacity(.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Icon(Icons.medical_services_outlined, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Recent Symptoms',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary, // teal to match the app theme
+                ),
+              ),
+            ],
+          ),
+
+          // Optional injected widget (e.g., PainLevelCard) directly under header
+          if (extraTop != null) ...[const SizedBox(height: 12), extraTop!],
+
+          // Each symptom entry
+          for (int i = 0; i < entries.length; i++) ...[
+            const SizedBox(height: 12),
+            _SymptomTile(entry: entries[i]),
+            if (i != entries.length - 1)
+              Divider(color: cs.outlineVariant.withOpacity(.35)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SymptomTile extends StatelessWidget {
+  const _SymptomTile({required this.entry});
+  final SymptomEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    Color chipColor() {
+      final t = entry.severity.toLowerCase();
+      if (t.contains('severe')) return const Color(0xFFE65757);
+      if (t.contains('moderate')) return const Color(0xFFF29B1D);
+      if (t.contains('mild')) return const Color(0xFF4CAF50);
+      return cs.primary;
+    }
+
+    // ⬇️ Match PainLevelCard / CurrentMedications card styling
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withOpacity(.35)),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: 0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
+            color: Colors.black.withOpacity(.03),
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
@@ -38,204 +138,84 @@ class RecentSymptomsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Date + severity chip
           Row(
-            children: [
-              Icon(Icons.medical_services_outlined,
-                  color: theme.colorScheme.primary, size: 24),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          if (items.isEmpty)
-            const _EmptyState(message: 'No recent symptoms')
-          else
-            Column(
-              children: [
-                for (final e in items) _SymptomEntryTile(entry: e),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ---- private tile (kept inside this file) ----
-class _SymptomEntryTile extends StatelessWidget {
-  final SymptomEntry entry;
-  const _SymptomEntryTile({required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final (bg, fg, label) = _severityBadge(theme.colorScheme, entry.severity);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top row: date + severity pill
-          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _fmtDate(entry.date),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w600,
+                _formatDate(entry.date),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: cs.onSurface.withOpacity(.75),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const Spacer(),
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: bg,
-                  borderRadius: BorderRadius.circular(12),
+                  color: chipColor(),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  label,
-                  style: TextStyle(
-                    color: fg,
-                    fontSize: 12,
+                  entry.severity.toLowerCase(),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: cs.onPrimary,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: .2,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
 
-          // Primary symptom name as a small chip (optional look)
-          if (entry.name.trim().isNotEmpty) ...[
-            Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color:
-                  theme.colorScheme.outline.withValues(alpha: 0.25),
-                ),
-              ),
-              child: (() {
-                final isNoSymptoms =
-                    entry.name.trim().toLowerCase() == 'no symptoms reported';
-                if (isNoSymptoms) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.check_circle,
-                          size: 16, color: Colors.green.shade600),
-                      const SizedBox(width: 6),
-                      Text(
-                        entry.name,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.green.shade600, // green text
-                        ),
-                      ),
-                    ],
-                  );
-                } else {
-                  return Text(
-                    entry.name,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  );
-                }
-              })(),
+          const SizedBox(height: 12),
+
+          // Symptom name “pill”
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cs.outlineVariant),
             ),
-            const SizedBox(height: 8),
-          ],
-
-          // Note/description (optional)
-          if (entry.note != null && entry.note!.trim().isNotEmpty)
-            Text(
-              entry.note!.trim(),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color:
-                theme.colorScheme.onSurface.withValues(alpha: 0.95),
+            child: Text(
+              entry.name,
+              style: theme.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  static (Color, Color, String) _severityBadge(
-      ColorScheme cs,
-      String raw,
-      ) {
-    final s = raw.toLowerCase().trim();
-    if (s == 'severe') {
-    return (cs.error, cs.onError, 'severe');
-    }
-    if (s == 'moderate') {
-    return (Colors.orange.shade600, Colors.white, 'moderate');
-    }
-    return (Colors.green.shade600, Colors.white, 'mild');
-    }
-
-  static String _fmtDate(DateTime d) {
-    const mm = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec'
-    ];
-    return '${mm[d.month - 1]} ${d.day}';
-  }
-}
-
-/// Empty state block
-class _EmptyState extends StatelessWidget {
-  final String message;
-  const _EmptyState({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest
-            .withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.insert_comment_outlined,
-              size: 28, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+
+          const SizedBox(height: 12),
+
+          // Note line
+          if (entry.note.isNotEmpty)
+            Text(
+              entry.note,
+              style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurface),
+            ),
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime d) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[d.month - 1]} ${d.day}';
   }
 }
