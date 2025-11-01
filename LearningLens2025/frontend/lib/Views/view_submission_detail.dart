@@ -98,8 +98,8 @@ class SubmissionDetailState extends State<SubmissionDetail> {
       final selectedLevelId = selectedLevels[criterion.id];
       if (selectedLevelId == null) continue;
 
-      final matchingLevels = criterion.levels
-          .where((level) => level.id == selectedLevelId);
+      final matchingLevels =
+          criterion.levels.where((level) => level.id == selectedLevelId);
       if (matchingLevels.isEmpty) continue;
 
       totalAchieved += matchingLevels.first.score.toDouble();

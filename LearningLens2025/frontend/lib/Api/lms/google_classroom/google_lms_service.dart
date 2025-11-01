@@ -1146,6 +1146,7 @@ class GoogleLmsService extends LmsInterface {
     throw UnimplementedError();
   }
 
+  @override
   Future<List<Map<String, dynamic>>> getSubmissionAttachments(
       {required int assignId}) {
     throw UnimplementedError();
