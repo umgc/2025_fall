@@ -7,18 +7,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST controller that exposes check-in specific question endpoints.
- *
- * Matches frontend routes:
- *   GET /v1/api/checkins/{checkInId}/questions
- *
- * If a check-in-specific question list is not yet implemented,
- * this controller currently returns all active questions in order
- * via the QuestionService.
- */
 @RestController
-@RequestMapping("/v1/api/checkins")
+@RequestMapping(path = {"/api/checkins", "/v1/api/checkins"}) // <- supports both
 public class CheckInQuestionController {
 
     private final QuestionService questionService;
@@ -28,16 +18,12 @@ public class CheckInQuestionController {
     }
 
     /**
+     * GET /api/checkins/{checkInId}/questions
      * GET /v1/api/checkins/{checkInId}/questions
-     *
-     * Retrieves the list of questions associated with a given check-in.
-     * Currently delegates to QuestionService.findActiveOrdered().
-     *
-     * @param checkInId ID of the check-in
-     * @return List of QuestionDTOs (active and ordered)
      */
     @GetMapping("/{checkInId}/questions")
-    public ResponseEntity<List<QuestionDTO>> getQuestions(@PathVariable Long checkInId) {
+    public ResponseEntity<List<QuestionDTO>> getQuestions(@PathVariable("checkInId") Long checkInId) {
+        // Temporary: return active, ordered questions until per-check-in mapping is ready
         List<QuestionDTO> questions = questionService.findActiveOrdered();
         return ResponseEntity.ok(questions);
     }
