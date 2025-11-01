@@ -19,10 +19,12 @@
 15. [File Management](#file-management)
 16. [Device Integration](#device-integration)
 17. [Notifications and Alerts](#notifications-and-alerts)
-18. [Emergency Features](#emergency-features)
-19. [Privacy and Security](#privacy-and-security)
-20. [Troubleshooting](#troubleshooting)
-21. [Support and Contact](#support-and-contact)
+18. [Electronic Visit Verification](#electronic-visit-verification)
+19. [Emergency Features](#emergency-features)
+20. [Privacy and Security](#privacy-and-security)
+21. [Troubleshooting](#troubleshooting)
+22. [Support and Contact](#support-and-contact)
+
 
 ## Introduction
 
@@ -951,6 +953,24 @@ The CareConnect dashboard is your central hub for all activities and information
    - Secondary contacts
    - Emergency services
    - Healthcare providers
+   
+## Electronic Visit Verification
+
+### Overview
+
+The EVV module in the Care Connect app helps caregivers record, verify, and submit visit data in compliance with Electronic Visit Verification standards.
+
+### Where to find it
+
+* Open ...More page, select **EVV** from the menu.
+
+You can:
+
+* View and manage **Scheduled Visits**
+* **Start**, **complete**, and **submit** EVV visits
+* **Generate EDI files** for completed visits
+* **View past and upcoming visits** from the patient dashboard
+* **Work offline** and sync when reconnected
 
 ## Emergency Features
 
