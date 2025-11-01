@@ -3081,58 +3081,264 @@ fi
 echo "Security patching completed successfully."
 ```
 
-## Troubleshooting
+## Troubleshooting Production Issues
 
-### Common Issues and Solutions
+This section provides systematic approaches to diagnosing and resolving common production issues in the CareConnect platform. Each issue follows a structured format: **Problem** → **Root Causes** → **Diagnostic Steps** → **Resolution** → **Prevention**, enabling both quick fixes during incidents and long-term improvements to prevent recurrence.
 
-#### Application Won't Start
+### Common Issues and Systematic Solutions
 
+#### Problem: ECS Tasks Fail to Start or Immediately Exit
+
+**Symptoms**: 
+- New deployments show tasks starting but immediately transitioning to STOPPED state
+- CloudWatch Logs show containers exiting with non-zero exit codes
+- ALB health checks report unhealthy targets
+- Users experience 503 Service Unavailable errors
+
+**Root Causes**:
+This issue typically stems from one of several configuration or dependency problems:
+
+1. **Environment Variable Misconfiguration**: Missing or incorrect environment variables (database URL, API keys, JWT secrets) cause application startup failures
+2. **Database Connectivity Issues**: Application can't reach RDS due to security group rules, subnet configuration, or database being unavailable
+3. **Container Image Problems**: ECR image is corrupt, missing dependencies, or built for wrong architecture (amd64 vs arm64)
+4. **IAM Permission Errors**: ECS task lacks permissions to access Secrets Manager, S3, or other AWS services needed at startup
+5. **Resource Constraints**: Task definition specifies insufficient memory/CPU, causing OOM kills during startup
+
+**Systematic Diagnostic Steps**:
+
+1. **Check ECS Task Exit Reason**:
+   ```bash
+   # Get detailed information about stopped tasks
+   aws ecs describe-tasks \
+       --cluster careconnect-prod \
+       --tasks $(aws ecs list-tasks \
+           --cluster careconnect-prod \
+           --service-name careconnect-prod-service \
+           --desired-status STOPPED \
+           --query 'taskArns[0]' \
+           --output text) \
+       --query 'tasks[0].{StopReason:stoppedReason,ExitCode:containers[0].exitCode,LastStatus:lastStatus}'
+   ```
+   **What this tells you**: The exit code and stop reason often indicate the category of failure. Exit code 137 = OOM kill. Exit code 1 with "Essential container exited" = application crash.
+
+2. **Examine Container Logs**:
+   ```bash
+   # View recent logs from failed containers
+   aws logs filter-log-events \
+       --log-group-name "/ecs/careconnect-prod" \
+       --start-time $(date -d '10 minutes ago' +%s)000 \
+       --query 'events[*].[timestamp,message]' \
+       --output text | sort
+   ```
+   **What to look for**: 
+   - "Connection refused" or "Connection timeout" = network/database issue
+   - "Environment variable X not set" = configuration issue
+   - "OutOfMemoryError" or "Killed" = resource constraint
+   - Stack traces with "AccessDeniedException" = IAM permission issue
+
+3. **Verify Task Definition Configuration**:
+   ```bash
+   # Review current task definition
+   aws ecs describe-task-definition \
+       --task-definition careconnect-backend \
+       --query 'taskDefinition.{CPU:cpu,Memory:memory,Env:containerDefinitions[0].environment[*].name}' \
+       --output json
+   ```
+   **What to check**: Ensure all required environment variables are present. Cross-reference with working configuration in staging.
+
+4. **Test Database Connectivity from VPC**:
+   ```bash
+   # Launch a test container in same VPC/subnet to isolate network issues
+   aws ecs run-task \
+       --cluster careconnect-prod \
+       --task-definition careconnect-test-connectivity \
+       --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx]}" \
+       --launch-type FARGATE
+   
+   # Then exec into it and test database connection
+   aws ecs execute-command \
+       --cluster careconnect-prod \
+       --task <task-id> \
+       --container connectivity-test \
+       --interactive \
+       --command "/bin/sh"
+   
+   # Inside the container:
+   nc -zv prod-db.region.rds.amazonaws.com 5432
+   ```
+   **What this proves**: If this succeeds but application fails, the issue is in application configuration, not network connectivity.
+
+5. **Check Security Group Rules**:
+   ```bash
+   # Verify ECS tasks can reach RDS
+   aws ec2 describe-security-groups \
+       --filters "Name=group-name,Values=careconnect-prod-ecs-tasks" \
+       --query 'SecurityGroups[0].IpPermissionsEgress[*]'
+   
+   # Verify RDS accepts connections from ECS
+   aws ec2 describe-security-groups \
+       --filters "Name=group-name,Values=careconnect-prod-rds" \
+       --query 'SecurityGroups[0].IpPermissions[*]'
+   ```
+   **What to verify**: ECS security group allows outbound to port 5432. RDS security group allows inbound from ECS security group on port 5432.
+
+**Resolution Steps**:
+
+**If Environment Variable Missing**:
 ```bash
-# Check ECS service logs
-aws logs filter-log-events \
-    --log-group-name "/ecs/careconnect-prod" \
-    --start-time $(date -d '1 hour ago' +%s)000
+# Update task definition with missing variable
+aws ecs register-task-definition \
+    --cli-input-json file://updated-task-def.json
 
-# Check service status
-aws ecs describe-services \
+# Force new deployment to use updated task definition
+aws ecs update-service \
     --cluster careconnect-prod \
-    --services careconnect-prod-service
-
-# Check task definition
-aws ecs describe-task-definition \
-    --task-definition careconnect-backend
-
-# Check security groups and network connectivity
-aws ec2 describe-security-groups \
-    --filters "Name=group-name,Values=careconnect-prod-*"
+    --service careconnect-prod-service \
+    --force-new-deployment
 ```
 
-#### Database Connection Issues
-
+**If Database Connectivity Issue**:
 ```bash
-# Test database connectivity
-psql -h prod-db.region.rds.amazonaws.com \
-     -U careconnect_app \
-     -d careconnect \
-     -c "SELECT 1"
-
-# Check database performance
-psql -h prod-db.region.rds.amazonaws.com \
-     -U admin -d careconnect \
-     -c "SELECT * FROM pg_stat_activity; SELECT * FROM pg_stat_database;"
-
-# Check RDS metrics
-aws cloudwatch get-metric-statistics \
-    --namespace AWS/RDS \
-    --metric-name DatabaseConnections \
-    --dimensions Name=DBInstanceIdentifier,Value=careconnect-prod-db \
-    --start-time $(date -d '1 hour ago' --iso-8601) \
-    --end-time $(date --iso-8601) \
-    --period 300 \
-    --statistics Average,Maximum
+# Add rule to RDS security group allowing ECS tasks
+aws ec2 authorize-security-group-ingress \
+    --group-id sg-rds-id \
+    --protocol tcp \
+    --port 5432 \
+    --source-group sg-ecs-tasks-id
 ```
 
-#### High Response Times
+**If Resource Constraint**:
+```bash
+# Update task definition with more resources
+# Modify task-def.json: increase "memory": "2048" to "4096"
+aws ecs register-task-definition --cli-input-json file://task-def.json
+aws ecs update-service --cluster careconnect-prod --service careconnect-prod-service --task-definition careconnect-backend:NEW_REVISION
+```
+
+**If IAM Permission Missing**:
+```bash
+# Attach missing policy to ECS task role
+aws iam attach-role-policy \
+    --role-name careconnect-ecs-task-role \
+    --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+```
+
+**Prevention**:
+- **Infrastructure as Code**: All task definitions and security groups should be in Terraform, reviewed in pull requests
+- **Automated Testing**: CI/CD should deploy to staging and run health checks before allowing production deployment
+- **Gradual Rollout**: Use blue-green or canary deployments so issues affect only a subset of traffic initially
+- **Resource Monitoring**: Set up CloudWatch alarms for task stop reasons and OOM events
+
+#### Problem: Database Connection Pool Exhaustion
+
+**Symptoms**:
+- Application logs show "Could not obtain connection from pool" errors
+- Response times spike to >30 seconds
+- Health checks start failing intermittently
+- CloudWatch metrics show DatabaseConnections at or near maximum
+
+**Root Causes**:
+Connection pool issues occur when the application exhausts available database connections, usually due to:
+
+1. **Connection Leaks**: Application code opens database connections but doesn't properly close them in exception paths
+2. **Slow Queries**: Long-running queries hold connections for extended periods, starving the pool
+3. **Traffic Spikes**: Sudden increase in traffic creates more concurrent requests than pool can handle
+4. **Misconfigured Pool Size**: Pool max size is too small for the number of ECS tasks and request concurrency
+5. **Database Performance**: Database is CPU-bound or experiencing high I/O wait, slowing all queries
+
+**Systematic Diagnostic Steps**:
+
+1. **Check Current Database Connections**:
+   ```bash
+   # Connect to RDS and query active connections
+   psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+       SELECT 
+           state, 
+           COUNT(*) as count,
+           MAX(EXTRACT(EPOCH FROM (now() - state_change))) as max_duration_seconds
+       FROM pg_stat_activity 
+       WHERE datname = 'careconnect'
+       GROUP BY state
+       ORDER BY count DESC;
+   "
+   ```
+   **What to look for**: High count of "idle in transaction" (connection leak) or "active" queries with very long durations (slow queries).
+
+2. **Identify Long-Running Queries**:
+   ```bash
+   psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+       SELECT 
+           pid,
+           usename,
+           state,
+           query,
+           now() - state_change as duration
+       FROM pg_stat_activity
+       WHERE state != 'idle'
+         AND now() - state_change > interval '30 seconds'
+       ORDER BY duration DESC;
+   "
+   ```
+   **What this reveals**: Specific queries that are holding connections for excessive time.
+
+3. **Check HikariCP Metrics** (from application logs):
+   ```bash
+   aws logs filter-log-events \
+       --log-group-name "/ecs/careconnect-prod" \
+       --filter-pattern "HikariPool" \
+       --start-time $(date -d '1 hour ago' +%s)000 \
+       | jq -r '.events[].message' \
+       | grep -E "active|idle|waiting"
+   ```
+   **What to look for**: Messages like "Thread starvation or clock leap detected" or "Total connections X (active Y, idle 0, waiting Z)".
+
+**Resolution Steps**:
+
+**Immediate (During Incident)**:
+```bash
+# 1. Scale up ECS tasks temporarily to distribute load
+aws ecs update-service \
+    --cluster careconnect-prod \
+    --service careconnect-prod-service \
+    --desired-count 10  # Double current count
+
+# 2. Kill problematic long-running queries
+psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE state = 'active'
+      AND now() - state_change > interval '5 minutes';
+"
+
+# 3. Restart ECS tasks to clear connection pools
+aws ecs update-service \
+    --cluster careconnect-prod \
+    --service careconnect-prod-service \
+    --force-new-deployment
+```
+
+**Long-Term (Post-Incident)**:
+1. **Increase Connection Pool Size**: 
+   Update `application.properties`:
+   ```properties
+   spring.datasource.hikari.maximum-pool-size=20  # Was 10
+   spring.datasource.hikari.connection-timeout=30000
+   ```
+
+2. **Fix Connection Leaks**: 
+   Review application code for improper connection handling. Ensure all `@Transactional` methods complete successfully or use try-with-resources for manual connection management.
+
+3. **Optimize Slow Queries**:
+   ```sql
+   -- Add missing indexes identified in query analysis
+   CREATE INDEX idx_vital_signs_user_time ON vital_signs(user_id, measurement_time DESC);
+   ```
+
+**Prevention**:
+- **Connection Pool Monitoring**: Set up CloudWatch alarm when active connections > 80% of max
+- **Query Performance Monitoring**: Use pg_stat_statements to track slow queries over time
+- **Load Testing**: Regular load tests identify connection pool limits before production traffic hits them
+- **Code Reviews**: Require review of all database access patterns for proper connection lifecycle management
 
 ```bash
 # Check ALB metrics
