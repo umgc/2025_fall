@@ -102,17 +102,24 @@ class _CustomAppBarState extends State<CustomAppBar> {
       ),
       actions: <Widget>[
         Flexible(
-          child: IconButton(
-            icon: Icon(Icons.science), // Science Icon
-            onPressed: !canAccessApp
-                ? null
-                : () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => TextBasedFunctionCallerView()),
-                    );
-                  },
+          child: Visibility(
+            visible: isTeacher,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: IconButton(
+              icon: Icon(Icons.science), // Science Icon
+              onPressed: !canAccessApp
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                TextBasedFunctionCallerView()),
+                      );
+                    },
+            ),
           ),
         ),
         // Refresh button: Instead of relying on an external callback,

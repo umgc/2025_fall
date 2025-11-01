@@ -197,6 +197,7 @@ class LocalLLMService implements LLM {
     return "ERROR: Local LLM failed to produce a response";
   }
 
+  // method to run model with previous contexts
   Future<String> runModel2(
     List<Map<String, dynamic>>? context, {
     int? maxTokenSet,
@@ -409,6 +410,7 @@ class LocalLLMService implements LLM {
     return await runModel2(context);
   }
 
+  // unused in local LLM;
   @override
   Future<String> generate(String prompt) {
     // TODO: implement generate
@@ -498,32 +500,37 @@ class LocalLLMService implements LLM {
   }
 
   Future<List<String>> fetchModelKeys() async {
-    final url = Uri.parse(
-      'https://raw.githubusercontent.com/ssung13/SWEN670F2025/main/models.csv',
-    );
+    final downloadUrl = LocalStorageService.getLocalLLMDownloadURLPath();
+    if (downloadUrl != '') {
+      final url = Uri.parse(
+        downloadUrl,
+      );
 
-    final List<String> modelKeys = [];
+      final List<String> modelKeys = [];
 
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final csvContent = response.body;
+      try {
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final csvContent = response.body;
 
-        for (var line in LineSplitter.split(csvContent)) {
-          if (line.trim().isEmpty) continue;
-          final parts = line.split(',');
-          if (parts.isNotEmpty) {
-            modelKeys.add(parts[0].trim());
+          for (var line in LineSplitter.split(csvContent)) {
+            if (line.trim().isEmpty) continue;
+            final parts = line.split(',');
+            if (parts.isNotEmpty) {
+              modelKeys.add(parts[0].trim());
+            }
           }
+        } else {
+          print('Failed to fetch CSV: ${response.statusCode}');
         }
-      } else {
-        print('Failed to fetch CSV: ${response.statusCode}');
+      } catch (e) {
+        print('Error fetching CSV: $e');
       }
-    } catch (e) {
-      print('Error fetching CSV: $e');
-    }
 
-    return modelKeys;
+      return modelKeys;
+    } else {
+      return [];
+    }
   }
 
   // method for outputting stream.
