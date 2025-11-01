@@ -129,3 +129,12 @@ test_video_calls.dart
 **/linux/flutter/generated_*
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/windows/flutter/generated_*
+
+# Donn't check AI models
+*.onnx
+*.GGUF
+*.bin
+*.pt
+
+# don't check in generated files
+generated*
