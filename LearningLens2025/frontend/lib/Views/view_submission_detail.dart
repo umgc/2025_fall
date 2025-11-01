@@ -65,7 +65,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
               TextEditingController(text: remarks[score['criterionid']]);
         }
         isLoading = false;
-        calculatedGrade = _computeGradeFromSelections();
+        calculatedGrade = computeGradeFromSelections();
       });
 
       if (fetchedRubric == null) {
@@ -81,7 +81,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
     }
   }
 
-  double? _computeGradeFromSelections() {
+  double? computeGradeFromSelections() {
     if (rubric == null || rubric!.criteria.isEmpty) {
       return null;
     }
@@ -412,7 +412,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                   onTap: () {
                     setState(() {
                       selectedLevels[criterion.id] = level.id;
-                      calculatedGrade = _computeGradeFromSelections();
+                      calculatedGrade = computeGradeFromSelections();
                     });
                   },
                   child: Container(
