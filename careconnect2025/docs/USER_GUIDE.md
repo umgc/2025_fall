@@ -887,18 +887,40 @@ The CareConnect dashboard is your central hub for all activities and information
 
 ### Smart Home Integration
 
-#### Supported Systems
-1. **Home Monitoring**:
-   - Motion sensors
-   - Door/window sensors
-   - Emergency buttons
-   - Air quality monitors
+#### Supported Systems  
 
-2. **Voice Assistants**:
-   - Amazon Alexa
-   - Google Assistant
-   - Apple Siri
-   - Custom commands
+1. **Home Monitoring**:  
+   - Motion sensors  
+   - Door/window sensors  
+   - Emergency buttons  
+   - Air quality monitors  
+
+
+2. **Voice Assistants**:  
+   - Amazon Alexa (Phase 1 Integration Complete)  
+        - CareConnect can now connect directly with an Alexa Skill, allowing patients to read or add calendar tasks using voice commands such as:  
+             “Alexa, ask CareConnect what’s on my schedule,” or “Alexa, tell CareConnect to add a doctor’s appointment for tomorrow.”  
+        - Users link their Alexa and CareConnect accounts securely through OAuth 2.0 account linking.  
+        - Once linked, Alexa calls CareConnect’s backend API endpoints  
+             (/v1/api/alexa/calendarTasks/get and /v1/api/alexa/calendarTasks/add) to read and create tasks for the patient’s calendar.  
+        - All requests use JWT authentication and are handled through the CareConnect backend’s Alexa Controller for security and data consistency.  
+        - The Alexa Skill communicates with CareConnect through HTTPS using the ask-sdk-core library.  
+        - Requests are processed by the backend controller, which validates the JWT, interprets the user’s intent, and interacts with the TaskService to retrieve or create patient calendar data.  
+        - The skill is currently available to internal Beta testers via invitation links in the Amazon Developer Console and requires linking through the CareConnect Smart Devices page.  
+        - The integration is currently in Beta mode and limited to patient accounts only.  
+        - Future plans include adding voice authentication to prevent unauthorized users from accessing patient information and expanding caregiver access with limited permissions.  
+
+   - Google Assistant (Planned Future Phase)  
+        - A Google Actions equivalent of the Alexa Skill will allow the same commands through Google Home and Android devices.  
+
+   - Apple Siri  
+   - Custom commands  
+
+#### Integration Summary  
+- The Alexa Integration marks CareConnect’s first major smart-home feature, bridging voice interaction with core health management tasks.  
+- It demonstrates secure communication between Amazon’s Alexa ecosystem and CareConnect’s backend services via OAuth 2.0 and JWT.  
+- This foundation opens the door to further home-automation enhancements such as smart light or speaker notifications for medication reminders, task alerts, and emergency events.  
+- As development continues, additional Alexa-enabled devices such as speakers, smart displays, or lighting systems can be connected to trigger visual or audible reminders for accessibility and safety.  
 
 ## Notifications and Alerts
 
