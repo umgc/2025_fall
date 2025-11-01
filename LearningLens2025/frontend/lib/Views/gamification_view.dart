@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:intl/intl.dart';
@@ -627,7 +626,6 @@ class _GamificationViewState extends State<GamificationView> {
                             },
                             previewMode: false,
                           );
-                          break;
                         case GameType.MATCHING:
                           gameView = MatchingGame(
                             pairs: data,
@@ -636,7 +634,6 @@ class _GamificationViewState extends State<GamificationView> {
                             },
                             previewMode: false,
                           );
-                          break;
                         case GameType.FLASHCARD:
                           gameView = FlashcardGame(
                             questions: data,
@@ -651,7 +648,6 @@ class _GamificationViewState extends State<GamificationView> {
                             },
                             previewMode: false,
                           );
-                          break;
                       }
 
                       showDialog(
