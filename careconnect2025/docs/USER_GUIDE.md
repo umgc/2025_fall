@@ -897,7 +897,8 @@ The CareConnect dashboard is your central hub for all activities and information
 
 
 2. **Voice Assistants**:  
-   - Amazon Alexa (Phase 1 Integration Complete)  
+   - Amazon Alexa (Phase 1 Integration Complete)
+        - [AlexaDemo]https://github.com/umgc/2025_fall/issues/621#issue-3577961974
         - CareConnect can now connect directly with an Alexa Skill, allowing patients to read or add calendar tasks using voice commands such as:  
              “Alexa, ask CareConnect what’s on my schedule,” or “Alexa, tell CareConnect to add a doctor’s appointment for tomorrow.”  
         - Users link their Alexa and CareConnect accounts securely through OAuth 2.0 account linking.  
