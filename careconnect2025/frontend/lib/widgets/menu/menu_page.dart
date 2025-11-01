@@ -141,6 +141,11 @@ class _MenuPageState extends State<MenuPage> {
         route: '/file-management',
       ),
       _MenuItem(
+        icon: Icons.sensors,
+        label: 'Fall Detection',
+        route: '/alertpage',
+      ),
+      _MenuItem(
         icon: Icons.mail,
         label: 'USPS Mail Digest',
         route: '/usps-test'

@@ -41,7 +41,6 @@ import '../../features/payments/presentation/pages/subscription_management_page.
 import '../../features/dashboard/presentation/pages/add_patient_screen.dart';
 import '../../features/auth/presentation/pages/password_reset_page.dart';
 import '../../features/auth/presentation/pages/reset_password_screen.dart'; // ADD THIS IMPORT
-import '../../features/auth/presentation/pages/AlexaLoginPage.dart';
 import '../../features/payments/models/package_model.dart';
 import '../../features/social/presentation/pages/main_feed_screen.dart';
 import '../../features/gamification/presentation/pages/gamification_screen.dart';
@@ -65,6 +64,7 @@ import '../../features/evv/presentation/pages/visit_completed_success_page.dart'
 import '../../providers/user_provider.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
+import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
 import '../../features/usps/presentation/usps_test_screen.dart';
 
 
@@ -1028,7 +1028,7 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
         GoRoute(
-          path: '/menu',
+          path: 'menu',
           name: 'menupage',
           builder: (context, state) => const MenuPage(),
         ),
