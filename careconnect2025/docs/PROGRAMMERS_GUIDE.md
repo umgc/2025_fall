@@ -2,67 +2,218 @@
 
 ## Introduction
 
-### Purpose
+### Purpose and Vision
 
-This Programmer Guide provides comprehensive documentation for developing, maintaining, and troubleshooting the CareConnect system. It covers all technical aspects, including development setup, coding standards, system integrations, and development lifecycle tools.
+This Programmer's Guide serves as the central hub of technical knowledge for the CareConnect platform, a comprehensive healthcare management system designed to connect patients, caregivers, and family members in a seamless digital ecosystem. Its purpose is threefold:
+
+**Onboarding**: To rapidly acclimate new developers to our complex, multi-technology stack by explaining the architectural decisions and development workflows. Rather than simply listing technologies, we explain *why* each was chosen and how they work together to create a cohesive healthcare platform.
+
+**Reference**: To provide clear, actionable examples and explanations for implementing features across the frontend, backend, and integrated services. Each code example is accompanied by context explaining its role in the larger system architecture.
+
+**Troubleshooting**: To offer a curated set of solutions for common pitfalls, ensuring developer efficiency and system stability. Our troubleshooting sections follow a Problem → Root Cause → Step-by-Step Solution approach for clarity.
+
+This document goes beyond simply listing endpoints and code; it explains the reasoning behind our design patterns, such as why we chose JWT for stateless authentication in a healthcare context and how our WebSocket architecture ensures real-time updates for critical patient alerts.
 
 ### Intended Audience
 
-This document is for developers, engineers, and system administrators working on the CareConnect project. It serves as both an onboarding guide for new team members and a reference manual for existing developers.
+This guide is designed for:
 
-### Technology Overview
+- **New developers** joining the CareConnect team who need to understand not just what the system does, but why it was built this way
+- **Experienced engineers** seeking reference material for implementing new features or debugging complex issues
+- **System administrators** who need to understand the architecture to properly deploy and maintain the platform
+- **Technical leads** who need to make informed decisions about future architectural directions
 
-CareConnect is built with modern, scalable technologies:
-- **Frontend**: Flutter (cross-platform mobile/web)
-- **Backend**: Spring Boot 3.4.5 with Java 17
-- **Database**: PostgreSQL with JPA/Hibernate
-- **AI Integration**: Spring AI + DeepSeek/LangChain4j
-- **Security**: JWT-based authentication
-- **Real-time**: WebSocket communication
-- **Cloud**: AWS infrastructure
+The guide assumes familiarity with software development principles but provides context for domain-specific healthcare considerations and our specific technology choices.
+
+### Technology Overview and Rationale
+
+CareConnect is built with a carefully selected stack of modern, scalable technologies. Each choice was made to balance healthcare industry requirements, developer productivity, and long-term maintainability:
+
+**Frontend - Flutter (cross-platform mobile/web)**
+We selected Flutter for its unique ability to create truly native experiences across iOS, Android, web, and desktop from a single codebase. In healthcare, where users may access the platform from various devices, this cross-platform capability is crucial. Flutter's reactive framework and rich widget library also enable us to build complex, accessible UIs that meet healthcare usability standards.
+
+**Backend - Spring Boot 3.4.5 with Java 17**
+Spring Boot was chosen for its enterprise-grade maturity, extensive ecosystem, and strong security features—all critical for healthcare applications handling sensitive patient data. Java 17's modern features (sealed classes, records, pattern matching) allow us to write more expressive, type-safe code while maintaining backwards compatibility with existing Java systems common in healthcare infrastructure.
+
+**Database - PostgreSQL with JPA/Hibernate**
+PostgreSQL provides the ACID compliance and data integrity guarantees essential for medical records. Its support for JSON columns allows us to store flexible health data structures while maintaining strong relational integrity for core entities like users and medications. JPA/Hibernate abstracts database operations while giving us fine-grained control when needed for complex healthcare queries.
+
+**AI Integration - Spring AI + DeepSeek/LangChain4j**
+Healthcare applications benefit enormously from AI for tasks like health risk assessment and intelligent scheduling. We use Spring AI's abstraction layer with DeepSeek and LangChain4j to provide AI-powered features while maintaining the flexibility to switch or combine AI providers as the technology evolves.
+
+**Security - JWT-based authentication**
+JWT (JSON Web Tokens) enable stateless authentication, crucial for our distributed architecture and real-time features. In healthcare, where audit trails and precise access control are mandatory, JWT's self-contained claims allow us to verify user identity and permissions without database lookups on every request, while still maintaining security through signature verification.
+
+**Real-time Communication - WebSocket**
+Healthcare scenarios often require immediate notification (medication reminders, vital sign alerts, emergency communications). WebSocket provides the persistent, bidirectional connection needed for these real-time features, while our fallback to HTTP polling ensures reliability even in constrained network environments.
+
+**Cloud Infrastructure - AWS**
+AWS provides the scalability, security certifications (HIPAA compliance options), and service breadth needed for healthcare applications. Our infrastructure-as-code approach using Terraform ensures reproducible, auditable deployments—a requirement for regulated healthcare environments.
 
 ## Architecture Overview
 
-### System Architecture
+### System Architecture and Design Philosophy
 
-CareConnect follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers.
+CareConnect follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers. This architectural approach was chosen to enable independent scaling, deployment, and development of each layer while maintaining loose coupling and high cohesion—principles essential for a healthcare platform that must evolve rapidly to meet changing regulatory and clinical requirements.
+
+#### Layered Architecture Benefits
+
+**Frontend Isolation**: The Flutter frontend communicates with the backend exclusively through well-defined REST and WebSocket APIs. This means we can completely rewrite the mobile app, add a web interface, or develop a desktop client without touching backend code. For healthcare providers who might want to access CareConnect from different devices (tablet in patient rooms, desktop in offices, mobile while on rounds), this flexibility is crucial.
+
+**Backend Independence**: The Spring Boot backend owns all business logic and data validation. Even if the frontend is compromised or contains bugs, the backend enforces all critical rules (medication dosages, user permissions, data validation). In healthcare, this defense-in-depth approach is a regulatory requirement.
+
+**Data Layer Abstraction**: The database is accessed only through JPA repositories, never via direct SQL in controllers or frontend code. This abstraction makes it possible to migrate to a different database, implement read replicas for scaling, or add caching layers without affecting the rest of the application.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Frontend Layer                           │
+│                                                                 │
+│  Responsibility: User interface and user experience             │
+│  Technology: Flutter (Dart)                                     │
+│  Key Concerns: Cross-platform compatibility, offline support,   │
+│                accessibility, responsive design                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  Flutter App (Web, iOS, Android, Desktop)                      │
 │  ├── Provider (State Management)                               │
+│  │   └── Manages UI state, exposes data to widgets            │
 │  ├── GoRouter (Navigation)                                     │
+│  │   └── Declarative routing, deep linking, guards            │
 │  ├── Dio (HTTP Client)                                         │
+│  │   └── REST API calls, interceptors, error handling         │
 │  └── Features (Modular Architecture)                           │
+│      └── Self-contained feature modules (auth, health, etc.)  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                          HTTP/WebSocket
+                   (JSON over HTTPS/WSS)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Backend Layer                            │
+│                                                                 │
+│  Responsibility: Business logic, data validation, security      │
+│  Technology: Spring Boot (Java 17)                              │
+│  Key Concerns: HIPAA compliance, data integrity, performance,   │
+│                API versioning, audit logging                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Spring Boot Application                                        │
 │  ├── Controllers (REST API)                                    │
+│  │   └── HTTP request handling, parameter validation,         │
+│  │       response formatting, API documentation                │
 │  ├── Services (Business Logic)                                 │
+│  │   └── Transaction management, complex workflows,           │
+│  │       business rules enforcement, orchestration             │
 │  ├── Repositories (Data Access)                                │
+│  │   └── Database queries, JPA entity management,             │
+│  │       query optimization, data retrieval                    │
 │  ├── WebSocket (Real-time Communication)                       │
+│  │   └── Persistent connections, event streaming,             │
+│  │       push notifications, bidirectional messaging           │
 │  └── Security (JWT Authentication)                             │
+│      └── Token validation, authorization, RBAC,               │
+│          session management, security filters                  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                            JDBC/JPA
+                    (SQL over TCP/IP)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Data Layer                              │
+│                                                                 │
+│  Responsibility: Data persistence, integrity, backup            │
+│  Technology: PostgreSQL 15+                                     │
+│  Key Concerns: ACID compliance, encryption at rest, backups,    │
+│                query performance, data retention                │
 ├─────────────────────────────────────────────────────────────────┤
-│  MySQL Database                                                 │
+│  PostgreSQL Database                                            │
 │  ├── User Management                                            │
+│  │   └── Authentication credentials, user profiles,           │
+│  │       roles and permissions, account status                 │
 │  ├── Health Data                                                │
+│  │   └── Vital signs, medications, allergies, conditions,     │
+│  │       lab results, medical history                          │
 │  ├── Communication                                              │
+│  │   └── Messages, call logs, notifications, WebSocket        │
+│  │       connection tracking, chat history                     │
 │  └── File Storage                                               │
+│      └── Medical records metadata, file paths, document        │
+│          categories, upload timestamps, access logs            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+#### Data Flow Example: Recording a Blood Pressure Reading
+
+To understand how these layers work together, let's trace a complete user action through the system:
+
+1. **User Input (Frontend Layer)**:
+   - Patient opens Health screen, taps "Record Vital Sign"
+   - Enters blood pressure: 140/90 mmHg
+   - Adds note: "Measured after morning medication"
+   - Taps "Save"
+
+2. **State Management (Frontend)**:
+   - HealthProvider's `recordVitalSign()` method is called
+   - Provider sets `isLoading = true`, triggering UI to show loading indicator
+   - Provider calls HealthService to make API request
+
+3. **API Request (Frontend → Backend)**:
+   - Dio HTTP client constructs POST request to `/api/health/vitals`
+   - AuthInterceptor automatically adds JWT token from secure storage
+   - Request body: `{"type": "blood_pressure", "systolic": 140, "diastolic": 90, "notes": "..."}`
+   - LoggingInterceptor logs request for debugging
+
+4. **Request Reception (Backend - Controller Layer)**:
+   - `HealthController.recordVitalSign()` receives request
+   - Spring Security validates JWT token, extracts user ID
+   - JSR-380 validation checks request body structure
+   - Controller passes validated DTO to Service layer
+
+5. **Business Logic (Backend - Service Layer)**:
+   - `HealthService.recordVitalSign()` begins transaction
+   - Verifies user exists and has permission to record vitals
+   - Converts DTO to JPA entity
+   - Saves entity via Repository (triggers database INSERT)
+   - **Critical business logic**: Checks if 140/90 exceeds patient's normal range
+   - If abnormal, calls NotificationService to alert caregiver
+   - Converts saved entity back to DTO
+   - Returns DTO to controller
+
+6. **Data Persistence (Backend - Repository/Database)**:
+   - JPA translates entity to SQL: `INSERT INTO vital_signs (user_id, type, systolic, diastolic, ...) VALUES (...)`
+   - PostgreSQL executes INSERT within transaction
+   - Database enforces constraints (foreign keys, not-null, unique)
+   - Returns generated ID and timestamp
+   - Transaction commits (all data saved) or rolls back (on any error)
+
+7. **Response (Backend → Frontend)**:
+   - Controller returns HTTP 201 Created with saved vital sign data
+   - ErrorInterceptor doesn't trigger (successful response)
+   - Dio receives response and parses JSON
+
+8. **State Update (Frontend)**:
+   - HealthProvider updates local state with new vital sign
+   - Calls `notifyListeners()` to rebuild UI
+   - HealthScreen automatically updates to show new reading
+   - Loading indicator disappears
+
+9. **Real-time Notification (Parallel Flow)**:
+   - If reading was abnormal, NotificationService also sent WebSocket message
+   - Caregiver's app, connected to `/ws/careconnect`, receives alert
+   - Their HealthDashboard automatically shows "Patient [Name] recorded elevated BP: 140/90"
+   - Caregiver can tap notification to view patient's full vital history
+
+**Total time**: ~500ms from button tap to UI update and caregiver notification. This is the power of a well-architected system: complex workflows feel instantaneous to users.
+
+#### Why This Architecture for Healthcare?
+
+**Auditability**: Every layer logs its actions. We can trace a medication order from UI tap → API call → service logic → database insert → notification sent, critical for regulatory compliance.
+
+**Security**: Multiple validation layers. Even if frontend is compromised, backend still enforces business rules. Even if backend is misconfigured, database constraints prevent invalid data.
+
+**Scalability**: Each layer can scale independently. High load from mobile users? Scale frontend servers. Complex analytics queries? Scale database read replicas. Real-time notifications spiking? Scale WebSocket handlers.
+
+**Maintainability**: Clear separation of concerns. UI developers work in Flutter, backend developers in Spring Boot, database admins tune PostgreSQL—all in parallel without conflicts.
+
+**Testability**: Each layer can be tested in isolation. Mock the API for frontend tests, mock the database for service tests, integration tests verify the full stack.
 
 ### Technology Stack
 
@@ -90,15 +241,332 @@ CareConnect follows a microservices-inspired architecture with clear separation 
 
 ## Development Environment Setup
 
-### Prerequisites
+Setting up a development environment for CareConnect requires careful orchestration of multiple technologies: Flutter for the frontend, Java/Spring Boot for the backend, PostgreSQL for the database, and various supporting tools. This section guides you through the setup process, explaining not just the *what* but the *why* behind each requirement.
 
-Ensure you have the following installed:
-- **Flutter SDK**: 3.9.2+
-- **Java**: OpenJDK 17
-- **Maven**: 3.6+
-- **MySQL**: 8.0+
-- **Git**: Latest version
-- **IDE**: VS Code, Android Studio, or IntelliJ IDEA
+### Prerequisites and System Requirements
+
+Before beginning, ensure your system meets these requirements. These aren't arbitrary—each is chosen to match production environment requirements and ensure team-wide compatibility.
+
+#### Essential Software
+
+**Flutter SDK 3.9.2 or higher**
+- **Why this version?** Flutter 3.9.2 introduced stable support for desktop platforms (Windows, macOS, Linux), which CareConnect uses for caregiver dashboard applications. Earlier versions had breaking API changes that would require code modifications.
+- **Installation**: Download from [flutter.dev](https://flutter.dev/docs/get-started/install)
+- **Verification**: Run `flutter doctor -v` after installation
+- **Common issues**: Ensure Flutter bin directory is in your PATH
+
+**Java Development Kit (JDK) 17**
+- **Why version 17 specifically?** Spring Boot 3.4.5 requires Java 17 minimum. This version includes critical features like Records (used for DTOs), sealed classes (used for domain modeling), and pattern matching (used in service layer logic).
+- **Not Java 11 or 8**: These older versions lack language features our codebase uses. Compilation will fail with cryptic errors.
+- **Not Java 18+**: While these would work, Java 17 is the current LTS (Long Term Support) version, matching what we deploy to production.
+- **Installation**: Use OpenJDK from [adoptium.net](https://adoptium.net/) or your system package manager
+- **Verification**: `java -version` should show `openjdk version "17.x.x"`
+
+**Maven 3.6 or higher**
+- **Why Maven?** Spring Boot projects traditionally use Maven for dependency management. While Gradle is an alternative, Maven's declarative approach and extensive plugin ecosystem make it ideal for our complex dependency graph (Spring AI milestones, security libraries, database drivers, etc.).
+- **Installation**: Often bundled with Java IDEs, or download from [maven.apache.org](https://maven.apache.org/)
+- **Note**: CareConnect includes Maven Wrapper (`mvnw`), so Maven installation is optional—the wrapper downloads the correct version automatically.
+- **Verification**: `./mvnw -version` (uses wrapper) or `mvn -version` (uses system Maven)
+
+**PostgreSQL 15 or higher** (previously MySQL, recently migrated)
+- **Why PostgreSQL?** Superior support for JSON columns (storing flexible health data), better ACID compliance (critical for medical records), more robust handling of concurrent transactions (multiple caregivers accessing same patient data).
+- **Why not MySQL?** MySQL was the original database, but PostgreSQL's advanced features (JSONB indexing, row-level security, materialized views) better support our analytics and reporting needs.
+- **Installation**: 
+  - **macOS**: `brew install postgresql@15`
+  - **Windows**: Download installer from [postgresql.org](https://www.postgresql.org/download/windows/)
+  - **Linux**: `sudo apt install postgresql-15` (Ubuntu/Debian)
+  - **Docker**: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:15`
+- **Verification**: `psql --version` should show PostgreSQL 15.x
+
+**Git (latest version)**
+- **Why Git?** Version control is essential for team collaboration. CareConnect uses GitHub for source control, CI/CD, and issue tracking.
+- **Installation**: Download from [git-scm.com](https://git-scm.com/)
+- **Configuration**: After installation, configure your identity:
+  ```bash
+  git config --global user.name "Your Name"
+  git config --global user.email "your.email@example.com"
+  ```
+- **Verification**: `git --version`
+
+**Integrated Development Environment (IDE)**
+- **VS Code**: Lightweight, excellent Flutter support via extensions, fast startup. Recommended for frontend development.
+  - Required extensions: "Flutter", "Dart"
+  - Recommended: "GitLens", "Error Lens", "Prettier"
+  
+- **Android Studio**: Official Android IDE, includes Android SDK and emulator. Best for testing Android-specific features.
+  - Includes Flutter plugin
+  - Required for Android builds
+  
+- **IntelliJ IDEA**: Powerful Java IDE, excellent Spring Boot integration. Recommended for backend development.
+  - Ultimate edition has better Spring support (paid)
+  - Community edition works fine for basic development (free)
+  - Required plugins: "Spring Boot", "JPA Buddy"
+
+**Why multiple IDEs?** Different tools excel at different tasks. VS Code is fast for quick frontend edits, Android Studio is essential for mobile debugging, IntelliJ is unmatched for Spring Boot refactoring. Most developers keep all three installed and use whichever fits the current task.
+
+### Clone and Initial Setup
+
+#### 1. Clone the Repository
+
+```bash
+# Clone from GitHub (use SSH if you have SSH keys configured)
+git clone https://github.com/umgc/2025_fall.git
+cd 2025_fall/careconnect2025
+
+# Or use HTTPS
+git clone https://github.com/umgc/2025_fall.git
+cd 2025_fall/careconnect2025
+```
+
+**Repository Structure Overview**: The repository contains multiple projects:
+- `careconnect2025/frontend/` - Flutter mobile/web application
+- `careconnect2025/backend/core/` - Spring Boot backend API
+- `careconnect2025/terraform_aws/` - Infrastructure as Code for AWS deployment
+- `careconnect2025/docs/` - Documentation including this guide
+
+#### 2. Set Up PostgreSQL Database
+
+```bash
+# Start PostgreSQL (if not already running)
+# macOS: brew services start postgresql@15
+# Linux: sudo systemctl start postgresql
+# Windows: Start from Services or PostgreSQL menu
+
+# Create database and user
+psql -U postgres  # Connect as postgres superuser
+```
+
+Then in the psql prompt:
+```sql
+-- Create dedicated database for CareConnect
+CREATE DATABASE careconnect;
+
+-- Create dedicated user (security best practice: don't use postgres superuser)
+CREATE USER careconnect WITH ENCRYPTED PASSWORD 'your_secure_password_here';
+
+-- Grant all privileges on the database to the user
+GRANT ALL PRIVILEGES ON DATABASE careconnect TO careconnect;
+
+-- Grant schema creation (needed for Flyway migrations)
+GRANT CREATE ON DATABASE careconnect TO careconnect;
+
+-- Exit psql
+\q
+```
+
+**Why a dedicated user?** In production, the application should never connect as the postgres superuser. Using a limited user means even if the application is compromised, attackers can't drop other databases or modify PostgreSQL settings. This principle of least privilege is a security best practice.
+
+**Why this password?** For local development, use a simple password. For production, environment variables provide secure passwords.
+
+#### 3. Configure Backend Environment
+
+Create `backend/core/src/main/resources/application-dev.properties`:
+
+```properties
+# Database Configuration
+# JDBC URL points to local PostgreSQL instance
+spring.datasource.url=jdbc:postgresql://localhost:5432/careconnect
+spring.datasource.username=careconnect
+spring.datasource.password=your_secure_password_here
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA Configuration
+# ddl-auto=update automatically creates/updates tables based on @Entity classes
+# This is convenient for development but NEVER use in production
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true  # Log all SQL queries (helpful for debugging)
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true  # Pretty-print SQL in logs
+
+# Server Configuration
+server.port=8080  # Backend listens on port 8080
+server.servlet.context-path=/  # Root path (no prefix like /api)
+
+# JWT Configuration
+# IMPORTANT: Generate a strong secret for development
+# openssl rand -base64 32  # Use this command to generate
+jwt.secret=YourStrongJwtSecretKeyHereMinimum32CharactersLong
+jwt.expiration=86400000  # 24 hours in milliseconds
+
+# CORS Configuration
+# Allow frontend to connect from these origins during development
+cors.allowed-origins=http://localhost:3000,http://localhost:50030,http://127.0.0.1:3000
+
+# Logging
+logging.level.com.careconnect=DEBUG  # Verbose logging for our code
+logging.level.org.springframework.web=DEBUG  # See all HTTP requests
+logging.level.org.hibernate.SQL=DEBUG  # See all SQL queries
+
+# Development-specific settings
+spring.devtools.restart.enabled=true  # Auto-restart on code changes
+spring.jpa.properties.hibernate.show_sql=true
+```
+
+**Critical Settings Explained**:
+- `ddl-auto=update`: Automatically creates tables when you run the app. Convenient but dangerous—doesn't handle schema changes well, can cause data loss. Use Flyway migrations in production.
+- `show-sql=true`: Logs every SQL query. Essential for debugging but creates huge logs in production—disable there.
+- `jwt.secret`: Must be at least 32 characters for HS256 algorithm. In production, load from environment variable, not hardcoded.
+
+#### 4. Set Up Frontend Environment
+
+Create `frontend/.env`:
+
+```bash
+# API Configuration
+# These differ by platform because of how emulators handle localhost
+CC_BASE_URL_WEB=http://localhost:8080        # Web app running in browser
+CC_BASE_URL_ANDROID=http://10.0.2.2:8080     # Android emulator special IP
+CC_BASE_URL_IOS=http://localhost:8080        # iOS simulator
+CC_BASE_URL_OTHER=http://localhost:8080      # Desktop platforms
+
+# JWT Configuration (must match backend)
+JWT_SECRET=YourStrongJwtSecretKeyHereMinimum32CharactersLong
+
+# AI Services (optional for basic development)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here  # Only needed for AI features
+OPENAI_API_KEY=your_openai_api_key_here      # Only needed for AI chat
+
+# Backend Authentication
+CC_BACKEND_TOKEN=your_backend_token  # For server-to-server communication
+```
+
+**Platform-Specific Base URLs**: 
+- Web: Uses standard `localhost:8080`
+- Android emulator: Uses `10.0.2.2` which is a special IP that the Android emulator maps to the host machine's `localhost`
+- iOS simulator: Can use `localhost` directly because it shares the host's network
+
+The app automatically selects the correct URL based on the platform it's running on.
+
+#### 5. Install Dependencies
+
+**Backend**:
+```bash
+cd backend/core
+
+# Using Maven Wrapper (recommended - uses exact version project needs)
+./mvnw clean install
+
+# This downloads all dependencies from Maven Central and Spring repositories
+# First time takes 5-10 minutes depending on internet speed
+# Subsequent runs are fast (dependencies are cached in ~/.m2/repository)
+```
+
+**Frontend**:
+```bash
+cd frontend
+
+# Download all Dart packages declared in pubspec.yaml
+flutter pub get
+
+# Verify Flutter setup
+flutter doctor -v
+
+# This checks:
+# ✓ Flutter SDK installed
+# ✓ Android toolchain (if you want Android builds)
+# ✓ Xcode (macOS only, if you want iOS builds)
+# ✓ Chrome (for web builds)
+# ✓ VS Code / Android Studio (optional)
+```
+
+**Understanding `flutter doctor` output**:
+- ✓ Green checkmark: All good
+- ⚠ Yellow warning: Optional feature not configured (e.g., iOS on Windows)
+- ✗ Red X: Required component missing or broken
+
+#### 6. Run and Verify
+
+**Start Backend**:
+```bash
+cd backend/core
+
+# Run with development profile
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Or run the JAR directly after building
+./mvnw clean package
+java -jar target/careconnect-backend-1.0.0.jar --spring.profiles.active=dev
+```
+
+**Verify backend is running**:
+```bash
+# Check health endpoint
+curl http://localhost:8080/actuator/health
+# Should return: {"status":"UP"}
+
+# Check API documentation
+# Open browser to: http://localhost:8080/swagger-ui/index.html
+```
+
+**Start Frontend**:
+```bash
+cd frontend
+
+# Run on Chrome (web)
+flutter run -d chrome
+
+# Run on Android emulator (start emulator first from Android Studio)
+flutter run -d emulator-5554
+
+# Run on iOS simulator (macOS only)
+flutter run -d iPhone
+
+# Run on desktop (current OS)
+flutter run -d macos  # or windows, or linux
+```
+
+**Common First-Run Issues**:
+- "Connection refused": Backend not running or wrong port
+- "CORS error": Check `cors.allowed-origins` in backend properties
+- "401 Unauthorized": Frontend using wrong API key or backend JWT secret mismatch
+- "Database connection failed": PostgreSQL not running or wrong credentials
+
+#### 7. Verify Full Stack Integration
+
+Once both frontend and backend are running:
+
+1. **Open the app** (automatically opens in Flutter)
+2. **Navigate to login screen**
+3. **Register a new account**:
+   - Email: `test@example.com`
+   - Password: `password123`
+   - Name: `Test User`
+4. **Verify you're redirected to dashboard**
+5. **Check backend logs** - should see:
+   ```
+   INFO - User test@example.com registered
+   INFO - JWT token generated for user test@example.com
+   DEBUG - SELECT * FROM users WHERE email = 'test@example.com'
+   ```
+
+If all this works, your development environment is fully configured!
+
+### Development Workflow
+
+**Typical Development Session**:
+```bash
+# Terminal 1: Backend
+cd backend/core
+./mvnw spring-boot:run
+
+# Terminal 2: Frontend
+cd frontend
+flutter run -d chrome
+
+# Terminal 3: Database (if needed)
+psql -U careconnect -d careconnect
+
+# Make code changes
+# Backend: Changes auto-reload with spring-devtools
+# Frontend: Hot reload with 'r' in terminal, hot restart with 'R'
+```
+
+**Pro Tips**:
+- Use IDE debuggers instead of print statements for complex issues
+- Run `flutter analyze` before committing to catch Dart warnings
+- Run `./mvnw verify` before pushing to catch Java issues
+- Keep backend logs visible to see API calls as you interact with frontend
+- Use browser DevTools (F12) to inspect API requests/responses
 
 ### Project Structure
 
@@ -156,15 +624,15 @@ CC_BACKEND_TOKEN=your_backend_token
 
 ```properties
 # Database Configuration
-spring.datasource.url=jdbc:mysql://localhost:3306/careconnect?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+spring.datasource.url=jdbc:postgresql://localhost:5432/careconnect
 spring.datasource.username=careconnect
 spring.datasource.password=your_password
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.driver-class-name=org.postgresql.Driver
 
 # JPA Configuration
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # Server Configuration
 server.port=8080
@@ -208,9 +676,29 @@ lib/
 └── main.dart
 ```
 
-### State Management
+### State Management with Provider
 
-CareConnect uses Provider for state management:
+CareConnect uses the Provider package for state management, selected for its simplicity, excellent documentation, and suitability for our mid-complexity application. It follows the inherited widget pattern, making state accessible across the widget tree without excessive boilerplate—a key consideration when building healthcare UIs that need to share patient data across many screens.
+
+#### Architectural Pattern: Feature-Specific ChangeNotifiers
+
+We implement a single, feature-specific ChangeNotifier for each major domain (e.g., AuthProvider, HealthDataProvider). This encapsulates all state and business logic related to that feature, following the single responsibility principle and making the codebase easier to navigate for developers new to the project.
+
+#### Key Implementation Details
+
+**Private State Variables**: All state variables (like `_currentUser`, `_isLoading`) are prefixed with underscore, making them private to the provider class. This prevents external mutation and ensures all changes go through controlled methods—critical for maintaining data integrity in a healthcare application where unauthorized state changes could have serious consequences.
+
+**Public Getters for Read-Only Access**: We expose state via public getters (e.g., `User? get currentUser`). This provides read-only access to the UI, enforcing a unidirectional data flow that makes the application's behavior predictable and debuggable.
+
+**State Modification Through Public Methods**: State is only changed within public methods (e.g., `login()`, `logout()`). These methods are responsible for:
+- **API Communication**: Calling the appropriate service layer methods
+- **State Updates**: Modifying the private variables based on the result
+- **Persistence**: Managing local storage of tokens or user data for offline access
+- **Notifications**: Calling `notifyListeners()` to inform the UI of state changes and trigger rebuilds
+
+#### Example: Authentication Flow in AuthProvider
+
+Below is the complete authentication flow, demonstrating how a user login request flows through the provider:
 
 ```dart
 // providers/auth_provider.dart
@@ -219,39 +707,125 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // Public interface for the UI to access state
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   Future<void> login(String email, String password) async {
+    // 1. Signal the start of an async operation
+    //    This allows the UI to show a loading indicator
     _setLoading(true);
+    _clearError();
+
     try {
+      // 2. Delegate the network call to the service layer
+      //    Separation of concerns: providers handle state, services handle API
       final response = await _authService.login(email, password);
+
+      // 3. Update the app state on success
+      //    Store the authenticated user for access throughout the app
       _currentUser = response.user;
+      
+      // 4. Persist authentication tokens securely
+      //    This enables the user to stay logged in between sessions
       await _tokenManager.saveTokens(response.tokens);
+      
+      // 5. Clear any previous errors
       _error = null;
+
     } catch (e) {
-      _error = e.toString();
+      // 6. Handle errors and update state accordingly
+      //    Provide user-friendly error messages rather than raw exceptions
+      _setError('Login failed: Please check your credentials.');
+      
+      // 7. Log the error for debugging while keeping sensitive data private
+      _logger.error('Login failed for email: $email', error: e);
     } finally {
+      // 8. Signal the end of the operation
+      //    This ensures the loading state is cleared even if an error occurred
       _setLoading(false);
     }
   }
 
+  // Private method to handle loading state consistently
+  // By centralizing this logic, we ensure notifyListeners() is never forgotten
   void _setLoading(bool loading) {
     _isLoading = loading;
+    notifyListeners(); // This is what tells all listening widgets to rebuild
+  }
+  
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
+  
+  void _setError(String error) {
+    _error = error;
     notifyListeners();
   }
 }
 ```
 
-### Routing Configuration
+#### Usage in UI
 
-Using GoRouter for navigation:
+A LoginScreen would use `context.watch<AuthProvider>()` to listen to this state and react accordingly:
+
+```dart
+class LoginScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Watch the provider - this widget rebuilds when the provider notifies
+    final authProvider = context.watch<AuthProvider>();
+    
+    // React to different states
+    if (authProvider.isLoading) {
+      return LoadingSpinner(); // Show loading during authentication
+    }
+    
+    if (authProvider.error != null) {
+      return ErrorMessage(authProvider.error!); // Show user-friendly error
+    }
+    
+    if (authProvider.currentUser != null) {
+      // Navigate to dashboard on successful login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/dashboard');
+      });
+    }
+    
+    return LoginForm(); // Show the login form
+  }
+}
+```
+
+This pattern ensures that authentication state flows in one direction (provider → UI), making it easy to reason about when and why the UI updates—a critical feature when dealing with sensitive healthcare data that requires precise access control.
+
+### Routing Configuration with GoRouter
+
+CareConnect uses GoRouter for declarative navigation, chosen for its type-safe routing, deep linking support, and excellent integration with Flutter's navigation 2.0 API. In a healthcare app where users might need to navigate directly to specific patient records or appointment details (via links from emails or notifications), GoRouter's URL-based routing is particularly valuable.
+
+#### Why GoRouter Over Navigator 1.0?
+
+Traditional Flutter navigation (Navigator 1.0) uses an imperative stack-based approach. While simple for basic apps, it becomes unwieldy for complex navigation flows. GoRouter provides:
+
+- **URL-based routing**: Each screen has a path (e.g., `/dashboard/health`) that can be bookmarked or linked
+- **Type-safe parameters**: Pass data between screens with compile-time safety
+- **Declarative redirects**: Guard routes based on authentication state without repetitive checks
+- **Deep linking**: Users can jump directly to specific screens from external links
+- **Nested navigation**: Complex tab structures (like our dashboard with sub-tabs) are easier to manage
+
+In healthcare, where clinicians might need to quickly navigate to a specific patient's recent vitals from an alert notification, this URL-based approach is much more robust than trying to programmatically push the right sequence of screens onto a stack.
+
+#### Core Routing Structure
 
 ```dart
 // config/router_config.dart
 final GoRouter routerConfig = GoRouter(
+  // Starting point when app launches
   initialLocation: '/splash',
+  
+  // Define all app routes
   routes: [
     GoRoute(
       path: '/splash',
@@ -261,39 +835,202 @@ final GoRouter routerConfig = GoRouter(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
+    
+    // Main dashboard with nested routes
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
+      
+      // Nested routes appear as tabs or sections within dashboard
       routes: [
         GoRoute(
-          path: 'health',
+          path: 'health',  // Full path: /dashboard/health
           builder: (context, state) => const HealthScreen(),
         ),
         GoRoute(
-          path: 'messages',
+          path: 'messages',  // Full path: /dashboard/messages
           builder: (context, state) => const MessagesScreen(),
+        ),
+        
+        // Parameterized route - accepts dynamic patient ID
+        GoRoute(
+          path: 'patient/:id',  // Full path: /dashboard/patient/123
+          builder: (context, state) {
+            // Extract the ID from the URL
+            final patientId = state.pathParameters['id']!;
+            return PatientDetailScreen(patientId: patientId);
+          },
         ),
       ],
     ),
   ],
+  
+  // Global navigation guard - runs before every route
   redirect: (context, state) {
+    // Check authentication status from our AuthProvider
     final isLoggedIn = context.read<AuthProvider>().currentUser != null;
-    final isLoginRoute = state.uri.path == '/login';
+    final isGoingToLogin = state.uri.path == '/login';
+    final isGoingToSplash = state.uri.path == '/splash';
 
-    if (!isLoggedIn && !isLoginRoute) {
+    // Logic: Unauthenticated users can only access login and splash
+    if (!isLoggedIn && !isGoingToLogin && !isGoingToSplash) {
+      // User trying to access protected route without login - redirect to login
       return '/login';
     }
-    if (isLoggedIn && isLoginRoute) {
+    
+    // Logic: Authenticated users shouldn't see login screen
+    if (isLoggedIn && isGoingToLogin) {
+      // Already logged in, redirect to dashboard instead
       return '/dashboard';
     }
+    
+    // No redirect needed - allow navigation to proceed
     return null;
   },
 );
 ```
 
-### HTTP Client Configuration
+#### Understanding the Redirect Guard
 
-Dio configuration with interceptors:
+The `redirect` function is CareConnect's authentication barrier. It runs before every navigation:
+
+**Scenario 1: Unauthenticated User Tries to Access Dashboard**
+1. User navigates to `/dashboard`
+2. Redirect guard checks: `isLoggedIn = false`, `isGoingToLogin = false`
+3. Guard returns `/login`, overriding the original destination
+4. User lands on login screen instead of dashboard
+
+**Scenario 2: User Logs In Successfully**
+1. Login completes, `AuthProvider.currentUser` is set
+2. App tries to navigate to `/login` (where they currently are)
+3. Redirect guard checks: `isLoggedIn = true`, `isGoingToLogin = true`
+4. Guard returns `/dashboard`, redirecting them away from login
+5. User automatically lands on dashboard
+
+**Scenario 3: Deep Link from Email**
+1. User clicks link: `careconnect://app/dashboard/patient/456`
+2. App launches, redirect guard checks authentication
+3. If not logged in: redirected to `/login`, but the intended destination is remembered
+4. After login, guard allows navigation to `/dashboard/patient/456`
+5. User lands exactly where the link intended
+
+This pattern ensures:
+- Protected routes require authentication
+- Authenticated users don't get stuck on login screen
+- Deep links work correctly after authentication
+- No need to check authentication in every screen's build method
+
+#### Programmatic Navigation in Code
+
+Components navigate using `context.go()` and `context.push()`:
+
+```dart
+// Replace current route (can't go back)
+context.go('/dashboard/health');
+
+// Push new route (can go back with back button)
+context.push('/dashboard/patient/123');
+
+// Navigate with named parameters
+context.goNamed(
+  'patientDetail',
+  pathParameters: {'id': '123'},
+  queryParameters: {'tab': 'vitals'},
+);
+
+// Go back
+context.pop();
+```
+
+**When to use `go` vs `push`**:
+- **go()**: Replaces the route (like after login - don't want back button to return to login)
+- **push()**: Adds to history (like opening a patient detail - want back button to return to list)
+
+#### Handling Deep Links from Notifications
+
+Healthcare notifications often need to navigate directly to relevant data:
+
+```dart
+// When notification is tapped:
+void handleNotificationTap(String type, String id) {
+  switch (type) {
+    case 'vital_alert':
+      // Navigate directly to patient's vitals
+      context.go('/dashboard/patient/$id?tab=vitals');
+      break;
+    case 'message':
+      // Navigate to specific conversation
+      context.go('/dashboard/messages/$id');
+      break;
+    case 'appointment':
+      // Navigate to appointment detail
+      context.go('/dashboard/appointments/$id');
+      break;
+  }
+}
+```
+
+The URL-based routing makes these deep links trivial to implement and maintain.
+
+#### Error Handling
+
+GoRouter includes built-in error handling for invalid routes:
+
+```dart
+GoRouter(
+  // ... routes ...
+  
+  // Called when navigation to unknown route
+  errorBuilder: (context, state) {
+    return ErrorScreen(
+      message: 'Page not found: ${state.uri.path}',
+      onRetry: () => context.go('/dashboard'),
+    );
+  },
+);
+```
+
+This ensures users never see a blank screen, even if they manually type an invalid URL or follow a broken link.
+
+#### Testing Considerations
+
+GoRouter makes navigation testing straightforward:
+
+```dart
+testWidgets('redirects unauthenticated users to login', (tester) async {
+  // Start with no authenticated user
+  await tester.pumpWidget(MyApp());
+  
+  // Try to navigate to dashboard
+  routerConfig.go('/dashboard');
+  await tester.pumpAndSettle();
+  
+  // Verify we're on login instead
+  expect(find.text('Login'), findsOneWidget);
+  expect(find.text('Dashboard'), findsNothing);
+});
+```
+
+The declarative nature makes it easy to verify routing logic without complex widget tree navigation.
+
+### HTTP Client Configuration with Dio and Interceptors
+
+CareConnect uses Dio as its HTTP client library instead of Flutter's built-in `http` package. This choice was made for Dio's powerful interceptor system, which is crucial for implementing cross-cutting concerns like authentication, logging, and error handling in a consistent, maintainable way.
+
+#### Why Dio Over Built-in HTTP?
+
+While Flutter's `http` package is simpler, Dio provides essential features for a production healthcare app:
+
+- **Interceptors**: Modify requests/responses globally (add auth tokens, log traffic, transform errors)
+- **Request cancellation**: Cancel in-flight requests when user navigates away (saves bandwidth, prevents race conditions)
+- **File upload/download**: Built-in support with progress tracking (for medical records, lab results)
+- **Timeout configuration**: Separate timeouts for connect vs receive (important for slow hospital networks)
+- **Retry logic**: Automatic retry with exponential backoff (essential for reliability)
+- **FormData support**: Multipart file uploads (medical document uploads)
+
+In healthcare, where API calls might involve large files (MRI scans) or need perfect reliability (medication orders), these features are not luxuries—they're requirements.
+
+#### Dio Configuration and Initialization
 
 ```dart
 // config/network/api_client.dart
@@ -301,43 +1038,295 @@ class ApiClient {
   late final Dio _dio;
 
   ApiClient() {
+    // Base configuration for all requests
     _dio = Dio(BaseOptions(
+      // Server URL from environment config (different for dev/staging/prod)
       baseUrl: EnvironmentConfig.baseUrl,
+      
+      // Connection timeout: How long to wait to establish connection
+      // 30 seconds accommodates slow hospital WiFi
       connectTimeout: const Duration(seconds: 30),
+      
+      // Receive timeout: How long to wait for response after connection
+      // 30 seconds accommodates large payloads (lab results PDFs)
       receiveTimeout: const Duration(seconds: 30),
+      
+      // Default headers for all requests
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     ));
 
-    _dio.interceptors.add(AuthInterceptor());
-    _dio.interceptors.add(LoggingInterceptor());
-    _dio.interceptors.add(ErrorInterceptor());
+    // Add interceptors in order - they execute sequentially
+    _dio.interceptors.add(AuthInterceptor());      // 1. Add auth tokens
+    _dio.interceptors.add(LoggingInterceptor());   // 2. Log requests/responses
+    _dio.interceptors.add(ErrorInterceptor());     // 3. Transform errors
   }
+  
+  // Expose dio instance for making requests
+  Dio get dio => _dio;
 }
+```
 
+#### Understanding Interceptors
+
+Interceptors in Dio work like middleware in Express or filters in Spring Boot. Each interceptor can:
+- Inspect and modify outgoing requests before they're sent
+- Inspect and modify incoming responses before they reach your code
+- Handle errors globally instead of in every API call
+
+**Interceptor Execution Order**:
+```
+Request Path:  Your Code → Auth → Logging → Error → Network
+Response Path: Network → Error → Logging → Auth → Your Code
+```
+
+#### Authentication Interceptor: Automatic Token Injection
+
+The authentication interceptor ensures every protected API call includes the user's JWT token, without developers needing to manually add it to each request:
+
+```dart
 class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // Retrieve stored JWT token from secure storage
     final token = await TokenManager.getAccessToken();
+    
     if (token != null) {
+      // Add Authorization header to every request
       options.headers['Authorization'] = 'Bearer $token';
     }
+    
+    // Continue to next interceptor
     handler.next(options);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Special case: If server returns 401 Unauthorized, token might be expired
     if (err.response?.statusCode == 401) {
+      // Attempt to refresh the token using refresh token
       final refreshed = await TokenManager.refreshToken();
+      
       if (refreshed) {
-        // Retry the original request
-        final clonedRequest = await _dio.fetch(err.requestOptions);
-        handler.resolve(clonedRequest);
-        return;
+        // Token refresh succeeded - retry the original request
+        try {
+          // Clone the original request with new token
+          final clonedRequest = await _dio.fetch(err.requestOptions);
+          
+          // Resolve with successful response
+          handler.resolve(clonedRequest);
+          return;
+        } catch (e) {
+          // Retry failed - fall through to error handling
+        }
+      } else {
+        // Token refresh failed - user needs to log in again
+        // Clear stored tokens and navigate to login
+        await TokenManager.clearTokens();
+        // Navigate to login screen
+        navigatorKey.currentState?.pushReplacementNamed('/login');
       }
     }
+    
+    // For non-401 errors or failed token refresh, pass error to next handler
     handler.next(err);
   }
 }
 ```
+
+**What this achieves**:
+1. **Automatic authentication**: Developers never forget to add tokens
+2. **Transparent token refresh**: If token expires mid-session, app automatically refreshes it and retries the request—user never notices
+3. **Graceful session expiration**: If refresh token also expired, user is smoothly redirected to login
+
+This is particularly important in healthcare where a user might leave the app open during a shift. When they return hours later, the app automatically handles the expired token without losing their work.
+
+#### Logging Interceptor: Debugging and Audit Trail
+
+The logging interceptor provides visibility into all network traffic, essential for debugging API integration issues and maintaining audit trails (required in healthcare):
+
+```dart
+class LoggingInterceptor extends Interceptor {
+  final Logger _logger = Logger('API');
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Log outgoing request details
+    _logger.info('➡️ ${options.method} ${options.uri}');
+    
+    // Log headers (excluding sensitive ones)
+    options.headers.forEach((key, value) {
+      if (!_isSensitiveHeader(key)) {
+        _logger.debug('Header: $key: $value');
+      }
+    });
+    
+    // Log request body (excluding sensitive data like passwords)
+    if (options.data != null && !_containsSensitiveData(options.path)) {
+      _logger.debug('Request body: ${options.data}');
+    }
+    
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // Log successful response
+    _logger.info('✅ ${response.statusCode} ${response.requestOptions.uri}');
+    _logger.debug('Response data: ${response.data}');
+    
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Log errors prominently
+    _logger.error(
+      '❌ ${err.response?.statusCode ?? 'ERROR'} ${err.requestOptions.uri}',
+      error: err,
+    );
+    
+    if (err.response?.data != null) {
+      _logger.error('Error response: ${err.response?.data}');
+    }
+    
+    handler.next(err);
+  }
+  
+  bool _isSensitiveHeader(String key) {
+    // Don't log authorization tokens or API keys
+    return key.toLowerCase() == 'authorization' || 
+           key.toLowerCase().contains('token') ||
+           key.toLowerCase().contains('key');
+  }
+  
+  bool _containsSensitiveData(String path) {
+    // Don't log bodies of login/register requests (contain passwords)
+    return path.contains('/auth/login') || 
+           path.contains('/auth/register') ||
+           path.contains('/password');
+  }
+}
+```
+
+**Why this matters**: In production, when a caregiver reports "the app says patient data failed to load," these logs let you see exactly what request was made and what error the server returned, dramatically speeding up debugging.
+
+#### Error Interceptor: User-Friendly Error Messages
+
+The error interceptor transforms technical HTTP errors into user-friendly messages, preventing users from seeing cryptic "DioException: 500" errors:
+
+```dart
+class ErrorInterceptor extends Interceptor {
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Transform Dio errors into application-specific exceptions
+    String message;
+    
+    if (err.type == DioExceptionType.connectionTimeout || 
+        err.type == DioExceptionType.receiveTimeout) {
+      // Network timeout - likely slow connection or server overload
+      message = 'Connection timeout. Please check your internet connection and try again.';
+    } else if (err.type == DioExceptionType.badResponse) {
+      // Server returned an error status code
+      final statusCode = err.response?.statusCode;
+      
+      switch (statusCode) {
+        case 400:
+          // Bad request - show server's error message if available
+          message = err.response?.data['message'] ?? 
+                   'Invalid request. Please check your input.';
+          break;
+        case 401:
+          // Unauthorized - handled by AuthInterceptor, but provide fallback
+          message = 'Authentication required. Please log in.';
+          break;
+        case 403:
+          // Forbidden - user doesn't have permission
+          message = 'You do not have permission to access this resource.';
+          break;
+        case 404:
+          // Not found - resource doesn't exist
+          message = 'The requested resource was not found.';
+          break;
+        case 500:
+        case 502:
+        case 503:
+          // Server errors - show friendly message
+          message = 'Server error. Our team has been notified. Please try again later.';
+          break;
+        default:
+          message = 'An unexpected error occurred. Please try again.';
+      }
+    } else if (err.type == DioExceptionType.cancel) {
+      // Request was cancelled (user navigated away) - don't show error
+      handler.next(err);
+      return;
+    } else {
+      // Unknown error - generic message
+      message = 'Unable to connect to server. Please check your internet connection.';
+    }
+    
+    // Create application-specific exception with user-friendly message
+    final appException = ApiException(message, statusCode: err.response?.statusCode);
+    
+    // Log the technical error for debugging
+    logger.error('API Error: ${err.message}', error: err);
+    
+    // Pass the user-friendly exception to application code
+    handler.reject(DioException(
+      requestOptions: err.requestOptions,
+      error: appException,
+      type: err.type,
+    ));
+  }
+}
+```
+
+**Benefits**:
+- Users see "Connection timeout" instead of "DioException: ConnectionTimeout"
+- Developers get technical logs for debugging
+- Consistent error messages across the entire app
+- Healthcare-appropriate language (calm, reassuring, actionable)
+
+#### Making Requests with Configured Client
+
+With interceptors in place, making API calls is straightforward:
+
+```dart
+class HealthService {
+  final ApiClient _apiClient;
+
+  HealthService(this._apiClient);
+
+  Future<List<VitalSign>> getVitalSigns() async {
+    try {
+      // Make request - interceptors automatically:
+      // 1. Add auth token
+      // 2. Log request
+      // 3. Transform any errors
+      final response = await _apiClient.dio.get('/api/health/vitals');
+      
+      // Parse response
+      return (response.data as List)
+          .map((json) => VitalSign.fromJson(json))
+          .toList();
+    } on ApiException catch (e) {
+      // Error was already transformed by ErrorInterceptor
+      throw HealthException(e.message);
+    }
+  }
+}
+```
+
+Notice how clean this code is—no manual token injection, no response logging, no error transformation. All that complexity is handled by interceptors, ensuring consistency across all API calls in the application.
+
+This architecture means:
+- New developers can add API calls without worrying about auth or logging
+- Changing how we handle authentication (e.g., switching from JWT to OAuth) only requires updating one file
+- All API calls automatically benefit from improvements to error handling or logging
+- Healthcare compliance requirements (like audit logging) are enforced automatically
 
 ### Feature Module Structure
 
@@ -535,41 +1524,61 @@ public interface VitalSignRepository extends JpaRepository<VitalSign, Long> {
 }
 ```
 
-### Service Layer
+### Service Layer: Implementing Business Logic and Orchestration
 
-Business logic implementation:
+The Service Layer in CareConnect acts as the core of our business logic, sitting between the Controllers (which handle HTTP requests and responses) and the Repositories (which handle data access). This architectural separation is crucial in healthcare applications where business rules can be complex and must be consistently applied across different access points (REST API, WebSocket, scheduled jobs, etc.).
+
+#### Core Responsibilities
+
+**Orchestrating Complex Operations**: Business processes in healthcare often involve multiple steps. For example, recording a vital sign might require: validating the user exists, saving the measurement, checking for critical values, notifying caregivers if needed, and updating analytics. The service layer coordinates all these steps as a single, transactional unit of work.
+
+**Enforcing Business Rules**: Validation goes beyond simple JSR-380 annotations. Services enforce domain-specific rules like "is this blood pressure reading within a critical range for *this specific patient* given their medical history?" These rules often require database queries or complex calculations.
+
+**Applying Security Context**: Services ensure that a user can only access data they are authorized to see. Even if a controller is misconfigured, the service layer acts as a second line of defense by verifying permissions.
+
+**Managing Transactions**: Using `@Transactional`, services ensure that either all database operations succeed or all fail together. In healthcare, partial data saves could lead to inconsistent medical records, so this all-or-nothing approach is essential.
+
+#### Example: Recording a Vital Sign with Automated Alerts
+
+This example demonstrates how the service layer orchestrates a seemingly simple operation (recording a blood pressure reading) into a multi-step process that maintains data integrity and patient safety:
 
 ```java
 // service/HealthService.java
 @Service
-@Transactional
+@Transactional // This entire method is a single transaction
 public class HealthService {
 
     private final VitalSignRepository vitalSignRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final VitalSignAnalyzer vitalSignAnalyzer;
+    
+    private static final Logger log = LoggerFactory.getLogger(HealthService.class);
 
     public HealthService(VitalSignRepository vitalSignRepository,
                         UserRepository userRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        VitalSignAnalyzer vitalSignAnalyzer) {
         this.vitalSignRepository = vitalSignRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
-    }
-
-    public List<VitalSignDTO> getVitalSigns(Long userId) {
-        List<VitalSign> vitalSigns = vitalSignRepository
-            .findByUserIdOrderByMeasurementTimeDesc(userId);
-
-        return vitalSigns.stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+        this.vitalSignAnalyzer = vitalSignAnalyzer;
     }
 
     public VitalSignDTO recordVitalSign(Long userId, VitalSignDTO vitalSignDTO) {
+        // 1. VALIDATE: First, ensure the user exists and is authorized
+        //    This prevents orphaned vital signs and enforces data integrity
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "User not found with id: " + userId));
+        
+        // Additional business rule: Only patients and caregivers can record vitals
+        if (!user.canRecordVitalSigns()) {
+            throw new UnauthorizedException("User is not authorized to record vital signs");
+        }
 
+        // 2. CONVERT: Map the incoming DTO to a JPA Entity
+        //    DTOs protect our API from exposing internal entity structure
         VitalSign vitalSign = new VitalSign();
         vitalSign.setUser(user);
         vitalSign.setType(vitalSignDTO.getType());
@@ -578,27 +1587,69 @@ public class HealthService {
         vitalSign.setNotes(vitalSignDTO.getNotes());
         vitalSign.setMeasurementTime(LocalDateTime.now());
 
+        // 3. PERSIST: Save the entity to the database
+        //    The transaction ensures this and all subsequent operations succeed together
         vitalSign = vitalSignRepository.save(vitalSign);
+        
+        log.info("Recorded vital sign for user {}: {} {}", 
+                userId, vitalSign.getValue(), vitalSign.getUnit());
 
-        // Check for alerts
-        checkVitalSignAlerts(vitalSign);
+        // 4. PROCESS BUSINESS LOGIC: Check for critical alerts after saving
+        //    This is a key piece of business logic that belongs in the service
+        //    If this were in the controller, other entry points might miss the check
+        checkForVitalSignAlerts(vitalSign);
 
+        // 5. RETURN: Convert the saved entity back to a DTO for the response
+        //    This prevents accidental exposure of Hibernate proxies or lazy-loaded data
         return convertToDTO(vitalSign);
     }
 
-    private void checkVitalSignAlerts(VitalSign vitalSign) {
-        // Implement alert logic based on vital sign thresholds
-        if (isAbnormalReading(vitalSign)) {
-            notificationService.sendAlert(
+    /**
+     * Analyzes a vital sign and sends alerts if critical thresholds are exceeded.
+     * This method demonstrates separation of concerns: the service orchestrates,
+     * while specialized components handle the complex medical logic.
+     */
+    private void checkForVitalSignAlerts(VitalSign vitalSign) {
+        // Delegate the complex medical logic to a dedicated analyzer
+        // This makes the code testable and allows medical rules to be updated
+        // independently of the service layer
+        AlertLevel alertLevel = vitalSignAnalyzer.analyzeVitalSign(vitalSign);
+        
+        if (alertLevel.isCritical()) {
+            // Use the notification service to alert caregivers
+            // This abstraction allows notifications via email, SMS, push, etc.
+            notificationService.sendHealthAlert(
                 vitalSign.getUser(),
-                "Abnormal vital sign detected: " + vitalSign.getType(),
-                AlertType.HEALTH_ALERT
+                String.format("Critical %s reading: %s %s", 
+                    vitalSign.getType(), 
+                    vitalSign.getValue(),
+                    vitalSign.getUnit()),
+                AlertType.CRITICAL_HEALTH_ALERT,
+                alertLevel
+            );
+            
+            // Audit log for compliance - all critical events must be logged
+            log.warn("CRITICAL ALERT generated for user {} - {} reading: {} {}",
+                vitalSign.getUser().getId(),
+                vitalSign.getType(),
+                vitalSign.getValue(),
+                vitalSign.getUnit());
+        } else if (alertLevel.needsAttention()) {
+            // Send lower-priority notification
+            notificationService.sendHealthAlert(
+                vitalSign.getUser(),
+                String.format("%s reading outside normal range: %s %s", 
+                    vitalSign.getType(), 
+                    vitalSign.getValue(),
+                    vitalSign.getUnit()),
+                AlertType.HEALTH_ADVISORY,
+                alertLevel
             );
         }
     }
 
     private VitalSignDTO convertToDTO(VitalSign vitalSign) {
-        // Convert entity to DTO
+        // Convert entity to DTO, ensuring we don't expose internal details
         return VitalSignDTO.builder()
             .id(vitalSign.getId())
             .type(vitalSign.getType())
@@ -610,6 +1661,18 @@ public class HealthService {
     }
 }
 ```
+
+#### Why This Structure?
+
+This method clearly separates concerns:
+- The **repository** handles only data persistence and retrieval
+- The **analyzer** encapsulates complex medical rules and thresholds
+- The **notification service** handles the mechanics of sending alerts
+- The **service** orchestrates all these components into a cohesive workflow
+
+The `@Transactional` annotation is critical here. If the alert-sending logic fails (e.g., email server is down), the entire vital sign recording is rolled back. This ensures we never have a situation where a critical reading is recorded but caregivers aren't notified.
+
+In healthcare applications, this transactional integrity is not just a nice-to-have—it's a regulatory requirement. The service layer is where we enforce these guarantees.
 
 ### Controller Layer
 
@@ -1540,40 +2603,107 @@ public CorsConfigurationSource corsConfigurationSource() {
 - Brute force protection for authentication endpoints
 - Emergency endpoint exemption from rate limits
 
-## Real-time Communication
+## Real-time Communication with WebSocket
 
-CareConnect implements a comprehensive WebSocket-based real-time communication system specifically designed for healthcare applications. The system uses a **dual-mode architecture** that automatically switches between local development and AWS production environments.
+CareConnect implements a comprehensive WebSocket-based real-time communication system. This system is specifically designed for healthcare applications where timely information delivery can be critical to patient safety. The system uses a **dual-mode architecture** that automatically switches between local development (embedded WebSocket server) and AWS production (API Gateway WebSocket) environments.
+
+### Why WebSocket for Healthcare?
+
+Healthcare scenarios demand real-time communication in ways that traditional REST APIs cannot satisfy:
+
+**Critical Alerts**: When a patient's blood pressure reading is dangerously high, the caregiver needs immediate notification—not whenever they next refresh the dashboard. A 5-minute delay in notification could be the difference between timely intervention and a medical emergency.
+
+**Medication Reminders**: Patients need timely reminders to take medications. WebSocket push notifications are more reliable than polling, especially when the app is backgrounded.
+
+**Communication**: Video calls, text messaging, and emergency calls require persistent connections. Establishing a new HTTP connection for every message would be slow and wasteful.
+
+**Vital Signs Monitoring**: Real-time streaming of vital signs data (from connected devices like blood pressure monitors) requires continuous data flow, not request-response cycles.
+
+**Audit Requirements**: Healthcare regulations often require real-time audit logging. WebSocket connections can stream audit events as they occur, rather than batching them.
+
+While Server-Sent Events (SSE) could handle some use cases, WebSocket's bidirectional nature allows clients to also send data efficiently (like acknowledging alerts or sending heartbeats).
 
 ### Architecture Overview
 
-The WebSocket system provides three main communication channels:
-- **`/ws/careconnect`** - General healthcare updates (AI notifications, vital signs, medication reminders)
-- **`/ws/calls`** - Video/audio call management and SMS notifications
-- **`/ws/notifications`** - Basic notification delivery
+CareConnect provides three main WebSocket channels, each serving distinct purposes:
 
-### WebSocket Configuration
+**`/ws/careconnect`** - Primary healthcare communications channel
+- AI notifications (health risk assessments, recommendations)
+- Vital signs alerts (abnormal readings requiring attention)
+- Medication reminders (scheduled notifications)
+- Mood/pain log updates (real-time patient self-reporting)
+- Emergency alerts (critical patient situations)
 
-#### Dual-Mode Configuration
+**`/ws/calls`** - Call management and notifications
+- Video call initiation and coordination
+- Audio call signaling
+- SMS notifications (text message delivery)
+- Call status updates
+
+**`/ws/notifications`** - General notification delivery
+- System notifications
+- Administrative messages
+- Low-priority updates
+
+This separation allows different Quality of Service levels: emergency alerts on `/ws/careconnect` get highest priority, while general notifications can be throttled during high load.
+
+### Dual-Mode Configuration: Development vs Production
+
+CareConnect's WebSocket system adapts automatically to its environment:
+
+**Development Mode**: Uses Spring Boot's embedded WebSocket server
+- Runs on same port as REST API (8080)
+- Simple configuration, easy debugging
+- Full WebSocket features including SockJS fallback
+- Perfect for local development and testing
+
+**Production Mode**: Uses AWS API Gateway WebSocket
+- Scales automatically with load
+- Integrates with AWS Lambda for message processing
+- Global distribution via CloudFront
+- Handles connection persistence and reconnection
+
+This dual-mode approach means developers can work locally without AWS credentials, while production benefits from enterprise-grade infrastructure.
+
+#### Configuration Detection
 
 ```java
 // config/WebSocketModeConfig.java
 @Configuration
-@ConditionalOnProperty(name = "careconnect.websocket.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+    name = "careconnect.websocket.enabled", 
+    havingValue = "true", 
+    matchIfMissing = true
+)
 public class WebSocketModeConfig {
 
+    /**
+     * Local WebSocket configuration - used when AWS endpoint is not defined.
+     * This is the default for development environments.
+     */
     @Bean
     @ConditionalOnMissingBean(name = "awsWebSocketApiEndpoint")
     public WebSocketConfig localWebSocketConfig() {
-        return new WebSocketConfig(); // Local development mode
+        return new WebSocketConfig(); // Embedded Spring WebSocket
     }
 
+    /**
+     * AWS WebSocket configuration - used when AWS endpoint is defined.
+     * This activates in production when AWS_WEBSOCKET_API_ENDPOINT is set.
+     */
     @Bean
     @ConditionalOnBean(name = "awsWebSocketApiEndpoint")
     public AwsWebSocketService awsWebSocketService() {
-        return new AwsWebSocketService(); // AWS production mode
+        return new AwsWebSocketService(); // AWS API Gateway client
     }
 }
+```
 
+**How it works**: Spring checks for the presence of `awsWebSocketApiEndpoint` bean (defined when `AWS_WEBSOCKET_API_ENDPOINT` environment variable is set). If present, uses AWS mode; otherwise, uses local mode. This is completely transparent to application code.
+
+### Local Development WebSocket Configuration
+
+```java
 // config/WebSocketConfig.java
 @Configuration
 @EnableWebSocket
@@ -1589,28 +2719,38 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // Parse allowed origins from configuration
         String[] origins = allowedOrigins.split(",");
 
         // Main healthcare WebSocket with SockJS fallback
         registry.addHandler(careConnectHandler, "/ws/careconnect")
                 .setAllowedOrigins(origins)
-                .withSockJS();
+                .withSockJS();  // Enables fallback for browsers without WebSocket
 
         // Call management WebSocket with SockJS fallback
         registry.addHandler(callHandler, "/ws/calls")
                 .setAllowedOrigins(origins)
                 .withSockJS();
 
-        // Basic notifications (no SockJS)
+        // Basic notifications (no SockJS - pure WebSocket only)
         registry.addHandler(notificationHandler, "/ws/notifications")
                 .setAllowedOrigins(origins);
     }
 }
 ```
 
-### WebSocket Handlers
+#### Why SockJS Fallback?
 
-#### CareConnectWebSocketHandler - Healthcare Communications
+SockJS provides automatic fallback to HTTP long-polling when WebSocket is unavailable. This is crucial in healthcare settings where:
+- Corporate firewalls might block WebSocket connections
+- Some hospital networks use outdated proxies incompatible with WebSocket
+- Mobile networks occasionally have issues with persistent connections
+
+With SockJS, the application automatically degrades gracefully: tries WebSocket first, falls back to HTTP streaming, then long-polling if needed. The application code remains identical—SockJS handles the complexity.
+
+### WebSocket Handler: Healthcare Communications
+
+The main healthcare WebSocket handler manages patient-critical communications:
 
 ```java
 @Component
@@ -1619,14 +2759,18 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final WebSocketConnectionService connectionService;
+    
+    // Thread-safe map of user IDs to active WebSocket sessions
     private final Map<Long, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("WebSocket connection established: {}", session.getId());
+        
+        // Track when connection was established (for timeout detection)
         session.getAttributes().put("connectionTime", System.currentTimeMillis());
 
-        // Send initial connection message
+        // Send welcome message to client
         sendMessage(session, Map.of(
             "type", "connection-established",
             "message", "WebSocket connection successful",
@@ -1635,35 +2779,56 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) 
+            throws Exception {
         try {
-            Map<String, Object> payload = objectMapper.readValue(message.getPayload(), Map.class);
+            // Parse incoming message as JSON
+            Map<String, Object> payload = objectMapper.readValue(
+                message.getPayload(), 
+                Map.class
+            );
             String messageType = (String) payload.get("type");
 
+            // Route message to appropriate handler based on type
             switch (messageType) {
                 case "authenticate":
+                    // Client sends JWT token to authenticate the connection
                     handleAuthentication(session, payload);
                     break;
+                    
                 case "heartbeat":
+                    // Client sends periodic heartbeat to keep connection alive
                     handleHeartbeat(session);
                     break;
+                    
                 case "ai-chat-notification":
+                    // AI-generated health recommendations or alerts
                     handleAIChatNotification(session, payload);
                     break;
+                    
                 case "mood-pain-log-update":
+                    // Patient reported mood/pain data in real-time
                     handleMoodPainLogUpdate(session, payload);
                     break;
+                    
                 case "medication-reminder":
+                    // Scheduled medication reminder needs to be sent
                     handleMedicationReminder(session, payload);
                     break;
+                    
                 case "vital-signs-alert":
+                    // Abnormal vital sign detected, alert caregivers
                     handleVitalSignsAlert(session, payload);
                     break;
+                    
                 case "emergency-alert":
+                    // Critical patient emergency, highest priority
                     handleEmergencyAlert(session, payload);
                     break;
+                    
                 default:
-                    log.warn("Unknown message type: {}", messageType);
+                    log.warn("Unknown message type received: {}", messageType);
+                    sendErrorMessage(session, "Unknown message type: " + messageType);
             }
         } catch (Exception e) {
             log.error("Error handling WebSocket message", e);
@@ -1671,28 +2836,42 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Handles client authentication over WebSocket.
+     * Unlike REST APIs where auth happens per-request, WebSocket connections
+     * authenticate once when established, then remain authenticated.
+     */
     private void handleAuthentication(WebSocketSession session, Map<String, Object> payload) {
         try {
             String token = (String) payload.get("token");
             Long userId = getLongValue(payload, "userId");
 
             if (jwtTokenProvider.validateToken(token)) {
+                // Token is valid - extract user information
                 Claims claims = jwtTokenProvider.getClaims(token);
                 String email = claims.getSubject();
                 String role = claims.get("role", String.class);
 
-                // Store user info in session
+                // Store user info in session attributes
+                // These persist for the lifetime of the WebSocket connection
                 session.getAttributes().put("userId", userId);
                 session.getAttributes().put("email", email);
                 session.getAttributes().put("role", role);
                 session.getAttributes().put("authenticated", true);
 
-                // Map user to session
+                // Map user ID to this session for targeted messaging
+                // When we need to send alert to user 123, we look up their session here
                 userSessions.put(userId, session);
 
-                // Persist connection
-                connectionService.saveConnection(session.getId(), email, userId, "authenticated");
+                // Persist connection to database for audit trail and reconnection
+                connectionService.saveConnection(
+                    session.getId(), 
+                    email, 
+                    userId, 
+                    "authenticated"
+                );
 
+                // Confirm successful authentication to client
                 sendMessage(session, Map.of(
                     "type", "authentication-success",
                     "userId", userId,
@@ -1702,10 +2881,14 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
 
                 log.info("User {} authenticated via WebSocket", email);
             } else {
+                // Invalid token - reject authentication
                 sendMessage(session, Map.of(
                     "type", "authentication-error",
                     "message", "Invalid token"
                 ));
+                
+                // Close connection after authentication failure
+                session.close(CloseStatus.POLICY_VIOLATION);
             }
         } catch (Exception e) {
             log.error("Authentication error", e);
@@ -1713,25 +2896,105 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Handles emergency alerts - highest priority healthcare notifications.
+     * These bypass normal throttling and are delivered immediately to all
+     * authorized recipients (caregivers and family members).
+     */
     private void handleEmergencyAlert(WebSocketSession session, Map<String, Object> payload) {
-        // High-priority emergency handling
         Long patientId = getLongValue(payload, "patientId");
         String alertType = (String) payload.get("alertType");
         String message = (String) payload.get("message");
 
-        // Notify all caregivers and family members
-        broadcastToUsersByRole(patientId, "emergency-alert", Map.of(
+        // Construct alert payload
+        Map<String, Object> alert = Map.of(
+            "type", "emergency-alert",
             "patientId", patientId,
             "alertType", alertType,
             "message", message,
             "timestamp", System.currentTimeMillis(),
             "priority", "HIGH"
-        ), List.of("CAREGIVER", "FAMILY_MEMBER"));
+        );
 
-        log.warn("Emergency alert sent for patient {}: {}", patientId, alertType);
+        // Broadcast to all caregivers and family members linked to this patient
+        // This uses a specialized method that queries database for authorized users
+        // and sends to all their active WebSocket sessions
+        broadcastToUsersByRole(
+            patientId, 
+            "emergency-alert", 
+            alert,
+            List.of("CAREGIVER", "FAMILY_MEMBER")
+        );
+
+        // Audit log - all emergency alerts must be logged for compliance
+        log.warn("🚨 EMERGENCY ALERT sent for patient {}: {} - {}", 
+            patientId, alertType, message);
+            
+        // Could also trigger additional actions:
+        // - Send SMS to emergency contact
+        // - Create database record for audit trail
+        // - Trigger automated escalation if no acknowledgment within X minutes
+    }
+    
+    private void sendMessage(WebSocketSession session, Map<String, Object> message) 
+            throws Exception {
+        if (session.isOpen()) {
+            String json = objectMapper.writeValueAsString(message);
+            session.sendMessage(new TextMessage(json));
+        }
     }
 }
 ```
+
+#### Key Architectural Decisions
+
+**Stateful Connections**: Unlike REST's stateless nature, WebSocket connections are stateful. Once a user authenticates, their connection remains authenticated until they disconnect or their token expires. This eliminates the overhead of validating JWT on every message.
+
+**User Session Mapping**: The `userSessions` map enables targeted messaging. When a vital sign alert needs to reach a specific caregiver, we look up their session and send directly to them, rather than broadcasting to everyone.
+
+**Message Type Routing**: The `handleTextMessage` switch statement acts as a message router. As new real-time features are added, they get a new message type and handler method. This scales much better than monolithic message processing.
+
+**Audit Logging**: Every significant event (authentication, emergency alerts) is logged. In healthcare, this audit trail is not optional—it's a regulatory requirement for demonstrating compliance with HIPAA and other regulations.
+
+**Error Resilience**: Notice how exceptions are caught and transformed into error messages sent back to the client. A crashed WebSocket handler would drop all active connections—unacceptable in a healthcare app where those connections might be monitoring critical patients.
+
+### Connection Lifecycle and Management
+
+**Connection Establishment**:
+1. Client opens WebSocket connection to `/ws/careconnect`
+2. Server accepts, assigns session ID
+3. Client sends `authenticate` message with JWT
+4. Server validates token, stores user info in session
+5. Connection is now ready for bidirectional messaging
+
+**Active Connection**:
+- Client sends periodic heartbeats (every 30 seconds) to prevent timeout
+- Server can send messages anytime (alerts, notifications)
+- Client can send messages anytime (requests, updates)
+- Connection remains open for hours or days
+
+**Connection Termination**:
+- Client explicitly closes (app backgrounded, user logs out)
+- Network interruption (mobile signal loss, WiFi disconnect)
+- Server timeout (no heartbeat for 5 minutes)
+- Server restart (all connections dropped, clients must reconnect)
+
+**Reconnection Strategy**: Clients implement exponential backoff reconnection:
+```dart
+// Flutter client reconnection logic
+int retryCount = 0;
+while (retryCount < 5 && !connected) {
+  await Future.delayed(Duration(seconds: math.pow(2, retryCount).toInt()));
+  try {
+    await connect();
+    retryCount = 0; // Reset on success
+  } catch (e) {
+    retryCount++;
+  }
+}
+```
+
+This prevents overwhelming the server with reconnection attempts while ensuring clients eventually reconnect.
 
 #### CallNotificationHandler - Video/Audio Calls
 
@@ -4175,12 +5438,13 @@ jobs:
         working-directory: backend/core
 
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15
         env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: careconnect_test
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: careconnect
+          POSTGRES_DB: careconnect_test
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - uses: actions/checkout@v3
@@ -4198,8 +5462,8 @@ jobs:
     - name: Run tests
       run: ./mvnw test
       env:
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/careconnect_test
-        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/careconnect_test
+        SPRING_DATASOURCE_USERNAME: careconnect
         SPRING_DATASOURCE_PASSWORD: test
 
   deploy-staging:
@@ -4559,7 +5823,7 @@ cd ../backend/core
 ./mvnw clean install
 
 # Setup database
-mysql -u root -p < scripts/init-db.sql
+psql -U postgres < scripts/init-db.sql
 
 # Run tests
 flutter test  # Frontend
@@ -4568,122 +5832,561 @@ flutter test  # Frontend
 
 ## Troubleshooting
 
+This section provides systematic approaches to resolving common issues in the CareConnect platform. Each issue is structured as: **Problem** → **Root Causes** → **Step-by-Step Resolution**, allowing you to quickly identify and fix issues while understanding why they occurred.
+
 ### Common Development Issues
 
 #### Configuration Problems
 
-**Environment Variable Issues**
-```bash
-# Check required environment variables
-echo $SECURITY_JWT_SECRET      # Required for JWT authentication
-echo $DEEPSEEK_API_KEY         # Required for AI features
-echo $STRIPE_SECRET_KEY        # Required for subscriptions
-echo $JDBC_URI                 # Database connection
+##### Problem: Environment Variable Issues
 
-# Set missing variables
-export SECURITY_JWT_SECRET="your-jwt-secret-key"
+**Symptoms**: Application fails to start with errors like "JWT secret not configured" or "API key missing". Services that depend on external APIs (AI, Stripe, AWS) fail to initialize.
+
+**Root Causes**:
+This typically occurs when environment variables are not properly set in your development environment. The application expects certain sensitive configuration values to be provided externally (not hardcoded) for security reasons. Common scenarios include:
+- Variables set in one terminal session but not persisted
+- Variables set in IDE configuration but not in terminal environment
+- Incorrect variable names (typos or case sensitivity issues)
+- Variables not exported in shell startup files
+
+**Systematic Resolution Steps**:
+
+1. **Verify Current Environment**: First, check which variables are actually set in your environment:
+```bash
+# Check all required environment variables at once
+echo "JWT Secret: $SECURITY_JWT_SECRET"
+echo "DeepSeek API Key: $DEEPSEEK_API_KEY"
+echo "Stripe Secret: $STRIPE_SECRET_KEY"
+echo "Database URL: $JDBC_URI"
+```
+Any variable showing blank means it's not set in your current environment.
+
+2. **Set Variables for Current Session**: For immediate testing, export variables in your terminal:
+```bash
+export SECURITY_JWT_SECRET="your-jwt-secret-key-at-least-32-chars"
 export DEEPSEEK_API_KEY="your-deepseek-api-key"
+export STRIPE_SECRET_KEY="your-stripe-secret-key"
+export JDBC_URI="jdbc:postgresql://localhost:5432/careconnect"
 ```
+These will only last for the current terminal session.
 
-**Profile-Specific Configuration Issues**
-```properties
-# application-dev.properties - Common issues:
-spring.jpa.hibernate.ddl-auto=update  # Risky for production
-spring.flyway.enabled=false           # Disabled due to circular dependencies
-
-# Fix for production:
-spring.jpa.hibernate.ddl-auto=validate
-spring.flyway.enabled=true
-```
-
-**Database Migration Problems**
+3. **Persist Variables Permanently**: Add these to your shell configuration file for persistence:
 ```bash
-# Flyway is currently disabled due to circular dependency issues
-# Temporary workaround uses JPA DDL auto-update
+# For bash users (~/.bashrc or ~/.bash_profile)
+echo 'export SECURITY_JWT_SECRET="your-secret"' >> ~/.bashrc
+source ~/.bashrc
 
+# For zsh users (~/.zshrc)
+echo 'export SECURITY_JWT_SECRET="your-secret"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+4. **Configure IDE Environment**: If running from an IDE, configure the run configuration:
+- **IntelliJ IDEA**: Run → Edit Configurations → Environment Variables
+- **VS Code**: Add to `.vscode/launch.json` or use `.env` file with appropriate plugin
+
+5. **Verify Application Startup**: After setting variables, restart your application and check the logs for successful initialization of services that depend on these variables.
+
+**Prevention**: Create a `.env.example` file in the repository documenting all required environment variables. New developers can copy this to `.env` and fill in their values.
+
+##### Problem: Profile-Specific Configuration Issues
+
+**Symptoms**: Application behavior differs between environments. Database schema updates fail in production. Flyway migrations conflict with JPA auto-generation.
+
+**Root Causes**:
+Spring Boot uses profiles to manage environment-specific configuration. Issues arise when:
+- Development profile uses `spring.jpa.hibernate.ddl-auto=update` which auto-generates schema changes
+- Flyway is disabled in development but enabled in production (or vice versa)
+- Configuration properties conflict between profiles
+- Active profile is not what you expect (e.g., running with `default` when you meant `dev`)
+
+**Systematic Resolution Steps**:
+
+1. **Identify Active Profile**: Check which profile Spring Boot is actually using:
+```bash
+# Check application logs on startup for:
+# "The following profiles are active: dev"
+
+# Or explicitly check:
+java -jar your-app.jar --spring.profiles.active=dev
+
+# Or via environment variable:
+export SPRING_PROFILES_ACTIVE=dev
+```
+
+2. **Understand Profile Hierarchy**: Spring Boot loads configuration in this order (later overrides earlier):
+   - `application.properties` (base configuration, always loaded)
+   - `application-{profile}.properties` (profile-specific overrides)
+   - Environment variables (highest priority)
+
+3. **Review Development vs Production Settings**: Common configuration that should differ:
+```properties
+# application-dev.properties (Development)
+spring.jpa.hibernate.ddl-auto=update      # Auto-generate schema changes
+spring.flyway.enabled=false               # Disabled due to circular dependencies
+spring.jpa.show-sql=true                  # Show SQL for debugging
+logging.level.com.careconnect=DEBUG       # Verbose logging
+
+# application-prod.properties (Production)
+spring.jpa.hibernate.ddl-auto=validate    # Never auto-modify production schema
+spring.flyway.enabled=true                # Use Flyway for controlled migrations
+spring.jpa.show-sql=false                 # Don't log SQL in production
+logging.level.com.careconnect=INFO        # Production logging level
+```
+
+4. **Fix Flyway/JPA Conflicts**: Currently, CareConnect has Flyway disabled in development due to circular dependency issues. To manually apply migrations:
+```bash
 # Check current database schema
 psql -h localhost -U careconnect -d careconnect -c "\dt"
 
-# Manual migration approach
+# Manually apply specific migration
 psql -h localhost -U careconnect -d careconnect -f src/main/resources/db/migration/V22__create_ai_chat_tables.sql
+
+# Verify migration was applied
+psql -h localhost -U careconnect -d careconnect -c "SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
 ```
+
+5. **Validate Profile Loading**: Add logging to confirm correct profile is loaded:
+```properties
+# Add to application.properties
+logging.level.org.springframework.core.env=DEBUG
+```
+This will log which property files are being loaded and in what order.
+
+**Why This Happens**: Flyway and JPA DDL auto-generation both try to manage database schema, leading to conflicts. In CareConnect, we've temporarily disabled Flyway in development to avoid circular dependencies, but this is a technical debt that should be resolved by fixing the circular dependencies and re-enabling Flyway.
 
 #### Flutter Build Issues
 
-**Cache and Dependencies**
-```bash
-# Clear Flutter cache
-flutter clean
-flutter pub cache clean
-flutter pub get
+##### Problem: Unexpected Build Failures or Dependency Conflicts
 
-# Fix version conflicts
-flutter pub deps
-flutter pub upgrade
+**Symptoms**: `flutter build` or `flutter run` fails with errors about missing packages, version conflicts, or corrupted cache. Tests that previously passed now fail inexplicably.
 
-# Reset Flutter installation
-flutter channel stable
-flutter upgrade
-flutter doctor -v
-```
+**Root Causes**:
+Flutter's build system aggressively caches dependencies and build artifacts for performance. While this usually helps, it can cause issues when:
+- Package versions change in `pubspec.yaml` but cached versions persist
+- Build artifacts become corrupted (often after git operations or Flutter SDK updates)
+- Multiple Flutter projects on your system create conflicting cached state
+- Flutter SDK is updated but local caches aren't refreshed
 
-**Build Failures**
-```bash
-# Android build issues
-cd android && ./gradlew clean
-flutter build apk --debug
+**Systematic Resolution Steps**:
 
-# iOS build issues
-cd ios && pod install
-flutter build ios --debug
-```
+1. **Level 1: Refresh Dependency Cache** (Solves ~80% of issues)
+   ```bash
+   # Delete the build folder (contains compiled artifacts)
+   flutter clean
+
+   # Repair the Pub cache (where packages are stored)
+   flutter pub cache repair
+
+   # Re-fetch all dependencies for this project
+   flutter pub get
+   ```
+   **What this does**: `flutter clean` removes all compiled artifacts, forcing a fresh build. `pub cache repair` checks the integrity of all cached packages and re-downloads any that are corrupted. `pub get` updates the project's dependency resolution.
+
+2. **Level 2: Upgrade SDK and Dependencies** (If Level 1 doesn't resolve)
+   ```bash
+   # Ensure you're on the stable channel (not dev or beta)
+   flutter channel stable
+
+   # Upgrade the Flutter SDK itself to the latest stable version
+   flutter upgrade
+
+   # Check which dependencies are outdated
+   flutter pub outdated
+
+   # Upgrade dependencies to latest compatible versions
+   flutter pub upgrade
+   ```
+   **Important**: After `flutter upgrade`, run `flutter doctor -v` to ensure all components (Android toolchain, iOS toolchain, etc.) are properly configured.
+
+3. **Level 3: Resolve Dependency Conflicts** (For persistent version conflicts)
+   ```bash
+   # Visualize the dependency tree to find conflicts
+   flutter pub deps --style=tree
+   ```
+   Look for the same package appearing multiple times with different versions. Example output:
+   ```
+   ├── http 0.13.5
+   └── some_package 1.0.0
+       └── http 0.13.4  ← Conflict! Two versions of http
+   ```
+   
+   **Resolution**: Use `dependency_overrides` in `pubspec.yaml` (use sparingly, only as last resort):
+   ```yaml
+   dependency_overrides:
+     http: ^0.13.5  # Force all packages to use this version
+   ```
+
+4. **Level 4: IDE Synchronization** (If builds work in terminal but not IDE)
+   
+   **VS Code**:
+   ```
+   - Open Command Palette (Cmd/Ctrl+Shift+P)
+   - Run: "Dart: Restart Analysis Server"
+   - If issue persists: Reload window (Cmd/Ctrl+R)
+   ```
+   
+   **Android Studio**:
+   ```
+   - File > Invalidate Caches / Restart...
+   - Select "Invalidate and Restart"
+   ```
+   
+   **What this does**: IDEs maintain their own analysis of your Dart code. Sometimes this gets out of sync with actual files, causing phantom errors.
+
+5. **Level 5: Verify Exact Package Versions** (For reproducible team builds)
+   
+   Check the project's `pubspec.yaml` and ensure you're using the exact versions specified:
+   ```yaml
+   dependencies:
+     flutter:
+       sdk: flutter
+     provider: ^6.0.5      # Ensure your version matches team's version
+     dio: ^5.3.2
+     go_router: ^10.1.0
+   ```
+   
+   The `pubspec.lock` file (committed to git) records exact versions. If your `pubspec.lock` differs from the team's, you might get different behavior.
+
+**Prevention**: 
+- Commit `pubspec.lock` to version control so all team members use identical package versions
+- Document the Flutter version the project uses in README: "This project requires Flutter 3.9.2 or later"
+- Run `flutter doctor` regularly to catch environment issues early
+- When changing dependencies, run tests before committing to catch incompatibilities
+
+**When to Escalate**: If none of these steps resolve the issue, the problem may be:
+- A genuine bug in a package (check package's GitHub issues)
+- Incompatibility with your specific OS/environment (check Flutter GitHub issues)
+- Project-specific configuration issue (consult the team lead)
 
 #### Backend Compilation Issues
 
-**Maven Dependencies**
-```bash
-# Clean Maven cache and resolve dependencies
-./mvnw clean
-rm -rf ~/.m2/repository
-./mvnw dependency:resolve
-./mvnw clean compile
+##### Problem: Maven Dependencies Not Resolving
 
-# Spring Boot 3.4.5 with Java 17 requirement
-java -version  # Must be Java 17+
-```
+**Symptoms**: Maven build fails with "Could not resolve dependencies" errors. Compile phase fails with "package does not exist" errors even though dependencies are declared in `pom.xml`. Spring Boot application fails to start due to missing beans.
 
-**Spring Boot Issues**
-```bash
-# Check for circular dependencies
-./mvnw compile 2>&1 | grep -i circular
+**Root Causes**:
+Maven maintains a local repository cache (`~/.m2/repository`) where it stores downloaded dependencies. Issues occur when:
+- The local repository becomes corrupted (incomplete downloads, disk errors)
+- A SNAPSHOT dependency was cached but the remote version has updated
+- Maven's metadata files become inconsistent
+- Network issues interrupted dependency downloads
+- Corporate proxies or firewalls block Maven Central or Spring repositories
 
-# Resolve Spring AI milestone version conflicts
-./mvnw dependency:tree | grep spring-ai
-```
+**Systematic Resolution Steps**:
+
+1. **Clean Build Artifacts**: Start by removing compiled code to force a fresh build:
+   ```bash
+   # Clean all compiled artifacts and target directory
+   ./mvnw clean
+   
+   # Verify target directory is gone
+   ls -la target  # Should show "No such file or directory"
+   ```
+
+2. **Purge Local Maven Repository** (Nuclear option, but often necessary):
+   ```bash
+   # Remove entire local Maven cache
+   # WARNING: This deletes ALL cached dependencies, not just for this project
+   rm -rf ~/.m2/repository
+   
+   # Re-download all dependencies
+   ./mvnw dependency:resolve
+   
+   # Attempt compilation
+   ./mvnw clean compile
+   ```
+   **What this does**: Completely removes Maven's local cache and forces it to re-download every dependency. This fixes corruption but requires a full re-download (can take several minutes on slow connections).
+
+3. **Verify Java Version** (Spring Boot 3.4.5 has specific requirements):
+   ```bash
+   # Check current Java version
+   java -version
+   
+   # Must show Java 17 or higher for Spring Boot 3.4.5
+   # If not:
+   # - macOS: brew install openjdk@17 && sudo ln -sfn $(brew --prefix openjdk@17)/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk
+   # - Linux: sudo apt install openjdk-17-jdk
+   # - Windows: Download from https://adoptium.net/
+   
+   # Verify JAVA_HOME points to Java 17
+   echo $JAVA_HOME
+   
+   # Set JAVA_HOME if needed
+   export JAVA_HOME=/path/to/java17
+   ```
+   **Why this matters**: Spring Boot 3.x requires Java 17 as a minimum. Using Java 11 or older will cause cryptic compilation errors because certain language features and APIs don't exist in older versions.
+
+4. **Diagnose Circular Dependencies**:
+   ```bash
+   # Compile and watch for circular dependency errors
+   ./mvnw compile 2>&1 | grep -i circular
+   
+   # If circular dependencies found, analyze with:
+   ./mvnw dependency:tree -Dverbose=true
+   ```
+   **Understanding Circular Dependencies**: A circular dependency occurs when Bean A depends on Bean B, which depends on Bean C, which depends on Bean A. Spring can sometimes resolve these with lazy initialization, but it's better to refactor the code to break the circle.
+   
+   **Common CareConnect Circular Dependency**: The Flyway/Spring AI circular dependency currently requires Flyway to be disabled in development. This should be resolved by:
+   - Moving database initialization to a separate configuration
+   - Using `@Lazy` annotation on one side of the dependency
+   - Refactoring to introduce an interface that breaks the circle
+
+5. **Check Spring AI Milestone Versions** (CareConnect-specific issue):
+   ```bash
+   # Spring AI is in milestone releases, which requires special repository configuration
+   # Verify dependency tree for Spring AI conflicts
+   ./mvnw dependency:tree | grep spring-ai
+   
+   # Should show consistent versions across all spring-ai-* artifacts
+   ```
+   
+   Ensure your `pom.xml` includes the Spring milestones repository:
+   ```xml
+   <repositories>
+       <repository>
+           <id>spring-milestones</id>
+           <name>Spring Milestones</name>
+           <url>https://repo.spring.io/milestone</url>
+           <snapshots>
+               <enabled>false</enabled>
+           </snapshots>
+       </repository>
+   </repositories>
+   ```
+
+6. **Force Maven to Update All Dependencies**:
+   ```bash
+   # Force update of all SNAPSHOT and release dependencies
+   ./mvnw clean install -U
+   
+   # The -U flag forces Maven to check for updated versions
+   ```
+
+**Prevention**:
+- Commit `maven-wrapper.properties` to ensure all developers use the same Maven version
+- Document required Java version in README
+- Use Maven Enforcer Plugin to fail builds with wrong Java version:
+  ```xml
+  <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-enforcer-plugin</artifactId>
+      <executions>
+          <execution>
+              <goals>
+                  <goal>enforce</goal>
+              </goals>
+              <configuration>
+                  <rules>
+                      <requireJavaVersion>
+                          <version>[17,)</version>
+                      </requireJavaVersion>
+                  </rules>
+              </configuration>
+          </execution>
+      </executions>
+  </plugin>
+  ```
+
+**When to Escalate**: If these steps don't resolve the issue:
+- Check if your network has proxy requirements (`~/.m2/settings.xml` proxy configuration)
+- Verify you can reach Maven Central: `curl https://repo.maven.apache.org/maven2/`
+- Check if a specific dependency is actually available at the version specified
+- Consult the team's build server logs to see if it's a local-only issue
 
 #### Database Connection Issues
 
-**PostgreSQL Connection Problems**
-```sql
--- Check PostgreSQL status
-SELECT version();
-SHOW max_connections;
-SHOW shared_preload_libraries;
+##### Problem: PostgreSQL Connection Failures
 
--- Connection pool issues
-SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
+**Symptoms**: Application startup fails with "Connection refused" or "Connection timeout" errors. Intermittent "Too many connections" errors during load. Operations hang without returning results.
 
--- Reset connections
-SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle';
-```
+**Root Causes**:
+Database connection issues in CareConnect typically stem from:
+- PostgreSQL server not running or not accessible
+- Connection pool exhausted (HikariCP runs out of connections)
+- Network connectivity issues (firewall, DNS resolution)
+- Incorrect connection string or credentials
+- PostgreSQL configured to accept too few connections
+- Long-running transactions holding connections without releasing them
 
-**HikariCP Connection Pool**
-```properties
-# Tune connection pool settings
-spring.datasource.hikari.maximum-pool-size=10
-spring.datasource.hikari.minimum-idle=5
-spring.datasource.hikari.connection-timeout=20000
-spring.datasource.hikari.idle-timeout=300000
+**Systematic Resolution Steps**:
+
+1. **Verify PostgreSQL Server Status**:
+   ```bash
+   # Check if PostgreSQL is running
+   pg_isready -h localhost -p 5432
+   # Expected: "localhost:5432 - accepting connections"
+   
+   # If using Docker:
+   docker ps | grep postgres
+   # Should show a running postgres container
+   
+   # If not running, start it:
+   # Docker: docker-compose up -d postgres
+   # macOS: brew services start postgresql
+   # Linux: sudo systemctl start postgresql
+   ```
+
+2. **Test Direct Connection** (bypasses application, tests database itself):
+   ```bash
+   # Connect with psql client
+   psql -h localhost -p 5432 -U careconnect -d careconnect
+   
+   # If successful, you'll see: careconnect=#
+   
+   # Check PostgreSQL version and basic health
+   SELECT version();
+   SELECT now();  # Should return current timestamp
+   ```
+   
+   **If this fails**: The problem is with PostgreSQL itself, not the application. Check:
+   - Credentials in your environment match PostgreSQL's configured users
+   - `pg_hba.conf` allows connections from localhost
+   - PostgreSQL is listening on the right port (check `postgresql.conf`)
+
+3. **Diagnose Connection Pool Issues**:
+   ```sql
+   -- Inside psql, check current connection usage
+   SELECT 
+       count(*) as total_connections,
+       count(*) FILTER (WHERE state = 'active') as active,
+       count(*) FILTER (WHERE state = 'idle') as idle,
+       count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction
+   FROM pg_stat_activity 
+   WHERE datname = 'careconnect';
+   
+   -- Check max_connections setting
+   SHOW max_connections;
+   
+   -- If close to max, you have a connection leak
+   ```
+   
+   **Understanding the Results**:
+   - **Active**: Currently executing queries (normal)
+   - **Idle**: Connected but not doing anything (normal for connection pool)
+   - **Idle in transaction**: Connected, started a transaction, but not committing/rolling back (BAD - indicates a bug)
+   
+   If "idle in transaction" is high, you have a connection leak. Transactions are starting but not finishing, holding connections hostage.
+
+4. **Tune HikariCP Connection Pool** (if pool exhaustion detected):
+   
+   CareConnect uses HikariCP as its connection pool. Tuning it properly is crucial for stability:
+   
+   ```properties
+   # In application.properties or application-dev.properties
+   
+   # Maximum number of connections in the pool
+   # Rule of thumb: (2 * number_of_cores) + number_of_disks
+   # For a 4-core machine with SSD: (2*4)+1 = 9, round up to 10
+   spring.datasource.hikari.maximum-pool-size=10
+   
+   # Minimum number of idle connections maintained
+   # Keep this lower to avoid wasting resources
+   spring.datasource.hikari.minimum-idle=5
+   
+   # Maximum time to wait for a connection from pool (milliseconds)
+   # 20 seconds is reasonable; if you hit this, you have a connection leak
+   spring.datasource.hikari.connection-timeout=20000
+   
+   # Maximum time a connection can sit idle before being closed
+   # 5 minutes prevents stale connections
+   spring.datasource.hikari.idle-timeout=300000
+   
+   # Maximum lifetime of a connection (milliseconds)
+   # 30 minutes forces periodic recycling, preventing stale connections
+   spring.datasource.hikari.max-lifetime=1800000
+   
+   # Enable leak detection (development only, has performance cost)
+   spring.datasource.hikari.leak-detection-threshold=60000
+   ```
+   
+   **What each setting does**:
+   - `maximum-pool-size`: Too low = connections exhausted under load; too high = wastes resources and can overwhelm PostgreSQL
+   - `connection-timeout`: How long to wait for a connection before giving up. If you hit this regularly, increase pool size or fix connection leaks
+   - `leak-detection-threshold`: If enabled, HikariCP will log a warning if a connection is held longer than this threshold, helping identify leaks
+
+5. **Identify and Kill Problematic Connections** (emergency measure):
+   ```sql
+   -- Find long-running or blocked queries
+   SELECT 
+       pid,
+       usename,
+       application_name,
+       state,
+       query,
+       now() - state_change as duration
+   FROM pg_stat_activity
+   WHERE state != 'idle'
+     AND now() - state_change > interval '5 minutes'
+   ORDER BY duration DESC;
+   
+   -- If you find a stuck query, you can terminate it:
+   SELECT pg_terminate_backend(12345);  -- Replace 12345 with actual pid
+   
+   -- To terminate all idle in transaction connections (use carefully!):
+   SELECT pg_terminate_backend(pid) 
+   FROM pg_stat_activity 
+   WHERE state = 'idle in transaction' 
+     AND now() - state_change > interval '10 minutes';
+   ```
+   
+   **Warning**: Terminating connections forcefully will roll back any in-progress transactions. Only do this when connections are truly stuck, not just slow.
+
+6. **Increase PostgreSQL's max_connections** (if legitimately need more connections):
+   ```sql
+   -- Check current setting
+   SHOW max_connections;  -- Default is often 100
+   
+   -- To increase (requires PostgreSQL restart):
+   -- Edit postgresql.conf:
+   max_connections = 200
+   
+   -- Then restart PostgreSQL:
+   -- Docker: docker-compose restart postgres
+   -- macOS: brew services restart postgresql
+   -- Linux: sudo systemctl restart postgresql
+   ```
+   
+   **Caveat**: Each connection consumes memory. Blindly increasing max_connections can cause PostgreSQL to run out of memory. Better to fix connection leaks or use connection pooling (which CareConnect already does with HikariCP).
+
+7. **Enable Connection Pool Logging** (to debug pool behavior):
+   ```properties
+   # Add to application.properties
+   logging.level.com.zaxxer.hikari=DEBUG
+   logging.level.com.zaxxer.hikari.HikariConfig=DEBUG
+   ```
+   
+   This will log every connection acquisition and release, helping you spot:
+   - Connections not being returned to pool
+   - Pool exhaustion events
+   - Configuration issues
+
+**Prevention**:
+- Always use `@Transactional` on service methods to ensure transactions complete
+- Avoid manual transaction management unless absolutely necessary
+- Use try-with-resources when manually managing connections (rare in Spring Boot)
+- Monitor connection pool metrics in production (HikariCP exposes JMX metrics)
+- Set up alerts when idle in transaction connections exceed a threshold
+
+**Common Anti-Patterns to Avoid**:
+```java
+// BAD: Opening connection manually (should use JPA/repositories)
+Connection conn = DriverManager.getConnection(url);
+// ... use connection ...
+// Forgot to close! Connection leak!
+
+// GOOD: Let Spring manage connections
+@Service
+@Transactional
+public class MyService {
+    @Autowired
+    private MyRepository repo;
+    
+    public void doWork() {
+        repo.save(entity);
+        // Connection automatically returned to pool when method completes
+    }
+}
 ```
 
 ### Authentication & Security Issues
