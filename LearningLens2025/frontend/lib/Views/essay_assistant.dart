@@ -48,7 +48,6 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
 // Controller
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 // beans
@@ -134,11 +133,10 @@ Future<Course?> getCourseForEssay(Assignment essay) async {
 }
 
 Future<Participant?> getStudentForEssay(int courseId) async {
-  SharedPreferences _prefs = await SharedPreferences.getInstance();
+  SharedPreferences prefs = await SharedPreferences.getInstance();
   final lms = LmsFactory.getLmsService();
-  final uid = _prefs.getString('userId');
+  final uid = prefs.getString('userId');
   final int? uidInt = uid != null ? int.tryParse(uid) : null;
-  
 
   final participants = await lms.getCourseParticipants(courseId.toString());
   for (final p in participants) {
@@ -1044,27 +1042,24 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
   /// Load essays for the current user (all courses). Pass a courseId if needed.
   Future<void> _loadEssays({int? courseId}) async {
-  if (!mounted) return;
-  try {
-    final all = await getAllEssays(courseId);
-    final filtered = all
-        .where((a) => !_isOverdue(a))
-        .toList()
-      ..sort((a, b) {
-        final ad = _effectiveDue(a);
-        final bd = _effectiveDue(b);
-        if (ad == null && bd == null) return 0;
-        if (ad == null) return 1;
-        if (bd == null) return -1;
-        return ad.compareTo(bd);
-      });
+    if (!mounted) return;
+    try {
+      final all = await getAllEssays(courseId);
+      final filtered = all.where((a) => !_isOverdue(a)).toList()
+        ..sort((a, b) {
+          final ad = _effectiveDue(a);
+          final bd = _effectiveDue(b);
+          if (ad == null && bd == null) return 0;
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return ad.compareTo(bd);
+        });
 
-    if (mounted) setState(() => _essays = filtered);
-  } catch (_) {
-    // optional: you can log or ignore silently
+      if (mounted) setState(() => _essays = filtered);
+    } catch (_) {
+      // optional: you can log or ignore silently
+    }
   }
-}
-
 
   /* ──────────────────────────────────────────────────────────────────────────
    * 3.5) Quill editor + draft/notes/session persistence
@@ -1272,9 +1267,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           SizedBox(
             width: 280,
             child: Material(
-              color: Theme.of(context).colorScheme.surface,
-              child: Column(
-                children: [
+                color: Theme.of(context).colorScheme.surface,
+                child: Column(children: [
                   // Sidebar header row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
@@ -1312,8 +1306,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         return ListTile(
                           dense: true,
                           selected: selected,
-                          selectedTileColor:
-                              Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                          selectedTileColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.08),
                           title: Text(
                             assignment.name,
                             maxLines: 1,
@@ -1323,7 +1319,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                           trailing: _statusChip(status),
                           onTap: () async {
                             setState(() => _selectedSidebarIndex = i);
-                            final started = await _openEssayDialog(context, assignment);
+                            final started =
+                                await _openEssayDialog(context, assignment);
                             if (!started && mounted) {
                               _selectActiveEssayIfAny();
                             }
@@ -1332,11 +1329,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                       },
                     ),
                   )
-                ]
-              )
-            ),
+                ])),
           ),
-
 
           // =================== CENTER: Chat column ===================
           Expanded(
@@ -1836,15 +1830,15 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
                     // Push controls to top, leave some breathing room
                     const Spacer(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            );
-        }
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // status chip widget for essay list items
   Widget _statusChip(EssayStatus s) {
