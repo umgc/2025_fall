@@ -1450,6 +1450,25 @@ Database migrations allow you to evolve the database schema over time while pres
 
 #### Sample Migration Files
 
+These migration files demonstrate best practices for database schema evolution. Each file is versioned (V001, V002, V003) and runs exactly once in order.
+
+**Key Design Patterns in These Migrations**:
+
+**Primary Keys as BIGSERIAL**: Using `BIGSERIAL` instead of `SERIAL` provides 64-bit integers (vs 32-bit), supporting up to 9 quintillion records. While healthcare apps rarely need this, the performance cost is negligible and it prevents "ran out of IDs" failures 10 years from now.
+
+**Foreign Key Constraints**: `REFERENCES users(id) ON DELETE CASCADE` ensures referential integrity. If a user is deleted, their vital signs and medications are automatically deleted too, preventing orphaned records. Healthcare compliance often requires retaining records even after account deletion, so in production you might use `ON DELETE RESTRICT` instead.
+
+**Check Constraints**: `CHECK (role IN ('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER'))` enforces valid values at the database level. Even if application code has a bug, invalid roles can't be inserted. This is defense-in-depth.
+
+**Index Strategy**:
+- `idx_users_email`: Unique index on email enables fast lookup during login
+- `idx_vital_signs_user_type_time`: Composite index optimized for querying "all blood pressure readings for user X in the last month"—a common healthcare query pattern
+- `measurement_time DESC`: Descending order because we usually want recent measurements first
+
+**Auto-updating Timestamps**: The trigger `update_updated_at_column()` automatically sets `updated_at` on every UPDATE. This audit trail is critical in healthcare for compliance and debugging ("when did this medication dosage change?").
+
+**DECIMAL for Medical Values**: Vital signs use `DECIMAL(10,2)` not `FLOAT` because floating-point arithmetic has rounding errors. For blood pressure like "120.5 mmHg," exact precision matters for medical accuracy.
+
 ```sql
 -- src/main/resources/db/migration/V001__Create_initial_schema.sql
 CREATE TABLE users (
@@ -1539,7 +1558,35 @@ CREATE TRIGGER update_allergies_updated_at BEFORE UPDATE ON allergies
 
 ### Database Backup Strategy
 
+Database backups are critical for disaster recovery and compliance. Healthcare regulations often require maintaining backups for 7-10 years. Our strategy combines automated daily backups with AWS RDS's built-in continuous backup.
+
+**Two-Tier Backup Approach**:
+1. **RDS Automated Backups**: Continuous transaction log backups enabling point-in-time recovery within the last 30 days
+2. **Manual pg_dump Backups**: Full logical backups stored in S3 with long-term retention for compliance
+
 #### Automated Backup Script
+
+**Why Both RDS Snapshots AND pg_dump**:
+- **RDS Snapshots**: Fast to restore, perfect for recent disasters (accidental deletion, bad deployment)
+- **pg_dump Backups**: Platform-independent SQL dumps you can restore to any PostgreSQL instance (not locked into AWS)
+
+**Script Components Explained**:
+
+**Custom Format**: `--format=custom` creates a PostgreSQL-specific binary format that's:
+- Smaller than plain SQL (important for large databases)
+- Faster to restore than plain SQL
+- Allows selective restoration (restore just one table if needed)
+
+**Compression Level 9**: `--compress=9` provides maximum compression at the cost of CPU time. For nightly backups, we have time; for emergency backups, you might use lower compression for speed.
+
+**Clean and Create**: `--clean --create` means the restore script will:
+- Drop the database if it exists (`--clean`)
+- Recreate the database (`--create`)
+This makes restores idempotent—running twice gives same result.
+
+**Retention Policy**: The script deletes backups older than `RETENTION_DAYS` (30). Adjust this based on compliance requirements. Healthcare apps might need 2555 days (7 years).
+
+**Backup Verification**: The script checks if the backup file is at least 1MB. A tiny backup likely indicates a failure (empty database or pg_dump error). In production, you'd also test-restore backups periodically to verify they're actually usable.
 
 ```bash
 #!/bin/bash
@@ -1604,6 +1651,28 @@ fi
 
 #### Point-in-Time Recovery
 
+RDS's automated backups enable point-in-time recovery (PITR)—restoring the database to any second within the last 30 days. This is invaluable when you discover data corruption hours after it occurred.
+
+**When to Use PITR**:
+- Accidental data deletion discovered hours later ("someone deleted all patients yesterday at 2:15 PM")
+- Bad migration or deployment corrupted data
+- Ransomware attack encrypted your data (restore to just before attack)
+
+**How PITR Works**:
+1. **Base Snapshot**: RDS takes daily snapshots of your entire database
+2. **Transaction Logs**: Every database modification is logged continuously
+3. **Restoration**: To restore to time T, RDS takes the most recent snapshot before T, then replays transaction logs up to time T
+
+**Script Workflow**:
+1. Specify restore time (e.g., "2024-10-15 14:30:00" - just before the bad deployment)
+2. AWS creates a NEW RDS instance with data from that exact time
+3. You can query this instance to verify it has correct data
+4. If good, redirect application to this instance; if not, delete and try different time
+
+**Why Restore to New Instance**: Never restore to the production instance directly—you might overwrite good data with bad data if you picked wrong restore time. Always restore to a new instance, verify, THEN promote to production.
+
+**Cost Note**: The restored instance runs at full cost until you delete it. Don't forget to clean up after recovery!
+
 ```bash
 #!/bin/bash
 # scripts/restore-database.sh
@@ -1650,7 +1719,43 @@ echo "Restored database endpoint: $RESTORE_ENDPOINT"
 
 ## CI/CD Pipeline
 
+Continuous Integration and Continuous Deployment (CI/CD) automate the path from code commit to production deployment. For CareConnect, GitHub Actions orchestrates testing, building, and deploying both backend and frontend whenever code is pushed to the main branch.
+
+**Why Automate Deployment**: Manual deployments are error-prone—it's easy to forget a step, deploy to the wrong environment, or skip testing. Automated pipelines ensure every deployment follows the same tested process.
+
+**Pipeline Philosophy**: Our pipeline follows a strict sequence: Test → Build → Deploy → Migrate → Smoke Test → Notify. If any step fails, the pipeline stops immediately, preventing broken code from reaching production.
+
 ### GitHub Actions Workflow
+
+GitHub Actions is tightly integrated with GitHub, making it ideal for open-source and team projects. Workflows are defined in YAML and run in ephemeral containers, ensuring clean build environments every time.
+
+**Workflow Triggers Explained**:
+- `on: push: branches: [main]`: Automatically deploys whenever code is merged to main branch
+- `workflow_dispatch`: Allows manual triggering from GitHub UI (useful for hotfixes)
+
+**Job Dependencies**: The `needs` keyword creates a directed acyclic graph (DAG) of jobs:
+```
+test → build-and-deploy-backend → run-migrations → smoke-tests → notify
+    → build-and-deploy-frontend ───────────↗
+```
+Backend and frontend deploy in parallel (faster), but migrations wait for backend deployment (migrations need the new code to be live).
+
+**Services in GitHub Actions**: The `services: postgres:` block starts a PostgreSQL container alongside the test runner. This gives tests a real database rather than mocks, catching more bugs. The health check ensures PostgreSQL is ready before tests run.
+
+**Why Cache Maven Packages**: Maven downloads dependencies from the internet, which is slow. The `cache` action stores `~/.m2` between builds, turning 5-minute dependency downloads into 10-second cache restores.
+
+**Immutable Image Tags**: Each build tags the Docker image with `$GITHUB_SHA` (the git commit hash). This creates an immutable reference—you can always deploy commit `abc123` exactly as it was built, essential for rollbacks.
+
+**Secrets Management**: `${{ secrets.AWS_ACCESS_KEY_ID }}` references secrets stored in GitHub's encrypted secrets store. Never hardcode credentials in workflows—they'd be visible in version history forever.
+
+**Deployment Safety**: The workflow waits (`aws ecs wait services-stable`) until deployment completes before running smoke tests. This prevents false positives from testing the old version while new version is still deploying.
+
+**Smoke Tests Strategy**: After deployment, the pipeline makes real HTTP requests to production endpoints:
+- `curl -f` fails if HTTP status isn't 2xx, causing the job to fail
+- Testing `/actuator/health` verifies Spring Boot started correctly
+- Testing a known-failure case (invalid login) verifies the API logic works, not just the health endpoint
+
+**Notification Strategy**: The `if: always()` ensures notifications run even if previous jobs failed. The `if: ${{ success() }}` vs `if: ${{ failure() }}` conditionals send appropriate messages. This is how the team learns about deployment results immediately via Slack.
 
 ```yaml
 # .github/workflows/deploy-production.yml
