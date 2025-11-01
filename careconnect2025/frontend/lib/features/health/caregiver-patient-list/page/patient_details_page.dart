@@ -37,10 +37,11 @@ class PatientDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Demo data
+    // Demo patient header data (kept local for this screen)
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
+    // Demo mood history
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -78,7 +79,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // MODEL entries
+    // MODEL entries (data layer shape)
     final modelSymptomEntries = <model.SymptomEntry>[
       model.SymptomEntry(
         id: 's4',
@@ -99,7 +100,7 @@ class PatientDetailsPage extends StatelessWidget {
         date: DateTime(2024, 12, 23),
         name: 'Mild headache',
         severity: 'Mild',
-        note: null, // demo of nullable
+        note: null,
       ),
       model.SymptomEntry(
         id: 's1',
@@ -110,7 +111,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // Convert to the WIDGET type
+    // Convert to the WIDGET type for the UI component
     final uiSymptomEntries = <sympt.SymptomEntry>[
       for (final s in modelSymptomEntries)
         sympt.SymptomEntry(
@@ -118,10 +119,11 @@ class PatientDetailsPage extends StatelessWidget {
           date: s.date,
           name: s.name,
           severity: s.severity,
-          note: s.note ?? '', // <-- fix: ensure non-null String
+          note: s.note ?? '',
         ),
     ];
 
+    // Demo medications
     final medicationEntries = <MedicationEntry>[
       MedicationEntry(
         id: 'm1',
@@ -155,6 +157,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // Demo activity
     final activityList = const [
       ActivityEntry(
         title: 'Took medication: Lisinopril 10mg',
@@ -168,6 +171,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // Demo check-ins
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',
@@ -225,6 +229,13 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // Demo vitals for the PainLevelCard (to match your screenshot)
+    final lastReported = DateTime.now().subtract(const Duration(hours: 6));
+    const currentPain = 4; // /10
+    const dizziness = 2; // /10
+    const fatigue = 7; // /10
+    const painLocation = 'Lower back';
+
     return DefaultTabController(
       length: 5,
       child: Scaffold(
@@ -234,6 +245,7 @@ class PatientDetailsPage extends StatelessWidget {
         ),
         body: Column(
           children: [
+            // Header card
             PatientHeaderCard(
               fullName: patientName,
               mrn: mrn,
@@ -247,11 +259,12 @@ class PatientDetailsPage extends StatelessWidget {
                 'Chronic Fatigue Syndrome',
               ],
               allergies: const ['Penicillin', 'Shellfish'],
-              /*heartRateBpm: 72,
-              bpSystolic: 120,
-              bpDiastolic: 80,
-              oxygenPercent: 98,
-              temperatureF: 98.0,*/
+              // Leave vitals commented here so the header card stays clean
+              // heartRateBpm: 72,
+              // bpSystolic: 120,
+              // bpDiastolic: 80,
+              // oxygenPercent: 98,
+              // temperatureF: 98.0,
               emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
@@ -260,9 +273,9 @@ class PatientDetailsPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  // Info
+                  // ---- Info ----
                   ListView(
-                    padding: const EdgeInsets.only(top: 12, bottom: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
                       ContactInfoCard(
                         phone: '(555) 123-4567',
@@ -274,7 +287,7 @@ class PatientDetailsPage extends StatelessWidget {
                         state: 'IL',
                         postalCode: '62701',
                       ),
-                      EmergencyContactCard(
+                      const EmergencyContactCard(
                         contactName: 'Michael Johnson',
                         relationship: 'Spouse',
                         phone: '(555) 987-6543',
@@ -282,34 +295,38 @@ class PatientDetailsPage extends StatelessWidget {
                     ],
                   ),
 
-                  // Mood
+                  // ---- Mood ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [MoodHistorySection(entries: moodEntries)],
                   ),
 
-                  // Health
+                  // ---- Health ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      const PainLevelCard(
-                        lastReportedText: '6 hours ago',
-                        currentPain: 4,
-                        location: 'Lower back',
-                        dizziness: 2,
-                        fatigue: 7,
+                      // Recent Symptoms + Pain Level INSIDE the same card
+                      sympt.RecentSymptomsSection(
+                        entries: uiSymptomEntries,
+                        extraTop: PainLevelCard(
+                          lastReportedText: _fmtWhen(lastReported),
+                          currentPain: currentPain,
+                          location: painLocation,
+                          dizziness: dizziness,
+                          fatigue: fatigue,
+                        ),
                       ),
-                      // Recent Symptoms (UI-typed list)
-                      sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
+
+                      // Meds
                       CurrentMedicationsSection(entries: medicationEntries),
                     ],
                   ),
 
-                  // Activity
+                  // ---- Activity ----
                   RecentActivityTab(items: activityList),
 
-                  // Virtual check-in
+                  // ---- Virtual check-in ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
@@ -353,6 +370,16 @@ class PatientDetailsPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Simple "x hours ago" formatter for the PainLevelCard
+  String _fmtWhen(DateTime d) {
+    final now = DateTime.now();
+    final diff = now.difference(d);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hours ago';
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 }
 

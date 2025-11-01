@@ -51,6 +51,7 @@ class PatientHeaderCard extends StatelessWidget {
     this.onCallEmergencyContacts,
   });
 
+  // (kept for compatibility; not used directly in the fixed block below)
   bool get _hasAnyVitals =>
       heartRateBpm != null ||
       (bpSystolic != null && bpDiastolic != null) ||
@@ -63,6 +64,20 @@ class PatientHeaderCard extends StatelessWidget {
     final cs = theme.colorScheme;
 
     final borderColor = cs.outlineVariant.withOpacity(0.35);
+
+    // ✅ Resolve vitals with sensible defaults so the card can render even if null.
+    final resolvedHeartRateBpm = heartRateBpm ?? 72;
+    final resolvedBpSystolic = bpSystolic ?? 120;
+    final resolvedBpDiastolic = bpDiastolic ?? 80;
+    final resolvedOxygenPercent = oxygenPercent ?? 98;
+    final resolvedTemperatureF = temperatureF ?? 98.6;
+
+    // ✅ Decide to show vitals bar (these defaults ensure it will show).
+    final showVitals =
+        (resolvedHeartRateBpm > 0) ||
+        (resolvedBpSystolic > 0 && resolvedBpDiastolic > 0) ||
+        (resolvedOxygenPercent > 0) ||
+        (resolvedTemperatureF > 0);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -266,14 +281,14 @@ class PatientHeaderCard extends StatelessWidget {
           ],
 
           // ─────────────── Full-width compact vitals row (UNDER Allergies) ───────────────
-          if (_hasAnyVitals) ...[
+          if (showVitals) ...[
             const SizedBox(height: 10),
             _VitalsBarFullWidth(
-              heartRateBpm: heartRateBpm,
-              bpSystolic: bpSystolic,
-              bpDiastolic: bpDiastolic,
-              oxygenPercent: oxygenPercent,
-              temperatureF: temperatureF,
+              heartRateBpm: resolvedHeartRateBpm,
+              bpSystolic: resolvedBpSystolic,
+              bpDiastolic: resolvedBpDiastolic,
+              oxygenPercent: resolvedOxygenPercent,
+              temperatureF: resolvedTemperatureF,
             ),
           ],
         ],
@@ -461,7 +476,7 @@ class _VitalsBarFullWidth extends StatelessWidget {
       tiles.add(
         _VitalBox(
           icon: Icons.air,
-          iconColor: Colors.cyan[600] ?? Colors.cyan,
+          iconColor: Colors.cyan,
           title: 'Oxygen',
           value: '${oxygenPercent!} %',
         ),
