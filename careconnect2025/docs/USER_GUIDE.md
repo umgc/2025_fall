@@ -202,6 +202,7 @@ The CareConnect dashboard is your central hub for all activities and information
    - Connect wearable devices (Fitbit, Apple Watch, etc.)
    - Automatic sync of steps, heart rate, sleep data
    - Configure sync frequency and data preferences
+   - Alexa Integration configuration to calendar
 
 #### Mood and Wellness Check-ins
 1. **Daily Mood Logging**:
@@ -242,6 +243,48 @@ The CareConnect dashboard is your central hub for all activities and information
 - Receive motivational messages
 - Track improvements over time
 
+### Symptoms and Allergies Tracker
+
+### Symptom Tracker
+1. **Recording Symptoms**:
+- Tap Symptoms from the bottom menu
+- Select the Mental Health Symptoms tab
+- Enter the symptom, for example: Anxiety, Panic Attack, Sleep Problems
+- Choose severity level: Mild, Moderate, or Severe
+- Add short clinical notes (onset, duration, and triggers)
+- (Optional) Tap Use AI Service to record by voice. The app will transcribe your voice and fill in the fields automatically. Review before saving
+- Tap Record Symptom to save
+
+2. **After Recording**:
+- The new symptom appears under Recent Mental Health Symptoms
+- Each card displays the symptom name, time, severity color, and notes
+- Severe symptoms show a Caregiver Alert tag and “Requires immediate attention” message
+- Entries can be removed using the × button
+
+### Allergy Tracker
+1. **Recording Allergies**:
+- Tap Symptoms from the bottom menu
+- Select the Drug Allergies tab
+- Enter the drug or medication name (e.g., Aspirin, Penicillin)
+- Describe the reaction (e.g., hives, swelling, shortness of breath)
+- Choose severity: Mild, Moderate, or Severe (Life-threatening)
+- (Optional) Tap Use AI Service to record by voice. The app transcribes your input and fills in the fields automatically. Review before saving
+- Tap Add Drug Allergy to save
+  
+2. **After Recording**:
+- The new allergy appears under Known Drug Allergies
+- Each entry displays the medication name, reaction details, and color-coded severity label
+- Severe allergies appear in red with a warning icon
+- Entries can be removed using the × button
+
+### AI Voice Service
+- The AI Voice Service allows users to fill out forms using speech
+- Tap Use AI Service to open voice recording
+- Speak naturally about your symptom or allergy reaction
+- The system converts your voice into text and fills in the related fields
+- Review and edit all entries before saving. The AI transcription may not be fully accurate
+- The data is only saved when you tap Record Symptom or Add Drug Allergy
+
 ### Personal Health Records
 
 #### Medical History
@@ -269,7 +312,10 @@ The CareConnect dashboard is your central hub for all activities and information
    - Medical information sharing
    - Emergency contact notification
    - Integration with local emergency services
-
+     
+3. **Vial of Life**:
+   - Patients can create, update, and share an emergency profile which shows important health information.
+   - The profile can be shared through a QR code or link with the patient’s consent.  
 ## Caregiver Features
 
 ### Patient Management
@@ -286,6 +332,26 @@ The CareConnect dashboard is your central hub for all activities and information
    - Monitor medication adherence
    - Track mood and symptoms
    - Analyze health trends
+
+ ### Symptoms Tracker
+ 1.**Viewing Patient recent Symptoms**:
+   - Tap Patients → open the patient profile → Health → Recent Symptoms
+   - Entries are sorted newest first
+   - Each entry shows the date, symptom name, and severity badge (Mild, Moderate, Severe)
+   - “No symptoms reported” appears with a green check icon
+   - Color codes: Mild = green, Moderate = orange, Severe = red
+   - Caregivers cannot add, edit, or delete symptoms
+
+ ### Allergies Tracker
+ 1.**Accessing Allergies**:
+    - From the Patient Dashboard, tap a patient’s View Details button
+    - This opens the Patient Profile screen
+    - In the header section (top of the profile), find Allergies displayed below Primary Diagnoses
+  2.**Viewing Patient Allergies**:
+    - Each allergy appears as a solid red chip with white text, for example: Penicillin, Aspirin
+    - The list shows only allergy names with no severity levels or reaction details
+    - The section is read-only. Caregivers cannot add, edit, or remove allergies
+    - Use this section as a quick reference when reviewing medications or patient history
 
 #### Care Documentation
 1. **Clinical Notes**:

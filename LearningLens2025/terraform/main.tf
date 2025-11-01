@@ -173,85 +173,25 @@ output "response" {
 
 data "aws_region" "current" {}
 
-resource "aws_ecr_repository" "edulense_program_grader_java" {
-  name = "edulense-program-grader-ecr-java"
+resource "aws_ecr_repository" "edulense_program_grader" {
+  name = "edulense-program-grader"
 }
 
-resource "null_resource" "build_docker_java_image" {
+resource "null_resource" "build_docker_image" {
   triggers = {
     script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerjava"))
+    docker_hash = sha1(file("../docker/Dockerfile"))
+    runcode_hash = sha1(file("../docker/runcode.sh"))
+    evaluate = sha1(file("../docker/evaluate.py"))
   }
   provisioner "local-exec" {
     working_dir = "../docker/"
     command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
     environment = {
       AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_java.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_java.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_java.name
-      ENV_LANG = "java"
-    }
-  }
-}
-
-resource "time_sleep" "after_java" {
-  triggers = {
-    dep_id = null_resource.build_docker_java_image.id
-  }
-  create_duration = "10s"
-}
-
-resource "aws_ecr_repository" "edulense_program_grader_python" {
-  name = "edulense-program-grader-ecr-python"
-}
-
-resource "null_resource" "build_docker_python_image" {
-  triggers = {
-    dep_id = time_sleep.after_java.triggers["dep_id"]
-    script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerpython"))
-  }
-  provisioner "local-exec" {
-    working_dir = "../docker/"
-    command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
-    environment = {
-      AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_python.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_python.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_python.name
-      ENV_LANG = "python"
-    }
-  }
-}
-
-resource "time_sleep" "after_python" {
-  triggers = {
-    dep_id = null_resource.build_docker_python_image.id
-  }
-  create_duration = "10s"
-}
-
-resource "aws_ecr_repository" "edulense_program_grader_c" {
-  name = "edulense-program-grader-ecr-c"
-}
-
-resource "null_resource" "build_docker_c_image" {
-  triggers = {
-    dep_id = time_sleep.after_python.triggers["dep_id"]
-    script_hash = sha1(file("../docker/dockerupload.ps1"))
-    docker_hash = sha1(file("../docker/Dockerc"))
-    docker_hash = sha1(file("../docker/runcode.sh"))
-  }
-  provisioner "local-exec" {
-    working_dir = "../docker/"
-    command = "powershell.exe -ExecutionPolicy Bypass -File ./dockerupload.ps1"
-    environment = {
-      AWS_REGION = data.aws_region.current.region
-      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader_c.repository_url
-      AWS_REG_ID = aws_ecr_repository.edulense_program_grader_c.registry_id
-      AWS_NAME = aws_ecr_repository.edulense_program_grader_c.name
-      ENV_LANG = "c"
+      AWS_REPO_URL = aws_ecr_repository.edulense_program_grader.repository_url
+      AWS_REG_ID = aws_ecr_repository.edulense_program_grader.registry_id
+      AWS_NAME = aws_ecr_repository.edulense_program_grader.name
     }
   }
 }

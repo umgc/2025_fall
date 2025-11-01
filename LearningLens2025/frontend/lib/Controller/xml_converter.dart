@@ -114,7 +114,7 @@ class XmlConverter {
 
   static String getShortenedDesc(String description) {
     int charLimit = 30;
-    String desc = HtmlConverter.convert(description.trim());
+    String desc = HtmlConverter.convert(description.trim()) ?? "";
     desc = desc.replaceAll('\n', '');
     if (desc.length <= charLimit) return desc;
     desc = desc.substring(0, charLimit);

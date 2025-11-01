@@ -19,6 +19,7 @@ class NotetakerDetailView extends StatefulWidget {
 
 class _NotetakerDetailViewState extends State<NotetakerDetailView> {
   PatientNote? _note;
+  final TextEditingController _aiSummaryController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   bool _isEditing = false;
   bool _hasChanges = false;
@@ -33,6 +34,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
       if (extra is PatientNote) {
         _note = extra;
         _noteController.text = _note!.note;
+        _aiSummaryController.text = _note!.aiSummary;
         _isEditing = true;
         _fetchPatientName();
       } else {
@@ -82,12 +84,23 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
   @override
   void dispose() {
     _noteController.dispose();
+    _aiSummaryController.dispose();
     super.dispose();
   }
 
   void _onNoteChanged(String value) {
+    _checkForChanges();
+  }
+
+  void _onAiSummaryChanged(String value) {
+    _checkForChanges();
+  }
+
+  void _checkForChanges() {
     setState(() {
-      _hasChanges = value != (_note?.note ?? '');
+      _hasChanges =
+          _noteController.text != (_note?.note ?? '') ||
+          _aiSummaryController.text != (_note?.aiSummary ?? '');
     });
   }
 
@@ -97,6 +110,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
       id: _note!.id,
       patientId: _note!.patientId,
       note: _noteController.text,
+      aiSummary: _aiSummaryController.text,
       createdAt: _note!.createdAt,
       updatedAt: DateTime.now(),
     );
@@ -150,7 +164,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Note deleted successfully')),
           );
-          context.pop();
+          context.pop(true);
         }
       } catch (e) {
         if (mounted) {
@@ -210,7 +224,7 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
       onPopInvoked: (didPop) async {
         if (didPop) return;
         if (await _onWillPop()) {
-          context.pop();
+          context.pop(true);
         }
       },
       child: Scaffold(
@@ -221,13 +235,13 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
               if (await _onWillPop()) {
-                context.pop();
+                context.pop(true);
               }
             },
           ),
           actions: [
             if (_isEditing)
-              IconButton(icon: const Icon(Icons.save), onPressed: _saveNote)
+              IconButton(icon: const Icon(Icons.save), onPressed: () async { await _saveNote(); context.pop(true); })
             else
               IconButton(
                 icon: const Icon(Icons.edit),
@@ -285,6 +299,34 @@ class _NotetakerDetailViewState extends State<NotetakerDetailView> {
                           ),
                         ),
                       ),
+                    ]),
+                    const SizedBox(height: 24),
+                    _buildSection(theme, 'AI Summary', Icons.smart_toy, [
+                      _isEditing
+                          ? TextField(
+                              controller: _aiSummaryController,
+                              onChanged: _onAiSummaryChanged,
+                              maxLines: null,
+                              decoration: InputDecoration(
+                                hintText: '',
+                                border: OutlineInputBorder(),
+                              ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceVariant
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _note!.aiSummary,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
                     ]),
                     const SizedBox(height: 24),
                     _buildSection(theme, 'Note Content', Icons.edit, [

@@ -13,6 +13,8 @@ import 'edit_questions.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class CreateAssessment extends StatefulWidget {
   static TextEditingController nameController = TextEditingController();
@@ -39,6 +41,7 @@ class _AssessmentState extends State<CreateAssessment> {
   final _formKey = GlobalKey<FormState>();
   String? selectedSubject, selectedGradeLevel;
   LlmType? selectedLLM;
+  bool canceled = false;
   List<String> _subjects = [
     'Math',
     'Science',
@@ -50,76 +53,103 @@ class _AssessmentState extends State<CreateAssessment> {
   ];
   bool _isLoading = false;
 
+  // disable local LLM for a web build for now.
+  bool _localLlmAvail = !kIsWeb;
+
   _AssessmentState();
 
-  void generateQuiz(Map<String, TextEditingController> fields) {
-    if (_formKey.currentState!.validate()) {
-      // Parse question counts, defaulting to 0 if empty
-      int multipleChoiceCount =
-          int.tryParse(fields['multipleChoice']!.text) ?? 0;
-      int trueFalseCount = int.tryParse(fields['trueFalse']!.text) ?? 0;
-      int shortAnswerCount = int.tryParse(fields['shortAns']!.text) ?? 0;
+  void generateQuiz(Map<String, TextEditingController> fields) async {
+    canceled = false;
+    if (selectedLLM != LlmType.LOCAL ||
+        await LocalLLMService().checkIfLoadedLocalLLMRecommended()) {
+      if (!mounted) return;
+      if (_formKey.currentState!.validate()) {
+        // Parse question counts, defaulting to 0 if empty
+        int multipleChoiceCount =
+            int.tryParse(fields['multipleChoice']!.text) ?? 0;
+        int trueFalseCount = int.tryParse(fields['trueFalse']!.text) ?? 0;
+        int shortAnswerCount = int.tryParse(fields['shortAns']!.text) ?? 0;
 
-      // Check if at least one type of question is greater than 1
-      if (multipleChoiceCount <= 0 &&
-          trueFalseCount <= 0 &&
-          shortAnswerCount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Please ensure at least one type of question has a count greater than 0.'),
-          ),
+        // Check if at least one type of question is greater than 1
+        if (multipleChoiceCount <= 0 &&
+            trueFalseCount <= 0 &&
+            shortAnswerCount <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Please ensure at least one type of question has a count greater than 0.'),
+            ),
+          );
+          return;
+        }
+
+        AssignmentForm af = AssignmentForm(
+          subject: selectedSubject != null
+              ? selectedSubject.toString()
+              : fields['subject']!.text,
+          topic: fields['description']!.text,
+          gradeLevel: selectedGradeLevel.toString(),
+          title: fields['name']!.text,
+          trueFalseCount: trueFalseCount,
+          shortAnswerCount: shortAnswerCount,
+          multipleChoiceCount: multipleChoiceCount,
+          maximumGrade: 100,
         );
-        return;
+        generateQuestions(af);
       }
-
-      AssignmentForm af = AssignmentForm(
-        subject: selectedSubject != null
-            ? selectedSubject.toString()
-            : fields['subject']!.text,
-        topic: fields['description']!.text,
-        gradeLevel: selectedGradeLevel.toString(),
-        title: fields['name']!.text,
-        trueFalseCount: trueFalseCount,
-        shortAnswerCount: shortAnswerCount,
-        multipleChoiceCount: multipleChoiceCount,
-        maximumGrade: 100,
-      );
-      generateQuestions(af);
     }
   }
 
   Future<void> generateQuestions(AssignmentForm af) async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-      final LLM aiModel;
-      if (selectedLLM == LlmType.CHATGPT) {
-        aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-      } else if (selectedLLM == LlmType.GROK) {
-        aiModel = GrokLLM(LocalStorageService.getGrokKey());
-      } else if (selectedLLM == LlmType.PERPLEXITY) {
-        aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
-      } else if (selectedLLM == LlmType.DEEPSEEK) {
-        aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
-      } else {
-        aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
-      }
-      var result = await aiModel.postToLlm(PromptEngine.generatePrompt(af));
-      if (result.isNotEmpty) {
-        setState(() {
-          _isLoading = false;
-        });
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => EditQuestions(result)));
-      }
-    } catch (e) {
-      print("Failure sending request to LLM: $e");
-      setState(() {
-        _isLoading = false;
-      });
+    //try {
+    setState(() {
+      _isLoading = true;
+    });
+    final LLM aiModel;
+    if (selectedLLM == LlmType.CHATGPT) {
+      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
+    } else if (selectedLLM == LlmType.GROK) {
+      aiModel = GrokLLM(LocalStorageService.getGrokKey());
+    } else if (selectedLLM == LlmType.PERPLEXITY) {
+      aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
+    } else if (selectedLLM == LlmType.DEEPSEEK) {
+      aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
+    } else {
+      aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
     }
+    final result = await aiModel.postToLlm(PromptEngine.generatePrompt(af));
+    if (!mounted) return;
+
+    if (result.isNotEmpty) {
+      if (!mounted) return;
+
+      if (canceled) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (!canceled &&
+          selectedLLM == LlmType.LOCAL &&
+          !LocalLLMService().checkXMLValid(result)) {
+        // Ask the user if they want to switch models and retry
+        await LocalLLMService().handleInvalidXml();
+        setState(() => _isLoading = false);
+      } else {
+        setState(() => _isLoading = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => EditQuestions(result)),
+        );
+      }
+    }
+    // } catch (e) {
+    //   print("Failure sending request to LLM: $e");
+    //   setState(() {
+    //     _isLoading = false;
+    //   });
+    // }
   }
 
   @override
@@ -157,7 +187,27 @@ class _AssessmentState extends State<CreateAssessment> {
                                     'Generating Quiz Questions...',
                                     style: TextStyle(
                                         fontSize: 18, color: Colors.black54),
-                                  )
+                                  ),
+                                  SizedBox(height: paddingHeight),
+                                  if (selectedLLM == LlmType.LOCAL)
+                                    TextButton(
+                                      onPressed: () async {
+                                        bool decision = await LocalLLMService()
+                                            .showCancelConfirmationDialog();
+                                        if (decision) {
+                                          canceled = true;
+                                        }
+                                      },
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.redAccent,
+                                      ),
+                                      child: const Text(
+                                        'Cancel Generation',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
                                 ],
                               ),
                             )
@@ -286,37 +336,57 @@ class _AssessmentState extends State<CreateAssessment> {
                       "Choose a total number of questions equal to four or five times the number of students in the course to guarantee unique quizzes per student",
                     ),
                     SizedBox(height: paddingHeight),
-                    DropdownButtonFormField<LlmType>(
-                      value: selectedLLM,
-                      decoration:
-                          const InputDecoration(labelText: "Select Model"),
-                      onChanged: (LlmType? newValue) {
-                        setState(() {
-                          selectedLLM = newValue;
-                          CreateAssessment.llmController.text =
-                              newValue!.displayName;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select an LLM model to generate the quiz.';
-                        }
-                        return null;
-                      },
-                      items: LlmType.values.map((LlmType llm) {
-                        return DropdownMenuItem<LlmType>(
-                          value: llm,
-                          enabled: LocalStorageService.userHasLlmKey(llm),
-                          child: Text(
-                            llm.displayName,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DropdownButtonFormField<LlmType>(
+                          value: selectedLLM,
+                          decoration:
+                              const InputDecoration(labelText: "Select Model"),
+                          onChanged: (LlmType? newValue) {
+                            setState(() {
+                              selectedLLM = newValue;
+                              CreateAssessment.llmController.text =
+                                  newValue!.displayName;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select an LLM model to generate the quiz.';
+                            }
+                            return null;
+                          },
+                          items: LlmType.values.map((LlmType llm) {
+                            final isEnabled = (llm == LlmType.LOCAL &&
+                                    LocalStorageService.getLocalLLMPath() !=
+                                        "" &&
+                                    _localLlmAvail) ||
+                                LocalStorageService.userHasLlmKey(llm);
+
+                            return DropdownMenuItem<LlmType>(
+                              value: llm,
+                              enabled: isEnabled,
+                              child: Text(
+                                llm.displayName,
+                                style: TextStyle(
+                                  color:
+                                      isEnabled ? Colors.black87 : Colors.grey,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (selectedLLM == LlmType.LOCAL) ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
                             style: TextStyle(
-                              color: LocalStorageService.userHasLlmKey(llm)
-                                  ? Colors.black87
-                                  : Colors.grey,
+                              fontSize: 13,
+                              color: Colors.black54,
                             ),
                           ),
-                        );
-                      }).toList(),
+                        ],
+                      ],
                     ),
                     SizedBox(height: paddingHeight),
                     ElevatedButton(
