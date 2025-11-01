@@ -202,6 +202,7 @@ The CareConnect dashboard is your central hub for all activities and information
    - Connect wearable devices (Fitbit, Apple Watch, etc.)
    - Automatic sync of steps, heart rate, sleep data
    - Configure sync frequency and data preferences
+   - Alexa Integration configuration to calendar
 
 #### Mood and Wellness Check-ins
 1. **Daily Mood Logging**:
@@ -311,7 +312,10 @@ The CareConnect dashboard is your central hub for all activities and information
    - Medical information sharing
    - Emergency contact notification
    - Integration with local emergency services
-
+     
+3. **Vial of Life**:
+   - Patients can create, update, and share an emergency profile which shows important health information.
+   - The profile can be shared through a QR code or link with the patient’s consent.  
 ## Caregiver Features
 
 ### Patient Management
