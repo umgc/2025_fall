@@ -362,14 +362,31 @@ class LoginScreen extends StatelessWidget {
 
 This pattern ensures that authentication state flows in one direction (provider → UI), making it easy to reason about when and why the UI updates—a critical feature when dealing with sensitive healthcare data that requires precise access control.
 
-### Routing Configuration
+### Routing Configuration with GoRouter
 
-Using GoRouter for navigation:
+CareConnect uses GoRouter for declarative navigation, chosen for its type-safe routing, deep linking support, and excellent integration with Flutter's navigation 2.0 API. In a healthcare app where users might need to navigate directly to specific patient records or appointment details (via links from emails or notifications), GoRouter's URL-based routing is particularly valuable.
+
+#### Why GoRouter Over Navigator 1.0?
+
+Traditional Flutter navigation (Navigator 1.0) uses an imperative stack-based approach. While simple for basic apps, it becomes unwieldy for complex navigation flows. GoRouter provides:
+
+- **URL-based routing**: Each screen has a path (e.g., `/dashboard/health`) that can be bookmarked or linked
+- **Type-safe parameters**: Pass data between screens with compile-time safety
+- **Declarative redirects**: Guard routes based on authentication state without repetitive checks
+- **Deep linking**: Users can jump directly to specific screens from external links
+- **Nested navigation**: Complex tab structures (like our dashboard with sub-tabs) are easier to manage
+
+In healthcare, where clinicians might need to quickly navigate to a specific patient's recent vitals from an alert notification, this URL-based approach is much more robust than trying to programmatically push the right sequence of screens onto a stack.
+
+#### Core Routing Structure
 
 ```dart
 // config/router_config.dart
 final GoRouter routerConfig = GoRouter(
+  // Starting point when app launches
   initialLocation: '/splash',
+  
+  // Define all app routes
   routes: [
     GoRoute(
       path: '/splash',
@@ -379,35 +396,183 @@ final GoRouter routerConfig = GoRouter(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
     ),
+    
+    // Main dashboard with nested routes
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
+      
+      // Nested routes appear as tabs or sections within dashboard
       routes: [
         GoRoute(
-          path: 'health',
+          path: 'health',  // Full path: /dashboard/health
           builder: (context, state) => const HealthScreen(),
         ),
         GoRoute(
-          path: 'messages',
+          path: 'messages',  // Full path: /dashboard/messages
           builder: (context, state) => const MessagesScreen(),
+        ),
+        
+        // Parameterized route - accepts dynamic patient ID
+        GoRoute(
+          path: 'patient/:id',  // Full path: /dashboard/patient/123
+          builder: (context, state) {
+            // Extract the ID from the URL
+            final patientId = state.pathParameters['id']!;
+            return PatientDetailScreen(patientId: patientId);
+          },
         ),
       ],
     ),
   ],
+  
+  // Global navigation guard - runs before every route
   redirect: (context, state) {
+    // Check authentication status from our AuthProvider
     final isLoggedIn = context.read<AuthProvider>().currentUser != null;
-    final isLoginRoute = state.uri.path == '/login';
+    final isGoingToLogin = state.uri.path == '/login';
+    final isGoingToSplash = state.uri.path == '/splash';
 
-    if (!isLoggedIn && !isLoginRoute) {
+    // Logic: Unauthenticated users can only access login and splash
+    if (!isLoggedIn && !isGoingToLogin && !isGoingToSplash) {
+      // User trying to access protected route without login - redirect to login
       return '/login';
     }
-    if (isLoggedIn && isLoginRoute) {
+    
+    // Logic: Authenticated users shouldn't see login screen
+    if (isLoggedIn && isGoingToLogin) {
+      // Already logged in, redirect to dashboard instead
       return '/dashboard';
     }
+    
+    // No redirect needed - allow navigation to proceed
     return null;
   },
 );
 ```
+
+#### Understanding the Redirect Guard
+
+The `redirect` function is CareConnect's authentication barrier. It runs before every navigation:
+
+**Scenario 1: Unauthenticated User Tries to Access Dashboard**
+1. User navigates to `/dashboard`
+2. Redirect guard checks: `isLoggedIn = false`, `isGoingToLogin = false`
+3. Guard returns `/login`, overriding the original destination
+4. User lands on login screen instead of dashboard
+
+**Scenario 2: User Logs In Successfully**
+1. Login completes, `AuthProvider.currentUser` is set
+2. App tries to navigate to `/login` (where they currently are)
+3. Redirect guard checks: `isLoggedIn = true`, `isGoingToLogin = true`
+4. Guard returns `/dashboard`, redirecting them away from login
+5. User automatically lands on dashboard
+
+**Scenario 3: Deep Link from Email**
+1. User clicks link: `careconnect://app/dashboard/patient/456`
+2. App launches, redirect guard checks authentication
+3. If not logged in: redirected to `/login`, but the intended destination is remembered
+4. After login, guard allows navigation to `/dashboard/patient/456`
+5. User lands exactly where the link intended
+
+This pattern ensures:
+- Protected routes require authentication
+- Authenticated users don't get stuck on login screen
+- Deep links work correctly after authentication
+- No need to check authentication in every screen's build method
+
+#### Programmatic Navigation in Code
+
+Components navigate using `context.go()` and `context.push()`:
+
+```dart
+// Replace current route (can't go back)
+context.go('/dashboard/health');
+
+// Push new route (can go back with back button)
+context.push('/dashboard/patient/123');
+
+// Navigate with named parameters
+context.goNamed(
+  'patientDetail',
+  pathParameters: {'id': '123'},
+  queryParameters: {'tab': 'vitals'},
+);
+
+// Go back
+context.pop();
+```
+
+**When to use `go` vs `push`**:
+- **go()**: Replaces the route (like after login - don't want back button to return to login)
+- **push()**: Adds to history (like opening a patient detail - want back button to return to list)
+
+#### Handling Deep Links from Notifications
+
+Healthcare notifications often need to navigate directly to relevant data:
+
+```dart
+// When notification is tapped:
+void handleNotificationTap(String type, String id) {
+  switch (type) {
+    case 'vital_alert':
+      // Navigate directly to patient's vitals
+      context.go('/dashboard/patient/$id?tab=vitals');
+      break;
+    case 'message':
+      // Navigate to specific conversation
+      context.go('/dashboard/messages/$id');
+      break;
+    case 'appointment':
+      // Navigate to appointment detail
+      context.go('/dashboard/appointments/$id');
+      break;
+  }
+}
+```
+
+The URL-based routing makes these deep links trivial to implement and maintain.
+
+#### Error Handling
+
+GoRouter includes built-in error handling for invalid routes:
+
+```dart
+GoRouter(
+  // ... routes ...
+  
+  // Called when navigation to unknown route
+  errorBuilder: (context, state) {
+    return ErrorScreen(
+      message: 'Page not found: ${state.uri.path}',
+      onRetry: () => context.go('/dashboard'),
+    );
+  },
+);
+```
+
+This ensures users never see a blank screen, even if they manually type an invalid URL or follow a broken link.
+
+#### Testing Considerations
+
+GoRouter makes navigation testing straightforward:
+
+```dart
+testWidgets('redirects unauthenticated users to login', (tester) async {
+  // Start with no authenticated user
+  await tester.pumpWidget(MyApp());
+  
+  // Try to navigate to dashboard
+  routerConfig.go('/dashboard');
+  await tester.pumpAndSettle();
+  
+  // Verify we're on login instead
+  expect(find.text('Login'), findsOneWidget);
+  expect(find.text('Dashboard'), findsNothing);
+});
+```
+
+The declarative nature makes it easy to verify routing logic without complex widget tree navigation.
 
 ### HTTP Client Configuration
 
@@ -4989,50 +5154,332 @@ Flutter's build system aggressively caches dependencies and build artifacts for 
 
 #### Backend Compilation Issues
 
-**Maven Dependencies**
-```bash
-# Clean Maven cache and resolve dependencies
-./mvnw clean
-rm -rf ~/.m2/repository
-./mvnw dependency:resolve
-./mvnw clean compile
+##### Problem: Maven Dependencies Not Resolving
 
-# Spring Boot 3.4.5 with Java 17 requirement
-java -version  # Must be Java 17+
-```
+**Symptoms**: Maven build fails with "Could not resolve dependencies" errors. Compile phase fails with "package does not exist" errors even though dependencies are declared in `pom.xml`. Spring Boot application fails to start due to missing beans.
 
-**Spring Boot Issues**
-```bash
-# Check for circular dependencies
-./mvnw compile 2>&1 | grep -i circular
+**Root Causes**:
+Maven maintains a local repository cache (`~/.m2/repository`) where it stores downloaded dependencies. Issues occur when:
+- The local repository becomes corrupted (incomplete downloads, disk errors)
+- A SNAPSHOT dependency was cached but the remote version has updated
+- Maven's metadata files become inconsistent
+- Network issues interrupted dependency downloads
+- Corporate proxies or firewalls block Maven Central or Spring repositories
 
-# Resolve Spring AI milestone version conflicts
-./mvnw dependency:tree | grep spring-ai
-```
+**Systematic Resolution Steps**:
+
+1. **Clean Build Artifacts**: Start by removing compiled code to force a fresh build:
+   ```bash
+   # Clean all compiled artifacts and target directory
+   ./mvnw clean
+   
+   # Verify target directory is gone
+   ls -la target  # Should show "No such file or directory"
+   ```
+
+2. **Purge Local Maven Repository** (Nuclear option, but often necessary):
+   ```bash
+   # Remove entire local Maven cache
+   # WARNING: This deletes ALL cached dependencies, not just for this project
+   rm -rf ~/.m2/repository
+   
+   # Re-download all dependencies
+   ./mvnw dependency:resolve
+   
+   # Attempt compilation
+   ./mvnw clean compile
+   ```
+   **What this does**: Completely removes Maven's local cache and forces it to re-download every dependency. This fixes corruption but requires a full re-download (can take several minutes on slow connections).
+
+3. **Verify Java Version** (Spring Boot 3.4.5 has specific requirements):
+   ```bash
+   # Check current Java version
+   java -version
+   
+   # Must show Java 17 or higher for Spring Boot 3.4.5
+   # If not:
+   # - macOS: brew install openjdk@17 && sudo ln -sfn $(brew --prefix openjdk@17)/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk
+   # - Linux: sudo apt install openjdk-17-jdk
+   # - Windows: Download from https://adoptium.net/
+   
+   # Verify JAVA_HOME points to Java 17
+   echo $JAVA_HOME
+   
+   # Set JAVA_HOME if needed
+   export JAVA_HOME=/path/to/java17
+   ```
+   **Why this matters**: Spring Boot 3.x requires Java 17 as a minimum. Using Java 11 or older will cause cryptic compilation errors because certain language features and APIs don't exist in older versions.
+
+4. **Diagnose Circular Dependencies**:
+   ```bash
+   # Compile and watch for circular dependency errors
+   ./mvnw compile 2>&1 | grep -i circular
+   
+   # If circular dependencies found, analyze with:
+   ./mvnw dependency:tree -Dverbose=true
+   ```
+   **Understanding Circular Dependencies**: A circular dependency occurs when Bean A depends on Bean B, which depends on Bean C, which depends on Bean A. Spring can sometimes resolve these with lazy initialization, but it's better to refactor the code to break the circle.
+   
+   **Common CareConnect Circular Dependency**: The Flyway/Spring AI circular dependency currently requires Flyway to be disabled in development. This should be resolved by:
+   - Moving database initialization to a separate configuration
+   - Using `@Lazy` annotation on one side of the dependency
+   - Refactoring to introduce an interface that breaks the circle
+
+5. **Check Spring AI Milestone Versions** (CareConnect-specific issue):
+   ```bash
+   # Spring AI is in milestone releases, which requires special repository configuration
+   # Verify dependency tree for Spring AI conflicts
+   ./mvnw dependency:tree | grep spring-ai
+   
+   # Should show consistent versions across all spring-ai-* artifacts
+   ```
+   
+   Ensure your `pom.xml` includes the Spring milestones repository:
+   ```xml
+   <repositories>
+       <repository>
+           <id>spring-milestones</id>
+           <name>Spring Milestones</name>
+           <url>https://repo.spring.io/milestone</url>
+           <snapshots>
+               <enabled>false</enabled>
+           </snapshots>
+       </repository>
+   </repositories>
+   ```
+
+6. **Force Maven to Update All Dependencies**:
+   ```bash
+   # Force update of all SNAPSHOT and release dependencies
+   ./mvnw clean install -U
+   
+   # The -U flag forces Maven to check for updated versions
+   ```
+
+**Prevention**:
+- Commit `maven-wrapper.properties` to ensure all developers use the same Maven version
+- Document required Java version in README
+- Use Maven Enforcer Plugin to fail builds with wrong Java version:
+  ```xml
+  <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-enforcer-plugin</artifactId>
+      <executions>
+          <execution>
+              <goals>
+                  <goal>enforce</goal>
+              </goals>
+              <configuration>
+                  <rules>
+                      <requireJavaVersion>
+                          <version>[17,)</version>
+                      </requireJavaVersion>
+                  </rules>
+              </configuration>
+          </execution>
+      </executions>
+  </plugin>
+  ```
+
+**When to Escalate**: If these steps don't resolve the issue:
+- Check if your network has proxy requirements (`~/.m2/settings.xml` proxy configuration)
+- Verify you can reach Maven Central: `curl https://repo.maven.apache.org/maven2/`
+- Check if a specific dependency is actually available at the version specified
+- Consult the team's build server logs to see if it's a local-only issue
 
 #### Database Connection Issues
 
-**PostgreSQL Connection Problems**
-```sql
--- Check PostgreSQL status
-SELECT version();
-SHOW max_connections;
-SHOW shared_preload_libraries;
+##### Problem: PostgreSQL Connection Failures
 
--- Connection pool issues
-SELECT state, count(*) FROM pg_stat_activity GROUP BY state;
+**Symptoms**: Application startup fails with "Connection refused" or "Connection timeout" errors. Intermittent "Too many connections" errors during load. Operations hang without returning results.
 
--- Reset connections
-SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle';
-```
+**Root Causes**:
+Database connection issues in CareConnect typically stem from:
+- PostgreSQL server not running or not accessible
+- Connection pool exhausted (HikariCP runs out of connections)
+- Network connectivity issues (firewall, DNS resolution)
+- Incorrect connection string or credentials
+- PostgreSQL configured to accept too few connections
+- Long-running transactions holding connections without releasing them
 
-**HikariCP Connection Pool**
-```properties
-# Tune connection pool settings
-spring.datasource.hikari.maximum-pool-size=10
-spring.datasource.hikari.minimum-idle=5
-spring.datasource.hikari.connection-timeout=20000
-spring.datasource.hikari.idle-timeout=300000
+**Systematic Resolution Steps**:
+
+1. **Verify PostgreSQL Server Status**:
+   ```bash
+   # Check if PostgreSQL is running
+   pg_isready -h localhost -p 5432
+   # Expected: "localhost:5432 - accepting connections"
+   
+   # If using Docker:
+   docker ps | grep postgres
+   # Should show a running postgres container
+   
+   # If not running, start it:
+   # Docker: docker-compose up -d postgres
+   # macOS: brew services start postgresql
+   # Linux: sudo systemctl start postgresql
+   ```
+
+2. **Test Direct Connection** (bypasses application, tests database itself):
+   ```bash
+   # Connect with psql client
+   psql -h localhost -p 5432 -U careconnect -d careconnect
+   
+   # If successful, you'll see: careconnect=#
+   
+   # Check PostgreSQL version and basic health
+   SELECT version();
+   SELECT now();  # Should return current timestamp
+   ```
+   
+   **If this fails**: The problem is with PostgreSQL itself, not the application. Check:
+   - Credentials in your environment match PostgreSQL's configured users
+   - `pg_hba.conf` allows connections from localhost
+   - PostgreSQL is listening on the right port (check `postgresql.conf`)
+
+3. **Diagnose Connection Pool Issues**:
+   ```sql
+   -- Inside psql, check current connection usage
+   SELECT 
+       count(*) as total_connections,
+       count(*) FILTER (WHERE state = 'active') as active,
+       count(*) FILTER (WHERE state = 'idle') as idle,
+       count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction
+   FROM pg_stat_activity 
+   WHERE datname = 'careconnect';
+   
+   -- Check max_connections setting
+   SHOW max_connections;
+   
+   -- If close to max, you have a connection leak
+   ```
+   
+   **Understanding the Results**:
+   - **Active**: Currently executing queries (normal)
+   - **Idle**: Connected but not doing anything (normal for connection pool)
+   - **Idle in transaction**: Connected, started a transaction, but not committing/rolling back (BAD - indicates a bug)
+   
+   If "idle in transaction" is high, you have a connection leak. Transactions are starting but not finishing, holding connections hostage.
+
+4. **Tune HikariCP Connection Pool** (if pool exhaustion detected):
+   
+   CareConnect uses HikariCP as its connection pool. Tuning it properly is crucial for stability:
+   
+   ```properties
+   # In application.properties or application-dev.properties
+   
+   # Maximum number of connections in the pool
+   # Rule of thumb: (2 * number_of_cores) + number_of_disks
+   # For a 4-core machine with SSD: (2*4)+1 = 9, round up to 10
+   spring.datasource.hikari.maximum-pool-size=10
+   
+   # Minimum number of idle connections maintained
+   # Keep this lower to avoid wasting resources
+   spring.datasource.hikari.minimum-idle=5
+   
+   # Maximum time to wait for a connection from pool (milliseconds)
+   # 20 seconds is reasonable; if you hit this, you have a connection leak
+   spring.datasource.hikari.connection-timeout=20000
+   
+   # Maximum time a connection can sit idle before being closed
+   # 5 minutes prevents stale connections
+   spring.datasource.hikari.idle-timeout=300000
+   
+   # Maximum lifetime of a connection (milliseconds)
+   # 30 minutes forces periodic recycling, preventing stale connections
+   spring.datasource.hikari.max-lifetime=1800000
+   
+   # Enable leak detection (development only, has performance cost)
+   spring.datasource.hikari.leak-detection-threshold=60000
+   ```
+   
+   **What each setting does**:
+   - `maximum-pool-size`: Too low = connections exhausted under load; too high = wastes resources and can overwhelm PostgreSQL
+   - `connection-timeout`: How long to wait for a connection before giving up. If you hit this regularly, increase pool size or fix connection leaks
+   - `leak-detection-threshold`: If enabled, HikariCP will log a warning if a connection is held longer than this threshold, helping identify leaks
+
+5. **Identify and Kill Problematic Connections** (emergency measure):
+   ```sql
+   -- Find long-running or blocked queries
+   SELECT 
+       pid,
+       usename,
+       application_name,
+       state,
+       query,
+       now() - state_change as duration
+   FROM pg_stat_activity
+   WHERE state != 'idle'
+     AND now() - state_change > interval '5 minutes'
+   ORDER BY duration DESC;
+   
+   -- If you find a stuck query, you can terminate it:
+   SELECT pg_terminate_backend(12345);  -- Replace 12345 with actual pid
+   
+   -- To terminate all idle in transaction connections (use carefully!):
+   SELECT pg_terminate_backend(pid) 
+   FROM pg_stat_activity 
+   WHERE state = 'idle in transaction' 
+     AND now() - state_change > interval '10 minutes';
+   ```
+   
+   **Warning**: Terminating connections forcefully will roll back any in-progress transactions. Only do this when connections are truly stuck, not just slow.
+
+6. **Increase PostgreSQL's max_connections** (if legitimately need more connections):
+   ```sql
+   -- Check current setting
+   SHOW max_connections;  -- Default is often 100
+   
+   -- To increase (requires PostgreSQL restart):
+   -- Edit postgresql.conf:
+   max_connections = 200
+   
+   -- Then restart PostgreSQL:
+   -- Docker: docker-compose restart postgres
+   -- macOS: brew services restart postgresql
+   -- Linux: sudo systemctl restart postgresql
+   ```
+   
+   **Caveat**: Each connection consumes memory. Blindly increasing max_connections can cause PostgreSQL to run out of memory. Better to fix connection leaks or use connection pooling (which CareConnect already does with HikariCP).
+
+7. **Enable Connection Pool Logging** (to debug pool behavior):
+   ```properties
+   # Add to application.properties
+   logging.level.com.zaxxer.hikari=DEBUG
+   logging.level.com.zaxxer.hikari.HikariConfig=DEBUG
+   ```
+   
+   This will log every connection acquisition and release, helping you spot:
+   - Connections not being returned to pool
+   - Pool exhaustion events
+   - Configuration issues
+
+**Prevention**:
+- Always use `@Transactional` on service methods to ensure transactions complete
+- Avoid manual transaction management unless absolutely necessary
+- Use try-with-resources when manually managing connections (rare in Spring Boot)
+- Monitor connection pool metrics in production (HikariCP exposes JMX metrics)
+- Set up alerts when idle in transaction connections exceed a threshold
+
+**Common Anti-Patterns to Avoid**:
+```java
+// BAD: Opening connection manually (should use JPA/repositories)
+Connection conn = DriverManager.getConnection(url);
+// ... use connection ...
+// Forgot to close! Connection leak!
+
+// GOOD: Let Spring manage connections
+@Service
+@Transactional
+public class MyService {
+    @Autowired
+    private MyRepository repo;
+    
+    public void doWork() {
+        repo.save(entity);
+        // Connection automatically returned to pool when method completes
+    }
+}
 ```
 
 ### Authentication & Security Issues
