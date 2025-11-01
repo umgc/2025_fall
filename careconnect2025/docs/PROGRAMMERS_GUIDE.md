@@ -52,46 +52,168 @@ AWS provides the scalability, security certifications (HIPAA compliance options)
 
 ## Architecture Overview
 
-### System Architecture
+### System Architecture and Design Philosophy
 
-CareConnect follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers.
+CareConnect follows a microservices-inspired architecture with clear separation between frontend, backend, and data layers. This architectural approach was chosen to enable independent scaling, deployment, and development of each layer while maintaining loose coupling and high cohesion—principles essential for a healthcare platform that must evolve rapidly to meet changing regulatory and clinical requirements.
+
+#### Layered Architecture Benefits
+
+**Frontend Isolation**: The Flutter frontend communicates with the backend exclusively through well-defined REST and WebSocket APIs. This means we can completely rewrite the mobile app, add a web interface, or develop a desktop client without touching backend code. For healthcare providers who might want to access CareConnect from different devices (tablet in patient rooms, desktop in offices, mobile while on rounds), this flexibility is crucial.
+
+**Backend Independence**: The Spring Boot backend owns all business logic and data validation. Even if the frontend is compromised or contains bugs, the backend enforces all critical rules (medication dosages, user permissions, data validation). In healthcare, this defense-in-depth approach is a regulatory requirement.
+
+**Data Layer Abstraction**: The database is accessed only through JPA repositories, never via direct SQL in controllers or frontend code. This abstraction makes it possible to migrate to a different database, implement read replicas for scaling, or add caching layers without affecting the rest of the application.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Frontend Layer                           │
+│                                                                 │
+│  Responsibility: User interface and user experience             │
+│  Technology: Flutter (Dart)                                     │
+│  Key Concerns: Cross-platform compatibility, offline support,   │
+│                accessibility, responsive design                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  Flutter App (Web, iOS, Android, Desktop)                      │
 │  ├── Provider (State Management)                               │
+│  │   └── Manages UI state, exposes data to widgets            │
 │  ├── GoRouter (Navigation)                                     │
+│  │   └── Declarative routing, deep linking, guards            │
 │  ├── Dio (HTTP Client)                                         │
+│  │   └── REST API calls, interceptors, error handling         │
 │  └── Features (Modular Architecture)                           │
+│      └── Self-contained feature modules (auth, health, etc.)  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                          HTTP/WebSocket
+                   (JSON over HTTPS/WSS)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Backend Layer                            │
+│                                                                 │
+│  Responsibility: Business logic, data validation, security      │
+│  Technology: Spring Boot (Java 17)                              │
+│  Key Concerns: HIPAA compliance, data integrity, performance,   │
+│                API versioning, audit logging                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  Spring Boot Application                                        │
 │  ├── Controllers (REST API)                                    │
+│  │   └── HTTP request handling, parameter validation,         │
+│  │       response formatting, API documentation                │
 │  ├── Services (Business Logic)                                 │
+│  │   └── Transaction management, complex workflows,           │
+│  │       business rules enforcement, orchestration             │
 │  ├── Repositories (Data Access)                                │
+│  │   └── Database queries, JPA entity management,             │
+│  │       query optimization, data retrieval                    │
 │  ├── WebSocket (Real-time Communication)                       │
+│  │   └── Persistent connections, event streaming,             │
+│  │       push notifications, bidirectional messaging           │
 │  └── Security (JWT Authentication)                             │
+│      └── Token validation, authorization, RBAC,               │
+│          session management, security filters                  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                            JDBC/JPA
+                    (SQL over TCP/IP)
                                 │
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Data Layer                              │
+│                                                                 │
+│  Responsibility: Data persistence, integrity, backup            │
+│  Technology: PostgreSQL 15+                                     │
+│  Key Concerns: ACID compliance, encryption at rest, backups,    │
+│                query performance, data retention                │
 ├─────────────────────────────────────────────────────────────────┤
-│  MySQL Database                                                 │
+│  PostgreSQL Database                                            │
 │  ├── User Management                                            │
+│  │   └── Authentication credentials, user profiles,           │
+│  │       roles and permissions, account status                 │
 │  ├── Health Data                                                │
+│  │   └── Vital signs, medications, allergies, conditions,     │
+│  │       lab results, medical history                          │
 │  ├── Communication                                              │
+│  │   └── Messages, call logs, notifications, WebSocket        │
+│  │       connection tracking, chat history                     │
 │  └── File Storage                                               │
+│      └── Medical records metadata, file paths, document        │
+│          categories, upload timestamps, access logs            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+#### Data Flow Example: Recording a Blood Pressure Reading
+
+To understand how these layers work together, let's trace a complete user action through the system:
+
+1. **User Input (Frontend Layer)**:
+   - Patient opens Health screen, taps "Record Vital Sign"
+   - Enters blood pressure: 140/90 mmHg
+   - Adds note: "Measured after morning medication"
+   - Taps "Save"
+
+2. **State Management (Frontend)**:
+   - HealthProvider's `recordVitalSign()` method is called
+   - Provider sets `isLoading = true`, triggering UI to show loading indicator
+   - Provider calls HealthService to make API request
+
+3. **API Request (Frontend → Backend)**:
+   - Dio HTTP client constructs POST request to `/api/health/vitals`
+   - AuthInterceptor automatically adds JWT token from secure storage
+   - Request body: `{"type": "blood_pressure", "systolic": 140, "diastolic": 90, "notes": "..."}`
+   - LoggingInterceptor logs request for debugging
+
+4. **Request Reception (Backend - Controller Layer)**:
+   - `HealthController.recordVitalSign()` receives request
+   - Spring Security validates JWT token, extracts user ID
+   - JSR-380 validation checks request body structure
+   - Controller passes validated DTO to Service layer
+
+5. **Business Logic (Backend - Service Layer)**:
+   - `HealthService.recordVitalSign()` begins transaction
+   - Verifies user exists and has permission to record vitals
+   - Converts DTO to JPA entity
+   - Saves entity via Repository (triggers database INSERT)
+   - **Critical business logic**: Checks if 140/90 exceeds patient's normal range
+   - If abnormal, calls NotificationService to alert caregiver
+   - Converts saved entity back to DTO
+   - Returns DTO to controller
+
+6. **Data Persistence (Backend - Repository/Database)**:
+   - JPA translates entity to SQL: `INSERT INTO vital_signs (user_id, type, systolic, diastolic, ...) VALUES (...)`
+   - PostgreSQL executes INSERT within transaction
+   - Database enforces constraints (foreign keys, not-null, unique)
+   - Returns generated ID and timestamp
+   - Transaction commits (all data saved) or rolls back (on any error)
+
+7. **Response (Backend → Frontend)**:
+   - Controller returns HTTP 201 Created with saved vital sign data
+   - ErrorInterceptor doesn't trigger (successful response)
+   - Dio receives response and parses JSON
+
+8. **State Update (Frontend)**:
+   - HealthProvider updates local state with new vital sign
+   - Calls `notifyListeners()` to rebuild UI
+   - HealthScreen automatically updates to show new reading
+   - Loading indicator disappears
+
+9. **Real-time Notification (Parallel Flow)**:
+   - If reading was abnormal, NotificationService also sent WebSocket message
+   - Caregiver's app, connected to `/ws/careconnect`, receives alert
+   - Their HealthDashboard automatically shows "Patient [Name] recorded elevated BP: 140/90"
+   - Caregiver can tap notification to view patient's full vital history
+
+**Total time**: ~500ms from button tap to UI update and caregiver notification. This is the power of a well-architected system: complex workflows feel instantaneous to users.
+
+#### Why This Architecture for Healthcare?
+
+**Auditability**: Every layer logs its actions. We can trace a medication order from UI tap → API call → service logic → database insert → notification sent, critical for regulatory compliance.
+
+**Security**: Multiple validation layers. Even if frontend is compromised, backend still enforces business rules. Even if backend is misconfigured, database constraints prevent invalid data.
+
+**Scalability**: Each layer can scale independently. High load from mobile users? Scale frontend servers. Complex analytics queries? Scale database read replicas. Real-time notifications spiking? Scale WebSocket handlers.
+
+**Maintainability**: Clear separation of concerns. UI developers work in Flutter, backend developers in Spring Boot, database admins tune PostgreSQL—all in parallel without conflicts.
+
+**Testability**: Each layer can be tested in isolation. Mock the API for frontend tests, mock the database for service tests, integration tests verify the full stack.
 
 ### Technology Stack
 
@@ -119,15 +241,332 @@ CareConnect follows a microservices-inspired architecture with clear separation 
 
 ## Development Environment Setup
 
-### Prerequisites
+Setting up a development environment for CareConnect requires careful orchestration of multiple technologies: Flutter for the frontend, Java/Spring Boot for the backend, PostgreSQL for the database, and various supporting tools. This section guides you through the setup process, explaining not just the *what* but the *why* behind each requirement.
 
-Ensure you have the following installed:
-- **Flutter SDK**: 3.9.2+
-- **Java**: OpenJDK 17
-- **Maven**: 3.6+
-- **MySQL**: 8.0+
-- **Git**: Latest version
-- **IDE**: VS Code, Android Studio, or IntelliJ IDEA
+### Prerequisites and System Requirements
+
+Before beginning, ensure your system meets these requirements. These aren't arbitrary—each is chosen to match production environment requirements and ensure team-wide compatibility.
+
+#### Essential Software
+
+**Flutter SDK 3.9.2 or higher**
+- **Why this version?** Flutter 3.9.2 introduced stable support for desktop platforms (Windows, macOS, Linux), which CareConnect uses for caregiver dashboard applications. Earlier versions had breaking API changes that would require code modifications.
+- **Installation**: Download from [flutter.dev](https://flutter.dev/docs/get-started/install)
+- **Verification**: Run `flutter doctor -v` after installation
+- **Common issues**: Ensure Flutter bin directory is in your PATH
+
+**Java Development Kit (JDK) 17**
+- **Why version 17 specifically?** Spring Boot 3.4.5 requires Java 17 minimum. This version includes critical features like Records (used for DTOs), sealed classes (used for domain modeling), and pattern matching (used in service layer logic).
+- **Not Java 11 or 8**: These older versions lack language features our codebase uses. Compilation will fail with cryptic errors.
+- **Not Java 18+**: While these would work, Java 17 is the current LTS (Long Term Support) version, matching what we deploy to production.
+- **Installation**: Use OpenJDK from [adoptium.net](https://adoptium.net/) or your system package manager
+- **Verification**: `java -version` should show `openjdk version "17.x.x"`
+
+**Maven 3.6 or higher**
+- **Why Maven?** Spring Boot projects traditionally use Maven for dependency management. While Gradle is an alternative, Maven's declarative approach and extensive plugin ecosystem make it ideal for our complex dependency graph (Spring AI milestones, security libraries, database drivers, etc.).
+- **Installation**: Often bundled with Java IDEs, or download from [maven.apache.org](https://maven.apache.org/)
+- **Note**: CareConnect includes Maven Wrapper (`mvnw`), so Maven installation is optional—the wrapper downloads the correct version automatically.
+- **Verification**: `./mvnw -version` (uses wrapper) or `mvn -version` (uses system Maven)
+
+**PostgreSQL 15 or higher** (previously MySQL, recently migrated)
+- **Why PostgreSQL?** Superior support for JSON columns (storing flexible health data), better ACID compliance (critical for medical records), more robust handling of concurrent transactions (multiple caregivers accessing same patient data).
+- **Why not MySQL?** MySQL was the original database, but PostgreSQL's advanced features (JSONB indexing, row-level security, materialized views) better support our analytics and reporting needs.
+- **Installation**: 
+  - **macOS**: `brew install postgresql@15`
+  - **Windows**: Download installer from [postgresql.org](https://www.postgresql.org/download/windows/)
+  - **Linux**: `sudo apt install postgresql-15` (Ubuntu/Debian)
+  - **Docker**: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:15`
+- **Verification**: `psql --version` should show PostgreSQL 15.x
+
+**Git (latest version)**
+- **Why Git?** Version control is essential for team collaboration. CareConnect uses GitHub for source control, CI/CD, and issue tracking.
+- **Installation**: Download from [git-scm.com](https://git-scm.com/)
+- **Configuration**: After installation, configure your identity:
+  ```bash
+  git config --global user.name "Your Name"
+  git config --global user.email "your.email@example.com"
+  ```
+- **Verification**: `git --version`
+
+**Integrated Development Environment (IDE)**
+- **VS Code**: Lightweight, excellent Flutter support via extensions, fast startup. Recommended for frontend development.
+  - Required extensions: "Flutter", "Dart"
+  - Recommended: "GitLens", "Error Lens", "Prettier"
+  
+- **Android Studio**: Official Android IDE, includes Android SDK and emulator. Best for testing Android-specific features.
+  - Includes Flutter plugin
+  - Required for Android builds
+  
+- **IntelliJ IDEA**: Powerful Java IDE, excellent Spring Boot integration. Recommended for backend development.
+  - Ultimate edition has better Spring support (paid)
+  - Community edition works fine for basic development (free)
+  - Required plugins: "Spring Boot", "JPA Buddy"
+
+**Why multiple IDEs?** Different tools excel at different tasks. VS Code is fast for quick frontend edits, Android Studio is essential for mobile debugging, IntelliJ is unmatched for Spring Boot refactoring. Most developers keep all three installed and use whichever fits the current task.
+
+### Clone and Initial Setup
+
+#### 1. Clone the Repository
+
+```bash
+# Clone from GitHub (use SSH if you have SSH keys configured)
+git clone https://github.com/umgc/2025_fall.git
+cd 2025_fall/careconnect2025
+
+# Or use HTTPS
+git clone https://github.com/umgc/2025_fall.git
+cd 2025_fall/careconnect2025
+```
+
+**Repository Structure Overview**: The repository contains multiple projects:
+- `careconnect2025/frontend/` - Flutter mobile/web application
+- `careconnect2025/backend/core/` - Spring Boot backend API
+- `careconnect2025/terraform_aws/` - Infrastructure as Code for AWS deployment
+- `careconnect2025/docs/` - Documentation including this guide
+
+#### 2. Set Up PostgreSQL Database
+
+```bash
+# Start PostgreSQL (if not already running)
+# macOS: brew services start postgresql@15
+# Linux: sudo systemctl start postgresql
+# Windows: Start from Services or PostgreSQL menu
+
+# Create database and user
+psql -U postgres  # Connect as postgres superuser
+```
+
+Then in the psql prompt:
+```sql
+-- Create dedicated database for CareConnect
+CREATE DATABASE careconnect;
+
+-- Create dedicated user (security best practice: don't use postgres superuser)
+CREATE USER careconnect WITH ENCRYPTED PASSWORD 'your_secure_password_here';
+
+-- Grant all privileges on the database to the user
+GRANT ALL PRIVILEGES ON DATABASE careconnect TO careconnect;
+
+-- Grant schema creation (needed for Flyway migrations)
+GRANT CREATE ON DATABASE careconnect TO careconnect;
+
+-- Exit psql
+\q
+```
+
+**Why a dedicated user?** In production, the application should never connect as the postgres superuser. Using a limited user means even if the application is compromised, attackers can't drop other databases or modify PostgreSQL settings. This principle of least privilege is a security best practice.
+
+**Why this password?** For local development, use a simple password. For production, environment variables provide secure passwords.
+
+#### 3. Configure Backend Environment
+
+Create `backend/core/src/main/resources/application-dev.properties`:
+
+```properties
+# Database Configuration
+# JDBC URL points to local PostgreSQL instance
+spring.datasource.url=jdbc:postgresql://localhost:5432/careconnect
+spring.datasource.username=careconnect
+spring.datasource.password=your_secure_password_here
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA Configuration
+# ddl-auto=update automatically creates/updates tables based on @Entity classes
+# This is convenient for development but NEVER use in production
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true  # Log all SQL queries (helpful for debugging)
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true  # Pretty-print SQL in logs
+
+# Server Configuration
+server.port=8080  # Backend listens on port 8080
+server.servlet.context-path=/  # Root path (no prefix like /api)
+
+# JWT Configuration
+# IMPORTANT: Generate a strong secret for development
+# openssl rand -base64 32  # Use this command to generate
+jwt.secret=YourStrongJwtSecretKeyHereMinimum32CharactersLong
+jwt.expiration=86400000  # 24 hours in milliseconds
+
+# CORS Configuration
+# Allow frontend to connect from these origins during development
+cors.allowed-origins=http://localhost:3000,http://localhost:50030,http://127.0.0.1:3000
+
+# Logging
+logging.level.com.careconnect=DEBUG  # Verbose logging for our code
+logging.level.org.springframework.web=DEBUG  # See all HTTP requests
+logging.level.org.hibernate.SQL=DEBUG  # See all SQL queries
+
+# Development-specific settings
+spring.devtools.restart.enabled=true  # Auto-restart on code changes
+spring.jpa.properties.hibernate.show_sql=true
+```
+
+**Critical Settings Explained**:
+- `ddl-auto=update`: Automatically creates tables when you run the app. Convenient but dangerous—doesn't handle schema changes well, can cause data loss. Use Flyway migrations in production.
+- `show-sql=true`: Logs every SQL query. Essential for debugging but creates huge logs in production—disable there.
+- `jwt.secret`: Must be at least 32 characters for HS256 algorithm. In production, load from environment variable, not hardcoded.
+
+#### 4. Set Up Frontend Environment
+
+Create `frontend/.env`:
+
+```bash
+# API Configuration
+# These differ by platform because of how emulators handle localhost
+CC_BASE_URL_WEB=http://localhost:8080        # Web app running in browser
+CC_BASE_URL_ANDROID=http://10.0.2.2:8080     # Android emulator special IP
+CC_BASE_URL_IOS=http://localhost:8080        # iOS simulator
+CC_BASE_URL_OTHER=http://localhost:8080      # Desktop platforms
+
+# JWT Configuration (must match backend)
+JWT_SECRET=YourStrongJwtSecretKeyHereMinimum32CharactersLong
+
+# AI Services (optional for basic development)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here  # Only needed for AI features
+OPENAI_API_KEY=your_openai_api_key_here      # Only needed for AI chat
+
+# Backend Authentication
+CC_BACKEND_TOKEN=your_backend_token  # For server-to-server communication
+```
+
+**Platform-Specific Base URLs**: 
+- Web: Uses standard `localhost:8080`
+- Android emulator: Uses `10.0.2.2` which is a special IP that the Android emulator maps to the host machine's `localhost`
+- iOS simulator: Can use `localhost` directly because it shares the host's network
+
+The app automatically selects the correct URL based on the platform it's running on.
+
+#### 5. Install Dependencies
+
+**Backend**:
+```bash
+cd backend/core
+
+# Using Maven Wrapper (recommended - uses exact version project needs)
+./mvnw clean install
+
+# This downloads all dependencies from Maven Central and Spring repositories
+# First time takes 5-10 minutes depending on internet speed
+# Subsequent runs are fast (dependencies are cached in ~/.m2/repository)
+```
+
+**Frontend**:
+```bash
+cd frontend
+
+# Download all Dart packages declared in pubspec.yaml
+flutter pub get
+
+# Verify Flutter setup
+flutter doctor -v
+
+# This checks:
+# ✓ Flutter SDK installed
+# ✓ Android toolchain (if you want Android builds)
+# ✓ Xcode (macOS only, if you want iOS builds)
+# ✓ Chrome (for web builds)
+# ✓ VS Code / Android Studio (optional)
+```
+
+**Understanding `flutter doctor` output**:
+- ✓ Green checkmark: All good
+- ⚠ Yellow warning: Optional feature not configured (e.g., iOS on Windows)
+- ✗ Red X: Required component missing or broken
+
+#### 6. Run and Verify
+
+**Start Backend**:
+```bash
+cd backend/core
+
+# Run with development profile
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Or run the JAR directly after building
+./mvnw clean package
+java -jar target/careconnect-backend-1.0.0.jar --spring.profiles.active=dev
+```
+
+**Verify backend is running**:
+```bash
+# Check health endpoint
+curl http://localhost:8080/actuator/health
+# Should return: {"status":"UP"}
+
+# Check API documentation
+# Open browser to: http://localhost:8080/swagger-ui/index.html
+```
+
+**Start Frontend**:
+```bash
+cd frontend
+
+# Run on Chrome (web)
+flutter run -d chrome
+
+# Run on Android emulator (start emulator first from Android Studio)
+flutter run -d emulator-5554
+
+# Run on iOS simulator (macOS only)
+flutter run -d iPhone
+
+# Run on desktop (current OS)
+flutter run -d macos  # or windows, or linux
+```
+
+**Common First-Run Issues**:
+- "Connection refused": Backend not running or wrong port
+- "CORS error": Check `cors.allowed-origins` in backend properties
+- "401 Unauthorized": Frontend using wrong API key or backend JWT secret mismatch
+- "Database connection failed": PostgreSQL not running or wrong credentials
+
+#### 7. Verify Full Stack Integration
+
+Once both frontend and backend are running:
+
+1. **Open the app** (automatically opens in Flutter)
+2. **Navigate to login screen**
+3. **Register a new account**:
+   - Email: `test@example.com`
+   - Password: `password123`
+   - Name: `Test User`
+4. **Verify you're redirected to dashboard**
+5. **Check backend logs** - should see:
+   ```
+   INFO - User test@example.com registered
+   INFO - JWT token generated for user test@example.com
+   DEBUG - SELECT * FROM users WHERE email = 'test@example.com'
+   ```
+
+If all this works, your development environment is fully configured!
+
+### Development Workflow
+
+**Typical Development Session**:
+```bash
+# Terminal 1: Backend
+cd backend/core
+./mvnw spring-boot:run
+
+# Terminal 2: Frontend
+cd frontend
+flutter run -d chrome
+
+# Terminal 3: Database (if needed)
+psql -U careconnect -d careconnect
+
+# Make code changes
+# Backend: Changes auto-reload with spring-devtools
+# Frontend: Hot reload with 'r' in terminal, hot restart with 'R'
+```
+
+**Pro Tips**:
+- Use IDE debuggers instead of print statements for complex issues
+- Run `flutter analyze` before committing to catch Dart warnings
+- Run `./mvnw verify` before pushing to catch Java issues
+- Keep backend logs visible to see API calls as you interact with frontend
+- Use browser DevTools (F12) to inspect API requests/responses
 
 ### Project Structure
 
