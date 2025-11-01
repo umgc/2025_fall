@@ -7,16 +7,18 @@ class SymptomCard extends StatelessWidget {
   final String description;
   final bool requiresAttention;
   final bool caregiverAlert;
+  final VoidCallback onDelete; // ✅ added callback for the "X" button
 
   const SymptomCard({
-    super.key,
+    Key? key,
     required this.title,
     required this.severity,
     required this.time,
     required this.description,
     required this.requiresAttention,
     required this.caregiverAlert,
-  });
+    required this.onDelete, // ✅ make sure parent passes this in
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +96,8 @@ class SymptomCard extends StatelessWidget {
               ],
               const SizedBox(width: 8),
               IconButton(
-                onPressed: () {
-                  // Handle dismiss
-                },
+                // ✅ now actually deletes the card
+                onPressed: onDelete,
                 icon: const Icon(Icons.close, size: 16),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

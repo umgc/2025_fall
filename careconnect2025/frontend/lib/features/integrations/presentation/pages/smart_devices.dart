@@ -5,6 +5,7 @@ import 'package:care_connect_app/services/profile_service.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:care_connect_app/services/auth_service.dart';
 
 class SmartDevicesPage extends StatefulWidget {
   const SmartDevicesPage({super.key});
@@ -67,6 +68,33 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
   Future<void> _linkAlexaAccount() async {
     print("Opening Alexa linking flow...");
     _showEnablementDialog('Alexa', alexaSkillUrl);
+  }
+
+  Future<void> _unlinkAlexaAccount() async {
+    setState(() => isLoading = true);
+    try {
+      final result = await AuthService.unlinkAlexaAccount();
+
+      if (result['isSuccess'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alexa Skill disabled successfully.')),
+        );
+        setState(() {
+          isAlexaLinked = false;
+          isLoading = false;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Failed to unlink Alexa.')),
+        );
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error unlinking Alexa: $e')),
+      );
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -139,6 +167,30 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
             ),
 
             const SizedBox(height: 32),
+
+            // Privacy Policy footer
+            GestureDetector(
+              onTap: () async {
+                final uri = Uri.parse('https://www.freeprivacypolicy.com/live/9a586bf1-2869-40aa-993a-c8f80200209c');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open Privacy Policy')),
+                  );
+                }
+              },
+              child: Text(
+                'Privacy Policy',
+                style: TextStyle(
+                  color: Colors.blue.shade700,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
 
             // Two-Column Layout for Alexa and Google
             LayoutBuilder(
@@ -260,21 +312,23 @@ class _SmartDevicesPageState extends State<SmartDevicesPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: isPatient
-                    ? (isAlexaLinked == true ? _checkAlexaStatus : _linkAlexaAccount)
-                    : null,
+              onPressed: isPatient
+                  ? (isAlexaLinked == true
+                      ? _unlinkAlexaAccount
+                      : _linkAlexaAccount)
+                  : null,
                 icon: Icon(isPatient && isAlexaLinked == true
                     ? Icons.refresh
                     : Icons.add),
                 label: Text(
                   isPatient
                       ? (isAlexaLinked == true
-                          ? 'Check Status'
+                          ? 'Disable Alexa Skill'
                           : 'Enable Alexa Skill')
                       : 'Coming Soon for Caregivers',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isPatient ? Colors.blue : Colors.grey,
+                  backgroundColor: isPatient ? (isAlexaLinked == true ? Colors.red : Colors.blue) : Colors.grey,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

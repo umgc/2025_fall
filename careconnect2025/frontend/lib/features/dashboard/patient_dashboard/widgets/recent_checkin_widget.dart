@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/services/checkin_service.dart';
 
 /// CheckIn Model
 class CheckIn {
@@ -7,10 +10,36 @@ class CheckIn {
   final String emoji;
 
   CheckIn({required this.date, required this.status, required this.emoji});
+
+  factory CheckIn.fromJson(Map<String, dynamic> json) {
+    return CheckIn(
+      date: DateTime.parse(json['date']),
+      status: json['status'] ?? '',
+      emoji: json['emoji'] ?? '',
+    );
+  }
+
 }
 
 /// Recent CheckIns Widget
 class RecentCheckInsWidget extends StatelessWidget {
+
+  /// Call this from the patient side when the user checks in.
+  static Future<bool> performCheckIn({
+    required String patientId,
+    required String caregiverId,
+  }) async {
+    return await CheckinService.addCheckin(patientId, caregiverId);
+  }
+
+  // Static counter to track all check-ins for caregiver dashboard linkage
+  static int totalCheckIns = 0;
+
+  /// This method updates the count whenever new check-ins are received
+  static void updateCheckInCount(List<CheckIn> latestCheckIns) {
+    totalCheckIns = latestCheckIns.length;
+  }
+
   final List<CheckIn> checkIns;
 
   const RecentCheckInsWidget({super.key, required this.checkIns});
@@ -18,6 +47,10 @@ class RecentCheckInsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    
+    // Update the counter each time this widget rebuilds
+    RecentCheckInsWidget.updateCheckInCount(checkIns);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
@@ -54,6 +87,50 @@ class RecentCheckInsWidget extends StatelessWidget {
               ),
             ],
           ),
+          
+          // Add Check-In button for patient
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              label: const Text(
+                'Check In',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              onPressed: () async {
+                final userProvider = Provider.of<UserProvider>(context, listen: false);
+                final patientId = userProvider.user?.id.toString() ?? '';
+                final caregiverId = userProvider.user?.caregiverId.toString() ?? '';
+
+                final success = await RecentCheckInsWidget.performCheckIn(
+                  patientId: patientId,
+                  caregiverId: caregiverId,
+                );
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? 'Check-In successful!' : 'Check-In failed. Try again.',
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+
           const SizedBox(height: 16),
           ...checkIns
               .take(3)
@@ -106,4 +183,18 @@ class RecentCheckInsWidget extends StatelessWidget {
     ];
     return '${months[date.month - 1]} ${date.day}';
   }
+
+  /// Sends a check-in to the backend for this patient.
+Future<void> _recordCheckIn(String patientId, String caregiverId) async {
+  try {
+    final success = await CheckinService.addCheckin(patientId, caregiverId);
+    if (success) {
+      debugPrint('✅ Patient check-in successful. $patientId');
+    } else {
+      debugPrint('⚠️ Check-in failed.');
+    }
+  } catch (e) {
+    debugPrint('❌ Error recording check-in: $e');
+  }
+}
 }

@@ -1,5 +1,6 @@
 package com.careconnect.service;
 
+import java.util.Map;
 import com.careconnect.model.Caregiver;
 import com.careconnect.model.Patient;
 import com.careconnect.model.User;
@@ -23,6 +24,9 @@ import com.careconnect.service.AllergyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import java.util.HashMap;
+import java.util.ArrayList;
+
 
 import java.util.Collections;
 import java.util.List;
@@ -119,6 +123,26 @@ public class PatientService {
         return user != null && patientRepository.existsByUser(user);
     }
 
+
+    // 6. Get primary care provider details for a patient
+    public Map<String, Object> getPrimaryProvider(Long patientId) {
+        Patient patient = patientRepository.findById(patientId)
+            .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
+        Map<String, Object> provider = new HashMap<>();
+        if (patient.getPrimaryCareProvider() != null) {
+            provider.put("name", patient.getPrimaryCareProvider().getName());
+            provider.put("specialty", patient.getPrimaryCareProvider().getSpecialty());
+            provider.put("organization", patient.getPrimaryCareProvider().getOrganization());
+            provider.put("phone", patient.getPrimaryCareProvider().getPhone());
+            provider.put("email", patient.getPrimaryCareProvider().getEmail());
+        }
+        return provider;
+    }
+
+
+
+
+
     /**
      * Get complete patient profile including allergies
      */
@@ -210,7 +234,7 @@ public class PatientService {
         
         // Get all medical information
         List<AllergyDTO> allergies = allergyService.getAllergiesForPatient(patientId);
-        List<MedicationDTO> activeMedications = medicationService.getActiveMedicationsForPatient(patientId);
+        List<MedicationDTO> activeMedications = medicationService.getAllMedicationsForPatient(patientId);
         LatestVitalsDTO latestVitals = getLatestVitals(patientId);
         LatestMoodPainDTO latestMoodPain = getLatestMoodPain(patientId);
         MedicalSummaryDTO medicalSummary = buildMedicalSummary(patientId, allergies, activeMedications, latestVitals, latestMoodPain);

@@ -24,7 +24,11 @@ class PatientCard extends StatelessWidget {
   /// Parameters:
   /// * [patient] - The patient data to display in the card
   /// * [onTap] - Optional callback function executed when card is tapped
-  const PatientCard({super.key, required this.patient, this.onTap});
+  const PatientCard({
+    Key? key,
+    required this.patient,
+    this.onTap,
+  }) : super(key: key);
 
   /// Builds the patient card widget.
   ///
@@ -108,9 +112,7 @@ class PatientCard extends StatelessWidget {
                 Text(
                   patient.statusMessage,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: patient.isUrgent
-                        ? Colors.red
-                        : theme.colorScheme.onSurface,
+                    color: patient.isUrgent ? Colors.red : theme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -205,7 +207,11 @@ class PatientCard extends StatelessWidget {
   Widget _buildIconWithBadge(IconData icon, int count, ThemeData theme) {
     return Stack(
       children: [
-        Icon(icon, color: theme.colorScheme.onSurfaceVariant, size: 32),
+        Icon(
+          icon,
+          color: theme.colorScheme.onSurfaceVariant,
+          size: 32,
+        ),
         if (count > 0)
           Positioned(
             right: 0,
@@ -216,7 +222,10 @@ class PatientCard extends StatelessWidget {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(6),
               ),
-              constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
+              constraints: const BoxConstraints(
+                minWidth: 12,
+                minHeight: 12,
+              ),
               child: Text(
                 count.toString(),
                 style: const TextStyle(
