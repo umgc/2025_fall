@@ -2,24 +2,53 @@
 
 ## Introduction
 
-### Purpose
+### Purpose and Vision
 
-This Programmer Guide provides comprehensive documentation for developing, maintaining, and troubleshooting the CareConnect system. It covers all technical aspects, including development setup, coding standards, system integrations, and development lifecycle tools.
+This Programmer's Guide serves as the central hub of technical knowledge for the CareConnect platform, a comprehensive healthcare management system designed to connect patients, caregivers, and family members in a seamless digital ecosystem. Its purpose is threefold:
+
+**Onboarding**: To rapidly acclimate new developers to our complex, multi-technology stack by explaining the architectural decisions and development workflows. Rather than simply listing technologies, we explain *why* each was chosen and how they work together to create a cohesive healthcare platform.
+
+**Reference**: To provide clear, actionable examples and explanations for implementing features across the frontend, backend, and integrated services. Each code example is accompanied by context explaining its role in the larger system architecture.
+
+**Troubleshooting**: To offer a curated set of solutions for common pitfalls, ensuring developer efficiency and system stability. Our troubleshooting sections follow a Problem → Root Cause → Step-by-Step Solution approach for clarity.
+
+This document goes beyond simply listing endpoints and code; it explains the reasoning behind our design patterns, such as why we chose JWT for stateless authentication in a healthcare context and how our WebSocket architecture ensures real-time updates for critical patient alerts.
 
 ### Intended Audience
 
-This document is for developers, engineers, and system administrators working on the CareConnect project. It serves as both an onboarding guide for new team members and a reference manual for existing developers.
+This guide is designed for:
 
-### Technology Overview
+- **New developers** joining the CareConnect team who need to understand not just what the system does, but why it was built this way
+- **Experienced engineers** seeking reference material for implementing new features or debugging complex issues
+- **System administrators** who need to understand the architecture to properly deploy and maintain the platform
+- **Technical leads** who need to make informed decisions about future architectural directions
 
-CareConnect is built with modern, scalable technologies:
-- **Frontend**: Flutter (cross-platform mobile/web)
-- **Backend**: Spring Boot 3.4.5 with Java 17
-- **Database**: PostgreSQL with JPA/Hibernate
-- **AI Integration**: Spring AI + DeepSeek/LangChain4j
-- **Security**: JWT-based authentication
-- **Real-time**: WebSocket communication
-- **Cloud**: AWS infrastructure
+The guide assumes familiarity with software development principles but provides context for domain-specific healthcare considerations and our specific technology choices.
+
+### Technology Overview and Rationale
+
+CareConnect is built with a carefully selected stack of modern, scalable technologies. Each choice was made to balance healthcare industry requirements, developer productivity, and long-term maintainability:
+
+**Frontend - Flutter (cross-platform mobile/web)**
+We selected Flutter for its unique ability to create truly native experiences across iOS, Android, web, and desktop from a single codebase. In healthcare, where users may access the platform from various devices, this cross-platform capability is crucial. Flutter's reactive framework and rich widget library also enable us to build complex, accessible UIs that meet healthcare usability standards.
+
+**Backend - Spring Boot 3.4.5 with Java 17**
+Spring Boot was chosen for its enterprise-grade maturity, extensive ecosystem, and strong security features—all critical for healthcare applications handling sensitive patient data. Java 17's modern features (sealed classes, records, pattern matching) allow us to write more expressive, type-safe code while maintaining backwards compatibility with existing Java systems common in healthcare infrastructure.
+
+**Database - PostgreSQL with JPA/Hibernate**
+PostgreSQL provides the ACID compliance and data integrity guarantees essential for medical records. Its support for JSON columns allows us to store flexible health data structures while maintaining strong relational integrity for core entities like users and medications. JPA/Hibernate abstracts database operations while giving us fine-grained control when needed for complex healthcare queries.
+
+**AI Integration - Spring AI + DeepSeek/LangChain4j**
+Healthcare applications benefit enormously from AI for tasks like health risk assessment and intelligent scheduling. We use Spring AI's abstraction layer with DeepSeek and LangChain4j to provide AI-powered features while maintaining the flexibility to switch or combine AI providers as the technology evolves.
+
+**Security - JWT-based authentication**
+JWT (JSON Web Tokens) enable stateless authentication, crucial for our distributed architecture and real-time features. In healthcare, where audit trails and precise access control are mandatory, JWT's self-contained claims allow us to verify user identity and permissions without database lookups on every request, while still maintaining security through signature verification.
+
+**Real-time Communication - WebSocket**
+Healthcare scenarios often require immediate notification (medication reminders, vital sign alerts, emergency communications). WebSocket provides the persistent, bidirectional connection needed for these real-time features, while our fallback to HTTP polling ensures reliability even in constrained network environments.
+
+**Cloud Infrastructure - AWS**
+AWS provides the scalability, security certifications (HIPAA compliance options), and service breadth needed for healthcare applications. Our infrastructure-as-code approach using Terraform ensures reproducible, auditable deployments—a requirement for regulated healthcare environments.
 
 ## Architecture Overview
 
@@ -208,9 +237,29 @@ lib/
 └── main.dart
 ```
 
-### State Management
+### State Management with Provider
 
-CareConnect uses Provider for state management:
+CareConnect uses the Provider package for state management, selected for its simplicity, excellent documentation, and suitability for our mid-complexity application. It follows the inherited widget pattern, making state accessible across the widget tree without excessive boilerplate—a key consideration when building healthcare UIs that need to share patient data across many screens.
+
+#### Architectural Pattern: Feature-Specific ChangeNotifiers
+
+We implement a single, feature-specific ChangeNotifier for each major domain (e.g., AuthProvider, HealthDataProvider). This encapsulates all state and business logic related to that feature, following the single responsibility principle and making the codebase easier to navigate for developers new to the project.
+
+#### Key Implementation Details
+
+**Private State Variables**: All state variables (like `_currentUser`, `_isLoading`) are prefixed with underscore, making them private to the provider class. This prevents external mutation and ensures all changes go through controlled methods—critical for maintaining data integrity in a healthcare application where unauthorized state changes could have serious consequences.
+
+**Public Getters for Read-Only Access**: We expose state via public getters (e.g., `User? get currentUser`). This provides read-only access to the UI, enforcing a unidirectional data flow that makes the application's behavior predictable and debuggable.
+
+**State Modification Through Public Methods**: State is only changed within public methods (e.g., `login()`, `logout()`). These methods are responsible for:
+- **API Communication**: Calling the appropriate service layer methods
+- **State Updates**: Modifying the private variables based on the result
+- **Persistence**: Managing local storage of tokens or user data for offline access
+- **Notifications**: Calling `notifyListeners()` to inform the UI of state changes and trigger rebuilds
+
+#### Example: Authentication Flow in AuthProvider
+
+Below is the complete authentication flow, demonstrating how a user login request flows through the provider:
 
 ```dart
 // providers/auth_provider.dart
@@ -219,30 +268,99 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // Public interface for the UI to access state
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
   Future<void> login(String email, String password) async {
+    // 1. Signal the start of an async operation
+    //    This allows the UI to show a loading indicator
     _setLoading(true);
+    _clearError();
+
     try {
+      // 2. Delegate the network call to the service layer
+      //    Separation of concerns: providers handle state, services handle API
       final response = await _authService.login(email, password);
+
+      // 3. Update the app state on success
+      //    Store the authenticated user for access throughout the app
       _currentUser = response.user;
+      
+      // 4. Persist authentication tokens securely
+      //    This enables the user to stay logged in between sessions
       await _tokenManager.saveTokens(response.tokens);
+      
+      // 5. Clear any previous errors
       _error = null;
+
     } catch (e) {
-      _error = e.toString();
+      // 6. Handle errors and update state accordingly
+      //    Provide user-friendly error messages rather than raw exceptions
+      _setError('Login failed: Please check your credentials.');
+      
+      // 7. Log the error for debugging while keeping sensitive data private
+      _logger.error('Login failed for email: $email', error: e);
     } finally {
+      // 8. Signal the end of the operation
+      //    This ensures the loading state is cleared even if an error occurred
       _setLoading(false);
     }
   }
 
+  // Private method to handle loading state consistently
+  // By centralizing this logic, we ensure notifyListeners() is never forgotten
   void _setLoading(bool loading) {
     _isLoading = loading;
+    notifyListeners(); // This is what tells all listening widgets to rebuild
+  }
+  
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
+  
+  void _setError(String error) {
+    _error = error;
     notifyListeners();
   }
 }
 ```
+
+#### Usage in UI
+
+A LoginScreen would use `context.watch<AuthProvider>()` to listen to this state and react accordingly:
+
+```dart
+class LoginScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // Watch the provider - this widget rebuilds when the provider notifies
+    final authProvider = context.watch<AuthProvider>();
+    
+    // React to different states
+    if (authProvider.isLoading) {
+      return LoadingSpinner(); // Show loading during authentication
+    }
+    
+    if (authProvider.error != null) {
+      return ErrorMessage(authProvider.error!); // Show user-friendly error
+    }
+    
+    if (authProvider.currentUser != null) {
+      // Navigate to dashboard on successful login
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/dashboard');
+      });
+    }
+    
+    return LoginForm(); // Show the login form
+  }
+}
+```
+
+This pattern ensures that authentication state flows in one direction (provider → UI), making it easy to reason about when and why the UI updates—a critical feature when dealing with sensitive healthcare data that requires precise access control.
 
 ### Routing Configuration
 
@@ -535,41 +653,61 @@ public interface VitalSignRepository extends JpaRepository<VitalSign, Long> {
 }
 ```
 
-### Service Layer
+### Service Layer: Implementing Business Logic and Orchestration
 
-Business logic implementation:
+The Service Layer in CareConnect acts as the core of our business logic, sitting between the Controllers (which handle HTTP requests and responses) and the Repositories (which handle data access). This architectural separation is crucial in healthcare applications where business rules can be complex and must be consistently applied across different access points (REST API, WebSocket, scheduled jobs, etc.).
+
+#### Core Responsibilities
+
+**Orchestrating Complex Operations**: Business processes in healthcare often involve multiple steps. For example, recording a vital sign might require: validating the user exists, saving the measurement, checking for critical values, notifying caregivers if needed, and updating analytics. The service layer coordinates all these steps as a single, transactional unit of work.
+
+**Enforcing Business Rules**: Validation goes beyond simple JSR-380 annotations. Services enforce domain-specific rules like "is this blood pressure reading within a critical range for *this specific patient* given their medical history?" These rules often require database queries or complex calculations.
+
+**Applying Security Context**: Services ensure that a user can only access data they are authorized to see. Even if a controller is misconfigured, the service layer acts as a second line of defense by verifying permissions.
+
+**Managing Transactions**: Using `@Transactional`, services ensure that either all database operations succeed or all fail together. In healthcare, partial data saves could lead to inconsistent medical records, so this all-or-nothing approach is essential.
+
+#### Example: Recording a Vital Sign with Automated Alerts
+
+This example demonstrates how the service layer orchestrates a seemingly simple operation (recording a blood pressure reading) into a multi-step process that maintains data integrity and patient safety:
 
 ```java
 // service/HealthService.java
 @Service
-@Transactional
+@Transactional // This entire method is a single transaction
 public class HealthService {
 
     private final VitalSignRepository vitalSignRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final VitalSignAnalyzer vitalSignAnalyzer;
+    
+    private static final Logger log = LoggerFactory.getLogger(HealthService.class);
 
     public HealthService(VitalSignRepository vitalSignRepository,
                         UserRepository userRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        VitalSignAnalyzer vitalSignAnalyzer) {
         this.vitalSignRepository = vitalSignRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
-    }
-
-    public List<VitalSignDTO> getVitalSigns(Long userId) {
-        List<VitalSign> vitalSigns = vitalSignRepository
-            .findByUserIdOrderByMeasurementTimeDesc(userId);
-
-        return vitalSigns.stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList());
+        this.vitalSignAnalyzer = vitalSignAnalyzer;
     }
 
     public VitalSignDTO recordVitalSign(Long userId, VitalSignDTO vitalSignDTO) {
+        // 1. VALIDATE: First, ensure the user exists and is authorized
+        //    This prevents orphaned vital signs and enforces data integrity
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "User not found with id: " + userId));
+        
+        // Additional business rule: Only patients and caregivers can record vitals
+        if (!user.canRecordVitalSigns()) {
+            throw new UnauthorizedException("User is not authorized to record vital signs");
+        }
 
+        // 2. CONVERT: Map the incoming DTO to a JPA Entity
+        //    DTOs protect our API from exposing internal entity structure
         VitalSign vitalSign = new VitalSign();
         vitalSign.setUser(user);
         vitalSign.setType(vitalSignDTO.getType());
@@ -578,27 +716,69 @@ public class HealthService {
         vitalSign.setNotes(vitalSignDTO.getNotes());
         vitalSign.setMeasurementTime(LocalDateTime.now());
 
+        // 3. PERSIST: Save the entity to the database
+        //    The transaction ensures this and all subsequent operations succeed together
         vitalSign = vitalSignRepository.save(vitalSign);
+        
+        log.info("Recorded vital sign for user {}: {} {}", 
+                userId, vitalSign.getValue(), vitalSign.getUnit());
 
-        // Check for alerts
-        checkVitalSignAlerts(vitalSign);
+        // 4. PROCESS BUSINESS LOGIC: Check for critical alerts after saving
+        //    This is a key piece of business logic that belongs in the service
+        //    If this were in the controller, other entry points might miss the check
+        checkForVitalSignAlerts(vitalSign);
 
+        // 5. RETURN: Convert the saved entity back to a DTO for the response
+        //    This prevents accidental exposure of Hibernate proxies or lazy-loaded data
         return convertToDTO(vitalSign);
     }
 
-    private void checkVitalSignAlerts(VitalSign vitalSign) {
-        // Implement alert logic based on vital sign thresholds
-        if (isAbnormalReading(vitalSign)) {
-            notificationService.sendAlert(
+    /**
+     * Analyzes a vital sign and sends alerts if critical thresholds are exceeded.
+     * This method demonstrates separation of concerns: the service orchestrates,
+     * while specialized components handle the complex medical logic.
+     */
+    private void checkForVitalSignAlerts(VitalSign vitalSign) {
+        // Delegate the complex medical logic to a dedicated analyzer
+        // This makes the code testable and allows medical rules to be updated
+        // independently of the service layer
+        AlertLevel alertLevel = vitalSignAnalyzer.analyzeVitalSign(vitalSign);
+        
+        if (alertLevel.isCritical()) {
+            // Use the notification service to alert caregivers
+            // This abstraction allows notifications via email, SMS, push, etc.
+            notificationService.sendHealthAlert(
                 vitalSign.getUser(),
-                "Abnormal vital sign detected: " + vitalSign.getType(),
-                AlertType.HEALTH_ALERT
+                String.format("Critical %s reading: %s %s", 
+                    vitalSign.getType(), 
+                    vitalSign.getValue(),
+                    vitalSign.getUnit()),
+                AlertType.CRITICAL_HEALTH_ALERT,
+                alertLevel
+            );
+            
+            // Audit log for compliance - all critical events must be logged
+            log.warn("CRITICAL ALERT generated for user {} - {} reading: {} {}",
+                vitalSign.getUser().getId(),
+                vitalSign.getType(),
+                vitalSign.getValue(),
+                vitalSign.getUnit());
+        } else if (alertLevel.needsAttention()) {
+            // Send lower-priority notification
+            notificationService.sendHealthAlert(
+                vitalSign.getUser(),
+                String.format("%s reading outside normal range: %s %s", 
+                    vitalSign.getType(), 
+                    vitalSign.getValue(),
+                    vitalSign.getUnit()),
+                AlertType.HEALTH_ADVISORY,
+                alertLevel
             );
         }
     }
 
     private VitalSignDTO convertToDTO(VitalSign vitalSign) {
-        // Convert entity to DTO
+        // Convert entity to DTO, ensuring we don't expose internal details
         return VitalSignDTO.builder()
             .id(vitalSign.getId())
             .type(vitalSign.getType())
@@ -610,6 +790,18 @@ public class HealthService {
     }
 }
 ```
+
+#### Why This Structure?
+
+This method clearly separates concerns:
+- The **repository** handles only data persistence and retrieval
+- The **analyzer** encapsulates complex medical rules and thresholds
+- The **notification service** handles the mechanics of sending alerts
+- The **service** orchestrates all these components into a cohesive workflow
+
+The `@Transactional` annotation is critical here. If the alert-sending logic fails (e.g., email server is down), the entire vital sign recording is rolled back. This ensures we never have a situation where a critical reading is recorded but caregivers aren't notified.
+
+In healthcare applications, this transactional integrity is not just a nice-to-have—it's a regulatory requirement. The service layer is where we enforce these guarantees.
 
 ### Controller Layer
 
@@ -4568,75 +4760,232 @@ flutter test  # Frontend
 
 ## Troubleshooting
 
+This section provides systematic approaches to resolving common issues in the CareConnect platform. Each issue is structured as: **Problem** → **Root Causes** → **Step-by-Step Resolution**, allowing you to quickly identify and fix issues while understanding why they occurred.
+
 ### Common Development Issues
 
 #### Configuration Problems
 
-**Environment Variable Issues**
-```bash
-# Check required environment variables
-echo $SECURITY_JWT_SECRET      # Required for JWT authentication
-echo $DEEPSEEK_API_KEY         # Required for AI features
-echo $STRIPE_SECRET_KEY        # Required for subscriptions
-echo $JDBC_URI                 # Database connection
+##### Problem: Environment Variable Issues
 
-# Set missing variables
-export SECURITY_JWT_SECRET="your-jwt-secret-key"
+**Symptoms**: Application fails to start with errors like "JWT secret not configured" or "API key missing". Services that depend on external APIs (AI, Stripe, AWS) fail to initialize.
+
+**Root Causes**:
+This typically occurs when environment variables are not properly set in your development environment. The application expects certain sensitive configuration values to be provided externally (not hardcoded) for security reasons. Common scenarios include:
+- Variables set in one terminal session but not persisted
+- Variables set in IDE configuration but not in terminal environment
+- Incorrect variable names (typos or case sensitivity issues)
+- Variables not exported in shell startup files
+
+**Systematic Resolution Steps**:
+
+1. **Verify Current Environment**: First, check which variables are actually set in your environment:
+```bash
+# Check all required environment variables at once
+echo "JWT Secret: $SECURITY_JWT_SECRET"
+echo "DeepSeek API Key: $DEEPSEEK_API_KEY"
+echo "Stripe Secret: $STRIPE_SECRET_KEY"
+echo "Database URL: $JDBC_URI"
+```
+Any variable showing blank means it's not set in your current environment.
+
+2. **Set Variables for Current Session**: For immediate testing, export variables in your terminal:
+```bash
+export SECURITY_JWT_SECRET="your-jwt-secret-key-at-least-32-chars"
 export DEEPSEEK_API_KEY="your-deepseek-api-key"
+export STRIPE_SECRET_KEY="your-stripe-secret-key"
+export JDBC_URI="jdbc:postgresql://localhost:5432/careconnect"
 ```
+These will only last for the current terminal session.
 
-**Profile-Specific Configuration Issues**
-```properties
-# application-dev.properties - Common issues:
-spring.jpa.hibernate.ddl-auto=update  # Risky for production
-spring.flyway.enabled=false           # Disabled due to circular dependencies
-
-# Fix for production:
-spring.jpa.hibernate.ddl-auto=validate
-spring.flyway.enabled=true
-```
-
-**Database Migration Problems**
+3. **Persist Variables Permanently**: Add these to your shell configuration file for persistence:
 ```bash
-# Flyway is currently disabled due to circular dependency issues
-# Temporary workaround uses JPA DDL auto-update
+# For bash users (~/.bashrc or ~/.bash_profile)
+echo 'export SECURITY_JWT_SECRET="your-secret"' >> ~/.bashrc
+source ~/.bashrc
 
+# For zsh users (~/.zshrc)
+echo 'export SECURITY_JWT_SECRET="your-secret"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+4. **Configure IDE Environment**: If running from an IDE, configure the run configuration:
+- **IntelliJ IDEA**: Run → Edit Configurations → Environment Variables
+- **VS Code**: Add to `.vscode/launch.json` or use `.env` file with appropriate plugin
+
+5. **Verify Application Startup**: After setting variables, restart your application and check the logs for successful initialization of services that depend on these variables.
+
+**Prevention**: Create a `.env.example` file in the repository documenting all required environment variables. New developers can copy this to `.env` and fill in their values.
+
+##### Problem: Profile-Specific Configuration Issues
+
+**Symptoms**: Application behavior differs between environments. Database schema updates fail in production. Flyway migrations conflict with JPA auto-generation.
+
+**Root Causes**:
+Spring Boot uses profiles to manage environment-specific configuration. Issues arise when:
+- Development profile uses `spring.jpa.hibernate.ddl-auto=update` which auto-generates schema changes
+- Flyway is disabled in development but enabled in production (or vice versa)
+- Configuration properties conflict between profiles
+- Active profile is not what you expect (e.g., running with `default` when you meant `dev`)
+
+**Systematic Resolution Steps**:
+
+1. **Identify Active Profile**: Check which profile Spring Boot is actually using:
+```bash
+# Check application logs on startup for:
+# "The following profiles are active: dev"
+
+# Or explicitly check:
+java -jar your-app.jar --spring.profiles.active=dev
+
+# Or via environment variable:
+export SPRING_PROFILES_ACTIVE=dev
+```
+
+2. **Understand Profile Hierarchy**: Spring Boot loads configuration in this order (later overrides earlier):
+   - `application.properties` (base configuration, always loaded)
+   - `application-{profile}.properties` (profile-specific overrides)
+   - Environment variables (highest priority)
+
+3. **Review Development vs Production Settings**: Common configuration that should differ:
+```properties
+# application-dev.properties (Development)
+spring.jpa.hibernate.ddl-auto=update      # Auto-generate schema changes
+spring.flyway.enabled=false               # Disabled due to circular dependencies
+spring.jpa.show-sql=true                  # Show SQL for debugging
+logging.level.com.careconnect=DEBUG       # Verbose logging
+
+# application-prod.properties (Production)
+spring.jpa.hibernate.ddl-auto=validate    # Never auto-modify production schema
+spring.flyway.enabled=true                # Use Flyway for controlled migrations
+spring.jpa.show-sql=false                 # Don't log SQL in production
+logging.level.com.careconnect=INFO        # Production logging level
+```
+
+4. **Fix Flyway/JPA Conflicts**: Currently, CareConnect has Flyway disabled in development due to circular dependency issues. To manually apply migrations:
+```bash
 # Check current database schema
 psql -h localhost -U careconnect -d careconnect -c "\dt"
 
-# Manual migration approach
+# Manually apply specific migration
 psql -h localhost -U careconnect -d careconnect -f src/main/resources/db/migration/V22__create_ai_chat_tables.sql
+
+# Verify migration was applied
+psql -h localhost -U careconnect -d careconnect -c "SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 5;"
 ```
+
+5. **Validate Profile Loading**: Add logging to confirm correct profile is loaded:
+```properties
+# Add to application.properties
+logging.level.org.springframework.core.env=DEBUG
+```
+This will log which property files are being loaded and in what order.
+
+**Why This Happens**: Flyway and JPA DDL auto-generation both try to manage database schema, leading to conflicts. In CareConnect, we've temporarily disabled Flyway in development to avoid circular dependencies, but this is a technical debt that should be resolved by fixing the circular dependencies and re-enabling Flyway.
 
 #### Flutter Build Issues
 
-**Cache and Dependencies**
-```bash
-# Clear Flutter cache
-flutter clean
-flutter pub cache clean
-flutter pub get
+##### Problem: Unexpected Build Failures or Dependency Conflicts
 
-# Fix version conflicts
-flutter pub deps
-flutter pub upgrade
+**Symptoms**: `flutter build` or `flutter run` fails with errors about missing packages, version conflicts, or corrupted cache. Tests that previously passed now fail inexplicably.
 
-# Reset Flutter installation
-flutter channel stable
-flutter upgrade
-flutter doctor -v
-```
+**Root Causes**:
+Flutter's build system aggressively caches dependencies and build artifacts for performance. While this usually helps, it can cause issues when:
+- Package versions change in `pubspec.yaml` but cached versions persist
+- Build artifacts become corrupted (often after git operations or Flutter SDK updates)
+- Multiple Flutter projects on your system create conflicting cached state
+- Flutter SDK is updated but local caches aren't refreshed
 
-**Build Failures**
-```bash
-# Android build issues
-cd android && ./gradlew clean
-flutter build apk --debug
+**Systematic Resolution Steps**:
 
-# iOS build issues
-cd ios && pod install
-flutter build ios --debug
-```
+1. **Level 1: Refresh Dependency Cache** (Solves ~80% of issues)
+   ```bash
+   # Delete the build folder (contains compiled artifacts)
+   flutter clean
+
+   # Repair the Pub cache (where packages are stored)
+   flutter pub cache repair
+
+   # Re-fetch all dependencies for this project
+   flutter pub get
+   ```
+   **What this does**: `flutter clean` removes all compiled artifacts, forcing a fresh build. `pub cache repair` checks the integrity of all cached packages and re-downloads any that are corrupted. `pub get` updates the project's dependency resolution.
+
+2. **Level 2: Upgrade SDK and Dependencies** (If Level 1 doesn't resolve)
+   ```bash
+   # Ensure you're on the stable channel (not dev or beta)
+   flutter channel stable
+
+   # Upgrade the Flutter SDK itself to the latest stable version
+   flutter upgrade
+
+   # Check which dependencies are outdated
+   flutter pub outdated
+
+   # Upgrade dependencies to latest compatible versions
+   flutter pub upgrade
+   ```
+   **Important**: After `flutter upgrade`, run `flutter doctor -v` to ensure all components (Android toolchain, iOS toolchain, etc.) are properly configured.
+
+3. **Level 3: Resolve Dependency Conflicts** (For persistent version conflicts)
+   ```bash
+   # Visualize the dependency tree to find conflicts
+   flutter pub deps --style=tree
+   ```
+   Look for the same package appearing multiple times with different versions. Example output:
+   ```
+   ├── http 0.13.5
+   └── some_package 1.0.0
+       └── http 0.13.4  ← Conflict! Two versions of http
+   ```
+   
+   **Resolution**: Use `dependency_overrides` in `pubspec.yaml` (use sparingly, only as last resort):
+   ```yaml
+   dependency_overrides:
+     http: ^0.13.5  # Force all packages to use this version
+   ```
+
+4. **Level 4: IDE Synchronization** (If builds work in terminal but not IDE)
+   
+   **VS Code**:
+   ```
+   - Open Command Palette (Cmd/Ctrl+Shift+P)
+   - Run: "Dart: Restart Analysis Server"
+   - If issue persists: Reload window (Cmd/Ctrl+R)
+   ```
+   
+   **Android Studio**:
+   ```
+   - File > Invalidate Caches / Restart...
+   - Select "Invalidate and Restart"
+   ```
+   
+   **What this does**: IDEs maintain their own analysis of your Dart code. Sometimes this gets out of sync with actual files, causing phantom errors.
+
+5. **Level 5: Verify Exact Package Versions** (For reproducible team builds)
+   
+   Check the project's `pubspec.yaml` and ensure you're using the exact versions specified:
+   ```yaml
+   dependencies:
+     flutter:
+       sdk: flutter
+     provider: ^6.0.5      # Ensure your version matches team's version
+     dio: ^5.3.2
+     go_router: ^10.1.0
+   ```
+   
+   The `pubspec.lock` file (committed to git) records exact versions. If your `pubspec.lock` differs from the team's, you might get different behavior.
+
+**Prevention**: 
+- Commit `pubspec.lock` to version control so all team members use identical package versions
+- Document the Flutter version the project uses in README: "This project requires Flutter 3.9.2 or later"
+- Run `flutter doctor` regularly to catch environment issues early
+- When changing dependencies, run tests before committing to catch incompatibilities
+
+**When to Escalate**: If none of these steps resolve the issue, the problem may be:
+- A genuine bug in a package (check package's GitHub issues)
+- Incompatibility with your specific OS/environment (check Flutter GitHub issues)
+- Project-specific configuration issue (consult the team lead)
 
 #### Backend Compilation Issues
 
