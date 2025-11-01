@@ -1017,7 +1017,7 @@ You can:
 * **View past and upcoming visits** from the patient dashboard
 * **Work offline** and sync when reconnected
 
-##Invoice Assistant
+## Invoice Assistant
 ### Invoice Dashboard
    - Total invoices
    - Total amount
