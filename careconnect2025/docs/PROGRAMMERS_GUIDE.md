@@ -574,9 +574,24 @@ testWidgets('redirects unauthenticated users to login', (tester) async {
 
 The declarative nature makes it easy to verify routing logic without complex widget tree navigation.
 
-### HTTP Client Configuration
+### HTTP Client Configuration with Dio and Interceptors
 
-Dio configuration with interceptors:
+CareConnect uses Dio as its HTTP client library instead of Flutter's built-in `http` package. This choice was made for Dio's powerful interceptor system, which is crucial for implementing cross-cutting concerns like authentication, logging, and error handling in a consistent, maintainable way.
+
+#### Why Dio Over Built-in HTTP?
+
+While Flutter's `http` package is simpler, Dio provides essential features for a production healthcare app:
+
+- **Interceptors**: Modify requests/responses globally (add auth tokens, log traffic, transform errors)
+- **Request cancellation**: Cancel in-flight requests when user navigates away (saves bandwidth, prevents race conditions)
+- **File upload/download**: Built-in support with progress tracking (for medical records, lab results)
+- **Timeout configuration**: Separate timeouts for connect vs receive (important for slow hospital networks)
+- **Retry logic**: Automatic retry with exponential backoff (essential for reliability)
+- **FormData support**: Multipart file uploads (medical document uploads)
+
+In healthcare, where API calls might involve large files (MRI scans) or need perfect reliability (medication orders), these features are not luxuries—they're requirements.
+
+#### Dio Configuration and Initialization
 
 ```dart
 // config/network/api_client.dart
@@ -584,43 +599,295 @@ class ApiClient {
   late final Dio _dio;
 
   ApiClient() {
+    // Base configuration for all requests
     _dio = Dio(BaseOptions(
+      // Server URL from environment config (different for dev/staging/prod)
       baseUrl: EnvironmentConfig.baseUrl,
+      
+      // Connection timeout: How long to wait to establish connection
+      // 30 seconds accommodates slow hospital WiFi
       connectTimeout: const Duration(seconds: 30),
+      
+      // Receive timeout: How long to wait for response after connection
+      // 30 seconds accommodates large payloads (lab results PDFs)
       receiveTimeout: const Duration(seconds: 30),
+      
+      // Default headers for all requests
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     ));
 
-    _dio.interceptors.add(AuthInterceptor());
-    _dio.interceptors.add(LoggingInterceptor());
-    _dio.interceptors.add(ErrorInterceptor());
+    // Add interceptors in order - they execute sequentially
+    _dio.interceptors.add(AuthInterceptor());      // 1. Add auth tokens
+    _dio.interceptors.add(LoggingInterceptor());   // 2. Log requests/responses
+    _dio.interceptors.add(ErrorInterceptor());     // 3. Transform errors
   }
+  
+  // Expose dio instance for making requests
+  Dio get dio => _dio;
 }
+```
 
+#### Understanding Interceptors
+
+Interceptors in Dio work like middleware in Express or filters in Spring Boot. Each interceptor can:
+- Inspect and modify outgoing requests before they're sent
+- Inspect and modify incoming responses before they reach your code
+- Handle errors globally instead of in every API call
+
+**Interceptor Execution Order**:
+```
+Request Path:  Your Code → Auth → Logging → Error → Network
+Response Path: Network → Error → Logging → Auth → Your Code
+```
+
+#### Authentication Interceptor: Automatic Token Injection
+
+The authentication interceptor ensures every protected API call includes the user's JWT token, without developers needing to manually add it to each request:
+
+```dart
 class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    // Retrieve stored JWT token from secure storage
     final token = await TokenManager.getAccessToken();
+    
     if (token != null) {
+      // Add Authorization header to every request
       options.headers['Authorization'] = 'Bearer $token';
     }
+    
+    // Continue to next interceptor
     handler.next(options);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // Special case: If server returns 401 Unauthorized, token might be expired
     if (err.response?.statusCode == 401) {
+      // Attempt to refresh the token using refresh token
       final refreshed = await TokenManager.refreshToken();
+      
       if (refreshed) {
-        // Retry the original request
-        final clonedRequest = await _dio.fetch(err.requestOptions);
-        handler.resolve(clonedRequest);
-        return;
+        // Token refresh succeeded - retry the original request
+        try {
+          // Clone the original request with new token
+          final clonedRequest = await _dio.fetch(err.requestOptions);
+          
+          // Resolve with successful response
+          handler.resolve(clonedRequest);
+          return;
+        } catch (e) {
+          // Retry failed - fall through to error handling
+        }
+      } else {
+        // Token refresh failed - user needs to log in again
+        // Clear stored tokens and navigate to login
+        await TokenManager.clearTokens();
+        // Navigate to login screen
+        navigatorKey.currentState?.pushReplacementNamed('/login');
       }
     }
+    
+    // For non-401 errors or failed token refresh, pass error to next handler
     handler.next(err);
   }
 }
 ```
+
+**What this achieves**:
+1. **Automatic authentication**: Developers never forget to add tokens
+2. **Transparent token refresh**: If token expires mid-session, app automatically refreshes it and retries the request—user never notices
+3. **Graceful session expiration**: If refresh token also expired, user is smoothly redirected to login
+
+This is particularly important in healthcare where a user might leave the app open during a shift. When they return hours later, the app automatically handles the expired token without losing their work.
+
+#### Logging Interceptor: Debugging and Audit Trail
+
+The logging interceptor provides visibility into all network traffic, essential for debugging API integration issues and maintaining audit trails (required in healthcare):
+
+```dart
+class LoggingInterceptor extends Interceptor {
+  final Logger _logger = Logger('API');
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Log outgoing request details
+    _logger.info('➡️ ${options.method} ${options.uri}');
+    
+    // Log headers (excluding sensitive ones)
+    options.headers.forEach((key, value) {
+      if (!_isSensitiveHeader(key)) {
+        _logger.debug('Header: $key: $value');
+      }
+    });
+    
+    // Log request body (excluding sensitive data like passwords)
+    if (options.data != null && !_containsSensitiveData(options.path)) {
+      _logger.debug('Request body: ${options.data}');
+    }
+    
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // Log successful response
+    _logger.info('✅ ${response.statusCode} ${response.requestOptions.uri}');
+    _logger.debug('Response data: ${response.data}');
+    
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Log errors prominently
+    _logger.error(
+      '❌ ${err.response?.statusCode ?? 'ERROR'} ${err.requestOptions.uri}',
+      error: err,
+    );
+    
+    if (err.response?.data != null) {
+      _logger.error('Error response: ${err.response?.data}');
+    }
+    
+    handler.next(err);
+  }
+  
+  bool _isSensitiveHeader(String key) {
+    // Don't log authorization tokens or API keys
+    return key.toLowerCase() == 'authorization' || 
+           key.toLowerCase().contains('token') ||
+           key.toLowerCase().contains('key');
+  }
+  
+  bool _containsSensitiveData(String path) {
+    // Don't log bodies of login/register requests (contain passwords)
+    return path.contains('/auth/login') || 
+           path.contains('/auth/register') ||
+           path.contains('/password');
+  }
+}
+```
+
+**Why this matters**: In production, when a caregiver reports "the app says patient data failed to load," these logs let you see exactly what request was made and what error the server returned, dramatically speeding up debugging.
+
+#### Error Interceptor: User-Friendly Error Messages
+
+The error interceptor transforms technical HTTP errors into user-friendly messages, preventing users from seeing cryptic "DioException: 500" errors:
+
+```dart
+class ErrorInterceptor extends Interceptor {
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Transform Dio errors into application-specific exceptions
+    String message;
+    
+    if (err.type == DioExceptionType.connectionTimeout || 
+        err.type == DioExceptionType.receiveTimeout) {
+      // Network timeout - likely slow connection or server overload
+      message = 'Connection timeout. Please check your internet connection and try again.';
+    } else if (err.type == DioExceptionType.badResponse) {
+      // Server returned an error status code
+      final statusCode = err.response?.statusCode;
+      
+      switch (statusCode) {
+        case 400:
+          // Bad request - show server's error message if available
+          message = err.response?.data['message'] ?? 
+                   'Invalid request. Please check your input.';
+          break;
+        case 401:
+          // Unauthorized - handled by AuthInterceptor, but provide fallback
+          message = 'Authentication required. Please log in.';
+          break;
+        case 403:
+          // Forbidden - user doesn't have permission
+          message = 'You do not have permission to access this resource.';
+          break;
+        case 404:
+          // Not found - resource doesn't exist
+          message = 'The requested resource was not found.';
+          break;
+        case 500:
+        case 502:
+        case 503:
+          // Server errors - show friendly message
+          message = 'Server error. Our team has been notified. Please try again later.';
+          break;
+        default:
+          message = 'An unexpected error occurred. Please try again.';
+      }
+    } else if (err.type == DioExceptionType.cancel) {
+      // Request was cancelled (user navigated away) - don't show error
+      handler.next(err);
+      return;
+    } else {
+      // Unknown error - generic message
+      message = 'Unable to connect to server. Please check your internet connection.';
+    }
+    
+    // Create application-specific exception with user-friendly message
+    final appException = ApiException(message, statusCode: err.response?.statusCode);
+    
+    // Log the technical error for debugging
+    logger.error('API Error: ${err.message}', error: err);
+    
+    // Pass the user-friendly exception to application code
+    handler.reject(DioException(
+      requestOptions: err.requestOptions,
+      error: appException,
+      type: err.type,
+    ));
+  }
+}
+```
+
+**Benefits**:
+- Users see "Connection timeout" instead of "DioException: ConnectionTimeout"
+- Developers get technical logs for debugging
+- Consistent error messages across the entire app
+- Healthcare-appropriate language (calm, reassuring, actionable)
+
+#### Making Requests with Configured Client
+
+With interceptors in place, making API calls is straightforward:
+
+```dart
+class HealthService {
+  final ApiClient _apiClient;
+
+  HealthService(this._apiClient);
+
+  Future<List<VitalSign>> getVitalSigns() async {
+    try {
+      // Make request - interceptors automatically:
+      // 1. Add auth token
+      // 2. Log request
+      // 3. Transform any errors
+      final response = await _apiClient.dio.get('/api/health/vitals');
+      
+      // Parse response
+      return (response.data as List)
+          .map((json) => VitalSign.fromJson(json))
+          .toList();
+    } on ApiException catch (e) {
+      // Error was already transformed by ErrorInterceptor
+      throw HealthException(e.message);
+    }
+  }
+}
+```
+
+Notice how clean this code is—no manual token injection, no response logging, no error transformation. All that complexity is handled by interceptors, ensuring consistency across all API calls in the application.
+
+This architecture means:
+- New developers can add API calls without worrying about auth or logging
+- Changing how we handle authentication (e.g., switching from JWT to OAuth) only requires updating one file
+- All API calls automatically benefit from improvements to error handling or logging
+- Healthcare compliance requirements (like audit logging) are enforced automatically
 
 ### Feature Module Structure
 
@@ -1897,40 +2164,107 @@ public CorsConfigurationSource corsConfigurationSource() {
 - Brute force protection for authentication endpoints
 - Emergency endpoint exemption from rate limits
 
-## Real-time Communication
+## Real-time Communication with WebSocket
 
-CareConnect implements a comprehensive WebSocket-based real-time communication system specifically designed for healthcare applications. The system uses a **dual-mode architecture** that automatically switches between local development and AWS production environments.
+CareConnect implements a comprehensive WebSocket-based real-time communication system specifically designed for healthcare applications where timely information delivery can be critical to patient safety. The system uses a **dual-mode architecture** that automatically switches between local development (embedded WebSocket server) and AWS production (API Gateway WebSocket) environments.
+
+### Why WebSocket for Healthcare?
+
+Healthcare scenarios demand real-time communication in ways that traditional REST APIs cannot satisfy:
+
+**Critical Alerts**: When a patient's blood pressure reading is dangerously high, the caregiver needs immediate notification—not whenever they next refresh the dashboard. A 5-minute delay in notification could be the difference between timely intervention and a medical emergency.
+
+**Medication Reminders**: Patients need timely reminders to take medications. WebSocket push notifications are more reliable than polling, especially when the app is backgrounded.
+
+**Communication**: Video calls, text messaging, and emergency calls require persistent connections. Establishing a new HTTP connection for every message would be slow and wasteful.
+
+**Vital Signs Monitoring**: Real-time streaming of vital signs data (from connected devices like blood pressure monitors) requires continuous data flow, not request-response cycles.
+
+**Audit Requirements**: Healthcare regulations often require real-time audit logging. WebSocket connections can stream audit events as they occur, rather than batching them.
+
+While Server-Sent Events (SSE) could handle some use cases, WebSocket's bidirectional nature allows clients to also send data efficiently (like acknowledging alerts or sending heartbeats).
 
 ### Architecture Overview
 
-The WebSocket system provides three main communication channels:
-- **`/ws/careconnect`** - General healthcare updates (AI notifications, vital signs, medication reminders)
-- **`/ws/calls`** - Video/audio call management and SMS notifications
-- **`/ws/notifications`** - Basic notification delivery
+CareConnect provides three main WebSocket channels, each serving distinct purposes:
 
-### WebSocket Configuration
+**`/ws/careconnect`** - Primary healthcare communications channel
+- AI notifications (health risk assessments, recommendations)
+- Vital signs alerts (abnormal readings requiring attention)
+- Medication reminders (scheduled notifications)
+- Mood/pain log updates (real-time patient self-reporting)
+- Emergency alerts (critical patient situations)
 
-#### Dual-Mode Configuration
+**`/ws/calls`** - Call management and notifications
+- Video call initiation and coordination
+- Audio call signaling
+- SMS notifications (text message delivery)
+- Call status updates
+
+**`/ws/notifications`** - General notification delivery
+- System notifications
+- Administrative messages
+- Low-priority updates
+
+This separation allows different Quality of Service levels: emergency alerts on `/ws/careconnect` get highest priority, while general notifications can be throttled during high load.
+
+### Dual-Mode Configuration: Development vs Production
+
+CareConnect's WebSocket system adapts automatically to its environment:
+
+**Development Mode**: Uses Spring Boot's embedded WebSocket server
+- Runs on same port as REST API (8080)
+- Simple configuration, easy debugging
+- Full WebSocket features including SockJS fallback
+- Perfect for local development and testing
+
+**Production Mode**: Uses AWS API Gateway WebSocket
+- Scales automatically with load
+- Integrates with AWS Lambda for message processing
+- Global distribution via CloudFront
+- Handles connection persistence and reconnection
+
+This dual-mode approach means developers can work locally without AWS credentials, while production benefits from enterprise-grade infrastructure.
+
+#### Configuration Detection
 
 ```java
 // config/WebSocketModeConfig.java
 @Configuration
-@ConditionalOnProperty(name = "careconnect.websocket.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+    name = "careconnect.websocket.enabled", 
+    havingValue = "true", 
+    matchIfMissing = true
+)
 public class WebSocketModeConfig {
 
+    /**
+     * Local WebSocket configuration - used when AWS endpoint is not defined.
+     * This is the default for development environments.
+     */
     @Bean
     @ConditionalOnMissingBean(name = "awsWebSocketApiEndpoint")
     public WebSocketConfig localWebSocketConfig() {
-        return new WebSocketConfig(); // Local development mode
+        return new WebSocketConfig(); // Embedded Spring WebSocket
     }
 
+    /**
+     * AWS WebSocket configuration - used when AWS endpoint is defined.
+     * This activates in production when AWS_WEBSOCKET_API_ENDPOINT is set.
+     */
     @Bean
     @ConditionalOnBean(name = "awsWebSocketApiEndpoint")
     public AwsWebSocketService awsWebSocketService() {
-        return new AwsWebSocketService(); // AWS production mode
+        return new AwsWebSocketService(); // AWS API Gateway client
     }
 }
+```
 
+**How it works**: Spring checks for the presence of `awsWebSocketApiEndpoint` bean (defined when `AWS_WEBSOCKET_API_ENDPOINT` environment variable is set). If present, uses AWS mode; otherwise, uses local mode. This is completely transparent to application code.
+
+### Local Development WebSocket Configuration
+
+```java
 // config/WebSocketConfig.java
 @Configuration
 @EnableWebSocket
@@ -1946,28 +2280,38 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // Parse allowed origins from configuration
         String[] origins = allowedOrigins.split(",");
 
         // Main healthcare WebSocket with SockJS fallback
         registry.addHandler(careConnectHandler, "/ws/careconnect")
                 .setAllowedOrigins(origins)
-                .withSockJS();
+                .withSockJS();  // Enables fallback for browsers without WebSocket
 
         // Call management WebSocket with SockJS fallback
         registry.addHandler(callHandler, "/ws/calls")
                 .setAllowedOrigins(origins)
                 .withSockJS();
 
-        // Basic notifications (no SockJS)
+        // Basic notifications (no SockJS - pure WebSocket only)
         registry.addHandler(notificationHandler, "/ws/notifications")
                 .setAllowedOrigins(origins);
     }
 }
 ```
 
-### WebSocket Handlers
+#### Why SockJS Fallback?
 
-#### CareConnectWebSocketHandler - Healthcare Communications
+SockJS provides automatic fallback to HTTP long-polling when WebSocket is unavailable. This is crucial in healthcare settings where:
+- Corporate firewalls might block WebSocket connections
+- Some hospital networks use outdated proxies incompatible with WebSocket
+- Mobile networks occasionally have issues with persistent connections
+
+With SockJS, the application automatically degrades gracefully: tries WebSocket first, falls back to HTTP streaming, then long-polling if needed. The application code remains identical—SockJS handles the complexity.
+
+### WebSocket Handler: Healthcare Communications
+
+The main healthcare WebSocket handler manages patient-critical communications:
 
 ```java
 @Component
@@ -1976,14 +2320,18 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final WebSocketConnectionService connectionService;
+    
+    // Thread-safe map of user IDs to active WebSocket sessions
     private final Map<Long, WebSocketSession> userSessions = new ConcurrentHashMap<>();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("WebSocket connection established: {}", session.getId());
+        
+        // Track when connection was established (for timeout detection)
         session.getAttributes().put("connectionTime", System.currentTimeMillis());
 
-        // Send initial connection message
+        // Send welcome message to client
         sendMessage(session, Map.of(
             "type", "connection-established",
             "message", "WebSocket connection successful",
@@ -1992,35 +2340,56 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) 
+            throws Exception {
         try {
-            Map<String, Object> payload = objectMapper.readValue(message.getPayload(), Map.class);
+            // Parse incoming message as JSON
+            Map<String, Object> payload = objectMapper.readValue(
+                message.getPayload(), 
+                Map.class
+            );
             String messageType = (String) payload.get("type");
 
+            // Route message to appropriate handler based on type
             switch (messageType) {
                 case "authenticate":
+                    // Client sends JWT token to authenticate the connection
                     handleAuthentication(session, payload);
                     break;
+                    
                 case "heartbeat":
+                    // Client sends periodic heartbeat to keep connection alive
                     handleHeartbeat(session);
                     break;
+                    
                 case "ai-chat-notification":
+                    // AI-generated health recommendations or alerts
                     handleAIChatNotification(session, payload);
                     break;
+                    
                 case "mood-pain-log-update":
+                    // Patient reported mood/pain data in real-time
                     handleMoodPainLogUpdate(session, payload);
                     break;
+                    
                 case "medication-reminder":
+                    // Scheduled medication reminder needs to be sent
                     handleMedicationReminder(session, payload);
                     break;
+                    
                 case "vital-signs-alert":
+                    // Abnormal vital sign detected, alert caregivers
                     handleVitalSignsAlert(session, payload);
                     break;
+                    
                 case "emergency-alert":
+                    // Critical patient emergency, highest priority
                     handleEmergencyAlert(session, payload);
                     break;
+                    
                 default:
-                    log.warn("Unknown message type: {}", messageType);
+                    log.warn("Unknown message type received: {}", messageType);
+                    sendErrorMessage(session, "Unknown message type: " + messageType);
             }
         } catch (Exception e) {
             log.error("Error handling WebSocket message", e);
@@ -2028,28 +2397,42 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Handles client authentication over WebSocket.
+     * Unlike REST APIs where auth happens per-request, WebSocket connections
+     * authenticate once when established, then remain authenticated.
+     */
     private void handleAuthentication(WebSocketSession session, Map<String, Object> payload) {
         try {
             String token = (String) payload.get("token");
             Long userId = getLongValue(payload, "userId");
 
             if (jwtTokenProvider.validateToken(token)) {
+                // Token is valid - extract user information
                 Claims claims = jwtTokenProvider.getClaims(token);
                 String email = claims.getSubject();
                 String role = claims.get("role", String.class);
 
-                // Store user info in session
+                // Store user info in session attributes
+                // These persist for the lifetime of the WebSocket connection
                 session.getAttributes().put("userId", userId);
                 session.getAttributes().put("email", email);
                 session.getAttributes().put("role", role);
                 session.getAttributes().put("authenticated", true);
 
-                // Map user to session
+                // Map user ID to this session for targeted messaging
+                // When we need to send alert to user 123, we look up their session here
                 userSessions.put(userId, session);
 
-                // Persist connection
-                connectionService.saveConnection(session.getId(), email, userId, "authenticated");
+                // Persist connection to database for audit trail and reconnection
+                connectionService.saveConnection(
+                    session.getId(), 
+                    email, 
+                    userId, 
+                    "authenticated"
+                );
 
+                // Confirm successful authentication to client
                 sendMessage(session, Map.of(
                     "type", "authentication-success",
                     "userId", userId,
@@ -2059,10 +2442,14 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
 
                 log.info("User {} authenticated via WebSocket", email);
             } else {
+                // Invalid token - reject authentication
                 sendMessage(session, Map.of(
                     "type", "authentication-error",
                     "message", "Invalid token"
                 ));
+                
+                // Close connection after authentication failure
+                session.close(CloseStatus.POLICY_VIOLATION);
             }
         } catch (Exception e) {
             log.error("Authentication error", e);
@@ -2070,25 +2457,105 @@ public class CareConnectWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Handles emergency alerts - highest priority healthcare notifications.
+     * These bypass normal throttling and are delivered immediately to all
+     * authorized recipients (caregivers and family members).
+     */
     private void handleEmergencyAlert(WebSocketSession session, Map<String, Object> payload) {
-        // High-priority emergency handling
         Long patientId = getLongValue(payload, "patientId");
         String alertType = (String) payload.get("alertType");
         String message = (String) payload.get("message");
 
-        // Notify all caregivers and family members
-        broadcastToUsersByRole(patientId, "emergency-alert", Map.of(
+        // Construct alert payload
+        Map<String, Object> alert = Map.of(
+            "type", "emergency-alert",
             "patientId", patientId,
             "alertType", alertType,
             "message", message,
             "timestamp", System.currentTimeMillis(),
             "priority", "HIGH"
-        ), List.of("CAREGIVER", "FAMILY_MEMBER"));
+        );
 
-        log.warn("Emergency alert sent for patient {}: {}", patientId, alertType);
+        // Broadcast to all caregivers and family members linked to this patient
+        // This uses a specialized method that queries database for authorized users
+        // and sends to all their active WebSocket sessions
+        broadcastToUsersByRole(
+            patientId, 
+            "emergency-alert", 
+            alert,
+            List.of("CAREGIVER", "FAMILY_MEMBER")
+        );
+
+        // Audit log - all emergency alerts must be logged for compliance
+        log.warn("🚨 EMERGENCY ALERT sent for patient {}: {} - {}", 
+            patientId, alertType, message);
+            
+        // Could also trigger additional actions:
+        // - Send SMS to emergency contact
+        // - Create database record for audit trail
+        // - Trigger automated escalation if no acknowledgment within X minutes
+    }
+    
+    private void sendMessage(WebSocketSession session, Map<String, Object> message) 
+            throws Exception {
+        if (session.isOpen()) {
+            String json = objectMapper.writeValueAsString(message);
+            session.sendMessage(new TextMessage(json));
+        }
     }
 }
 ```
+
+#### Key Architectural Decisions
+
+**Stateful Connections**: Unlike REST's stateless nature, WebSocket connections are stateful. Once a user authenticates, their connection remains authenticated until they disconnect or their token expires. This eliminates the overhead of validating JWT on every message.
+
+**User Session Mapping**: The `userSessions` map enables targeted messaging. When a vital sign alert needs to reach a specific caregiver, we look up their session and send directly to them, rather than broadcasting to everyone.
+
+**Message Type Routing**: The `handleTextMessage` switch statement acts as a message router. As new real-time features are added, they get a new message type and handler method. This scales much better than monolithic message processing.
+
+**Audit Logging**: Every significant event (authentication, emergency alerts) is logged. In healthcare, this audit trail is not optional—it's a regulatory requirement for demonstrating compliance with HIPAA and other regulations.
+
+**Error Resilience**: Notice how exceptions are caught and transformed into error messages sent back to the client. A crashed WebSocket handler would drop all active connections—unacceptable in a healthcare app where those connections might be monitoring critical patients.
+
+### Connection Lifecycle and Management
+
+**Connection Establishment**:
+1. Client opens WebSocket connection to `/ws/careconnect`
+2. Server accepts, assigns session ID
+3. Client sends `authenticate` message with JWT
+4. Server validates token, stores user info in session
+5. Connection is now ready for bidirectional messaging
+
+**Active Connection**:
+- Client sends periodic heartbeats (every 30 seconds) to prevent timeout
+- Server can send messages anytime (alerts, notifications)
+- Client can send messages anytime (requests, updates)
+- Connection remains open for hours or days
+
+**Connection Termination**:
+- Client explicitly closes (app backgrounded, user logs out)
+- Network interruption (mobile signal loss, WiFi disconnect)
+- Server timeout (no heartbeat for 5 minutes)
+- Server restart (all connections dropped, clients must reconnect)
+
+**Reconnection Strategy**: Clients implement exponential backoff reconnection:
+```dart
+// Flutter client reconnection logic
+int retryCount = 0;
+while (retryCount < 5 && !connected) {
+  await Future.delayed(Duration(seconds: math.pow(2, retryCount).toInt()));
+  try {
+    await connect();
+    retryCount = 0; // Reset on success
+  } catch (e) {
+    retryCount++;
+  }
+}
+```
+
+This prevents overwhelming the server with reconnection attempts while ensuring clients eventually reconnect.
 
 #### CallNotificationHandler - Video/Audio Calls
 
