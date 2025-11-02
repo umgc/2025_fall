@@ -695,4 +695,41 @@ class AuthService {
     }
   }
 
+  static Future<Map<String, dynamic>> unlinkAlexaAccount() async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    final host = getBackendBaseUrl(); // ✅ pulls from your env config
+    final uri = Uri.parse('$host/v1/api/auth/sso/alexa/unlink');
+
+    try {
+      print("🧩 PATCH $uri");
+      final response = await http
+          .post(uri, headers: headers, body: jsonEncode({}))
+          .timeout(const Duration(seconds: 15));
+
+      print("🔌 Alexa unlink response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
+        return {
+          'isSuccess': true,
+          'message': 'Alexa account unlinked successfully',
+        };
+      } else {
+        final body = jsonDecode(response.body);
+        return {
+          'isSuccess': false,
+          'message': body['error'] ?? 'Failed to unlink Alexa account',
+        };
+      }
+    } catch (e) {
+      print('❌ Exception during unlinkAlexaAccount: $e');
+      return {
+        'isSuccess': false,
+        'message': 'An unexpected error occurred: $e',
+      };
+    }
+  }
+
+
 }
