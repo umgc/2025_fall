@@ -53,8 +53,11 @@ export const handler = async (event, context) => {
       return "Completed game successfully.";
     }
     if (command === "createGame") {
-      await createGame(client, event["body"]);
-      return "Added game successfully";
+      return createGame(client, event["body"]);
+    }
+    if (command === "assignGame") {
+      await assignGame(client, event["body"]);
+      return "Assigned game successfully";
     }
   }
   if (method === "DELETE") {
@@ -68,24 +71,21 @@ export const handler = async (event, context) => {
     await client`CREATE TABLE IF NOT EXISTS GAMES (
       game_id UUID PRIMARY KEY,
       course_id BIGINT,
-      student_id BIGINT,
       title VARCHAR,
       data VARCHAR,
       game_type SMALLINT,
-      score NUMERIC(5,2),
-      raw_correct SMALLINT,
-      max_score SMALLINT,
       assigned_by BIGINT,
       assigned_date TIMESTAMP,
       lms_service SMALLINT
     );`;
-    try {
-      await client`ALTER TABLE GAMES ALTER COLUMN score TYPE NUMERIC(5,2);`;
-      await client`ALTER TABLE GAMES ADD COLUMN IF NOT EXISTS raw_correct SMALLINT;`;
-      await client`ALTER TABLE GAMES ADD COLUMN IF NOT EXISTS max_score SMALLINT;`;
-    } catch (alterError) {
-      console.warn("Skipping score column alter: ", alterError);
-    }
+    await client`CREATE TABLE IF NOT EXISTS GAME_SCORES (
+      score_id UUID PRIMARY KEY,
+      student_id BIGINT,
+      score NUMERIC(5,2),
+      raw_correct SMALLINT,
+      max_score SMALLINT,
+      game UUID
+    );`;
     }
     catch (error) {
       console.error("Failed to create database table: ", error);
@@ -96,6 +96,7 @@ export const handler = async (event, context) => {
   async function deleteGame(client, body) {
     try {
       let log = JSON.parse(body);
+      await client`DELETE FROM GAME_SCORES WHERE game = ${log.gameId};`;
       await client`DELETE FROM GAMES WHERE game_id = ${log.gameId};`;
     }
     catch (error) {
@@ -106,7 +107,7 @@ export const handler = async (event, context) => {
 
   async function getGamesForStudent(client, studentId, lms) {
     try {
-      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, lms_service, assigned_date FROM GAMES WHERE
+      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, lms_service, assigned_date FROM GAMES INNER JOIN GAME_SCORES ON game = game_id WHERE
       student_id = ${studentId}
       AND lms_service = ${lms};`;
     }
@@ -118,7 +119,7 @@ export const handler = async (event, context) => {
 
     async function getGamesForTeacher(client, assignedBy, lms) {
     try {
-      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES WHERE
+      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES INNER JOIN GAME_SCORES ON game = game_id WHERE
       assigned_by = ${assignedBy}
       AND lms_service = ${lms};`;
     }
@@ -128,37 +129,29 @@ export const handler = async (event, context) => {
     }
   };
 
-    async function createGame(client, body) {
+  async function createGame(client, body) {
     try {
       let log = JSON.parse(body);
       return await client`
       INSERT INTO GAMES (
         game_id,
         course_id,
-        student_id,
         title,
         data,
         game_type,
-        score,
-        raw_correct,
-        max_score,
         assigned_by,
         assigned_date,
         lms_service
       ) VALUES (
         gen_random_uuid(),
         ${log.courseId},
-        ${log.studentId},
         ${log.title},
         ${log.data},
         ${log.gameType},
-        NULL,
-        NULL,
-        NULL,
         ${log.assignedBy},
         ${log.assignedDate},
         ${log.lmsType}
-      );`;
+      ) RETURNING game_id;`;
     }
     catch (error) {
       console.error("Failed to add game ", error);
@@ -166,7 +159,33 @@ export const handler = async (event, context) => {
     }
   };
 
-      async function completeGame(client, body) {
+  async function assignGame(client, body) {
+    try {
+      let log = JSON.parse(body);
+      return await client`
+      INSERT INTO GAME_SCORES (
+        score_id,
+        student_id,
+        score,
+        raw_correct,
+        max_score,
+        game
+      ) VALUES (
+        gen_random_uuid(),
+        ${log.studentId},
+        NULL,
+        NULL,
+        NULL,
+        ${log.game}
+      );`;
+    }
+    catch (error) {
+      console.error("Failed to add game score ", error);
+      throw error;
+    }
+  };
+
+    async function completeGame(client, body) {
     try {
       let log = JSON.parse(body);
       let rawScore = Number(log.score);
@@ -191,11 +210,11 @@ export const handler = async (event, context) => {
         maxScore = Math.max(0, Math.round(maxScore));
       }
       return await client`
-      UPDATE GAMES
+      UPDATE GAME_SCORES
       SET score = ${normalizedScore},
           raw_correct = ${rawCorrect},
           max_score = ${maxScore}
-      WHERE game_id = ${log.gameId};`;
+      WHERE game = ${log.gameId} AND student_id = ${log.studentId};`;
     }
     catch (error) {
       console.error("Failed to update score ", error);

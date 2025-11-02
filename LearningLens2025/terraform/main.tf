@@ -200,7 +200,7 @@ resource "aws_dsql_cluster" "edulense" {
   deletion_protection_enabled = true
 
   tags = {
-    Name = "EduLenseAILoggingDatabase"
+    Name = "EduLenseDatabaseCluster"
   }
 }
 
