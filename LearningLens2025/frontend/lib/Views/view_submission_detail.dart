@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:learninglens_app/Views/view_reflection_page.dart';
 
 import 'package:learninglens_app/beans/submission_with_grade.dart';
+import 'package:learninglens_app/services/reflection_service.dart';
 
 class SubmissionDetail extends StatefulWidget {
   final Participant participant;
@@ -34,6 +35,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
   Map<int, TextEditingController> remarkControllers =
       {}; // Controllers for each remark
 
+  // List to store reflections
   @override
   void initState() {
     super.initState();
@@ -77,6 +79,18 @@ class SubmissionDetailState extends State<SubmissionDetail> {
         errorMessage = 'Failed to retrieve context ID for the assignment.';
       });
     }
+  }
+
+  Future<List<List<String>>> fetchReflections() async {
+    List<List<String>> reflectionsToReturn = [];
+    final reflections = await ReflectionService().getReflectionsForAssignment(
+        int.parse(widget.courseId), widget.submission.submission.assignmentId);
+    for (Reflection r in reflections) {
+      final resp = await ReflectionService()
+          .getReflectionForSubmission(r.uuid!, widget.participant.id);
+      reflectionsToReturn.add([r.question, resp?.response ?? ""]);
+    }
+    return reflectionsToReturn;
   }
 
   // Save updated submission scores and remarks as JSON
@@ -210,17 +224,21 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                                     fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                               ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ViewReflectionPage(
-                                        participant: widget.participant,
-                                        submission:
-                                            widget.submission.submission,
-                                      ),
-                                    ),
-                                  );
+                                onPressed: () async {
+                                  fetchReflections()
+                                      .then((value) => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  ViewReflectionPage(
+                                                      participant:
+                                                          widget.participant,
+                                                      submission: widget
+                                                          .submission
+                                                          .submission,
+                                                      reflections: value),
+                                            ),
+                                          ));
                                 },
                                 icon: Icon(Icons.note_alt_outlined),
                                 label: Text('View Reflection'),

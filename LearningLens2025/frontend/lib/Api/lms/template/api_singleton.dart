@@ -176,15 +176,6 @@ class ApiSingleton implements LmsInterface {
   }
 
   @override
-  Future<void> saveReflectionQuestions({
-    required String courseId,
-    required String assignmentId,
-    required List<String> questions,
-  }) {
-    throw UnimplementedError();
-  }
-
-  @override
   Future<int?> getContextId(int assignmentId, String courseId) {
     // TODO: implement getContextId
     throw UnimplementedError();

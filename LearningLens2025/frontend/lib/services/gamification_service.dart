@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
+import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -23,6 +24,7 @@ class AssignedGame {
   final int? rawCorrect;
   final int? maxScore;
   double? score;
+  LmsType lms = LocalStorageService.getSelectedClassroom();
 
   AssignedGame(
       {required this.studentId,
@@ -115,6 +117,7 @@ class GamificationService {
           'data': game.gameData,
           'assignedBy': game.assignedBy,
           'assignedDate': game.assignedDate.toString(),
+          'lmsType': game.lms.index,
         }));
   }
 
@@ -139,7 +142,10 @@ class GamificationService {
   Future<List<AssignedGame>> getGamesForTeacher(int createdBy) async {
     final uri = _requireUri(
       'getForTeacher',
-      params: {'createdBy': '$createdBy'},
+      params: {
+        'createdBy': '$createdBy',
+        'lmsType': '${LocalStorageService.getSelectedClassroom().index}'
+      },
     );
     final response = await ApiService().httpGet(uri);
 
@@ -152,7 +158,10 @@ class GamificationService {
   Future<List<AssignedGame>> getGamesForStudent(int assignedTo) async {
     final uri = _requireUri(
       'getForStudent',
-      params: {'assignedTo': '$assignedTo'},
+      params: {
+        'assignedTo': '$assignedTo',
+        'lmsType': '${LocalStorageService.getSelectedClassroom().index}'
+      },
     );
     final response = await ApiService().httpGet(uri);
 

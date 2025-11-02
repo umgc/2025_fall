@@ -6,6 +6,8 @@ import 'package:learninglens_app/Views/dashboard.dart';
 import 'package:learninglens_app/Views/edit_reflection_questions_page.dart';
 import 'dart:convert';
 
+import 'package:learninglens_app/services/reflection_service.dart';
+
 class EssayAssignmentSettings extends StatefulWidget {
   final String updatedJson;
   final String description;
@@ -472,7 +474,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                 String allowSubmissionFrom =
                                     '$selectedDaySubmission $selectedMonthSubmission $selectedYearSubmission $selectedHourSubmission:$selectedMinuteSubmission';
 
-                                await api.createAssignment(
+                                final result = await api.createAssignment(
                                   courseId,
                                   sectionNumber, // Section ID
                                   assignmentName,
@@ -481,6 +483,16 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                   widget.updatedJson,
                                   description,
                                 );
+
+                                print(result);
+
+                                for (String r in reflectionQuestions) {
+                                  await ReflectionService().createReflection(
+                                      Reflection(
+                                          courseId: int.parse(courseId),
+                                          assignmentId: result?['assignmentid'],
+                                          question: r));
+                                }
 
                                 if (mounted) {
                                   final snackBar = SnackBar(

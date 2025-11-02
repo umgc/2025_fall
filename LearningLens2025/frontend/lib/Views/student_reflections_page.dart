@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:learninglens_app/services/reflection_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Api
@@ -14,8 +14,6 @@ import 'package:learninglens_app/beans/course.dart';
 enum ReflectionStatus { notStarted, inProgress, submitted }
 
 class StudentReflectionsPage extends StatefulWidget {
-  const StudentReflectionsPage({super.key});
-
   @override
   State<StudentReflectionsPage> createState() => _StudentReflectionsPageState();
 }
@@ -29,16 +27,7 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
   final Map<String, ReflectionStatus> _essayStatus = {};
 
   // Track reflection answers for each essay
-  final Map<String, Map<String, TextEditingController>> _controllers = {};
-
-  // Reflection questions
-  final List<String> _questions = [
-    'How did you approach this task before using AI support?',
-    'In what ways did AI assistance influence your thought process or decisions?',
-    'What challenges did you face while completing this task?',
-    'How confident are you in your final submission and why?',
-    'What would you do differently next time to improve your work?',
-  ];
+  final Map<String, Map<Reflection, TextEditingController>> _controllers = {};
 
   @override
   void initState() {
@@ -46,12 +35,15 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
     _loadEssays();
   }
 
-  Future<void> _loadEssays({int? courseId, bool toast = false}) async {
-    if (!mounted) return;
+  Future<void> _loadEssays({int? courseId}) async {
     setState(() => _isReloadingEssays = true);
 
     try {
       final allEssays = await getAllEssays(courseId);
+
+      final prefs = await SharedPreferences.getInstance();
+      final uid = prefs.getString('userId');
+      final int? uidInt = uid != null ? int.tryParse(uid) : null;
 
       final filteredEssays = allEssays.where((a) => !_isOverdue(a)).toList()
         ..sort((a, b) {
@@ -63,22 +55,37 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
           return ad.compareTo(bd);
         });
 
+      for (var e in filteredEssays) {
+        ReflectionStatus stat = ReflectionStatus.notStarted;
+        final refs = await ReflectionService()
+            .getReflectionsForAssignment(e.courseId, e.id);
+        _controllers[e.id.toString()] = {};
+        for (var r in refs) {
+          ReflectionResponse? response;
+          if (uidInt != null) {
+            response = await ReflectionService()
+                .getReflectionForSubmission(r.uuid!, uidInt);
+            if (response != null) {
+              stat = ReflectionStatus.submitted;
+            }
+          }
+          setState(() {
+            _controllers[e.id.toString()]![r] =
+                TextEditingController(text: response?.response ?? "");
+          });
+        }
+        setState(() {
+          _essayStatus[e.id.toString()] = stat;
+        });
+      }
+
       setState(() {
         _essays = filteredEssays;
-        for (var e in _essays) {
-          _essayStatus[e.id.toString()] ??= ReflectionStatus.notStarted;
-        }
       });
 
-      if (toast) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Essays reloaded')),
-        );
-      }
+      setState(() => _isReloadingEssays = false);
     } catch (e) {
       print("Error loading essays: $e");
-    } finally {
-      if (mounted) setState(() => _isReloadingEssays = false);
     }
   }
 
@@ -91,58 +98,27 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  // --- SharedPreferences Helpers ---
-  Future<void> _saveInProgress(Assignment essay) async {
-    final id = essay.id.toString();
-    final controllers = _controllers[id];
-    if (controllers == null) return;
-
-    final answers = <String, String>{};
-    controllers.forEach((q, controller) {
-      answers[q] = controller.text.trim();
-    });
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('reflection_$id', jsonEncode(answers));
-  }
-
-  Future<void> _loadSavedReflection(Assignment essay) async {
-    final id = essay.id.toString();
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString('reflection_$id');
-    if (jsonString == null) return;
-
-    final savedAnswers = jsonDecode(jsonString) as Map<String, dynamic>;
-
-    setState(() {
-      _controllers[id] ??= {
-        for (var q in _questions) q: TextEditingController()
-      };
-      _controllers[id]!.forEach((q, controller) {
-        if (savedAnswers[q] != null) controller.text = savedAnswers[q];
-      });
-    });
-  }
-
   void _startReflection(Assignment essay) async {
     final id = essay.id.toString();
     setState(() {
       _essayStatus[id] = ReflectionStatus.inProgress;
-      _controllers[id] ??= {
-        for (var q in _questions) q: TextEditingController()
-      };
     });
-
-    await _loadSavedReflection(essay);
   }
 
   void _submitReflection(Assignment essay) async {
     final id = essay.id.toString();
     final controllers = _controllers[id];
-    if (controllers == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('userId');
+    final int? uidInt = uid != null ? int.tryParse(uid) : null;
+    if (controllers == null || uidInt == null) return;
 
-    await _saveInProgress(essay);
-
+    for (var c in controllers.entries) {
+      await ReflectionService().completeReflection(ReflectionResponse(
+          studentId: uidInt,
+          response: c.value.text.trim(),
+          reflectionId: c.key.uuid!));
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Reflection submitted.')),
     );
@@ -193,54 +169,42 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
                         Text('Essay Assignments',
                             style: Theme.of(context).textTheme.titleMedium),
                         const Spacer(),
-                        IconButton(
-                          tooltip: 'Reload',
-                          onPressed: _isReloadingEssays
-                              ? null
-                              : () => _loadEssays(toast: true),
-                          icon: _isReloadingEssays
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.refresh),
-                        ),
                       ],
                     ),
                   ),
                   const Divider(height: 1),
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () async => _loadEssays(),
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _essays.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final assignment = _essays[i];
-                          final selected = _selectedSidebarIndex == i;
-                          final dueText = _formatDate(assignment.dueDate);
+                  _isReloadingEssays
+                      ? CircularProgressIndicator()
+                      : Expanded(
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(8),
+                            itemCount: _essays.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, i) {
+                              final assignment = _essays[i];
+                              final selected = _selectedSidebarIndex == i;
+                              final dueText = _formatDate(assignment.dueDate);
 
-                          return ListTile(
-                            dense: true,
-                            selected: selected,
-                            selectedTileColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.08),
-                            title: Text(assignment.name,
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('Due: $dueText'),
-                            trailing: _statusChip(assignment),
-                            onTap: () =>
-                                setState(() => _selectedSidebarIndex = i),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+                              return ListTile(
+                                dense: true,
+                                selected: selected,
+                                selectedTileColor: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.08),
+                                title: Text(assignment.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                                subtitle: Text('Due: $dueText'),
+                                trailing: _statusChip(assignment),
+                                onTap: () =>
+                                    setState(() => _selectedSidebarIndex = i),
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -312,13 +276,13 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
           const Text('Reflection Questions:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 12),
-          ..._questions.map((q) {
+          ...controllers.keys.map((q) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(q,
+                  Text(q.question,
                       style: const TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 16)),
                   const SizedBox(height: 6),
@@ -331,7 +295,6 @@ class _StudentReflectionsPageState extends State<StudentReflectionsPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onChanged: (_) => _saveInProgress(essay),
                   ),
                 ],
               ),

@@ -34,11 +34,13 @@ export const handler = async (event, context) => {
   if (method === "GET") {
     if (command === "getForStudent") {
       const assignedTo = BigInt(event["queryStringParameters"]["assignedTo"]);
-      return await getGamesForStudent(client, assignedTo);
+      const lms = parseInt(event["queryStringParameters"]["lmsType"]);
+      return await getGamesForStudent(client, assignedTo, lms);
     }
     if (command === "getForTeacher") {
       const createdBy = BigInt(event["queryStringParameters"]["createdBy"]);
-      return await getGamesForTeacher(client, createdBy);
+      const lms = parseInt(event["queryStringParameters"]["lmsType"]);
+      return await getGamesForTeacher(client, createdBy, lms);
     }
   }
   if (method === "POST") {
@@ -74,7 +76,8 @@ export const handler = async (event, context) => {
       raw_correct SMALLINT,
       max_score SMALLINT,
       assigned_by BIGINT,
-      assigned_date TIMESTAMP
+      assigned_date TIMESTAMP,
+      lms_service SMALLINT
     );`;
     try {
       await client`ALTER TABLE GAMES ALTER COLUMN score TYPE NUMERIC(5,2);`;
@@ -101,10 +104,11 @@ export const handler = async (event, context) => {
     }
 };
 
-  async function getGamesForStudent(client, studentId) {
+  async function getGamesForStudent(client, studentId, lms) {
     try {
-      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES WHERE
-      student_id = ${studentId};`;
+      return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, lms_service, assigned_date FROM GAMES WHERE
+      student_id = ${studentId}
+      AND lms_service = ${lms};`;
     }
     catch (error) {
       console.error("Failed to get games for student ", error);
@@ -112,10 +116,11 @@ export const handler = async (event, context) => {
     }
   };
 
-    async function getGamesForTeacher(client, assignedBy) {
+    async function getGamesForTeacher(client, assignedBy, lms) {
     try {
       return await client`SELECT game_id, course_id, student_id, title, data, game_type, score, raw_correct, max_score, assigned_by, assigned_date FROM GAMES WHERE
-      assigned_by = ${assignedBy};`;
+      assigned_by = ${assignedBy}
+      AND lms_service = ${lms};`;
     }
     catch (error) {
       console.error("Failed to get games for teacher ", error);
@@ -138,7 +143,8 @@ export const handler = async (event, context) => {
         raw_correct,
         max_score,
         assigned_by,
-        assigned_date
+        assigned_date,
+        lms_service
       ) VALUES (
         gen_random_uuid(),
         ${log.courseId},
@@ -150,7 +156,8 @@ export const handler = async (event, context) => {
         NULL,
         NULL,
         ${log.assignedBy},
-        ${log.assignedDate}
+        ${log.assignedDate},
+        ${log.lmsType}
       );`;
     }
     catch (error) {

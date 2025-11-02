@@ -678,48 +678,6 @@ class MoodleLmsService implements LmsInterface {
   }
 
   @override
-  Future<void> saveReflectionQuestions({
-    required String courseId,
-    required String assignmentId,
-    required List<String> questions,
-  }) async {
-    if (_userToken == null) throw StateError('User not logged in to Moodle');
-
-    try {
-      final questionsJson = jsonEncode(questions);
-
-      final response = await ApiService().httpPost(
-        Uri.parse(apiURL + serverUrl),
-        body: {
-          'wstoken': _userToken,
-          'wsfunction': 'local_learninglens_save_reflection_questions',
-          'moodlewsrestformat': 'json',
-          'courseid': courseId,
-          'assignmentid': assignmentId,
-          'questions': questionsJson,
-        },
-      );
-
-      if (response.statusCode != 200) {
-        throw HttpException(
-            'Failed to save reflection questions: ${response.statusCode}');
-      }
-
-      final responseData = jsonDecode(response.body);
-      if (responseData is Map<String, dynamic> &&
-          responseData.containsKey('error')) {
-        throw HttpException('Moodle error: ${responseData['error']}');
-      }
-
-      print(
-          'Reflection questions saved successfully for assignment $assignmentId');
-    } catch (e) {
-      print('Error saving reflection questions: $e');
-      rethrow;
-    }
-  }
-
-  @override
   Future<int?> getContextId(int assignmentId, String courseId) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 

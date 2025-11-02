@@ -53,23 +53,10 @@ class _EditReflectionQuestionsPageState
     List<String> questions =
         _controllers.map((controller) => controller.text.trim()).toList();
 
-    try {
-      await LmsFactory.getLmsService().saveReflectionQuestions(
-        courseId: widget.courseId,
-        assignmentId: widget.assignmentId,
-        questions: questions,
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Questions saved successfully!')),
-      );
-
-      Navigator.pop(context, questions);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save questions: $e')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Questions saved successfully!')),
+    );
+    Navigator.pop(context, questions);
   }
 
   @override
