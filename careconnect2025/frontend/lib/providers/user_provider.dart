@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 
 /// Represents an authenticated user session with basic information.
 ///
-/// This class contains the essential session models obtained during login,
+/// This class contains the essential session data obtained during login,
 /// including user identification, authentication tokens, and role information.
 /// It serves as the foundation for user authentication and authorization.
 class UserSession {
@@ -61,16 +61,16 @@ class UserSession {
     this.emailVerified = false,
   });
 
-  /// Creates a UserSession from JSON models.
+  /// Creates a UserSession from JSON data.
   ///
-  /// Factory constructor for deserializing session models from storage
+  /// Factory constructor for deserializing session data from storage
   /// or API responses during authentication.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing session models
+  /// * [json] - JSON map containing session data
   ///
   /// Returns:
-  /// * UserSession - New session instance from JSON models
+  /// * UserSession - New session instance from JSON data
   factory UserSession.fromJson(Map<String, dynamic> json) {
     return UserSession(
       id: json['id'],
@@ -86,7 +86,7 @@ class UserSession {
 
   /// Converts the UserSession to JSON format.
   ///
-  /// Used for session persistence and models serialization.
+  /// Used for session persistence and data serialization.
   /// All session fields are included for complete state preservation.
   ///
   /// Returns:
@@ -124,7 +124,7 @@ class UserSession {
 
   /// Checks if the user has write access permissions.
   ///
-  /// Currently only caregivers have write access to modify patient models.
+  /// Currently only caregivers have write access to modify patient data.
   ///
   /// Returns:
   /// * bool - True if user has write permissions
@@ -136,15 +136,15 @@ class UserSession {
 /// This provider handles the complete user authentication lifecycle including:
 /// - Session management and persistence
 /// - Token validation and refresh
-/// - Role-based user models fetching
+/// - Role-based user data fetching
 /// - User model creation based on role (Patient or Caregiver)
 /// - Activity tracking for session management
 ///
 /// The provider follows a two-step authentication process:
 /// 1. Initial login creates a UserSession with basic information
-/// 2. Detailed user models is fetched based on role and stored in specific models
+/// 2. Detailed user data is fetched based on role and stored in specific models
 class UserProvider extends ChangeNotifier {
-  /// Current user session containing authentication and basic user models
+  /// Current user session containing authentication and basic user data
   UserSession? _user;
 
   /// Public getter for the current user session
@@ -174,14 +174,14 @@ class UserProvider extends ChangeNotifier {
   /// Public getter for caregiver model
   CaregiverModel? get caregiverModel => _caregiverModel;
 
-  /// Initializes user authentication state from stored models on app start.
+  /// Initializes user authentication state from stored data on app start.
   ///
   /// This method is called when the app starts to restore any existing
   /// user session from local storage. It performs the following operations:
   /// - Initializes storage services
   /// - Attempts to restore user session from stored tokens
   /// - Validates session freshness and handles stale sessions
-  /// - Fetches detailed user models if session is valid
+  /// - Fetches detailed user data if session is valid
   ///
   /// Returns:
   /// * Future<void> - Completes when initialization is finished
@@ -209,14 +209,14 @@ class UserProvider extends ChangeNotifier {
           await UserRoleStorageService.instance.clearUserData();
           _user = null;
         } else {
-          // Sync user models with UserRoleStorageService
+          // Sync user data with UserRoleStorageService
           await _syncUserDataToStorage();
-          // Fetch detailed user models based on role
+          // Fetch detailed user data based on role
           await fetchUserDetails();
         }
       }
     } catch (e) {
-      // If there's an error, clear any stored auth models
+      // If there's an error, clear any stored auth data
       await AuthTokenManager.clearAuthData();
       await UserRoleStorageService.instance.clearUserData();
       _user = null;
@@ -232,7 +232,7 @@ class UserProvider extends ChangeNotifier {
   /// It performs several important operations:
   /// - Updates the user session
   /// - Records user activity for session tracking
-  /// - Synchronizes user models to persistent storage
+  /// - Synchronizes user data to persistent storage
   /// - Notifies listeners of state changes
   ///
   /// Parameters:
@@ -241,7 +241,7 @@ class UserProvider extends ChangeNotifier {
     _user = user;
     // Update activity when user is set (e.g., after login)
     AuthTokenManager.updateLastActivity();
-    // Sync user models to storage
+    // Sync user data to storage
     _syncUserDataToStorage();
     notifyListeners();
   }
@@ -251,11 +251,11 @@ class UserProvider extends ChangeNotifier {
   /// This method is the second step in the authentication process. After
   /// login establishes a basic user session, this method fetches complete
   /// user information including:
-  /// - Creates a base UserModel from session models
+  /// - Creates a base UserModel from session data
   /// - Fetches role-specific details (Patient or Caregiver)
   /// - Populates appropriate detailed models
   ///
-  /// The method makes API calls to retrieve comprehensive user models
+  /// The method makes API calls to retrieve comprehensive user data
   /// and handles errors gracefully.
   ///
   /// Returns:
@@ -269,7 +269,7 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Create base UserModel from session models
+      // Create base UserModel from session data
       _userModel = UserModel(
         name: _user!.name ?? '',
         email: _user!.email,
@@ -277,7 +277,7 @@ class UserProvider extends ChangeNotifier {
         role: _user!.role,
       );
 
-      // Fetch detailed models based on role
+      // Fetch detailed data based on role
       if (_user!.role.toUpperCase() == 'PATIENT') {
         await _fetchPatientDetails();
       } else if (_user!.role.toUpperCase() == 'CAREGIVER') {
@@ -310,7 +310,7 @@ class UserProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final patientData = json.decode(response.body);
-        // Create PatientModel with combined models
+        // Create PatientModel with combined data
         _patientModel = PatientUserModel(
           name:
               '${patientData['firstName']} ${patientData['lastName']}',
@@ -330,10 +330,10 @@ class UserProvider extends ChangeNotifier {
           jsonEncode(_patientModel!.toJson()),
         );
       } else {
-        // TODO - what to do when user models can't be loaded?
+        // TODO - what to do when user data can't be loaded?
       }
     } catch (e) {
-      // TODO - what to do when user models can't be loaded?
+      // TODO - what to do when user data can't be loaded?
     }
   }
 
@@ -353,7 +353,7 @@ class UserProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final caregiverData = json.decode(response.body);
 
-        // Create CaregiverModel with combined models
+        // Create CaregiverModel with combined data
         _caregiverModel = CaregiverModel(
           name: '${caregiverData['firstName']} ${caregiverData['lastname']}',
           email: _userModel!.email,
@@ -381,19 +381,19 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Clears all user models and authentication state.
+  /// Clears all user data and authentication state.
   ///
   /// This method performs a complete logout by:
   /// - Clearing the user session
   /// - Removing all user models (base, patient, caregiver)
   /// - Clearing stored authentication tokens
-  /// - Clearing cached user models from storage
+  /// - Clearing cached user data from storage
   /// - Notifying listeners of the state change
   ///
   /// Called during logout or when authentication becomes invalid.
   ///
   /// Returns:
-  /// * Future<void> - Completes when all user models is cleared
+  /// * Future<void> - Completes when all user data is cleared
   Future<void> clearUser() async {
     _user = null;
     _userModel = null;
@@ -459,7 +459,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Sync current user models to UserRoleStorageService
+  /// Sync current user data to UserRoleStorageService
   Future<void> _syncUserDataToStorage() async {
     if (_user != null) {
       try {
@@ -474,7 +474,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// Get user models from storage (useful for navigation)
+  /// Get user data from storage (useful for navigation)
   Future<UserData?> getUserDataFromStorage() async {
     return await UserRoleStorageService.instance.getUserData();
   }

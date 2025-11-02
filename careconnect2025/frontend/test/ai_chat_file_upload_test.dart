@@ -36,7 +36,7 @@ void main() {
       expect(find.text('Analytics AI'), findsOneWidget);
       expect(
         find.text(
-          'Welcome to the Healthcare Analytics Assistant. How can I help you analyze your models today?',
+          'Welcome to the Healthcare Analytics Assistant. How can I help you analyze your data today?',
         ),
         findsOneWidget,
       );

@@ -5,15 +5,24 @@ import 'package:care_connect_app/services/user_role_storage_service.dart'
 /// Lightweight fake user for testing.
 class MockUser extends UserSession {
   MockUser({
-    super.id = 1,
-    super.email = 'test@example.com',
-    super.role = 'PATIENT',
-    super.token = 'mock_token',
-    super.patientId = 1,
-    super.caregiverId,
-    super.name = 'Test User',
-    super.emailVerified = true,
-  });
+    int id = 1,
+    String email = 'test@example.com',
+    String role = 'PATIENT',
+    String token = 'mock_token',
+    int? patientId = 1,
+    int? caregiverId,
+    String? name = 'Test User',
+    bool emailVerified = true,
+  }) : super(
+         id: id,
+         email: email,
+         role: role,
+         token: token,
+         patientId: patientId,
+         caregiverId: caregiverId,
+         name: name,
+         emailVerified: emailVerified,
+       );
 }
 
 /// Mock UserProvider for tests (no HTTP/storage calls).

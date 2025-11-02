@@ -6,7 +6,7 @@ import '../models/task_model.dart';
 /// TaskUtils
 /// =============================
 /// Utility class for common task-related operations:
-/// - Normalizing API models into [Task] model-friendly structures
+/// - Normalizing API data into [Task] model-friendly structures
 /// - Normalizing dates to midnight (for consistent comparisons)
 class TaskUtils {
   /// Normalize raw task map values (from API or DB) into expected formats.

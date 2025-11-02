@@ -1,4 +1,5 @@
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
+import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient_header_card.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/fall_alert.dart';

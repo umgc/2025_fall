@@ -78,7 +78,7 @@ class AuthService {
             if (uri.scheme == 'careconnect' &&
                 uri.host == 'oauth' &&
                 uri.path == '/callback') {
-              // Extract the JWT token and user models from the callback URL
+              // Extract the JWT token and user data from the callback URL
               final token = uri.queryParameters['token'];
               final error = uri.queryParameters['error'];
 
@@ -99,12 +99,12 @@ class AuthService {
               final userDataString = uri.queryParameters['user'];
               if (userDataString == null) {
                 completer.completeError(
-                  Exception('No user models received from backend'),
+                  Exception('No user data received from backend'),
                 );
                 return;
               }
 
-              // Decode the user models
+              // Decode the user data
               final userData = jsonDecode(Uri.decodeComponent(userDataString));
 
               // Create user session
@@ -120,7 +120,7 @@ class AuthService {
               // Update last activity time to track session freshness
               await AuthTokenManager.updateLastActivity();
 
-              // Store user models in UserRoleStorageService for navigation
+              // Store user data in UserRoleStorageService for navigation
               await _storeUserDataFromSession(userSession);
 
               print('Google OAuth login successful: JWT token force-updated');
@@ -183,7 +183,7 @@ class AuthService {
       // Update last activity time to track session freshness
       await AuthTokenManager.updateLastActivity();
 
-      // Store user models in UserRoleStorageService for navigation
+      // Store user data in UserRoleStorageService for navigation
       await _storeUserDataFromSession(userSession);
 
       // Register user to WebSocket for notifications
@@ -256,7 +256,7 @@ class AuthService {
   }) async {
     final headers = {'Content-Type': 'application/json'};
 
-    // Build registration models with null safety
+    // Build registration data with null safety
     final Map<String, dynamic> registrationData = {
       'firstName': firstName,
       'lastName': lastName,
@@ -266,7 +266,7 @@ class AuthService {
       'gender': (gender ?? "").toUpperCase(),
     };
 
-    print('Debug: Basic models added successfully');
+    print('Debug: Basic data added successfully');
 
     // Only add professional info if at least license number is provided
     if (licenseNumber != null && licenseNumber.isNotEmpty) {
@@ -296,12 +296,12 @@ class AuthService {
     // Always add credentials
     registrationData['credentials'] = {'email': email, 'password': password};
 
-    print('Debug: About to encode registration models...');
-    print('Registration models keys: ${registrationData.keys}');
+    print('Debug: About to encode registration data...');
+    print('Registration data keys: ${registrationData.keys}');
 
     try {
       final jsonString = jsonEncode(registrationData);
-      print('Registering caregiver with models: $jsonString');
+      print('Registering caregiver with data: $jsonString');
     } catch (jsonError) {
       print('JSON encoding failed: $jsonError');
       throw Exception('Data serialization error: $jsonError');
@@ -467,10 +467,10 @@ class AuthService {
       headers: headers,
     );
 
-    // Clear all auth models using the new token manager
+    // Clear all auth data using the new token manager
     await AuthTokenManager.clearAuthData();
 
-    // Clear user models from UserRoleStorageService
+    // Clear user data from UserRoleStorageService
     await UserRoleStorageService.instance.clearUserData();
 
     if (response.statusCode == 200) {
@@ -486,7 +486,7 @@ class AuthService {
     required String userDataString,
   }) async {
     try {
-      // Parse user models (it's URL encoded)
+      // Parse user data (it's URL encoded)
       final userData = jsonDecode(Uri.decodeComponent(userDataString));
 
       // Create user session
@@ -502,7 +502,7 @@ class AuthService {
       // Update last activity time to track session freshness
       await AuthTokenManager.updateLastActivity();
 
-      // Store user models in UserRoleStorageService for navigation
+      // Store user data in UserRoleStorageService for navigation
       await _storeUserDataFromSession(userSession);
 
       print('OAuth callback processed: JWT token force-updated');
@@ -543,21 +543,21 @@ class AuthService {
         // Update last activity time
         await AuthTokenManager.updateLastActivity();
 
-        // Update user models in UserRoleStorageService
+        // Update user data in UserRoleStorageService
         await _storeUserDataFromSession(userSession);
 
         print('JWT token force-refreshed successfully');
         return userSession;
       } else {
         print('Token refresh failed: ${response.statusCode}');
-        // If refresh fails, clear auth models to force re-login
+        // If refresh fails, clear auth data to force re-login
         await AuthTokenManager.clearAuthData();
         await UserRoleStorageService.instance.clearUserData();
         return null;
       }
     } catch (e) {
       print('Error during token refresh: $e');
-      // Clear auth models on error to force re-login
+      // Clear auth data on error to force re-login
       await AuthTokenManager.clearAuthData();
       await UserRoleStorageService.instance.clearUserData();
       return null;
@@ -581,7 +581,7 @@ class AuthService {
     return true;
   }
 
-  /// Store user models from UserSession to UserRoleStorageService
+  /// Store user data from UserSession to UserRoleStorageService
   static Future<void> _storeUserDataFromSession(UserSession userSession) async {
     try {
       await UserRoleStorageService.instance.setUserData(
@@ -592,16 +592,16 @@ class AuthService {
       );
 
       if (kDebugMode) {
-        print('User models stored in UserRoleStorageService: Role=${userSession.role}, UserID=${userSession.id}');
+        print('User data stored in UserRoleStorageService: Role=${userSession.role}, UserID=${userSession.id}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error storing user models in UserRoleStorageService: $e');
+        print('Error storing user data in UserRoleStorageService: $e');
       }
     }
   }
 
-  /// Get current user models from UserRoleStorageService
+  /// Get current user data from UserRoleStorageService
   static Future<UserData?> getCurrentUserData() async {
     return await UserRoleStorageService.instance.getUserData();
   }

@@ -188,7 +188,7 @@ class _ProfilePageState extends State<ProfilePage> {
         };
 
         // Mock save for now - replace with actual API call
-        print('Saving profile models: $profileData');
+        print('Saving profile data: $profileData');
 
         // Mock image upload
         if (_imageFile != null) {
@@ -207,7 +207,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
 
-        // Reload profile to get updated models
+        // Reload profile to get updated data
         await _loadUserProfile();
       }
     } catch (e) {

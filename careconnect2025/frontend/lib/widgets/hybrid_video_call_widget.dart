@@ -12,7 +12,7 @@ class HybridVideoCallWidget extends StatefulWidget {
   final bool isAudioEnabled;
   final bool isInitiator;
 
-  // Real user identification models
+  // Real user identification data
   final String? userEmail;
   final String? userPhone;
   final String? userName;
@@ -29,7 +29,7 @@ class HybridVideoCallWidget extends StatefulWidget {
     this.isAudioEnabled = true,
     this.isInitiator = false,
 
-    // Real user models parameters
+    // Real user data parameters
     this.userEmail,
     this.userPhone,
     this.userName,
@@ -305,7 +305,7 @@ class _HybridVideoCallWidgetState extends State<HybridVideoCallWidget> {
   }
 }
 
-// Test page for the hybrid video calling with real user models
+// Test page for the hybrid video calling with real user data
 class VideoCallTestPage extends StatefulWidget {
   const VideoCallTestPage({super.key});
 
@@ -318,7 +318,7 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
   final TextEditingController _userIdController = TextEditingController();
   final TextEditingController _recipientIdController = TextEditingController();
 
-  // Real user models controllers based on your API structure
+  // Real user data controllers based on your API structure
   final TextEditingController _userEmailController = TextEditingController();
   final TextEditingController _userPhoneController = TextEditingController();
   final TextEditingController _userNameController = TextEditingController();
@@ -332,12 +332,12 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
   @override
   void initState() {
     super.initState();
-    // Set realistic default values based on your backend models
+    // Set realistic default values based on your backend data
     _callIdController.text = 'call_${DateTime.now().millisecondsSinceEpoch}';
     _userIdController.text = '15'; // Caregiver ID from your API
     _recipientIdController.text = '10'; // Patient ID from your API
 
-    // Real models from your curl commands
+    // Real data from your curl commands
     _userEmailController.text = 'carepatient2025@yopmail.com';
     _userPhoneController.text = '2012345670';
     _userNameController.text = 'test mama';
@@ -552,7 +552,7 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
                     '2. For mobile: Uses Agora with App ID: 6dd0e8e31625434e8dd185bcb075cd79',
                   ),
                   Text('3. Real user emails/phones are shown during calls'),
-                  Text('4. Default models matches your backend API structure'),
+                  Text('4. Default data matches your backend API structure'),
                   Text('5. Caregiver: carepatient2025@yopmail.com (ID: 15)'),
                   Text('6. Patient: patienttar2025@yopmail.com (ID: 10)'),
                 ],
@@ -589,7 +589,7 @@ class _VideoCallTestPageState extends State<VideoCallTestPage> {
           recipientId: isInitiator ? _recipientIdController.text : null,
           isInitiator: isInitiator,
 
-          // Pass real user models
+          // Pass real user data
           userName: _userNameController.text.isEmpty
               ? null
               : _userNameController.text,

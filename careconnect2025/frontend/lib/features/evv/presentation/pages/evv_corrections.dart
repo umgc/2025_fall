@@ -37,7 +37,7 @@ class _EvvCorrectionsPageState extends State<EvvCorrectionsPage> with TickerProv
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading models: $e')),
+          SnackBar(content: Text('Error loading data: $e')),
         );
       }
     }
@@ -259,7 +259,7 @@ class _EvvCorrectionsPageState extends State<EvvCorrectionsPage> with TickerProv
                 );
               }
               return const SizedBox.shrink();
-            }),
+            }).toList(),
           ],
         ),
       ),

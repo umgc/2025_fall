@@ -67,7 +67,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   @override
   void initState() {
     super.initState();
-    // Add a small delay to ensure the widget is fully mounted before fetching models
+    // Add a small delay to ensure the widget is fully mounted before fetching data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       fetchAnalytics();
     });
@@ -130,11 +130,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             '🔍 Vitals API response body: ${vitalsResp.body.substring(0, min(100, vitalsResp.body.length))}...',
           );
 
-          if (!vitalsJsonMap.containsKey('models')) {
-            throw const FormatException('Vitals response missing "models" key');
+          if (!vitalsJsonMap.containsKey('data')) {
+            throw const FormatException('Vitals response missing "data" key');
           }
 
-          final List<dynamic> vitalsDataList = vitalsJsonMap['models'] as List;
+          final List<dynamic> vitalsDataList = vitalsJsonMap['data'] as List;
           final dashboardJson = json.decode(dashboardResp.body);
 
           // Debug log the dashboard response
@@ -152,17 +152,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             '✅ Dashboard parsed - avgMood: ${dashboard?.avgMoodValue}, avgPain: ${dashboard?.avgPainValue}',
           );
           print(
-            '✅ Successfully loaded ${vitals.length} vitals and dashboard models',
+            '✅ Successfully loaded ${vitals.length} vitals and dashboard data',
           );
         } catch (e) {
           print('❌ Error parsing API response: $e');
           setState(() {
-            error = 'Error parsing models: $e';
+            error = 'Error parsing data: $e';
             loading = false;
           });
         }
       } else {
-        String vitalsErrorMessage = 'Failed to fetch vitals models';
+        String vitalsErrorMessage = 'Failed to fetch vitals data';
         if (vitalsResp.body.isNotEmpty) {
           try {
             final Map<String, dynamic> errorBody = json.decode(vitalsResp.body);
@@ -173,7 +173,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           }
         }
         // Handle non-200 status codes for dashboardResp
-        String dashboardErrorMessage = 'Failed to fetch dashboard models';
+        String dashboardErrorMessage = 'Failed to fetch dashboard data';
         if (dashboardResp.body.isNotEmpty) {
           try {
             final Map<String, dynamic> errorBody = json.decode(
@@ -247,7 +247,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
 
-    // Add summary models
+    // Add summary data
     csvContent.writeln('');
     csvContent.writeln('Summary Data');
     if (dashboard != null) {
@@ -516,17 +516,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
     // Priority 1: Return existing dashboard if available
     if (dashboard != null) {
-      print('✅ Using existing dashboard models');
+      print('✅ Using existing dashboard data');
       return dashboard!;
     }
 
-    // Priority 2: If we have vitals models, calculate averages from it
+    // Priority 2: If we have vitals data, calculate averages from it
     if (vitals.isNotEmpty) {
       print(
-        '📊 Calculating dashboard models from ${vitals.length} vitals records',
+        '📊 Calculating dashboard data from ${vitals.length} vitals records',
       );
 
-      // Calculate averages from vitals models
+      // Calculate averages from vitals data
       double avgHeartRate =
           vitals.map((v) => v.heartRate).reduce((a, b) => a + b) /
           vitals.length;
@@ -559,7 +559,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ? painValues.reduce((a, b) => a + b) / painValues.length
           : null;
 
-      // Calculate adherence rate (assume reasonable value if we have models)
+      // Calculate adherence rate (assume reasonable value if we have data)
       double adherenceRate =
           85.0; // Default reasonable value when dashboard API fails
 
@@ -585,8 +585,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
 
-    print('⚠️ No vitals models available - returning null dashboard');
-    // Priority 3: If no vitals models, return null values (will show "N/A" in UI)
+    print('⚠️ No vitals data available - returning null dashboard');
+    // Priority 3: If no vitals data, return null values (will show "N/A" in UI)
     return DashboardAnalytics(
       adherenceRate: null,
       avgHeartRate: null,
@@ -629,7 +629,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   String _getHealthDataContext() {
     if (vitals.isEmpty && dashboard == null) {
-      return "No health models available for this patient in the selected period.";
+      return "No health data available for this patient in the selected period.";
     } else {
       StringBuffer context = StringBuffer();
       context.writeln("PATIENT HEALTH DATA SUMMARY (Last $selectedDays days):");
@@ -666,7 +666,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         context.writeln("");
       }
 
-      // Add recent vitals models including mood and pain
+      // Add recent vitals data including mood and pain
       if (vitals.isNotEmpty) {
         context.writeln("RECENT VITAL SIGNS:");
         final recentVitals = vitals.take(10).toList();
@@ -730,8 +730,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
-  // Ensures a non-nullable String is always returned for health models context.
-  // If no models, returns a default message; otherwise, returns the summary.
+  // Ensures a non-nullable String is always returned for health data context.
+  // If no data, returns a default message; otherwise, returns the summary.
   // This prevents null errors and avoids throwing exceptions.
   // Always returns a valid String for display.
   Widget _buildAIAssistantCard() {
@@ -792,7 +792,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Ask questions about this patient\'s health models and get AI-powered insights:',
+                    'Ask questions about this patient\'s health data and get AI-powered insights:',
                     style: TextStyle(
                       fontSize: screenWidth < 400 ? 12 : 14,
                       color: Colors.grey.shade700,
@@ -884,7 +884,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Click "Ask AI" to start a conversation about the patient\'s health models',
+                            'Click "Ask AI" to start a conversation about the patient\'s health data',
                             style: TextStyle(
                               fontSize: screenWidth < 400 ? 10 : 11,
                               color: Theme.of(context).colorScheme.primary,
@@ -1111,7 +1111,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             ),
                             SizedBox(height: screenWidth < 400 ? 12 : 16),
                             Text(
-                              'No models available for this period',
+                              'No data available for this period',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: screenWidth < 400 ? 12 : 14,
@@ -1252,14 +1252,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     final latestVital = vitals.isNotEmpty ? vitals.first : null;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Debug: Print dashboard models to check what we have
-    print('🔍 Mobile Summary - Dashboard models:');
+    // Debug: Print dashboard data to check what we have
+    print('🔍 Mobile Summary - Dashboard data:');
     print('  - avgMood: ${dashData.avgMoodValue}');
     print('  - avgPain: ${dashData.avgPainValue}');
     print('  - avgHeartRate: ${dashData.avgHeartRate}');
     print('  - avgSpo2: ${dashData.avgSpo2}');
 
-    // If no models at all, show a helpful message
+    // If no data at all, show a helpful message
     if (latestVital == null && dashData.avgHeartRate == null) {
       return Container(
         padding: const EdgeInsets.all(16), // Reduced padding
@@ -1780,7 +1780,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ),
           const SizedBox(height: 6), // Reduced spacing
           Text(
-            hasData ? value : 'No models',
+            hasData ? value : 'No data',
             style: TextStyle(
               color: textColor,
               fontSize: 16, // Reduced font size
@@ -1881,14 +1881,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       );
     }
 
-    // Prepare chart models with different colors for each chart - with null safety
+    // Prepare chart data with different colors for each chart - with null safety
     List<FlSpot> heartRateSpots = [];
     List<FlSpot> spo2Spots = [];
     List<FlSpot> systolicSpots = [];
     List<FlSpot> diastolicSpots = [];
     List<FlSpot> weightSpots = [];
 
-    // Only process models if vitals list is not empty and properly loaded
+    // Only process data if vitals list is not empty and properly loaded
     if (vitals.isNotEmpty) {
       try {
         heartRateSpots = [
@@ -1912,7 +1912,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             FlSpot(i.toDouble(), vitals[i].weight),
         ];
       } catch (e) {
-        print('Error preparing chart models: $e');
+        print('Error preparing chart data: $e');
         // Reset to empty lists if there's an error
         heartRateSpots = [];
         spo2Spots = [];
@@ -2305,7 +2305,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               CircularProgressIndicator(),
                               SizedBox(height: 16),
                               Text(
-                                'Loading analytics models...',
+                                'Loading analytics data...',
                                 style: TextStyle(fontSize: 16),
                               ),
                             ],

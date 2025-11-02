@@ -89,7 +89,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       platforms.add({
         'id': 'apple_health',
         'name': 'Apple Health',
-        'description': 'Sync health models from Apple Health app',
+        'description': 'Sync health data from Apple Health app',
         'icon': Icons.favorite,
         'color': Colors.red,
         'features': [
@@ -237,7 +237,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
         types: types,
       );
 
-      print('Successfully fetched ${healthData.length} health models points');
+      print('Successfully fetched ${healthData.length} health data points');
 
       Map<HealthDataType, int> summary = {};
       for (var point in healthData) {
@@ -245,7 +245,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       }
 
       summary.forEach((type, count) {
-        print('  - ${type.toString()}: $count models points');
+        print('  - ${type.toString()}: $count data points');
       });
     } catch (e) {
       print('Data fetch failed (connection still OK): $e');
@@ -1127,7 +1127,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
       ];
 
       // Request authorization
-      print('Requesting health permissions for ${types.length} models types...');
+      print('Requesting health permissions for ${types.length} data types...');
       bool requested = await health.requestAuthorization(
         types,
         permissions: types.map((type) => HealthDataAccess.READ).toList(),
@@ -1157,7 +1157,7 @@ class _AddDeviceScreenState extends State<AddDeviceScreen> {
 
           await _storeConnectedDevice('google_fit', grantedPermissions);
 
-          // Test the connection by fetching recent models
+          // Test the connection by fetching recent data
           await _fetchAndLogHealthData(health, types);
 
           setState(() {

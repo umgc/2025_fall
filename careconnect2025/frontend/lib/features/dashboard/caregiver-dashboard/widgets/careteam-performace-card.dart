@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:care_connect_app/config/theme/app_theme.dart';
 
 class CareTeamPerformance extends StatelessWidget {
-  const CareTeamPerformance({super.key});
+  const CareTeamPerformance({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

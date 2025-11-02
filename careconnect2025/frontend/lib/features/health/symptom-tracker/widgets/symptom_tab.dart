@@ -3,7 +3,7 @@ import 'symptom_input_form.dart';
 import 'symptom_card.dart';
 
 class SymptomTab extends StatefulWidget {
-  const SymptomTab({super.key});
+  const SymptomTab({Key? key}) : super(key: key);
 
   @override
   State<SymptomTab> createState() => _SymptomTabState();

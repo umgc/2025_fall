@@ -52,7 +52,7 @@ class _MainScreenState extends State<MainScreen> {
     } else {
       final user = userProvider.user;
 
-      // Check if user models is missing or invalid
+      // Check if user data is missing or invalid
       if (user == null || user.role.isEmpty || user.id <= 0) {
         _redirectToLoginWithMessage('Please log in again');
         return;
@@ -75,7 +75,7 @@ class _MainScreenState extends State<MainScreen> {
   /// Redirect to login screen with a message.
   void _redirectToLoginWithMessage(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Clear user models
+      // Clear user data
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       userProvider.clearUser();
 
@@ -141,7 +141,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
-        // Check if user models is missing or invalid
+        // Check if user data is missing or invalid
         final currentUser = userProvider.user;
         if (widget.config == null && (currentUser == null || currentUser.role.isEmpty || currentUser.id <= 0)) {
           // Return a loading screen while redirecting

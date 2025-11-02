@@ -42,11 +42,11 @@ class PatientDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // TODO: Fetch from your store/service using patientId.
-    // For now, demo models mirrors your mockups (Sarah Johnson).
+    // For now, demo data mirrors your mockups (Sarah Johnson).
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
-    // --- Mood demo models ---
+    // --- Mood demo data ---
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -84,7 +84,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Health demo models ---
+    // --- Health demo data ---
     final symptomEntries = <SymptomEntry>[
       SymptomEntry(
         id: 's4',
@@ -149,7 +149,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Virtual Check-In demo models ---
+    // --- Virtual Check-In demo data ---
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',

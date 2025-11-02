@@ -67,7 +67,7 @@ class ScheduledNotification {
 
   /// Creates a [ScheduledNotification] from a JSON map.
   ///
-  /// This is typically used when receiving models from an API.
+  /// This is typically used when receiving data from an API.
   /// Ensures date strings are parsed into [DateTime] objects.
   factory ScheduledNotification.fromJson(Map<String, dynamic> json) {
     return ScheduledNotification(
@@ -89,7 +89,7 @@ class ScheduledNotification {
 
   /// Converts this [ScheduledNotification] to a JSON map.
   ///
-  /// Useful for sending models to an API (e.g., when creating a
+  /// Useful for sending data to an API (e.g., when creating a
   /// new scheduled notification on the backend).
   ///
   /// Note: Fields like [id], [sentTime], [status], [messageId],

@@ -11,15 +11,15 @@ class PatientParser {
         // Extract the relationship
         String relationship = patientData['relationship'] ?? 'Unknown';
 
-        // Initialize link models
+        // Initialize link data
         int? linkId;
         String linkStatus = 'ACTIVE';
 
-        // Extract link models if available
+        // Extract link data if available
         if (patientItem.containsKey('link') &&
             patientItem['link'] is Map<String, dynamic>) {
           final linkData = patientItem['link'] as Map<String, dynamic>;
-          print('🔍 Link models found: $linkData');
+          print('🔍 Link data found: $linkData');
 
           // Extract linkId
           linkId = _extractLinkId(linkData);
@@ -70,7 +70,7 @@ class PatientParser {
     }
   }
 
-  /// Extract link ID from link models
+  /// Extract link ID from link data
   static int? _extractLinkId(Map<String, dynamic> linkData) {
     // Try id field
     if (linkData.containsKey('id')) {
@@ -98,11 +98,11 @@ class PatientParser {
       }
     }
 
-    print('⚠️ Link models does not contain id or linkId field');
+    print('⚠️ Link data does not contain id or linkId field');
     return null;
   }
 
-  /// Extract link status from link models
+  /// Extract link status from link data
   static String _extractLinkStatus(Map<String, dynamic> linkData) {
     // Try status field
     if (linkData.containsKey('status')) {
@@ -119,7 +119,7 @@ class PatientParser {
       return status;
     }
 
-    print('⚠️ Link models does not contain status field, defaulting to ACTIVE');
+    print('⚠️ Link data does not contain status field, defaulting to ACTIVE');
     return 'ACTIVE';
   }
 }

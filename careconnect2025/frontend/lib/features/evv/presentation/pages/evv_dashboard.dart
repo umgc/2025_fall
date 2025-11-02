@@ -36,7 +36,7 @@ class _EvvDashboardState extends State<EvvDashboard> {
       final user = userProvider.user;
       
       if (user?.role == 'ADMIN' || user?.role == 'SUPERVISOR') {
-        // Load admin/supervisor specific models
+        // Load admin/supervisor specific data
         final pendingApprovals = await _evvService.getPendingEorApprovals();
         final pendingCorrections = await _evvService.getPendingCorrections();
         

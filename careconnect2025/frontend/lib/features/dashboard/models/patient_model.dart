@@ -112,7 +112,7 @@ class Patient {
     // If linkId is still null, try to extract from link object
     if (json.containsKey('link') && json['link'] is Map<String, dynamic>) {
       final linkData = json['link'] as Map<String, dynamic>;
-      print('🔍 Found link models: ${linkData.keys.toList()}');
+      print('🔍 Found link data: ${linkData.keys.toList()}');
 
       // Extract link ID
       if (linkData.containsKey('id')) {
@@ -217,7 +217,7 @@ class Patient {
   //   // If linkId is still null, try to extract from link object
   //   if (json.containsKey('link') && json['link'] is Map<String, dynamic>) {
   //     final linkData = json['link'] as Map<String, dynamic>;
-  //     print('🔍 Found link models: ${linkData.keys.toList()}');
+  //     print('🔍 Found link data: ${linkData.keys.toList()}');
 
   //     // Extract link ID
   //     if (linkData.containsKey('id')) {

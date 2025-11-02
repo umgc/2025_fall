@@ -61,7 +61,7 @@ class Subscription {
     // Original Stripe format
     final planData =
         json['plan'] as Map<String, dynamic>? ??
-        json['items']?['models']?[0]?['plan'] as Map<String, dynamic>? ??
+        json['items']?['data']?[0]?['plan'] as Map<String, dynamic>? ??
         {};
 
     final stripeId = json['id']?.toString() ?? '';

@@ -52,7 +52,7 @@ class OfflineNotification extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Last synced ${_getTimeSinceSync()}. Your models will sync when reconnected. The application will have limited functionality.',
+                  'Last synced ${_getTimeSinceSync()}. Your data will sync when reconnected. The application will have limited functionality.',
                   style: TextStyle(
                     color: theme.colorScheme.onInverseSurface.withValues(
                       alpha: 0.8,

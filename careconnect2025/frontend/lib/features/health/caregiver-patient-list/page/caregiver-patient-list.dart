@@ -29,7 +29,7 @@ class CaregiverPatientList extends StatefulWidget {
 
 /// Private state class for CaregiverPatientList.
 ///
-/// Manages patient models loading, filtering, and search functionality.
+/// Manages patient data loading, filtering, and search functionality.
 class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// Complete list of all patients assigned to this caregiver
   List<Patient> _allPatients = [];
@@ -45,7 +45,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
 
   /// Initializes the widget state.
   ///
-  /// Sets up the search controller listener and loads initial patient models.
+  /// Sets up the search controller listener and loads initial patient data.
   @override
   void initState() {
     super.initState();
@@ -63,12 +63,12 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
     super.dispose();
   }
 
-  /// Loads patient models from the server.
+  /// Loads patient data from the server.
   ///
   /// Fetches the caregiver's assigned patients from the API.
   ///
   /// Returns:
-  /// * Future<void> - Completes when patient models is loaded
+  /// * Future<void> - Completes when patient data is loaded
   Future<void> _loadPatients() async {
     setState(() {
       _isLoading = true;
@@ -133,7 +133,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
       lastUpdated: DateTime.now(), // TODO: Use actual lastUpdated from API
       statusMessage: link['notes'] ?? 'No status available',
       nextCheckIn: DateTime.now().add(const Duration(days: 1)), // TODO: Use actual check-in date
-      mood: 'Good', // TODO: Fetch actual mood from patient models
+      mood: 'Good', // TODO: Fetch actual mood from patient data
       moodEmoji: '😊', // TODO: Map mood to emoji
       isUrgent: false, // TODO: Determine urgency based on patient status
       messageCount: 0, // TODO: Fetch actual unread message count
@@ -574,7 +574,7 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// * [count] - The numerical value to display
   /// * [label] - The descriptive label for the statistic
   /// * [color] - The color to use for the count text
-  /// * [theme] - The app theme models for consistent styling
+  /// * [theme] - The app theme data for consistent styling
   ///
   /// Returns:
   /// * Widget - A styled card containing the statistic

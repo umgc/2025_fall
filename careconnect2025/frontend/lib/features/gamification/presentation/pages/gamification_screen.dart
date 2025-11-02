@@ -104,7 +104,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print("Error loading gamification models: $e");
+      print("Error loading gamification data: $e");
     }
   }
 

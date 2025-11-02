@@ -378,7 +378,7 @@ class AmountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.8),
+        color: theme.colorScheme.surfaceVariant.withOpacity(.8),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: theme.colorScheme.outline.withOpacity(.4)),
       ),

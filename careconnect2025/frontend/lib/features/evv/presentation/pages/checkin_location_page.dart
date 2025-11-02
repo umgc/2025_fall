@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/api_service.dart';
+import '../../../../services/auth_token_manager.dart';
 import '../../../../config/theme/app_theme.dart';
 import '../../../dashboard/models/patient_model.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class CheckinLocationPage extends StatefulWidget {
   final int patientId;

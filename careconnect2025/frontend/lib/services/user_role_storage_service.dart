@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
-/// Service for storing and retrieving user role and related models
+/// Service for storing and retrieving user role and related data
 /// Uses SharedPreferences which automatically handles platform differences:
 /// - Web: localStorage/sessionStorage
 /// - Mobile: Native platform storage (UserDefaults on iOS, SharedPreferences on Android)
@@ -30,7 +30,7 @@ class UserRoleStorageService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  /// Store user role and related models
+  /// Store user role and related data
   Future<void> setUserData({
     required String role,
     required int userId,
@@ -48,7 +48,7 @@ class UserRoleStorageService {
     ]);
 
     if (kDebugMode) {
-      print('UserRoleStorageService: Stored user models - Role: $role, UserID: $userId');
+      print('UserRoleStorageService: Stored user data - Role: $role, UserID: $userId');
     }
   }
 
@@ -82,7 +82,7 @@ class UserRoleStorageService {
     return _prefs!.getBool(_isLoggedInKey) ?? false;
   }
 
-  /// Get all user models at once
+  /// Get all user data at once
   Future<UserData?> getUserData() async {
     await _ensureInitialized();
 
@@ -103,7 +103,7 @@ class UserRoleStorageService {
     );
   }
 
-  /// Clear all stored user models (logout)
+  /// Clear all stored user data (logout)
   Future<void> clearUserData() async {
     await _ensureInitialized();
 
@@ -118,7 +118,7 @@ class UserRoleStorageService {
     ]);
 
     if (kDebugMode) {
-      print('UserRoleStorageService: Cleared all user models');
+      print('UserRoleStorageService: Cleared all user data');
     }
   }
 

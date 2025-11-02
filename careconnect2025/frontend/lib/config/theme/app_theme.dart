@@ -186,7 +186,7 @@ class AppTheme {
     );
   }
 
-  // Generate theme models for MaterialApp
+  // Generate theme data for MaterialApp
   static ThemeData get lightTheme {
     return ThemeData(
       primaryColor: primary,
@@ -264,7 +264,7 @@ class AppTheme {
     );
   }
 
-  // Generate dark theme models for MaterialApp
+  // Generate dark theme data for MaterialApp
   static ThemeData get darkTheme {
     return ThemeData(
       primaryColor: primaryDarkTheme,

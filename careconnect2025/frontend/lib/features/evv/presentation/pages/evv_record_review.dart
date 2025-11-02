@@ -163,8 +163,8 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
     final gender = (record.patient?.gender?.toUpperCase() == 'MALE' || record.patient?.gender?.toUpperCase() == 'M') ? 'M' : 'F';
     
     final claimId = '$patientId${record.dateOfService.millisecondsSinceEpoch.toString().substring(0, 10)}';
-    final evvId = 'EVV-$claimId';
-    final lineEvvId = 'EVV-LINE-$claimId';
+    final evvId = 'EVV-${claimId}';
+    final lineEvvId = 'EVV-LINE-${claimId}';
     
     final duration = record.timeOut.difference(record.timeIn).inMinutes;
     final units = ((duration / 15).ceil()).toString();
@@ -366,7 +366,7 @@ IEA*1*$controlNumber~
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue: _selectedStatusFilter,
+                    value: _selectedStatusFilter,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

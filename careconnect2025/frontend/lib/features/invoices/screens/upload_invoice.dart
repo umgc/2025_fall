@@ -26,13 +26,11 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
   Future<void> _watchConnectivity() async {
     final status = await Connectivity().checkConnectivity();
-    if (mounted) {
+    if (mounted)
       setState(() => offline = status.contains(ConnectivityResult.none));
-    }
     Connectivity().onConnectivityChanged.listen((result) {
-      if (mounted) {
+      if (mounted)
         setState(() => offline = result.contains(ConnectivityResult.none));
-      }
     });
   }
 
@@ -124,7 +122,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     final res = await runWithBlockingDialog<InvoiceResponseDto?>(
       context: context,
-      message: 'Extracting invoice models. This may take a minute.',
+      message: 'Extracting invoice data. This may take a minute.',
       future: InvoiceOcrLlmApi.extractWithLlm(
         images: imageFiles,
         pdfPaths: pdfPaths,
@@ -134,7 +132,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     await _handleExtractResult(
       res,
-      failMessage: 'Could not extract invoice models from files',
+      failMessage: 'Could not extract invoice data from files',
     );
     if (!mounted) return;
   }
@@ -167,7 +165,7 @@ class _UploadInvoicePageState extends State<UploadInvoicePage> {
 
     final res = await runWithBlockingDialog<InvoiceResponseDto?>(
       context: context,
-      message: 'Extracting invoice models from images. This may take a minute.',
+      message: 'Extracting invoice data from images. This may take a minute.',
       future: InvoiceOcrLlmApi.extractWithLlm(images: reviewed),
     );
 

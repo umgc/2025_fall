@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:care_connect_app/features/dashboard/models/patient_model.dart';
 
-/// Utility class for parsing patient models from various API response formats
+/// Utility class for parsing patient data from various API response formats
 class PatientParser {
   /// Parse a patient item from any supported API response format
   static Patient parsePatientItem(Map<String, dynamic> patientItem) {
@@ -12,12 +12,12 @@ class PatientParser {
       // Handle nested patient structure (new API format)
       if (patientItem.containsKey('patient')) {
         final Map<String, dynamic> patientData = patientItem['patient'];
-        print('📋 Found nested patient models: ${json.encode(patientData)}');
+        print('📋 Found nested patient data: ${json.encode(patientData)}');
 
         // Extract the relationship
         String relationship = patientData['relationship'] ?? 'Unknown';
 
-        // Initialize link models
+        // Initialize link data
         int? linkId;
         String linkStatus = 'ACTIVE';
 
@@ -29,18 +29,18 @@ class PatientParser {
           print('🔍 Found linkId at top level: $linkId');
         }
 
-        // Extract link models if available
+        // Extract link data if available
         if (patientItem.containsKey('link')) {
           // Handle both Map and non-Map cases (like strings)
           if (patientItem['link'] is Map<String, dynamic>) {
             final linkData = patientItem['link'] as Map<String, dynamic>;
-            print('🔍 Link models found (Map): ${json.encode(linkData)}');
+            print('🔍 Link data found (Map): ${json.encode(linkData)}');
 
             // Extract linkId - check all possible fields
             int? extractedLinkId = _extractLinkId(linkData);
             if (extractedLinkId != null) {
               linkId = extractedLinkId;
-              print('✅ Using linkId from link models: $linkId');
+              print('✅ Using linkId from link data: $linkId');
             }
 
             // Extract linkStatus - check all possible fields
@@ -59,7 +59,7 @@ class PatientParser {
               final linkData = json.decode(patientItem['link']);
               if (linkData is Map<String, dynamic>) {
                 print(
-                  '🔍 Link models found (JSON string): ${patientItem['link']}',
+                  '🔍 Link data found (JSON string): ${patientItem['link']}',
                 );
                 int? extractedLinkId = _extractLinkId(linkData);
                 if (extractedLinkId != null) {
@@ -75,11 +75,11 @@ class PatientParser {
             }
           } else {
             print(
-              '⚠️ Link models is not a map or string: ${patientItem['link'].runtimeType}',
+              '⚠️ Link data is not a map or string: ${patientItem['link'].runtimeType}',
             );
           }
         } else {
-          print('⚠️ No link models found in patient item');
+          print('⚠️ No link data found in patient item');
         }
 
         // TEMPORARY FIX: Generate a linkId if it's null but status is ACTIVE
@@ -112,7 +112,7 @@ class PatientParser {
           linkId = patientData['linkId'] is int
               ? patientData['linkId']
               : int.tryParse(patientData['linkId'].toString());
-          print('🔍 Found linkId in patient models: $linkId');
+          print('🔍 Found linkId in patient data: $linkId');
         }
 
         // Check if the id from patientItem might be a linkId (some APIs do this)
@@ -163,9 +163,9 @@ class PatientParser {
     }
   }
 
-  /// Extract link ID from link models checking multiple possible field names
+  /// Extract link ID from link data checking multiple possible field names
   static int? _extractLinkId(Map<String, dynamic> linkData) {
-    print('🔎 Examining link models keys: ${linkData.keys.toList()}');
+    print('🔎 Examining link data keys: ${linkData.keys.toList()}');
 
     // Try to extract an integer from a field, handling both int and String types
     int? tryExtractInt(dynamic value, String fieldName) {
@@ -222,13 +222,13 @@ class PatientParser {
       }
     }
 
-    print('⚠️ No valid linkId found in link models');
+    print('⚠️ No valid linkId found in link data');
     return null;
   }
 
-  /// Extract link status from link models checking multiple possible field names
+  /// Extract link status from link data checking multiple possible field names
   static String _extractLinkStatus(Map<String, dynamic> linkData) {
-    print('🔎 Examining link models for status fields');
+    print('🔎 Examining link data for status fields');
 
     // Check for direct status field
     if (linkData.containsKey('status')) {
@@ -265,7 +265,7 @@ class PatientParser {
       }
     }
 
-    print('⚠️ No status information found in link models, defaulting to ACTIVE');
+    print('⚠️ No status information found in link data, defaulting to ACTIVE');
     return 'ACTIVE';
   }
 

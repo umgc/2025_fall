@@ -45,7 +45,7 @@ class BackendApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        print('🔍 Received patient models: ${data.length} patients');
+        print('🔍 Received patient data: ${data.length} patients');
 
         // Process the nested structure from your API
         final List<Map<String, dynamic>> patients = [];
@@ -56,7 +56,7 @@ class BackendApiService {
                 ? Map<String, dynamic>.from(item['link'])
                 : null;
 
-            // Add link information to patient models
+            // Add link information to patient data
             if (link != null) {
               patient['linkId'] = link['id'];
               patient['linkStatus'] = link['status'];

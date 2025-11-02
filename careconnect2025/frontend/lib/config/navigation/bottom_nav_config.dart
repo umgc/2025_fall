@@ -220,7 +220,7 @@ static List<BottomNavItem> getCaregiverNavItems() {
         return getCaregiverNavItems();
       default:
         // TODO - We should throw exception if the roles doesn't exist
-        //        We don't want any models leakage.
+        //        We don't want any data leakage.
         return getPatientNavItems();
     }
   }

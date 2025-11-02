@@ -110,7 +110,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             userRole.toUpperCase() == 'ADMIN';
       });
 
-      // Use the new ProfileService to get complete profile models
+      // Use the new ProfileService to get complete profile data
       Map<String, dynamic>? profileData;
 
       if (_isCaregiver) {
@@ -141,7 +141,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           }
         });
       } else {
-        throw Exception('Failed to load profile models');
+        throw Exception('Failed to load profile data');
       }
     } catch (e) {
       setState(() {
@@ -162,7 +162,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         return {};
       }
 
-      // If models is already a Map, it's from ProfileService
+      // If data is already a Map, it's from ProfileService
       if (data is Map<String, dynamic>) {
         final rawData = data;
 
@@ -281,7 +281,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
       // Add role-specific fields
       if (_isCaregiver) {
-        // Build caregiver profile models based on the expected backend structure
+        // Build caregiver profile data based on the expected backend structure
         final Map<String, dynamic> profileData = {
           'firstName': _nameController.text.split(' ').first,
           'lastName': _nameController.text.contains(' ')
@@ -354,7 +354,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           );
         }
       } else if (_isPatient) {
-        // Build patient profile models based on the expected backend structure
+        // Build patient profile data based on the expected backend structure
         final Map<String, dynamic> patientData = {
           'firstName': _nameController.text.split(' ').first,
           'lastName': _nameController.text.contains(' ')

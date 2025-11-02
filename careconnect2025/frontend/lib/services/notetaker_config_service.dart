@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:care_connect_app/features/notetaker/models/patient_note_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 import 'api_service.dart';
 import '../config/env_constant.dart';
 
@@ -194,8 +196,8 @@ class NotetakerConfigService {
         List<dynamic> data;
         if (decoded is List) {
           data = decoded;
-        } else if (decoded is Map && decoded.containsKey('models')) {
-          data = decoded['models'] as List<dynamic>;
+        } else if (decoded is Map && decoded.containsKey('data')) {
+          data = decoded['data'] as List<dynamic>;
         } else if (decoded is Map && decoded.containsKey('notes')) {
           data = decoded['notes'] as List<dynamic>;
         } else {

@@ -37,7 +37,7 @@ class CallIntegrationHelper {
 
     final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Extract patient models from your existing structure
+    // Extract patient data from your existing structure
     final patientData = _extractPatientData(targetPatient);
     final caregiverData = _extractCaregiverData(currentUser);
 

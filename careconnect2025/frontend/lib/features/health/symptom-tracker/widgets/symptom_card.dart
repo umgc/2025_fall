@@ -9,14 +9,14 @@ class SymptomCard extends StatelessWidget {
   final bool caregiverAlert;
 
   const SymptomCard({
-    super.key,
+    Key? key,
     required this.title,
     required this.severity,
     required this.time,
     required this.description,
     required this.requiresAttention,
     required this.caregiverAlert,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

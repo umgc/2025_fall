@@ -344,10 +344,10 @@ class ComprehensiveFileService {
         return response.bodyBytes;
       } else {
         final errorData = json.decode(response.body);
-        throw Exception(errorData['error'] ?? 'Failed to export models');
+        throw Exception(errorData['error'] ?? 'Failed to export data');
       }
     } catch (e) {
-      print('❌ Error exporting user models: $e');
+      print('❌ Error exporting user data: $e');
       return null;
     }
   }
@@ -360,10 +360,10 @@ class ComprehensiveFileService {
   }) async {
     try {
       final response = await _uploadToEndpoint(
-        endpoint: '/import/health-models',
+        endpoint: '/import/health-data',
         file: dataFile,
         category: FileCategory.healthDataImport.value,
-        description: 'Bulk health models import',
+        description: 'Bulk health data import',
         additionalFields: {
           'importType': importType,
           'validateOnly': validateOnly.toString(),
@@ -382,7 +382,7 @@ class ComprehensiveFileService {
       }
       return null;
     } catch (e) {
-      print('❌ Error importing bulk models: $e');
+      print('❌ Error importing bulk data: $e');
       return null;
     }
   }
@@ -459,7 +459,7 @@ class ComprehensiveFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        print('Response models returned: $responseData');
+        print('Response data returned: $responseData');
         return UserFileDTO.fromJson(responseData);
       } else {
         final errorData = json.decode(response.body);
@@ -510,7 +510,7 @@ class ComprehensiveFileService {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final List<dynamic> files =
-            responseData['models'] ?? responseData['content'] ?? [];
+            responseData['data'] ?? responseData['content'] ?? [];
         return files.map((json) => UserFileDTO.fromJson(json)).toList();
       } else {
         final errorData = json.decode(response.body);
@@ -555,7 +555,7 @@ class ComprehensiveFileService {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         final List<dynamic> files =
-            responseData['models'] ?? responseData['content'] ?? [];
+            responseData['data'] ?? responseData['content'] ?? [];
         return files.map((json) => UserFileDTO.fromJson(json)).toList();
       } else {
         final errorData = json.decode(response.body);
@@ -658,7 +658,7 @@ class ComprehensiveFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        return FileUploadResponse.fromJson(responseData['models']);
+        return FileUploadResponse.fromJson(responseData['data']);
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['error'] ?? 'Failed to upload file');

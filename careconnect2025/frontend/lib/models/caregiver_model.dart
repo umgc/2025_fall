@@ -30,7 +30,7 @@ class ProfessionalInfo {
 
   /// Converts the ProfessionalInfo instance to a JSON map.
   ///
-  /// Used for API requests and models serialization when storing or
+  /// Used for API requests and data serialization when storing or
   /// transmitting professional credential information.
   ///
   /// Returns:
@@ -45,14 +45,14 @@ class ProfessionalInfo {
 
   /// Creates a ProfessionalInfo instance from a JSON map.
   ///
-  /// Factory constructor for deserializing professional credential models
-  /// from API responses. Provides safe defaults for missing models.
+  /// Factory constructor for deserializing professional credential data
+  /// from API responses. Provides safe defaults for missing data.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing professional info models
+  /// * [json] - JSON map containing professional info data
   ///
   /// Returns:
-  /// * ProfessionalInfo - New instance populated from JSON models
+  /// * ProfessionalInfo - New instance populated from JSON data
   factory ProfessionalInfo.fromJson(Map<String, dynamic> json) {
     return ProfessionalInfo(
       licenseNumber: json['licenseNumber'] ?? '',
@@ -64,7 +64,7 @@ class ProfessionalInfo {
 
 /// Extended user model for caregivers with detailed personal and professional information.
 ///
-/// This model extends UserModel to include caregiver-specific models such as
+/// This model extends UserModel to include caregiver-specific data such as
 /// personal details, contact information, address, and optional professional
 /// credentials for licensed healthcare providers.
 class CaregiverModel extends UserModel {
@@ -153,14 +153,14 @@ class CaregiverModel extends UserModel {
   /// Creates a CaregiverModel instance from a JSON map.
   ///
   /// Factory constructor that handles comprehensive deserialization of caregiver
-  /// models from API responses, including nested address and professional info.
+  /// data from API responses, including nested address and professional info.
   /// Provides safe defaults for all missing fields.
   ///
   /// Parameters:
-  /// * [json] - JSON map containing complete caregiver models
+  /// * [json] - JSON map containing complete caregiver data
   ///
   /// Returns:
-  /// * CaregiverModel - New instance populated from JSON models
+  /// * CaregiverModel - New instance populated from JSON data
   factory CaregiverModel.fromJson(Map<String, dynamic> json) {
     return CaregiverModel(
       name: json['name'] ?? '',

@@ -244,7 +244,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            initialValue: _selectedStateCode.isEmpty ? null : _selectedStateCode,
+                            value: _selectedStateCode.isEmpty ? null : _selectedStateCode,
                             decoration: const InputDecoration(
                               labelText: 'State',
                               border: OutlineInputBorder(),
@@ -280,7 +280,7 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            initialValue: _selectedStatus.isEmpty ? null : _selectedStatus,
+                            value: _selectedStatus.isEmpty ? null : _selectedStatus,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               border: OutlineInputBorder(),

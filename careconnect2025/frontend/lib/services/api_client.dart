@@ -221,7 +221,7 @@ class ApiClient {
         headers: {
           ...?headers,
           // Let Dio set proper content type for multipart
-          'Content-Type': 'multipart/form-models',
+          'Content-Type': 'multipart/form-data',
         },
       ),
       cancelToken: cancelToken,

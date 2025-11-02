@@ -20,7 +20,6 @@ version: 1.0.0+1
 
 environment:
   sdk: ^3.9.2
-  flutter: ">=3.22.0"
 
 # Performance optimization: Enable null safety and latest features
 
@@ -55,7 +54,7 @@ dependencies:
   permission_handler: ^12.0.1 # permission for camera - downgraded for compatibility
   flutter_localizations:
     sdk: flutter
-  intl: ^0.20.2 # models formatting
+  intl: ^0.20.2 # data formatting
   camera: ^0.11.1 # emotion detector use
   pdf: ^3.11.3 # PDF generation
   # emotion detector use
@@ -152,12 +151,6 @@ dependencies:
   device_info_plus: ^12.1.0
   flutter_local_notifications: ^17.2.1
   # Team D - Dependencies End
-  collection: any
-  calendar_view: any
-  flutter_web_plugins:
-    sdk: flutter
-  accordion: any
-  web_socket_channel: any
 dependency_overrides:
   # llama_cpp_dart:
   #   git:
@@ -186,8 +179,6 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
- # calendar_view: any
- # flutter_dotenv: any
 flutter: 
   generate: true  # enables gen-l10n on build
   uses-material-design: true

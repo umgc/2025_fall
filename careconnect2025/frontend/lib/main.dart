@@ -10,16 +10,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:provider/provider.dart';
 
 import 'config/router/app_router.dart';
-import 'features/tasks/utils/task_type_manager.dart';
 import 'services/auth_migration_helper.dart';
 import 'services/messaging_service.dart';
 import 'config/theme/app_theme.dart';
 import 'config/utils/responsive_utils.dart';
 import 'config/utils/web_utils.dart';
+import 'features/tasks/utils/task_type_manager.dart';
 import 'providers/theme_provider.dart';
 import 'providers/user_provider.dart';
+import 'services/auth_migration_helper.dart';
+import 'services/messaging_service.dart';
 
 Future<void> main() async {
   // Global error handling for unhandled Dart errors

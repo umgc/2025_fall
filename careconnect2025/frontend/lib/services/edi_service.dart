@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:universal_html/html.dart' as html;
 import '../features/dashboard/models/patient_model.dart';
 
@@ -97,7 +98,7 @@ IEA*1*$controlNumber~
     return ediContent;
   }
 
-  /// Export visit models as an EDI file
+  /// Export visit data as an EDI file
   /// Returns true if successful, false otherwise
   static Future<bool> exportVisitData({
     required Patient patient,

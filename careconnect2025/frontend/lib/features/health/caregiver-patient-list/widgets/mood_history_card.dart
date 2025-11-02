@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Row models. You can pass either (score5 + emoji) OR (score10) and it maps.
+/// Row data. You can pass either (score5 + emoji) OR (score10) and it maps.
 class MoodHistoryEntry {
   final DateTime date;
   final String label;        // "Poor" | "Fair" | "Good" | "Excellent"

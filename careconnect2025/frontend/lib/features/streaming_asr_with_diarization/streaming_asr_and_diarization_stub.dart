@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/enhanced_file_service.dart';
 import '../notetaker/models/patient_note_model.dart';
 
 class StreamingAsrAndDiarizationScreen extends StatelessWidget {

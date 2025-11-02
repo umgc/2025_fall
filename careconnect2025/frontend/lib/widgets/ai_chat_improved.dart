@@ -371,7 +371,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
               ),
               SizedBox(height: 8),
               Text(
-                '• All models is encrypted and access is logged',
+                '• All data is encrypted and access is logged',
                 style: TextStyle(fontSize: 14),
               ),
               SizedBox(height: 12),
@@ -711,7 +711,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
         userId: currentUserId,
         conversationId: _conversationId.isNotEmpty ? _conversationId : null,
         uploadedFiles: uploadedFilesJson,
-        // Include all medical context models
+        // Include all medical context data
         includeVitals: true,
         includeMedications: true,
         includeNotes: true,
@@ -729,7 +729,7 @@ class _AIChatState extends State<AIChat> with SingleTickerProviderStateMixin {
       } else {
         // Success case - get AI response or provide helpful fallback
         aiText = response['aiResponse'];
-        if (aiText.isEmpty) {
+        if (aiText == null || aiText.isEmpty) {
           aiText = 'I apologize, but I was unable to generate a response. Please try rephrasing your question or check your connection.';
           errorMsg = 'Empty response received from AI service';
         }

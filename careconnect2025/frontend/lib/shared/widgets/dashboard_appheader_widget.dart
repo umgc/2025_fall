@@ -169,7 +169,7 @@ class DashboardAppHeader extends StatelessWidget
                                   // Show error if no patient data available
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Patient models not available for emergency QR'),
+                                      content: Text('Patient data not available for emergency QR'),
                                     ),
                                   );
                                 }
