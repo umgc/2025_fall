@@ -352,7 +352,6 @@ $inputText
       'max_tokens': maxOutputTokens,
       'stream': true, // critical for SSE
     };
-    print("Streaming body: $body");
     final client = http.Client();
     try {
       final req = http.Request('POST', parsedUrl)

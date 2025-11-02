@@ -10,6 +10,8 @@ import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 class TextBasedFunctionCallerView extends StatefulWidget {
   const TextBasedFunctionCallerView({super.key});
@@ -29,6 +31,8 @@ class _TextBasedFunctionCallerViewState
 
   LlmType selectedLLM = LlmType.GROK; //default to chatgpt
   late LLM llm;
+
+  bool _localLlmAvail = !kIsWeb;
 
   @override
   void initState() {
@@ -54,6 +58,8 @@ class _TextBasedFunctionCallerViewState
       aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
     } else if (selectedLLM == LlmType.DEEPSEEK) {
       aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+    } else if (selectedLLM == LlmType.LOCAL) {
+      aiModel = LocalLLMService();
     } else {
       // default
       aiModel = OpenAiLLM(LocalStorageService.getOpenAIKey());
@@ -199,11 +205,18 @@ class _TextBasedFunctionCallerViewState
                     items: LlmType.values.map((LlmType llm) {
                       return DropdownMenuItem<LlmType>(
                         value: llm,
-                        enabled: LocalStorageService.userHasLlmKey(llm),
+                        enabled: (llm == LlmType.LOCAL &&
+                                LocalStorageService.getLocalLLMPath() != "" &&
+                                _localLlmAvail) ||
+                            LocalStorageService.userHasLlmKey(llm),
                         child: Text(
                           llm.displayName,
                           style: TextStyle(
-                            color: LocalStorageService.userHasLlmKey(llm)
+                            color: (llm == LlmType.LOCAL &&
+                                        LocalStorageService.getLocalLLMPath() !=
+                                            "" &&
+                                        _localLlmAvail) ||
+                                    LocalStorageService.userHasLlmKey(llm)
                                 ? Colors.black87
                                 : Colors.grey,
                           ),

@@ -379,7 +379,7 @@ class _AssessmentState extends State<CreateAssessment> {
                         if (selectedLLM == LlmType.LOCAL) ...[
                           const SizedBox(height: 6),
                           const Text(
-                            "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external LLM.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                            "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external LLM.\nPlease use the local LLM responsibly and independently verify any critical information.",
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.black54,

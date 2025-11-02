@@ -34,6 +34,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
   Map<int, String> remarks = {}; // Map to store remarks
   Map<int, TextEditingController> remarkControllers =
       {}; // Controllers for each remark
+  double? calculatedGrade;
 
   // List to store reflections
   @override
@@ -66,6 +67,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
               TextEditingController(text: remarks[score['criterionid']]);
         }
         isLoading = false;
+        calculatedGrade = computeGradeFromSelections();
       });
 
       if (fetchedRubric == null) {
@@ -79,6 +81,37 @@ class SubmissionDetailState extends State<SubmissionDetail> {
         errorMessage = 'Failed to retrieve context ID for the assignment.';
       });
     }
+  }
+
+  double? computeGradeFromSelections() {
+    if (rubric == null || rubric!.criteria.isEmpty) {
+      return null;
+    }
+
+    double totalAchieved = 0;
+    double totalPossible = 0;
+
+    for (final criterion in rubric!.criteria) {
+      if (criterion.levels.isEmpty) continue;
+
+      final maxScore = criterion.levels.last.score.toDouble();
+      totalPossible += maxScore;
+
+      final selectedLevelId = selectedLevels[criterion.id];
+      if (selectedLevelId == null) continue;
+
+      final matchingLevels =
+          criterion.levels.where((level) => level.id == selectedLevelId);
+      if (matchingLevels.isEmpty) continue;
+
+      totalAchieved += matchingLevels.first.score.toDouble();
+    }
+
+    if (totalPossible == 0) {
+      return null;
+    }
+
+    return (totalAchieved / totalPossible) * 100;
   }
 
   Future<List<List<String>>> fetchReflections() async {
@@ -203,7 +236,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                     SizedBox(height: 8),
                     widget.submission.submission.onlineText.isNotEmpty
                         ? Text(
-                            'Grade: ${widget.submission.grade != null ? widget.submission.grade!.grade.toString() : "Not graded yet"}',
+                            'Grade: ${calculatedGrade != null ? '${calculatedGrade!.round()}%' : widget.submission.grade != null ? widget.submission.grade!.grade.toString() : "Not graded yet"}',
                             style: TextStyle(fontSize: 16),
                           )
                         : Text(
@@ -397,6 +430,7 @@ class SubmissionDetailState extends State<SubmissionDetail> {
                   onTap: () {
                     setState(() {
                       selectedLevels[criterion.id] = level.id;
+                      calculatedGrade = computeGradeFromSelections();
                     });
                   },
                   child: Container(
