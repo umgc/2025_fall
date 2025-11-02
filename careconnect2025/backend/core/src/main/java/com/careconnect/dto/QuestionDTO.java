@@ -1,7 +1,7 @@
 package com.careconnect.dto;
 
 // QuestionDTO
-public record QuestionDTO(Long id, String prompt, String type, boolean required, int ordinal) {}
+public record QuestionDTO(Long id, String prompt, String type, boolean required, boolean active, int ordinal) {}
 
 // CreateCheckInRequest (package-private to allow multiple records in one file)
 record CreateCheckInRequest(Long patientId, java.util.List<Long> selectedQuestionIds) {}

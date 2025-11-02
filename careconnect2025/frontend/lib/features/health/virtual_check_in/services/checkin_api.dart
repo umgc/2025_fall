@@ -64,5 +64,41 @@ class CheckInApi {
     }
   }
 
+  /// POST /api/questions - Create new question
+  Future<BackendQuestionDto> createQuestion(BackendQuestionDto question) async {
+    final uri = Uri.parse('$_base/api/questions');
+    final res = await _client
+        .post(uri, headers: _headers(), body: jsonEncode(question.toJson()))
+        .timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to create question: ${res.statusCode} ${res.body}');
+    }
+    return BackendQuestionDto.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// PUT /api/questions/{id} - Update existing question
+  Future<BackendQuestionDto> updateQuestion(int id, BackendQuestionDto question) async {
+    final uri = Uri.parse('$_base/api/questions/$id');
+    final res = await _client
+        .put(uri, headers: _headers(), body: jsonEncode(question.toJson()))
+        .timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to update question: ${res.statusCode} ${res.body}');
+    }
+    return BackendQuestionDto.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// PATCH /api/questions/{id}/active - Deactivate a question
+  Future<void> deactivateQuestion(int id) async {
+    final uri = Uri.parse('$_base/api/questions/$id/active?active=false');
+    final res = await _client.patch(uri, headers: _headers()).timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to deactivate question: ${res.statusCode} ${res.body}');
+    }
+  }
+
   void close() => _client.close();
 }

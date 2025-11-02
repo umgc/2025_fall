@@ -59,7 +59,10 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
   // The working list we render/edit
   late List<VirtualCheckInQuestion> _items;
 
-  // “Add New Question” form state
+  // Track which question IDs have been deleted (for deactivation)
+  final Set<int> _deletedQuestionIds = {};
+
+  // "Add New Question" form state
   CheckInQuestionType _newType = CheckInQuestionType.numerical;
   bool _newRequired = false;
   final TextEditingController _newTextCtrl = TextEditingController();
@@ -83,7 +86,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
       await _api.getQuestions(widget.checkInId.toString()); // <-- convert to String
 
       setState(() {
-        _items = backend.map(vmap.toUiQuestion).toList(growable: false);
+        _items = backend.map(vmap.toUiQuestion).toList();
       });
     } catch (e) {
       setState(() => _error = e.toString());
@@ -92,7 +95,67 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
     }
   }
 
+  Future<void> _saveConfiguration(BuildContext context) async {
+    try {
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
+      // Step 1: Deactivate deleted questions
+      for (final deletedId in _deletedQuestionIds) {
+        await _api.deactivateQuestion(deletedId);
+      }
+
+      // Step 2: Create or update each question
+      for (int i = 0; i < _items.length; i++) {
+        final uiQuestion = _items[i];
+        final backendDto = _toBackendDto(uiQuestion, i);
+
+        if (backendDto.id != null) {
+          // Existing question - update it
+          await _api.updateQuestion(backendDto.id!, backendDto);
+        } else {
+          // New question - create it
+          await _api.createQuestion(backendDto);
+        }
+      }
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Questions saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // Close the config sheet and return the updated list
+      if (mounted) {
+        Navigator.pop(context, _items);
+      }
+    } catch (e) {
+      // Close loading dialog if it's open
+      if (mounted) Navigator.of(context).pop();
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving questions: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -213,7 +276,16 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                                     const Spacer(),
                                     IconButton(
                                       tooltip: 'Delete question',
-                                      onPressed: () => setState(() => _items.removeAt(i)),
+                                      onPressed: () {
+                                        setState(() {
+                                          // Track deleted question ID for backend deactivation
+                                          final questionId = int.tryParse(q.id);
+                                          if (questionId != null) {
+                                            _deletedQuestionIds.add(questionId);
+                                          }
+                                          _items.removeAt(i);
+                                        });
+                                      },
                                       icon: Icon(Icons.delete_outline, color: cs.error),
                                     ),
                                   ],
@@ -466,7 +538,7 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
                             .labelLarge
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      onPressed: () => Navigator.pop(context, _items),
+                      onPressed: () => _saveConfiguration(context),
                       icon: const Icon(Icons.save_outlined, size: 18),
                       label: const Text('Save Configuration'),
                     ),
@@ -481,6 +553,40 @@ class _VirtualCheckInConfigSheetState extends State<VirtualCheckInConfigSheet> {
   }
 
   // ── Helpers
+
+  /// Convert UI question to backend DTO for API calls
+  BackendQuestionDto _toBackendDto(VirtualCheckInQuestion uiQuestion, int index) {
+    BackendQuestionType backendType;
+    switch (uiQuestion.type) {
+      case CheckInQuestionType.numerical:
+        backendType = BackendQuestionType.number;
+        break;
+      case CheckInQuestionType.yesNo:
+        backendType = BackendQuestionType.yesNo;
+        break;
+      case CheckInQuestionType.textInput:
+        backendType = BackendQuestionType.text;
+        break;
+    }
+
+    // Try to parse the ID as an integer (existing questions)
+    // New questions will have timestamp-based IDs that won't parse
+    int? questionId;
+    try {
+      questionId = int.parse(uiQuestion.id);
+    } catch (_) {
+      questionId = null; // New question without backend ID
+    }
+
+    return BackendQuestionDto(
+      id: questionId,
+      prompt: uiQuestion.text,
+      type: backendType,
+      required: uiQuestion.required,
+      active: true,
+      ordinal: index,
+    );
+  }
 
   Widget _pillOutlined(
       BuildContext context, {

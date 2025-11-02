@@ -12,6 +12,7 @@ public final class QuestionMapper {
                 q.getPrompt(),
                 q.getType().name(),  // Convert QuestionType enum to String
                 q.isRequired(),
+                q.isActive(),
                 q.getOrdinal()
         );
     }
