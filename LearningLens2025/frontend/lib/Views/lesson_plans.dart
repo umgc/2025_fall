@@ -13,6 +13,8 @@ import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/grok_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 // Define a constant for grade levels
@@ -33,6 +35,9 @@ class _LessonPlanState extends State<LessonPlans> {
   bool isSubmitDisabled = false;
   String? selectedGradeLevel;
   bool isSubmitting = false;
+
+  // disable local LLM for a web build for now.
+  bool _localLlmAvail = !kIsWeb;
 
   //final ScrollController _scrollController = ScrollController();
   List<ScrollController> _scrollControllers = [];
@@ -106,6 +111,8 @@ class _LessonPlanState extends State<LessonPlans> {
         aiModel = GrokLLM(LocalStorageService.getGrokKey());
       } else if (selectedLLM == LlmType.DEEPSEEK) {
         aiModel = DeepseekLLM(LocalStorageService.getDeepseekKey());
+      } else if (selectedLLM == LlmType.LOCAL) {
+        aiModel = LocalLLMService();
       } else {
         aiModel = PerplexityLLM(LocalStorageService.getPerplexityKey());
       }
@@ -115,6 +122,8 @@ class _LessonPlanState extends State<LessonPlans> {
       var result = await aiModel.postToLlm(prompt);
 
       String normalizedText = utf8.decode(result.codeUnits);
+
+      print(normalizedText);
 
       setState(() {
         manualEntryController.text = normalizeText(
@@ -293,13 +302,22 @@ class _LessonPlanState extends State<LessonPlans> {
                                     items: LlmType.values.map((LlmType llm) {
                                       return DropdownMenuItem<LlmType>(
                                         value: llm,
-                                        enabled:
+                                        enabled: (llm == LlmType.LOCAL &&
+                                                LocalStorageService
+                                                        .getLocalLLMPath() !=
+                                                    "" &&
+                                                _localLlmAvail) ||
                                             LocalStorageService.userHasLlmKey(
                                                 llm),
                                         child: Text(llm.displayName,
                                             style: TextStyle(
-                                              color: LocalStorageService
-                                                      .userHasLlmKey(llm)
+                                              color: (llm == LlmType.LOCAL &&
+                                                          LocalStorageService
+                                                                  .getLocalLLMPath() !=
+                                                              "" &&
+                                                          _localLlmAvail) ||
+                                                      LocalStorageService
+                                                          .userHasLlmKey(llm)
                                                   ? Colors.black87
                                                   : Colors.grey,
                                             )),
@@ -308,6 +326,17 @@ class _LessonPlanState extends State<LessonPlans> {
                                     disabledHint:
                                         Text("Enable AI to select a model"),
                                   ),
+
+                                if (selectedLLM == LlmType.LOCAL) ...[
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    "Running a Large Language Model (LLM) requires substantial hardware resources. The recommended model for this task is 7B or higher reasoning models (Qwen), however smaller models may be used without generating errors. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
 
                                 // New UI elements for additional AI prompt
                                 if (showAiPromptSection)
@@ -343,18 +372,56 @@ class _LessonPlanState extends State<LessonPlans> {
                                                 });
                                               },
                                         child: isGeneratingLesson
-                                            ? SizedBox(
-                                                width: 24,
-                                                height: 24,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                          Color>(Colors.white),
-                                                ),
+                                            ? Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  const SizedBox(
+                                                    width: 24,
+                                                    height: 24,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                                  Color>(
+                                                              Colors.white),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  if (selectedLLM ==
+                                                      LlmType.LOCAL)
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        setState(() {
+                                                          isGeneratingLesson =
+                                                              false;
+                                                        });
+                                                        // Cancel inference from Local LLM (may break)
+                                                        LocalLLMService()
+                                                            .cancel();
+                                                      },
+                                                      style:
+                                                          TextButton.styleFrom(
+                                                        foregroundColor:
+                                                            Colors.black,
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        textStyle:
+                                                            const TextStyle(
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .underline,
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                          'Cancel Generation'),
+                                                    ),
+                                                ],
                                               )
-                                            : Text("Generate Lesson Plan"),
+                                            : const Text(
+                                                "Generate Lesson Plan"),
                                       ),
                                     ],
                                   ),

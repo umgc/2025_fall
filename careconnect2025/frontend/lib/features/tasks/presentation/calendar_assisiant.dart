@@ -13,8 +13,10 @@ import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
 import 'package:care_connect_app/widgets/common_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import 'widgets/add_task_button.dart';
 import 'widgets/calendar_cell.dart';
 import 'widgets/event_tile.dart';
 import 'widgets/filters_panel.dart';
@@ -243,7 +245,6 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
     return CalendarControllerProvider<Task>(
       controller: _eventController,
       child: Scaffold(
@@ -252,14 +253,7 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
           context,
           title: 'Calendar Assistant',
           additionalActions: [
-            TextButton.icon(
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                "Add Task",
-                style: TextStyle(color: Colors.white),
-              ),
-              onPressed: _addTask,
-            ),
+            AddTaskButton(onPressed: _addTask),
             ImportIcsButton(
               onTasksImported: _loadTasksFromDb,
               patientNames: patientNames, //refresh calendar after import
@@ -411,6 +405,46 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
                                 color: theme.colorScheme.onSurface,
                               ),
                             ),
+                            headerBuilder: (date) {
+                              final formatted = DateFormat(
+                                'MMM yyyy',
+                              ).format(date);
+
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Left arrow (previous month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.previousPage();
+                                    },
+                                  ),
+
+                                  // Month title
+                                  Text(
+                                    formatted,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          color: theme.colorScheme.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+
+                                  // Right arrow (next month)
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    color: theme.colorScheme.onSurface,
+                                    onPressed: () {
+                                      _monthKey.currentState?.nextPage();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+
                             weekDayBuilder: (day) {
                               final labels = [
                                 "M",
@@ -630,32 +664,47 @@ class _CalendarAssistantScreenState extends State<CalendarAssistantScreen> {
 
               const SizedBox(height: 16),
 
-              // Task list changes depending on view
+              // ------------------
+              // Task list section (scrollable)
+              // ------------------
               if (_selectedDay != null)
-                _currentView == CalendarViewType.week
-                    ? TaskListWeek(
-                        events: _eventController.events.where((e) {
-                          final weekStart = TaskUtils.getStartOfWeek(
-                            _selectedDay!,
-                          );
-                          final weekEnd = weekStart.add(
-                            const Duration(days: 7),
-                          );
-                          return e.date.isAfter(
-                                weekStart.subtract(const Duration(seconds: 1)),
-                              ) &&
-                              e.date.isBefore(weekEnd);
-                        }).toList(),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      )
-                    : TaskListDay(
-                        events: _eventController.getEventsOnDay(_selectedDay!),
-                        patientNames: patientNames,
-                        onEdit: _editTask,
-                        onDelete: _removeTask,
-                      ),
+                Column(
+                  children: [
+                    const Divider(thickness: 1),
+                    SizedBox(
+                      // adjust this to control how tall the list area is
+                      height: MediaQuery.of(context).size.height * 0.20,
+                      child: _currentView == CalendarViewType.week
+                          ? TaskListWeek(
+                              events: _eventController.events.where((e) {
+                                final weekStart = TaskUtils.getStartOfWeek(
+                                  _selectedDay!,
+                                );
+                                final weekEnd = weekStart.add(
+                                  const Duration(days: 7),
+                                );
+                                return e.date.isAfter(
+                                      weekStart.subtract(
+                                        const Duration(seconds: 1),
+                                      ),
+                                    ) &&
+                                    e.date.isBefore(weekEnd);
+                              }).toList(),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            )
+                          : TaskListDay(
+                              events: _eventController.getEventsOnDay(
+                                _selectedDay!,
+                              ),
+                              patientNames: patientNames,
+                              onEdit: _editTask,
+                              onDelete: _removeTask,
+                            ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),

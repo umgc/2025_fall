@@ -4,6 +4,7 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
@@ -39,9 +40,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
   bool isLoading = false;
   DateTime? startDate;
   DateTime? endDate;
-  final DateTime earliestPossibleDate = DateTime(2025, 9);
-  final DateTime lastPossibleDate =
-      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+  final DateTime earliestPossibleDate = DateTime(2025, 9, 1);
+  final DateTime lastPossibleDate = DateTime(DateTime.now().year,
+      DateTime.now().month, DateTime.now().day, 23, 59, 59, 999, 999);
 
   int? selected;
 
@@ -225,33 +226,34 @@ class _AiLogScreenState extends State<AiLogScreen> {
 
   Future<List<int>> _exportReportAsExcel() async {
     var excel = Excel.createExcel();
+    excel.rename('Sheet1', 'AI Logs');
     // Dynamic export for student breakdown.
     Sheet studentSheet = excel['AI Logs'];
     if (logSource.sortedData.isNotEmpty) {
       // Get headers dynamically from the first map.
       var studentHeaders = [
-        AiLog.getHeaderForColumn(0),
-        AiLog.getHeaderForColumn(1),
-        AiLog.getHeaderForColumn(2),
-        AiLog.getHeaderForColumn(3),
-        AiLog.getHeaderForColumn(4),
-        AiLog.getHeaderForColumn(5),
-        AiLog.getHeaderForColumn(6),
-        AiLog.getHeaderForColumn(7),
+        TextCellValue(AiLog.getHeaderForColumn(0)),
+        TextCellValue(AiLog.getHeaderForColumn(1)),
+        TextCellValue(AiLog.getHeaderForColumn(2)),
+        TextCellValue(AiLog.getHeaderForColumn(3)),
+        TextCellValue(AiLog.getHeaderForColumn(4)),
+        TextCellValue(AiLog.getHeaderForColumn(5)),
+        TextCellValue(AiLog.getHeaderForColumn(6)),
+        TextCellValue(AiLog.getHeaderForColumn(7)),
       ];
       studentSheet.appendRow(studentHeaders);
       // Append each student row by mapping the values to strings.
       for (var log in logSource.sortedData) {
         studentSheet.appendRow(
           [
-            log.getValueForColumn(0),
-            log.getValueForColumn(1),
-            log.getValueForColumn(2),
-            log.getValueForColumn(3),
-            log.getValueForColumn(4),
-            log.getValueForColumn(5),
-            log.getValueForColumn(6),
-            log.getValueForColumn(7).toString(),
+            TextCellValue(log.getStringForColumn(0)),
+            TextCellValue(log.getStringForColumn(1)),
+            TextCellValue(log.getStringForColumn(2)),
+            TextCellValue(log.getStringForColumn(3)),
+            TextCellValue(log.getStringForColumn(4)),
+            TextCellValue(log.getStringForColumn(5)),
+            TextCellValue(log.getStringForColumn(6)),
+            TextCellValue(log.getStringForColumn(7)),
           ],
         );
       }
@@ -483,9 +485,9 @@ class _AiLogScreenState extends State<AiLogScreen> {
     final DateTime? picked = await showDatePicker(
       cancelText: "Clear",
       context: context,
-      initialDate: endDate == null ? lastPossibleDate : endDate!,
+      initialDate: startDate ?? (endDate ?? lastPossibleDate),
       firstDate: earliestPossibleDate,
-      lastDate: endDate == null ? lastPossibleDate : endDate!,
+      lastDate: endDate ?? lastPossibleDate,
     );
 
     setState(() {
@@ -500,19 +502,20 @@ class _AiLogScreenState extends State<AiLogScreen> {
       cancelText: "Clear",
       context: context,
       initialDate: lastPossibleDate,
-      firstDate: startDate == null ? earliestPossibleDate : startDate!,
+      firstDate: endDate ?? (startDate ?? earliestPossibleDate),
       lastDate: lastPossibleDate,
     );
 
     setState(() {
       endDate = picked == null
           ? null
-          : DateTime(picked.year, picked.month, picked.day);
+          : DateTime(
+              picked.year, picked.month, picked.day, 23, 59, 59, 999, 999);
     });
   }
 
   String getDateString(DateTime date) {
-    return date.toLocal().toString().split(' ')[0];
+    return DateFormat.yMd().format(date.toLocal());
   }
 
   // Function to show details in a dialog
@@ -534,9 +537,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        logSource.sortedData[selected!]
-                            .getValueForColumn(3)
-                            .toString(),
+                        logSource.sortedData[selected!].getStringForColumn(3),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -552,9 +553,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        logSource.sortedData[selected!]
-                            .getValueForColumn(4)
-                            .toString(),
+                        logSource.sortedData[selected!].getStringForColumn(4),
                         style: TextStyle(
                           color: Colors.black87,
                           fontSize: 16,
@@ -566,8 +565,7 @@ class _AiLogScreenState extends State<AiLogScreen> {
                       margin: const EdgeInsets.fromLTRB(20, 6, 0, 6),
                       padding: const EdgeInsets.all(14),
                       decoration: logSource.sortedData[selected!]
-                              .getValueForColumn(5)
-                              .toString()
+                              .getStringForColumn(5)
                               .isEmpty
                           ? null
                           : BoxDecoration(
@@ -576,24 +574,20 @@ class _AiLogScreenState extends State<AiLogScreen> {
                             ),
                       child: Text(
                         logSource.sortedData[selected!]
-                                .getValueForColumn(5)
-                                .toString()
+                                .getStringForColumn(5)
                                 .isEmpty
                             ? "There was no micro-reflection for this AI prompt."
                             : logSource.sortedData[selected!]
-                                .getValueForColumn(5)
-                                .toString(),
+                                .getStringForColumn(5),
                         style: TextStyle(
                             color: logSource.sortedData[selected!]
-                                    .getValueForColumn(5)
-                                    .toString()
+                                    .getStringForColumn(5)
                                     .isEmpty
                                 ? Colors.grey
                                 : Colors.white,
                             fontSize: 16,
                             fontStyle: logSource.sortedData[selected!]
-                                    .getValueForColumn(5)
-                                    .toString()
+                                    .getStringForColumn(5)
                                     .isEmpty
                                 ? FontStyle.italic
                                 : FontStyle.normal),
@@ -634,7 +628,7 @@ class _AiLogSource extends DataTableSource {
 
   DataCell cellFor(int row, int column) {
     return DataCell(Text(
-      sortedData[row].getValueForColumn(column).toString(),
+      sortedData[row].getStringForColumn(column),
       softWrap: true,
       textAlign: TextAlign.start,
       maxLines: 3,

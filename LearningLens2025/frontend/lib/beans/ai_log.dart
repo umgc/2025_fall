@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/llm/enum/llm_enum.dart';
 import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/beans/assignment.dart';
@@ -68,6 +69,14 @@ class AiLog {
     }
   }
 
+  String getStringForColumn(int column) {
+    if (column == 7) {
+      return DateFormat.yMd().add_jms().format(created.toLocal());
+    } else {
+      return getValueForColumn(column).toString();
+    }
+  }
+
   @override
   String toString() {
     return toJson().toString();
@@ -90,7 +99,7 @@ class AiLog {
       case 6:
         return "AI Model";
       case 7:
-        return "Created (UTC)";
+        return "Created (Local)";
       default:
         return "";
     }
