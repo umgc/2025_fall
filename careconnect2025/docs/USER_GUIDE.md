@@ -220,6 +220,13 @@ The CareConnect dashboard is your central hub for all activities and information
    - Record symptoms and severity
    - Add photos for visual documentation
    - Track symptom patterns
+   
+4. **Video Check-In**
+   - Activated from the Check-In Screen
+   - Captures a short video using the user's camera
+   - Includes pause functionality
+   - Allows for submission and discarding of videos
+   - Videos are submitted to an AI service for mood analysis
 
 ### Medication Management
 
