@@ -65,6 +65,8 @@ import '../../providers/user_provider.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.dart';
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
+import '../../features/usps/presentation/usps_test_screen.dart';
+
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
 Future<void> navigateToDashboard(BuildContext context, {int? tabIndex}) async {
@@ -94,6 +96,12 @@ final GoRouter appRouter = GoRouter(
         return LoginPage(userType: userType);
       },
     ),
+    GoRoute(
+      path: '/usps-test',
+      name: 'uspsTest',
+      builder: (context, state) => const UspsTestScreen(),
+    ),
+
     GoRoute(
       path: '/signup',
       builder: (context, state) {

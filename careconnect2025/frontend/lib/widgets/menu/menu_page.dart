@@ -145,6 +145,23 @@ class _MenuPageState extends State<MenuPage> {
         label: 'Fall Detection',
         route: '/alertpage',
       ),
+      _MenuItem(
+        icon: Icons.mail,
+        label: 'USPS Mail Digest',
+        route: '/usps-test'
+      ),
+      _MenuItem(
+        icon: Icons.person_add,
+        label: 'Add Patient',
+        route: '/add-patient',
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
+      ),
+      _MenuItem(
+        icon: Icons.settings,
+        label: 'Settings',
+        route: '/settings',
+        section: _Section.settings,
+      ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(

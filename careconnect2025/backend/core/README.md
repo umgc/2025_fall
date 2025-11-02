@@ -61,6 +61,8 @@ nano .env  # or use your preferred editor
 - `DB_PASSWORD` - Your database password
 - `SECURITY_JWT_SECRET` - JWT secret key (256+ bits)
 
+Need Gmail OAuth for mail digests? Follow the programmer guide in `docs/google-oauth-setup.md`.
+
 **Firebase variables** (required for notifications):
 - `FIREBASE_PROJECT_ID=careconnectcapstone`
 - `FIREBASE_SENDER_ID=663999888931`
