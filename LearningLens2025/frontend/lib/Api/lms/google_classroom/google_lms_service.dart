@@ -899,15 +899,14 @@ class GoogleLmsService extends LmsInterface {
   @override
   // TODO - google API doesn't have an endpoint to pass in the rubric like Moodle
   Future<Map<String, dynamic>?> createAssignment(
-    String courseid,
-    String sectionid,
-    String assignmentName,
-    String startdate,
-    String enddate,
-    String rubricJson,
-    String description,
-    {List<int> individualStudentsOptions = const []}
-  ) async {
+      String courseid,
+      String sectionid,
+      String assignmentName,
+      String startdate,
+      String enddate,
+      String rubricJson,
+      String description,
+      {List<int> individualStudentsOptions = const []}) async {
     print('Creating assignment...');
     print('Course ID: $courseid');
     print('Section ID: $sectionid');

@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/google_classroom/google_classroom_api.dart';
 import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
 class CreateAssignmentPage extends StatefulWidget {
-  final GoogleClassroomApi _googleClassroomApi = GoogleClassroomApi();
-
   @override
   _CreateAssignmentPageState createState() => _CreateAssignmentPageState();
 }
