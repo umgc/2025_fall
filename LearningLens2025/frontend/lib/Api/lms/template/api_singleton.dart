@@ -312,7 +312,7 @@ class ApiSingleton implements LmsInterface {
     // TODO: implement getSubmissionStatusRaw
     throw UnimplementedError();
   }
-  
+
   @override
   Future<void> refreshOverrides() {
     // TODO: implement refreshOverrides
@@ -320,13 +320,31 @@ class ApiSingleton implements LmsInterface {
   }
 
   @override
-  Future<String> addEssayOverride({required int assignid, int? userId, int? groupId, int? allowsubmissionsfromdate, int? dueDate, int? cutoffDate, int? timelimit, int? sortorder, int? courseId}) {
+  Future<String> addEssayOverride(
+      {required int assignid,
+      int? userId,
+      int? groupId,
+      int? allowsubmissionsfromdate,
+      int? dueDate,
+      int? cutoffDate,
+      int? timelimit,
+      int? sortorder,
+      int? courseId}) {
     // TODO: implement addEssayOverride
     throw UnimplementedError();
   }
 
   @override
-  Future<QuizOverride> addQuizOverride({required int quizId, int? userId, int? groupId, int? timeOpen, int? timeClose, int? timeLimit, int? attempts, String? password, int? courseId}) {
+  Future<QuizOverride> addQuizOverride(
+      {required int quizId,
+      int? userId,
+      int? groupId,
+      int? timeOpen,
+      int? timeClose,
+      int? timeLimit,
+      int? attempts,
+      String? password,
+      int? courseId}) {
     // TODO: implement addQuizOverride
     throw UnimplementedError();
   }

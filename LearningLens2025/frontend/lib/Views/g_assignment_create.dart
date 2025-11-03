@@ -110,25 +110,30 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
         return;
       }
 
-      var ess = await GoogleLmsService().createAssignment(_selectedCourseId!, "", _title!, "", _dueDate?.millisecondsSinceEpoch.toString() ?? "", _points?.toString() ?? "", _instructions ?? "");
+      var ess = await GoogleLmsService().createAssignment(
+          _selectedCourseId!,
+          "",
+          _title!,
+          "",
+          _dueDate?.millisecondsSinceEpoch.toString() ?? "",
+          _points?.toString() ?? "",
+          _instructions ?? "");
       if (ess != null) {
-                  print('Assignment created successfully!');
-          await GoogleLmsService()
-              .courses
-              ?.firstWhere((c) => c.id.toString() == _selectedCourseId)
-              .refreshEssays();
-          Navigator.pop(context);
-      }
-      else {
+        print('Assignment created successfully!');
+        await GoogleLmsService()
+            .courses
+            ?.firstWhere((c) => c.id.toString() == _selectedCourseId)
+            .refreshEssays();
+        Navigator.pop(context);
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('Error creating assignment.'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          SnackBar(
+            content: Text('Error creating assignment.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-setState(() => _isSubmitting = false);
+      setState(() => _isSubmitting = false);
     }
   }
 

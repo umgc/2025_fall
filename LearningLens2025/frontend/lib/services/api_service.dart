@@ -85,7 +85,7 @@ class ApiService {
     }
   }
 
-    Future<http.Response> httpPatch(
+  Future<http.Response> httpPatch(
     Uri url, {
     Map<String, String>? headers,
     Object? body,

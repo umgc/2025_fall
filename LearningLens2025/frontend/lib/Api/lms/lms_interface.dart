@@ -120,27 +120,25 @@ abstract class LmsInterface {
     throw UnimplementedError();
   }
 
-    Future<QuizOverride> addQuizOverride({
-    required int quizId,
-    int? userId,
-    int? groupId,
-    int? timeOpen,
-    int? timeClose,
-    int? timeLimit,
-    int? attempts,
-    String? password,
-    int? courseId
-  });
+  Future<QuizOverride> addQuizOverride(
+      {required int quizId,
+      int? userId,
+      int? groupId,
+      int? timeOpen,
+      int? timeClose,
+      int? timeLimit,
+      int? attempts,
+      String? password,
+      int? courseId});
 
-    Future<String> addEssayOverride({
-    required int assignid,
-    int? userId,
-    int? groupId,
-    int? allowsubmissionsfromdate,
-    int? dueDate,
-    int? cutoffDate,
-    int? timelimit,
-    int? sortorder,
-    int? courseId
-  });
+  Future<String> addEssayOverride(
+      {required int assignid,
+      int? userId,
+      int? groupId,
+      int? allowsubmissionsfromdate,
+      int? dueDate,
+      int? cutoffDate,
+      int? timelimit,
+      int? sortorder,
+      int? courseId});
 }

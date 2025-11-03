@@ -11,7 +11,6 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
-import "package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart";
 import "package:learninglens_app/Controller/custom_appbar.dart";
 import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/assessment.dart';
@@ -563,12 +562,20 @@ class _IepPageState extends State<IepPage> {
                                     epochTime2 != null)
                             ? () async {
                                 if (selectedAssignment?.type == 'quiz') {
-                                  await quizOver(epochTime!, int.parse(selectedCourse!), selectedAssignment!.id,
-                                      userId!, attempts!);
+                                  await quizOver(
+                                      epochTime!,
+                                      int.parse(selectedCourse!),
+                                      selectedAssignment!.id,
+                                      userId!,
+                                      attempts!);
                                 } else if (selectedAssignment?.type ==
                                     'essay') {
-                                  await essayOver(epochTime!, int.parse(selectedCourse!), selectedAssignment!.id,
-                                      userId!, epochTime2!);
+                                  await essayOver(
+                                      epochTime!,
+                                      int.parse(selectedCourse!),
+                                      selectedAssignment!.id,
+                                      userId!,
+                                      epochTime2!);
                                 }
                                 resetForm(false);
                               }
@@ -703,7 +710,8 @@ class _IepPageState extends State<IepPage> {
 
   Future<List<Participant>>? getAllParticipants(String courseID) async {
     List<Participant>? participants;
-    participants = await LmsFactory.getLmsService().getCourseParticipants(courseID);
+    participants =
+        await LmsFactory.getLmsService().getCourseParticipants(courseID);
     return participants;
   }
 
@@ -723,7 +731,8 @@ class _IepPageState extends State<IepPage> {
 
   Future<List<Assessment>> handleAssessmentSelection(int? courseID) async {
     if (courseID != null) {
-      List<Assignment> essayList = await LmsFactory.getLmsService().getEssays(courseID);
+      List<Assignment> essayList =
+          await LmsFactory.getLmsService().getEssays(courseID);
       // Fetch quizzes (if available).
       List<Quiz> quizList = [];
       try {
@@ -760,7 +769,8 @@ class _IepPageState extends State<IepPage> {
     });
   }
 
-  Future<void> quizOver(int epochTime, int courseId, int quizId, int userId, int attempts) async {
+  Future<void> quizOver(
+      int epochTime, int courseId, int quizId, int userId, int attempts) async {
     await LmsFactory.getLmsService().addQuizOverride(
         quizId: quizId,
         courseId: courseId,
@@ -769,7 +779,7 @@ class _IepPageState extends State<IepPage> {
         attempts: attempts);
     await LmsFactory.getLmsService().refreshOverrides();
     setState(() {
-      overrides =  LmsFactory.getLmsService().overrides;
+      overrides = LmsFactory.getLmsService().overrides;
       overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -777,7 +787,8 @@ class _IepPageState extends State<IepPage> {
     );
   }
 
-  Future<void> essayOver(int epochTime, int courseId, int essayId, int userId, int epochTime2) async {
+  Future<void> essayOver(int epochTime, int courseId, int essayId, int userId,
+      int epochTime2) async {
     await LmsFactory.getLmsService().addEssayOverride(
         assignid: essayId,
         courseId: courseId,

@@ -92,7 +92,8 @@ class Assignment implements LearningLensInterface {
     );
     if (json['AssigneeMode']?.toString() == "INDIVIDUAL_STUDENTS") {
       final studentOptions = json["studentIds"] as List<dynamic>;
-      a.individualStudentsOptions.addAll(studentOptions.map((e) => int.parse(e.toString())));
+      a.individualStudentsOptions
+          .addAll(studentOptions.map((e) => int.parse(e.toString())));
     }
     a.maxScore = json["maxPoints"];
     return a;
