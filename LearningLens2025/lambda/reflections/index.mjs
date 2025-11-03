@@ -76,7 +76,7 @@ export const handler = async (event, context) => {
       response VARCHAR,
       date TIMESTAMP,
       reflection UUID
-    )`
+    );`
     }
     catch (error) {
       console.error("Failed to create database table: ", error);
