@@ -23,6 +23,7 @@ import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:xml/xml.dart' as xml;
+import 'package:intl/intl.dart';
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class GoogleLmsService extends LmsInterface {
@@ -77,9 +78,15 @@ class GoogleLmsService extends LmsInterface {
   // Auth / Login
   // ****************************************************************************************
   @override
-  Future<void> login(String username, String password, String baseURL) {
-    // TODO: implement google api code
-    throw UnimplementedError();
+  Future<void> login(String username, String password, String baseURL) async {
+    final clientId =
+        baseURL.isNotEmpty ? baseURL : LocalStorageService.getGoogleClientId();
+
+    if (clientId.isEmpty) {
+      throw ArgumentError('Google client ID is required for Classroom login.');
+    }
+
+    await loginOath(clientId);
   }
 
   Future<void> loginOath(String clientID) async {
@@ -154,8 +161,50 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<bool> isUserTeacher(List<Course> moodleCourses) async {
-    // TODO: implement google api code
-    throw UnimplementedError();
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+    if (moodleCourses.isEmpty) {
+      return false;
+    }
+
+    final response = await ApiService().httpGet(
+      Uri.parse('$apiURL/courses?teacherId=me'),
+      headers: {'Authorization': 'Bearer $_userToken'},
+    );
+
+    if (response.statusCode != 200) {
+      throw HttpException(
+          'Failed to determine Google Classroom teacher status: ${response.body}');
+    }
+
+    final decodedJson = jsonDecode(response.body);
+    if (decodedJson is! Map<String, dynamic>) {
+      return false;
+    }
+
+    final coursesJson = decodedJson['courses'];
+    if (coursesJson is! List) {
+      return false;
+    }
+
+    final teacherCourseIds = <int>{};
+    for (final courseJson in coursesJson) {
+      if (courseJson is Map<String, dynamic>) {
+        final idString = courseJson['id']?.toString();
+        final id = idString != null ? int.tryParse(idString) : null;
+        if (id != null) {
+          teacherCourseIds.add(id);
+        }
+      }
+    }
+
+    for (final course in moodleCourses) {
+      if (teacherCourseIds.contains(course.id)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
@@ -187,9 +236,16 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<List<Course>> getCourses() async {
-    // TODO: implement google api code
-    // Never called??
-    throw UnimplementedError();
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    if (courses != null && courses!.isNotEmpty) {
+      return courses!;
+    }
+
+    courses = await getUserCourses();
+    return courses!;
   }
 
   @override
@@ -224,9 +280,6 @@ class GoogleLmsService extends LmsInterface {
       Uri.parse('https://classroom.googleapis.com/v1/courses'),
       headers: {'Authorization': 'Bearer $_userToken'},
     );
-
-    // TODO: remove after testing.
-    // print('Google: ${response.body}');
 
     if (response.statusCode != 200) {
       throw HttpException(response.body);
@@ -326,9 +379,53 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<void> importQuiz(String courseid, String quizXml) async {
-    // TODO: implement google api code
-    throw UnimplementedError(
-        'This feature is not supported by Google Classroom. Please contact the developer.');
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+    if (courseid.isEmpty) {
+      throw ArgumentError('courseid must not be empty');
+    }
+    if (quizXml.trim().isEmpty) {
+      throw ArgumentError('quizXml must not be empty');
+    }
+
+    final quiz = Quiz.fromXmlString(quizXml);
+    final quizName = (quiz.name != null && quiz.name!.trim().isNotEmpty)
+        ? quiz.name!
+        : 'Imported Quiz';
+    final quizDescription = quiz.description ?? '';
+
+    if (courses == null || courses!.isEmpty) {
+      try {
+        await getCourses();
+      } catch (e) {
+        print('Unable to import quiz: $e');
+      }
+    }
+
+    final dueDate =
+        quiz.timeClose ?? DateTime.now().add(const Duration(days: 7));
+    final formattedDueDate = formatDueDate(dueDate);
+
+    final success = await createAndAssignQuizFromXml(
+      courseid,
+      quizName,
+      quizDescription,
+      quizXml,
+      formattedDueDate,
+    );
+
+    if (!success) {
+      throw HttpException('Failed to import quiz into Google Classroom');
+    }
+  }
+
+  String formatDueDate(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day-$hour-$minute';
   }
 
   @override
@@ -768,72 +865,140 @@ class GoogleLmsService extends LmsInterface {
     return essayList;
   }
 
-  @override
-  Future<Map<String, dynamic>?> createAssignment(
-      String courseid,
-      String sectionid,
-      String assignmentName,
-      String startdate,
-      String enddate,
-      String rubricJson,
-      String description,
-      {List<int> individualStudentsOptions = const []}) async {
-    final url = Uri.parse(
-        'https://classroom.googleapis.com/v1/courses/$courseid/courseWork');
-    final headers = {
-      'Authorization': 'Bearer $_userToken',
-      'Content-Type': 'application/json',
-    };
+  MapEntry<Course, Assignment>? findCourseAssignment(int assignmentId) {
+    if (courses == null) return null;
+    for (final course in courses!) {
+      final assignments = course.essays ?? const <Assignment>[];
+      for (final assignment in assignments) {
+        if (assignment.id == assignmentId) {
+          return MapEntry(course, assignment);
+        }
+      }
+    }
+    return null;
+  }
 
-    Map<String, dynamic> requestBody = {
+  DateTime? _parsePickerDate(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    final stringDate = DateTime.tryParse(trimmed);
+    if (stringDate != null) {
+      return stringDate;
+    }
+
+    try {
+      final formatter = DateFormat('dd MMMM yyyy HH:mm', 'en_US');
+      return formatter.parseStrict(trimmed);
+    } on FormatException {
+      print('Failed to parse date string: $raw');
+      return null;
+    }
+  }
+
+  @override
+  // TODO - google API doesn't have an endpoint to pass in the rubric like Moodle
+  Future<Map<String, dynamic>?> createAssignment(
+    String courseid,
+    String sectionid,
+    String assignmentName,
+    String startdate,
+    String enddate,
+    String rubricJson,
+    String description,
+    {List<int> individualStudentsOptions = const []}
+  ) async {
+    print('Creating assignment...');
+    print('Course ID: $courseid');
+    print('Section ID: $sectionid');
+    print('Assignment Name: $assignmentName');
+    print('Start Date: $startdate');
+    print('End Date: $enddate');
+    final token = _userToken ?? await _getToken();
+    if (token == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    final dueDateTime = _parsePickerDate(enddate);
+    final availabilityDate = _parsePickerDate(startdate);
+
+    final body = <String, dynamic>{
       'title': assignmentName,
       'description': description,
-      'state': 'PUBLISHED',
       'workType': 'ASSIGNMENT',
-      'maxPoints': int.tryParse(rubricJson.toString()),
     };
 
-    DateTime d = DateTime.fromMillisecondsSinceEpoch(int.parse(enddate));
-
-    requestBody['dueDate'] = {
-      'year': d.year,
-      'month': d.month,
-      'day': d.day,
-    };
-    requestBody['dueTime'] = {
-      'hours': d.hour,
-      'minutes': d.minute,
-      'seconds': 0,
-    };
+    if (dueDateTime != null) {
+      body['dueDate'] = {
+        'year': dueDateTime.year,
+        'month': dueDateTime.month,
+        'day': dueDateTime.day,
+      };
+      body['dueTime'] = {
+        'hours': dueDateTime.hour,
+        'minutes': dueDateTime.minute,
+        'seconds': dueDateTime.second,
+      };
+    }
 
     if (individualStudentsOptions.isNotEmpty) {
-      requestBody['assigneeMode'] = 'INDIVIDUAL_STUDENTS';
-      requestBody['individualStudentsOptions'] = {
+      body['assigneeMode'] = 'INDIVIDUAL_STUDENTS';
+      body['individualStudentsOptions'] = {
         "studentIds": individualStudentsOptions,
       };
     }
 
-    String? topicIdNew =
-        await GoogleClassroomApi().getTopicId(courseid, "essay");
-    if (topicIdNew != null) {
-      requestBody['topicId'] = topicIdNew;
+    if (availabilityDate != null) {
+      body['scheduledTime'] = availabilityDate.toUtc().toIso8601String();
     }
 
-    print(requestBody);
+    if (sectionid.trim().isNotEmpty) {
+      if (sectionid.trim().startsWith('http')) {
+        body['materials'] = [
+          {
+            'link': {'url': sectionid.trim()}
+          }
+        ];
+      } else {
+        final resolvedTopicId =
+            await _classroomApi.getTopicId(courseid, sectionid.trim());
+        final topicIdCandidate = resolvedTopicId ??
+            (RegExp(r'^\d+$').hasMatch(sectionid.trim())
+                ? sectionid.trim()
+                : null);
+        if (topicIdCandidate != null) {
+          body['topicId'] = topicIdCandidate;
+        }
+      }
+    }
 
-    final body = jsonEncode(requestBody);
+    final url = Uri.parse('$apiURL/courses/$courseid/courseWork');
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
 
-    final response =
-        await ApiService().httpPost(url, headers: headers, body: body);
+    try {
+      final response =
+          await http.post(url, headers: headers, body: jsonEncode(body));
 
-    if (response.statusCode != 200) {
-      print('Request failed with status: ${response.statusCode}.');
+      print('Create assignment response: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('Body: ${response.body}');
+        return null;
+      }
+
+      final courseWorkResponse = jsonDecode(response.body);
+      if (courseWorkResponse is Map<String, dynamic>) {
+        return courseWorkResponse;
+      }
+
+      return {'data': courseWorkResponse};
+    } catch (e, st) {
+      print('Error creating assignment in Google Classroom: $e');
+      print(st);
       return null;
     }
-
-    final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-    print('Create Assignment Response: $responseData');
-    return null;
   }
 
   @override
@@ -927,12 +1092,34 @@ class GoogleLmsService extends LmsInterface {
 
   @override
   Future<MoodleRubric?> getRubric(String assignmentid) async {
-    // TODO: implement google api code
-    print('Getting rubric...');
-    print('Assignment ID: $assignmentid');
-    throw UnimplementedError(
-        'This feature is not supported by Google Classroom. Please contact the developer.');
+    if (_userToken == null) {
+      throw StateError('User not logged in to Google Classroom');
+    }
+
+    final assignmentKey = int.tryParse(assignmentid);
+    if (assignmentKey == null) {
+      print('getRubric: Unable to parse assignmentId "$assignmentid"');
+      return null;
+    }
+
+    final target = findCourseAssignment(assignmentKey);
+    if (target == null) {
+      print('getRubric: Assignment $assignmentKey not found in cached courses');
+      return null;
+    }
+
+    final courseId = target.key.id.toString();
+    final courseWorkId = target.value.id.toString();
+
+    final rubrics = await _classroomApi.listRubrics(courseId, courseWorkId);
+
+    if (rubrics.isEmpty) {
+      return null;
+    }
+
+    return MoodleRubric.empty().fromGoogleJson(rubrics.first);
   }
+
   // ****************************************************************************************
   // Quiz creation and assignment with Answer Key
   //Short answer question 10 Points

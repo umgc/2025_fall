@@ -24,8 +24,20 @@ class Level implements LearningLensInterface {
 
   @override
   Level fromGoogleJson(Map<String, dynamic> json) {
-    // TODO: Dinesh, try to map the Google JSON to the Level object
-    throw UnimplementedError();
+    final rawId = json['levelId'];
+    final rawPoints = json['points'];
+
+    return Level(
+      id: rawId is int
+          ? rawId
+          : rawId is String
+              ? rawId.hashCode
+              : 0,
+      description: (json['description'] as String?)?.trim().isNotEmpty == true
+          ? (json['description'] as String).trim()
+          : ((json['title'] as String?) ?? '').trim(),
+      score: rawPoints is num ? rawPoints.round() : 0,
+    );
   }
 
   Map<String, dynamic> toJson() {

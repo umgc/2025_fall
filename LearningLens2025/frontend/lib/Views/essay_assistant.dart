@@ -48,7 +48,6 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
 // Controller
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 // beans
@@ -134,11 +133,14 @@ Future<Course?> getCourseForEssay(Assignment essay) async {
 }
 
 Future<Participant?> getStudentForEssay(int courseId) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
   final lms = LmsFactory.getLmsService();
-  final uid = (lms as MoodleLmsService).userId;
+  final uid = prefs.getString('userId');
+  final int? uidInt = uid != null ? int.tryParse(uid) : null;
+
   final participants = await lms.getCourseParticipants(courseId.toString());
   for (final p in participants) {
-    if (p.id == uid) return p;
+    if (p.id == uidInt) return p;
   }
   return null;
 }
@@ -254,7 +256,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
       getCourseForEssay(_currentSession!.essay); // course of current essay
   Future<Participant?> get _currentStudent => getStudentForEssay(
       _currentSession!.essay.courseId); // student using the assistant
-
   bool get _sessionActive =>
       _currentSession != null; // Check if a session is active
   String get essayID => _currentSession?.id ?? ''; // Current essay/session ID
@@ -379,7 +380,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
   // ---------------- Left sidebar (essays) state ----------------
   int? _selectedSidebarIndex; // selected essay index in the left list
   List<Assignment> _essays = []; // loaded from LMS (all courses or filtered)
-  bool _isReloadingEssays = false; // loading state
   final Map<String, EssayStatus> _statusCache =
       {}; // key = essayKey , value = EssayStatus
 
@@ -698,7 +698,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       llmContextSize: aiModel.contextSize,
       maxOutputTokens: aiModel.maxOutputTokens,
     );
-    print('Full context for LLM:\n$fullContext');
+    //print('Full context for LLM:\n$fullContext');
 
     // Log the user's turn immediately
     _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
@@ -838,8 +838,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         _selectedLLM,
         microReflection ?? '',
       );
-
       await AILoggingSingleton().addLog(log);
+      print('AI interaction logged successfully.');
     } catch (err, st) {
       print('AI logging failed: $err\n$st');
     }
@@ -1041,16 +1041,11 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
    * ────────────────────────────────────────────────────────────────────────── */
 
   /// Load essays for the current user (all courses). Pass a courseId if needed.
-  Future<void> _loadEssays({int? courseId, bool toast = false}) async {
+  Future<void> _loadEssays({int? courseId}) async {
     if (!mounted) return;
-    setState(() => _isReloadingEssays = true);
-
     try {
       final all = await getAllEssays(courseId);
-
-      final filtered = all
-          .where((a) => !_isOverdue(a)) // keep your “not overdue” filter
-          .toList()
+      final filtered = all.where((a) => !_isOverdue(a)).toList()
         ..sort((a, b) {
           final ad = _effectiveDue(a);
           final bd = _effectiveDue(b);
@@ -1061,13 +1056,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         });
 
       if (mounted) setState(() => _essays = filtered);
-      if (toast && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Essays reloaded')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isReloadingEssays = false);
+    } catch (_) {
+      // optional: you can log or ignore silently
     }
   }
 
@@ -1277,9 +1267,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           SizedBox(
             width: 280,
             child: Material(
-              color: Theme.of(context).colorScheme.surface,
-              child: Column(
-                children: [
+                color: Theme.of(context).colorScheme.surface,
+                child: Column(children: [
                   // Sidebar header row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
@@ -1290,20 +1279,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         Text('Essay Assignments',
                             style: Theme.of(context).textTheme.titleMedium),
                         const Spacer(),
-                        IconButton(
-                          tooltip: 'Reload',
-                          onPressed: _isReloadingEssays
-                              ? null
-                              : () => _loadEssays(toast: true),
-                          icon: _isReloadingEssays
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: const CircularProgressIndicator(
-                                      strokeWidth: 2),
-                                )
-                              : const Icon(Icons.refresh),
-                        ),
+                        // (removed reload button)
                       ],
                     ),
                   ),
@@ -1311,55 +1287,49 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
                   // List of essay items (from LMS)
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () => _loadEssays(),
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                        itemCount: _essays.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final assignment = _essays[i];
-                          final selected = _selectedSidebarIndex == i;
-                          final dueText = assignment.dueDate == null
-                              ? 'No due date'
-                              : assignment.dueDate!
-                                  .toLocal()
-                                  .toIso8601String()
-                                  .split('T')
-                                  .first;
-                          final status = _statusOf(assignment);
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                      itemCount: _essays.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, i) {
+                        final assignment = _essays[i];
+                        final selected = _selectedSidebarIndex == i;
+                        final dueText = assignment.dueDate == null
+                            ? 'No due date'
+                            : assignment.dueDate!
+                                .toLocal()
+                                .toIso8601String()
+                                .split('T')
+                                .first;
+                        final status = _statusOf(assignment);
 
-                          return ListTile(
-                            dense: true,
-                            selected: selected,
-                            selectedTileColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.08),
-                            title: Text(
-                              assignment.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text('Due: $dueText'),
-                            trailing: _statusChip(status),
-                            onTap: () async {
-                              setState(() => _selectedSidebarIndex = i);
-                              final started =
-                                  await _openEssayDialog(context, assignment);
-                              if (!started && mounted) {
-                                _selectActiveEssayIfAny();
-                              }
-                            },
-                          );
-                        },
-                      ),
+                        return ListTile(
+                          dense: true,
+                          selected: selected,
+                          selectedTileColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.08),
+                          title: Text(
+                            assignment.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text('Due: $dueText'),
+                          trailing: _statusChip(status),
+                          onTap: () async {
+                            setState(() => _selectedSidebarIndex = i);
+                            final started =
+                                await _openEssayDialog(context, assignment);
+                            if (!started && mounted) {
+                              _selectActiveEssayIfAny();
+                            }
+                          },
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  )
+                ])),
           ),
 
           // =================== CENTER: Chat column ===================
