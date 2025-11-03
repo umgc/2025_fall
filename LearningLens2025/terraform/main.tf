@@ -297,3 +297,52 @@ resource "aws_lambda_function_url" "get_token_url" {
     allow_headers = ["content-type"]
   }
 }
+
+# Run npm install before zipping
+resource "null_resource" "npm_install_game_data" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/game_data/package.json")
+    package_lock = filemd5("../lambda/game_data/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/game_data && npm install"
+  }
+}
+
+data "archive_file" "game_data" {
+  type = "zip"
+  source_dir = "../lambda/game_data"
+  excludes = ["../lambda/game_data/game_data.zip"]
+  output_path = "../lambda/game_data/game_data.zip"
+
+  depends_on = [null_resource.npm_install_game_data]
+}
+
+resource "aws_lambda_function" "game_data" {
+  filename = data.archive_file.game_data.output_path
+  function_name = "game_data"
+  role = aws_iam_role.lambda_token.arn
+  handler = "index.handler"
+  source_code_hash = data.archive_file.game_data.output_base64sha256
+  runtime = "nodejs20.x"
+  timeout = "10"
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL = "info"
+      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "get_game_data_url" {
+  function_name = aws_lambda_function.game_data.function_name
+  authorization_type = "NONE"
+  cors {
+    allow_methods = ["GET", "POST", "DELETE"]
+    allow_origins = ["*"]
+    allow_headers = ["content-type"]
+  }
+}

@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.careconnect.dto.PatientNoteDTO;
 import com.careconnect.dto.PatientNotetakerConfigDTO;
 import com.careconnect.dto.v2.TaskDtoV2;
-import com.careconnect.model.Patient;
 import com.careconnect.model.PatientNote;
 import com.careconnect.model.PatientNotetakerConfig;
 import com.careconnect.model.PatientNotetakerKeyword;
@@ -38,6 +37,7 @@ public class PatientNotetakerService {
     private final PatientNoteRepository patientNoteRepository;
     private final PatientNotetakerConfigRepository patientNotetakerConfigRepository;
     private final PatientService patientService;
+    private final String model = "deepseek/deepseek-chat-v3.1:free";
 
     public PatientNotetakerService(PatientNoteRepository patientNoteRepository, 
         PatientNotetakerConfigRepository patientNotetakerConfigRepository, 
@@ -105,8 +105,10 @@ public class PatientNotetakerService {
         newNote.setPatientId(patientId);
         newNote.setCreatedAt(LocalDateTime.now());
         newNote.setUpdatedAt(LocalDateTime.now());
+        newNote.setAiSummary(processAiSummary(noteDTO.getNote()));
         PatientNoteDTO result = new PatientNoteDTO(patientNoteRepository.save(newNote));
         detectKeyWords(patientId, newNote.getNote());
+       
         return result;
     }
 
@@ -119,6 +121,11 @@ public class PatientNotetakerService {
         PatientNote existingNote = patientNoteRepository.findById(noteId).orElseThrow();
         existingNote.setPatientId(patientId);
         existingNote.setNote(noteDTO.getNote());
+        if((!noteDTO.getAiSummary().isBlank() || !noteDTO.getAiSummary().isEmpty()) && noteDTO.getAiSummary() != "Failed to generate AI Summary") {
+            existingNote.setAiSummary(noteDTO.getAiSummary());
+        } else {
+            existingNote.setAiSummary(processAiSummary(noteDTO.getNote()));
+        }
         existingNote.setUpdatedAt(LocalDateTime.now());
         return new PatientNoteDTO(patientNoteRepository.save(existingNote));
     }
@@ -144,7 +151,6 @@ public class PatientNotetakerService {
         List<String> foundKeywords = new ArrayList<>();
         //make lowercase for case insensitive comparisions
         fileData = fileData.toLowerCase();
-        //TODO add defaults and parse those out as well.
         for(PatientNotetakerKeyword keyword : keywords) {
             String lowercaseKeyword = keyword.getKeyword().toLowerCase();
             if(fileData.contains(lowercaseKeyword)) {
@@ -182,7 +188,7 @@ public class PatientNotetakerService {
                     + ". Name, date and description are the most important properties to decipher. If you are unable to determine any of the properties, set them null or empty. Only respond with the json object beginning with { and ending with }.";
             System.out.println("Sending OpenRouter request...");
             OpenRouterChatRequest request = new OpenRouterChatRequest(
-                    "deepseek/deepseek-chat-v3.1:free",
+                    model,
                     Arrays.asList(new Message("system", "You are an expert language interpreter and software engineer"),new Message("user", prompt)),
                     0.2,
                     256);
@@ -217,6 +223,36 @@ public class PatientNotetakerService {
             aiTask.setDate(date.withYear(LocalDate.now().getYear()).toString());
             taskService.createTask(patientId, aiTask);
         }
+    }
+
+    @Async
+    private String processAiSummary(String noteContent) {
+        String prompt = "Given the following converation transcription, summarize the following into a maximum of 1-2 concise sentences, focusing on key health information and any action items or takeaways. Specify which individual identified in the conversation each item pertains to: '"
+                + noteContent + "'";
+
+        OpenRouterChatRequest request = new OpenRouterChatRequest(
+                model,
+                Arrays.asList(new Message("system", "You are a helpful assistant who's main focus is to summarize detailed conversations into simple, concise takeways. do not use verbose language or symbols."),new Message("user", prompt)),
+                0.2,
+                256);
+
+        OpenRouterResponse response; 
+        try {
+            response = openRouterService.sendChatRequest(request);
+        } catch (Exception e) {
+            log.error("Unable to reach OpenRouter service: {}", e.getMessage());
+            return "Failed to generate AI Summary";
+        }
+        String aiSummary = null;
+        if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()
+                && response.getChoices().get(0).getMessage() != null) {
+            aiSummary = response.getChoices().get(0).getMessage().getContent();
+            aiSummary = aiSummary.split("<")[0].trim();
+        } else {
+            aiSummary = "";
+        }
+        log.info("AI Summary generated: {}", aiSummary);
+        return aiSummary;
     }
 
     private <T> T mapJson(String json, Class<T> object) {

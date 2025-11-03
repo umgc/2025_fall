@@ -314,6 +314,12 @@ class ApiSingleton implements LmsInterface {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<void> refreshOverrides() {
     // TODO: implement refreshOverrides
     throw UnimplementedError();

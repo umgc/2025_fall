@@ -3,6 +3,7 @@ import 'package:learninglens_app/Api/experimental/assistant/textbased_function_c
 import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/prompt_engine.dart';
 import 'package:learninglens_app/services/api_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart';
 
 //  Replicate the functionality used in chatgpt_client, but swap over to prompt engineering instead of the function caller.
 //  This code gears the development for the assistant to be more generic in terms of which llm is used rather than relying on
@@ -61,34 +62,45 @@ class TextBasedLLMClient {
     }
   }
 
-  /// Calls the OpenAI Chat Completion API with the entire conversation so far
+  /// Calls the OpenAI Chat Completion API with the entire conversation so far or call locl LLM.
   Future<String?> _callLLM(List<Map<String, String>> conversation) async {
-    final response = await ApiService().httpPost(
-      Uri.parse(llm.url),
-      headers: {
-        "Authorization": 'Bearer ${llm.apiKey}',
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "model": llm.model,
-        "messages": conversation.map((m) {
-          return {"role": m["role"], "content": m["content"]};
-        }).toList(),
-        "temperature": 0.7,
-        "top_p": 0.9,
-      }),
-    );
+    if (llm.apiKey == "") {
+      final response = await LocalLLMService().runModel2(conversation.map((m) {
+        return {"role": m["role"], "content": m["content"]};
+      }).toList());
 
-    if (response.statusCode != 200) {
-      return "Error from LLM: ${response.statusCode} => ${response.body}";
+      if (response == "") {
+        return null;
+      }
+      return response;
+    } else {
+      final response = await ApiService().httpPost(
+        Uri.parse(llm.url),
+        headers: {
+          "Authorization": 'Bearer ${llm.apiKey}',
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "model": llm.model,
+          "messages": conversation.map((m) {
+            return {"role": m["role"], "content": m["content"]};
+          }).toList(),
+          "temperature": 0.7,
+          "top_p": 0.9,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        return "Error from LLM: ${response.statusCode} => ${response.body}";
+      }
+
+      final jsonData = jsonDecode(response.body);
+      if (jsonData["choices"] == null || jsonData["choices"].isEmpty) {
+        return null;
+      }
+
+      return jsonData["choices"][0]["message"]["content"];
     }
-
-    final jsonData = jsonDecode(response.body);
-    if (jsonData["choices"] == null || jsonData["choices"].isEmpty) {
-      return null;
-    }
-
-    return jsonData["choices"][0]["message"]["content"];
   }
 
   /// Parses a "CALL functionName(...)" string, calls the local function, returns its result

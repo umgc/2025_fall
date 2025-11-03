@@ -148,7 +148,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
               // Discard changes and navigate back
               context.pop();
             },
-            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+            child: const Text('Cancel'),
           ),
           TextButton(
             style: ButtonStyle(
@@ -168,7 +168,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                 color: Colors.white,
               ),
             )
-                : const Text('Save', style: TextStyle(color: Colors.white)),
+                : const Text('Save'),
           ),
         ],
       ),
@@ -217,7 +217,7 @@ class _NotetakerConfigurationPageState extends State<NotetakerConfigurationPage>
                                       mainAxisAlignment: MainAxisAlignment
                                           .spaceBetween,
                                       children: <Widget>[
-                                        Text(path.basename(file)),
+                                        Text(path.basename(file), style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                                         IconButton(
                                             icon: new Icon(Icons.cancel),
                                             tooltip: 'delete voice sample',

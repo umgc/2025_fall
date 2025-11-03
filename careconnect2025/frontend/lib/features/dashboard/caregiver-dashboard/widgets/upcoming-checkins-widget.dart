@@ -64,7 +64,7 @@ class UpcomingCheckins extends StatelessWidget {
           ),
           Center(
             child: ElevatedButton(
-              onPressed: () => context.push('/evv/create-record'),
+              onPressed: () => context.push('/evv/select-patient'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[700],
                 foregroundColor: Colors.white,

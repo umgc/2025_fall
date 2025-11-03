@@ -17,6 +17,7 @@ import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/beans/submission_status.dart';
 import 'package:learninglens_app/beans/submission_with_grade.dart';
 import 'package:learninglens_app/services/api_service.dart';
+import 'package:learninglens_app/services/local_storage_service.dart';
 
 /// A Singleton class for Moodle API access implementing [LmsInterface].
 class MoodleLmsService implements LmsInterface {
@@ -121,7 +122,13 @@ class MoodleLmsService implements LmsInterface {
     fullName = userData['fullname'];
     profileImage = userData['userpictureurl'];
 
-    userId = userData['userid'] as int?;
+    final userId = userData['userid'];
+    if (userId != null) {
+      LocalStorageService.saveUserId(userId.toString());
+    } else {
+      LocalStorageService.clearUserId();
+      print('?? Moodle site info did not include userId');
+    }
 
     // 4) Optionally load user courses right away
     courses = await getUserCourses();
@@ -1075,7 +1082,7 @@ class MoodleLmsService implements LmsInterface {
       'wstoken': _userToken!,
       'wsfunction': 'local_learninglens_add_essay_override',
       'moodlewsrestformat': 'json',
-      'assignmentId': assignid.toString(),
+      'assignid': assignid.toString(),
     };
 
     // Add only non-null fields
@@ -1094,9 +1101,10 @@ class MoodleLmsService implements LmsInterface {
     final responseData = json.decode(response.body);
 
     if (response.statusCode == 200 && responseData is Map<String, dynamic>) {
+      print(responseData);
       return 'Override: ${responseData['override_id']}';
     } else {
-      throw Exception("Failed to create quiz override: ${response.body}");
+      throw Exception("Failed to create essay override: ${response.body}");
     }
   }
 
@@ -1626,5 +1634,94 @@ class MoodleLmsService implements LmsInterface {
     final itemid = (d is Map ? d['itemid'] : null);
     if (itemid is int) return itemid;
     throw StateError('Unexpected itemid response: ${res.body}');
+  }
+
+  @override
+
+  /// Gets the latest submission attachment for all assignment submissions
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) async {
+    if (_userToken == null) throw StateError('User not logged in to Moodle');
+
+    final res = await ApiService().httpPost(
+      Uri.parse(apiURL + serverUrl),
+      body: {
+        'wstoken': _userToken!,
+        'wsfunction': 'mod_assign_get_submissions',
+        'moodlewsrestformat': 'json',
+        'assignmentids[0]': '$assignId',
+      },
+    );
+
+    if (res.statusCode != 200) {
+      throw HttpException(res.body);
+    }
+
+    final data = jsonDecode(res.body);
+    if (data is Map && data['exception'] != null) {
+      throw HttpException('${data['exception']}: ${data['message']}');
+    }
+
+    final List<Map<String, dynamic>> submissions = [];
+    final assignments = data['assignments'] as List?;
+    if (assignments == null || assignments.isEmpty) return submissions;
+
+    for (final assignment in assignments) {
+      final subs = assignment['submissions'] as List?;
+      if (subs == null || subs.isEmpty) continue;
+
+      // Group submissions by user ID
+      final Map<int, List<dynamic>> byUser = {};
+      for (final sub in subs) {
+        final uid = sub['userid'];
+        if (uid == null) continue;
+        byUser.putIfAbsent(uid, () => []).add(sub);
+      }
+
+      for (final entry in byUser.entries) {
+        final userId = entry.key;
+        final userSubs = entry.value;
+
+        // Sort by modified or created time (newest first)
+        userSubs.sort((a, b) {
+          final at = a['timemodified'] ?? a['timecreated'] ?? 0;
+          final bt = b['timemodified'] ?? b['timecreated'] ?? 0;
+          return bt.compareTo(at);
+        });
+
+        final latest = userSubs.first;
+
+        final plugins = latest['plugins'] as List?;
+        if (plugins != null) {
+          for (final plugin in plugins) {
+            if (plugin['type'] == 'file') {
+              final fileAreas = plugin['fileareas'] as List?;
+              if (fileAreas != null && fileAreas.isNotEmpty) {
+                final files = fileAreas[0]['files'] as List?;
+                if (files != null && files.isNotEmpty) {
+                  String submissionUrl = files.first['fileurl'];
+                  final uri = Uri.parse(submissionUrl);
+                  // Need to append the token to the URl
+                  final updatedUrl = uri.replace(
+                    queryParameters: {
+                      ...uri.queryParameters,
+                      'token': _userToken!,
+                    },
+                  ).toString();
+
+                  submissions.add({
+                    'userid': userId,
+                    'submissionUrl': updatedUrl,
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return submissions;
   }
 }

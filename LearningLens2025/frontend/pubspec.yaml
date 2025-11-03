@@ -49,6 +49,9 @@ dependencies:
     sdk: flutter
   quill_delta: ^3.0.0-nullsafety.2
   vsc_quill_delta_to_html: ^1.0.5
+  super_clipboard: ^0.9.1
+  flutter_quill_delta_from_html: ^1.5.3
+  markdown: ^7.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

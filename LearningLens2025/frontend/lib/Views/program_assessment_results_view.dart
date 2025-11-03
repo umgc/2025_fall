@@ -7,6 +7,7 @@ import 'package:learninglens_app/beans/assignment.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/services/program_assessment_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProgramAsessmentResultsView extends StatefulWidget {
   final ProrgramAssessmentJob evaluation;
@@ -35,6 +36,7 @@ class _ProgramAsessmentResultsViewState
   final Course course;
   final Assignment assignment;
   final List<Participant> participants;
+  late List<Map<String, dynamic>> _submissionAttachments;
 
   final lmsService = LmsFactory.getLmsService();
 
@@ -74,15 +76,46 @@ class _ProgramAsessmentResultsViewState
     }
   }
 
+  Future<List<Map<String, dynamic>>> _getAssignmentAttachments() async {
+    return await lmsService.getSubmissionAttachments(assignId: assignment.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        appBar: CustomAppBar(
-          title: 'Evaluation for ${assignment.name}',
-          userprofileurl: lmsService.profileImage ?? '',
-        ),
-        body: SingleChildScrollView(child: _buildMainLayout()));
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: CustomAppBar(
+        title: 'Evaluation for ${assignment.name}',
+        userprofileurl: lmsService.profileImage ?? '',
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _getAssignmentAttachments(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error loading submissions: ${snapshot.error}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text('No submissions found.'),
+            );
+          } else {
+            // Assign the result once loaded (optional, if you use it later)
+            _submissionAttachments = snapshot.data!;
+            return SingleChildScrollView(
+              child: _buildMainLayout(),
+            );
+          }
+        },
+      ),
+    );
   }
 
   Widget _buildMainLayout() {
@@ -132,14 +165,46 @@ class _ProgramAsessmentResultsViewState
     );
   }
 
+  Widget _buildViewSubmissionLink(String submissionUrl) {
+    return InkWell(
+      onTap: () async {
+        final uri = Uri.parse(submissionUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          debugPrint('Could not launch $submissionUrl');
+        }
+      },
+      child: const Text(
+        'View Submission',
+        style: TextStyle(
+          color: Colors.blue,
+          decoration: TextDecoration.underline,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   Widget _buildPanel(int idx, dynamic result) {
     List<dynamic> outputs = result['outputs'];
 
     final student = participants
         .firstWhere((p) => p.id.toString() == result['studentId'].toString());
+
+    final studentSubmission = _submissionAttachments.firstWhere(
+      (entry) => entry['userid'].toString() == student.id.toString(),
+    );
+
     final allOutputCorrectness = outputs.map(_isOutputCorrect);
 
     List<Widget> children = [];
+
+    // Add link to view the student's submission
+    children.addAll([
+      _buildViewSubmissionLink(studentSubmission['submissionUrl']),
+      SizedBox(height: 4)
+    ]);
 
     final suggestedGrade = allOutputCorrectness.where((o) => o == true).length /
         allOutputCorrectness.length;
