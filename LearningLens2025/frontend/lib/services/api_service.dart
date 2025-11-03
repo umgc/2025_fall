@@ -85,34 +85,6 @@ class ApiService {
     }
   }
 
-  Future<http.Response> httpPatch(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-    Encoding? encoding,
-  }) async {
-    final stopwatch = Stopwatch()..start();
-    try {
-      final response = await http.patch(
-        url,
-        headers: headers,
-        body: body,
-        encoding: encoding,
-      );
-      stopwatch.stop();
-      _handleResponse(response, method: 'PATCH', duration: stopwatch.elapsed);
-      return response;
-    } catch (e, stackTrace) {
-      stopwatch.stop();
-      _logger.e(
-        'Exception (PATCH) -> $url (${stopwatch.elapsedMilliseconds}ms)',
-        e,
-        stackTrace,
-      );
-      rethrow;
-    }
-  }
-
   /// Handles the [response], logging success or error messages.
   /// Includes [method] (GET/POST/...) and [duration] for helpful timing info.
   void _handleResponse(
