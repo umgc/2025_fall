@@ -69,6 +69,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settings => 'الإعدادات';
 
   @override
+  String get fallDetection => 'اكتشاف السقوط';
+
+  @override
+  String get informedDelivery => 'التسليم المعلن';
+
+  @override
+  String get smartDevices => 'الأجهزة الذكية';
+
+  @override
   String get pleaseLogIn => 'يرجى تسجيل الدخول';
 
   @override

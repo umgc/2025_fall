@@ -1,0 +1,29 @@
+## Copy this file and create .env file
+
+# PostgreSQL Development Database Configuration
+JDBC_URI=jdbc:postgresql://localhost:5432/careconnect
+DB_USER=postgres
+DB_PASSWORD=changeme
+CORS_ALLOWED_LIST=http://localhost:*
+# Security Configuration
+SECURITY_JWT_SECRET=Ubtl5F9nYshQnfuSw8yyhr0cBNAS8cSvY8ewfL5GApn4ixh0LhG5beGa8qbAxvvQaJmAaA/Tcv2Xa58
+# Firebase Configuration (mocked for development)
+FIREBASE_PROJECT_ID=care-connect-9544b
+FIREBASE_SENDER_ID=425422636860
+# AWS Configuration (mocked for development - not used in dev mode)
+AWS_ACCESS_KEY_ID=mock_access_key
+AWS_SECRET_ACCESS_KEY=mock_secret_key
+AWS_REGION=us-east-1
+STRIPE_SECRET_KEY=sk_test_100FNGMsf1MUBuH00KMcf9jHV
+STRIPE_WEEBHOOK_SECRET=whsec_100tZPNp16zyzEJC
+# Email provider
+CARECONNECT_EMAIL_PROVIDER=sendgrid
+CARECONNECT_EMAIL_SENDGRID_API_KEY=SG.100O3K-IOu6NPkxa7v0bJ6psQ
+# From address
+CARECONNECT_EMAIL_FROM=donotreply@careconnect.me
+DEEPSEEK_API_KEY=sk-key
+OPENAI_API_KEY=sk-mock-key
+S3_BUCKET_NAME=cc-iac-us-east-1-650566638526a
+DEEPSEEK_OPENROUTER_API_KEY=sk-or-v1-key
+GOOGLE_CLIENT_ID=mock
+GOOGLE_CLIENT_SECRET=mock

@@ -14,5 +14,6 @@ public record PatientSummaryDTO(
     String dob,
     Gender gender,
     Address address,
-    String relationship
+    String relationship,
+    String maNumber
 ) {}

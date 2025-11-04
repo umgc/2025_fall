@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'symptom_input_form.dart';
 import 'symptom_card.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class SymptomTab extends StatefulWidget {
   final String patientId;
@@ -12,60 +15,106 @@ class SymptomTab extends StatefulWidget {
 }
 
 class _SymptomTabState extends State<SymptomTab> {
+
+  // TODO - move to api services
+  final String baseUrl = 'https://localhost:8080/v1/api/symptoms';
+
   late List<Map<String, dynamic>> _symptoms;
 
   @override
   void initState() {
     super.initState();
-    _symptoms = [
-    {
-      'title': 'Suicidal thoughts',
-      'severity': 'severe',
-      'time': 'Today at 2:15 PM',
-      'description':
-          'Patient expressing thoughts of self-harm. Immediate intervention required.',
-      'requiresAttention': true,
-      'caregiverAlert': true,
-    },
-    {
-      'title': 'Anxiety',
-      'severity': 'moderate',
-      'time': 'Yesterday at 6:30 PM',
-      'description': 'Increased worry about upcoming medical appointment',
-      'requiresAttention': false,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Depression',
-      'severity': 'moderate',
-      'time': '2 days ago at 10:45 AM',
-      'description': 'Persistent feelings of sadness and hopelessness',
-      'requiresAttention': true,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Sleep disturbance',
-      'severity': 'mild',
-      'time': '3 days ago at 11:30 PM',
-      'description': 'Difficulty falling asleep, frequent nightmares',
-      'requiresAttention': false,
-      'caregiverAlert': false,
-    },
-    {
-      'title': 'Panic attack',
-      'severity': 'severe',
-      'time': '4 days ago at 3:20 PM',
-      'description': 'Sudden onset of intense fear with physical symptoms',
-      'requiresAttention': true,
-      'caregiverAlert': true,
-    },
-  ];
+    _symptoms = []; // pulls from wherever your backend or input provides it
+    _fetchSymptoms();
   }
 
-  void _addSymptom(Map<String, dynamic> symptomData) {
-    setState(() {
-      _symptoms.insert(0, symptomData);
-    });
+  // Function to add symptoms
+  Future<void> _addSymptom(Map<String, dynamic> symptomData) async {
+    try {
+      final patientId = 1; // 🔸 Replace with logged-in patient ID
+      final body = jsonEncode({
+        'patientId': patientId,
+        'symptomKey': symptomData['title'],
+        'symptomValue': symptomData['description'],
+        'severity': symptomData['severity'],
+      });
+
+      final response = await http.post(
+        Uri.parse(baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body)['data'];
+        setState(() {
+          _symptoms.insert(0, {
+            'id': data['id'],
+            'title': data['symptomKey'] ?? '',
+            'severity': data['severity'] ?? 'Unknown',
+            'time': data['takenAt'] ?? '',
+            'description': data['symptomValue'] ?? '',
+            'requiresAttention': false,
+            'caregiverAlert': false,
+          });
+        });
+      } else {
+        print('Failed to add symptom: ${response.body}');
+      }
+    } catch (e) {
+      print('Error adding symptom: $e');
+    }
+  }
+
+
+  // Function to remove a symptom at a given index
+  Future<void> _removeSymptom(int index) async {
+    final symptom = _symptoms[index];
+    final id = symptom['id'];
+
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/$id'));
+      if (response.statusCode == 200) {
+        setState(() {
+          _symptoms.removeAt(index);
+        });
+      } else {
+        print('Failed to delete symptom: ${response.body}');
+      }
+    } catch (e) {
+      print('Error deleting symptom: $e');
+    }
+  }
+
+
+
+  // Fetch all symptoms for this patient
+  Future<void> _fetchSymptoms() async {
+    try {
+      final patientId = 1; // 🔸 Replace with logged-in patient ID
+      final response = await http.get(Uri.parse('$baseUrl/patient/$patientId'));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> list = data['data'] ?? [];
+        setState(() {
+          _symptoms.clear();
+          _symptoms.addAll(list.map((s) => {
+                'id': s['id'],
+                'title': s['symptomKey'] ?? '',
+                'severity': s['severity'] ?? 'Unknown',
+                'time': s['takenAt'] ?? '',
+                'description': s['symptomValue'] ?? '',
+                'requiresAttention': false,
+                'caregiverAlert': false,
+              }));
+        });
+      } else {
+        print('Failed to fetch symptoms: ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching symptoms: $e');
+    }
   }
 
   @override
@@ -103,6 +152,8 @@ class _SymptomTabState extends State<SymptomTab> {
                 description: symptom['description'],
                 requiresAttention: symptom['requiresAttention'],
                 caregiverAlert: symptom['caregiverAlert'],
+                // Pass the delete callback to the SymptomCard
+                onDelete: () => _removeSymptom(index),
               );
             },
           ),

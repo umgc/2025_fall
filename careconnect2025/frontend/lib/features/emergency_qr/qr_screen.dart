@@ -206,6 +206,27 @@ class QrScreen extends StatelessWidget {
                             ),
                           ),
                         ),
+
+
+                        const SizedBox(width: 12),
+                        
+                        // Print PDF Button
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _printPdf(context),
+                            icon: const Icon(Icons.print, size: 18),
+                            label: const Text('Print Emergency PDF'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              foregroundColor: theme.colorScheme.onPrimaryContainer,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+
                       ],
                     ),
                   ],
@@ -354,6 +375,57 @@ class QrScreen extends StatelessWidget {
       }
     }
   }
+
+
+
+
+
+
+    // Print Emergency PDF
+    void _printPdf(BuildContext context) async {
+      if (emergencyId == null) return;
+
+      final url = _getPdfUrl();
+
+      try {
+        if (kIsWeb) {
+          // Web: open print dialog directly in new tab
+          html.window.open('$url?print=true', '_blank');
+        } else {
+          // Mobile & Desktop: open system print dialog using OS viewer
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+            );
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cannot open print dialog'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error printing PDF: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+
+
+
+
+
 
   // Share emergency information
   void _shareEmergencyInfo(BuildContext context) async {

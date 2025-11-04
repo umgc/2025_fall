@@ -6,11 +6,11 @@ import com.careconnect.dto.invoice.InvoiceDto;
 import com.careconnect.dto.invoice.InvoiceResponseDto;
 import com.careconnect.dto.invoice.PaymentDto;
 import com.careconnect.model.invoice.Invoice;
-import com.careconnect.service.invoice.InvoiceService;
 import com.careconnect.service.invoice.LlmExtractionService;
+import com.careconnect.service.invoice.InvoiceService;
 import com.careconnect.service.invoice.TextractService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.MediaType;
@@ -30,15 +30,18 @@ public class InvoiceController {
     private final InvoiceService service;
     private final TextractService textractService;
     private final LlmExtractionService llmExtractionService;
-
+    private final ObjectMapper objectMapper;
     public InvoiceController(
-            InvoiceService service,
             @Autowired(required = false) TextractService textractService,
-            @Autowired(required = false) LlmExtractionService llmExtractionService
+            @Autowired(required = false) LlmExtractionService llmExtractionService,
+            InvoiceService service,
+            ObjectMapper objectMapper
     ) {
         this.service = service;
         this.llmExtractionService = llmExtractionService;
         this.textractService = textractService;
+        this.objectMapper = objectMapper;
+
     }
 
     @GetMapping
@@ -139,8 +142,10 @@ public class InvoiceController {
 
             // Step 2: Send raw text to the LLM service
             var json = llmExtractionService.extractInvoiceData(result.rawText);
-            var outputConverter = new BeanOutputConverter<>(InvoiceDto.class);
-            InvoiceDto invoiceDto=outputConverter.convert(json);
+            String sanitizedJson = JsonSanitizer.extractFirstJsonObject(json);
+
+            InvoiceDto invoiceDto = objectMapper.readValue(sanitizedJson, InvoiceDto.class);
+
             invoiceDto.documentLink=result.s3Key;
 
             // Step 3: Duplicate check (provider + total are the primary keys we compare)
@@ -180,6 +185,45 @@ public class InvoiceController {
     /**
      * Helper method to validate the list of uploaded files.
      */
+    public final class JsonSanitizer {
+        private JsonSanitizer() {}
+
+        public static String extractFirstJsonObject(String s) {
+            if (s == null) return null;
+            String t = s.trim();
+
+            // remove ```json ... ``` fences if present
+            if (t.startsWith("```")) {
+                int firstNewline = t.indexOf('\n');
+                t = (firstNewline >= 0 ? t.substring(firstNewline + 1) : t).trim();
+                int fence = t.lastIndexOf("```");
+                if (fence >= 0) t = t.substring(0, fence).trim();
+            }
+
+            int start = t.indexOf('{');
+            if (start < 0) return null;
+
+            int depth = 0;
+            boolean inStr = false, esc = false;
+            for (int i = start; i < t.length(); i++) {
+                char c = t.charAt(i);
+                if (inStr) {
+                    if (!esc && c == '\\') { esc = true; continue; }
+                    if (!esc && c == '"') inStr = false;
+                    esc = false;
+                    continue;
+                }
+                if (c == '"') { inStr = true; continue; }
+                if (c == '{') depth++;
+                else if (c == '}') {
+                    depth--;
+                    if (depth == 0) return t.substring(start, i + 1);
+                }
+            }
+            return null;
+        }
+    }
+
     private boolean isFileListInvalid(List<MultipartFile> files) {
         return files == null || files.isEmpty() || files.stream().allMatch(MultipartFile::isEmpty);
     }

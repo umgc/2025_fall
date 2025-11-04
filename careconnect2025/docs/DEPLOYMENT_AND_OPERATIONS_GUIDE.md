@@ -1,26 +1,52 @@
 # CareConnect 2025 Deployment and Operations Guide
 
-## Table of Contents
+## Introduction
 
-1. [Infrastructure Overview](#infrastructure-overview)
-2. [Environment Setup](#environment-setup)
-3. [AWS Infrastructure Deployment](#aws-infrastructure-deployment)
-4. [Application Deployment](#application-deployment)
-5. [Database Management](#database-management)
-6. [CI/CD Pipeline](#cicd-pipeline)
-7. [Monitoring and Logging](#monitoring-and-logging)
-8. [Security and Compliance](#security-and-compliance)
-9. [Backup and Disaster Recovery](#backup-and-disaster-recovery)
-10. [Performance Optimization](#performance-optimization)
-11. [Scaling Strategies](#scaling-strategies)
-12. [Maintenance Procedures](#maintenance-procedures)
-13. [Troubleshooting](#troubleshooting)
-14. [Security Incident Response](#security-incident-response)
-15. [Compliance and Auditing](#compliance-and-auditing)
+### Purpose and Scope
+
+This Deployment and Operations Guide serves as the authoritative resource for deploying, configuring, monitoring, and maintaining the CareConnect healthcare platform in production environments. Unlike development-focused documentation, this guide addresses the unique challenges of running a HIPAA-compliant healthcare application at scale, where reliability, security, and data integrity are not optional—they are regulatory requirements.
+
+**Target Audience**: This guide is designed for:
+- **DevOps Engineers** responsible for infrastructure provisioning and CI/CD pipelines
+- **Site Reliability Engineers (SREs)** managing production systems and incident response
+- **System Administrators** performing day-to-day operational tasks
+- **Security Engineers** ensuring compliance with healthcare regulations
+- **Technical Leads** making architectural and scaling decisions
+
+**What This Guide Covers**:
+- **Infrastructure Architecture**: Understanding the AWS-based multi-tier architecture and why each component was selected
+- **Deployment Procedures**: Step-by-step deployment workflows from code commit to production release
+- **Monitoring and Observability**: Comprehensive monitoring strategies, alerting, and incident response
+- **Security and Compliance**: HIPAA compliance requirements, security best practices, and audit procedures
+- **Disaster Recovery**: Backup strategies, recovery procedures, and business continuity planning
+- **Troubleshooting**: Systematic approaches to diagnosing and resolving production issues
+
+### Healthcare-Specific Operational Considerations
+
+Operating a healthcare platform differs significantly from standard web applications:
+
+**Regulatory Compliance**: HIPAA and HITECH regulations mandate specific security controls, audit logging, and data handling procedures. Every deployment decision—from encryption methods to backup retention—must consider these requirements.
+
+**Zero Downtime Requirement**: Healthcare providers rely on CareConnect for patient care coordination. Scheduled maintenance windows must be carefully planned, and deployments must use blue-green or canary strategies to avoid service interruptions during critical care hours.
+
+**Data Integrity Above All**: In healthcare, data corruption or loss isn't just inconvenient—it can endanger patient safety. Our backup strategies, database configurations, and deployment procedures prioritize data integrity over speed or convenience.
+
+**Audit Trail Requirements**: Every change to the production system must be logged and traceable. This guide includes procedures for maintaining audit trails that satisfy regulatory scrutiny.
 
 ## Infrastructure Overview
 
-### Architecture Diagram
+### Cloud Architecture Philosophy
+
+CareConnect's infrastructure follows a defense-in-depth approach, where multiple layers of security, redundancy, and monitoring protect patient data and ensure system availability. We've chosen AWS as our cloud provider for its:
+
+- **HIPAA Compliance**: AWS offers Business Associate Agreements (BAA) and maintains HITRUST certification
+- **Mature Services**: Proven services like RDS, ECS, and CloudFront reduce operational burden
+- **Global Presence**: Multi-region capabilities support disaster recovery and data residency requirements
+- **Comprehensive Monitoring**: CloudWatch and related services provide deep observability
+
+The architecture separates concerns across multiple tiers, allowing independent scaling, security hardening, and failure isolation. If the caching layer fails, the application continues serving requests (albeit slower). If a container crashes, ECS automatically replaces it without manual intervention.
+
+### Architecture Diagram and Traffic Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -51,7 +77,7 @@
         │                 │                 │
 ┌───────▼────┐    ┌──────▼──────┐    ┌─────▼──────┐
 │    RDS     │    │  ElastiCache│    │   Lambda   │
-│   MySQL    │    │    Redis    │    │ Functions  │
+│ PostgreSQL │    │    Redis    │    │ Functions  │
 └────────────┘    └─────────────┘    └────────────┘
         │
 ┌───────▼────┐
@@ -61,7 +87,107 @@
 └────────────┘
 ```
 
-### Technology Stack
+**Understanding the Traffic Flow**:
+
+1. **User Request**: A caregiver opens the CareConnect app on their tablet
+2. **DNS Resolution**: Route 53 resolves `careconnect.health` to CloudFront distribution
+3. **CDN Layer**: CloudFront serves cached static assets (images, CSS, JavaScript) from edge locations closest to the user, reducing latency
+4. **Load Balancing**: Dynamic API requests pass through CloudFront to Application Load Balancer, which distributes traffic across healthy backend containers
+5. **Application Processing**: ECS containers running Spring Boot process business logic, enforcing authentication and authorization
+6. **Data Access**: Application queries RDS PostgreSQL for persistent data, checks ElastiCache Redis for cached data to avoid expensive database queries
+7. **File Operations**: Large files (medical documents, lab results) are stored in and retrieved from S3
+8. **Serverless Functions**: Lambda functions handle asynchronous tasks like PDF generation, email sending, and scheduled data exports
+
+This multi-tier architecture ensures that a failure in any single component (except the database) doesn't bring down the entire system.
+
+### Technology Stack and Selection Rationale
+
+Our technology choices balance operational maturity, healthcare compliance requirements, and team expertise:
+
+#### Infrastructure Layer
+
+**Cloud Provider: Amazon Web Services (AWS)**
+- **Why AWS over Azure/GCP**: AWS's early entry into healthcare compliance (HIPAA-eligible services since 2013) means more mature tooling and extensive documentation for healthcare workloads. The AWS BAA (Business Associate Agreement) covers a wide range of services, giving us flexibility in architecture choices.
+- **Compliance Certifications**: AWS maintains HITRUST, SOC 1/2/3, and ISO 27001 certifications required by many healthcare organizations.
+
+**Infrastructure as Code: Terraform**
+- **Why Terraform over CloudFormation**: Terraform's provider-agnostic approach means we could migrate to multi-cloud if needed. Its declarative syntax and state management make infrastructure changes auditable and reversible—critical for regulated environments.
+- **State Management**: We use remote state in S3 with DynamoDB locking to prevent concurrent modifications that could corrupt infrastructure state.
+
+**Container Orchestration: ECS with Fargate**
+- **Why ECS over Kubernetes**: ECS offers deep AWS integration with less operational overhead. For our team size and application complexity, ECS's managed control plane and native AWS service integration (IAM, CloudWatch, ALB) provides the right balance of power and simplicity.
+- **Why Fargate over EC2**: Fargate's serverless model eliminates patching and scaling of underlying VMs. In healthcare, reducing the attack surface and operational burden of OS management is valuable—we focus on application security, not server hardening.
+
+**Load Balancer: Application Load Balancer (ALB)**
+- **Layer 7 Routing**: ALB operates at HTTP/HTTPS level, enabling path-based routing (`/api/*` → backend, `/admin/*` → admin portal) and health checks that verify application health, not just network connectivity.
+- **WAF Integration**: Tight integration with AWS WAF allows us to protect against OWASP Top 10 vulnerabilities at the perimeter.
+
+**CDN: CloudFront**
+- **Global Distribution**: Medical facilities access CareConnect from various geographic locations. CloudFront's 200+ edge locations reduce latency for users worldwide.
+- **DDoS Protection**: CloudFront integrates with AWS Shield for DDoS mitigation—important for maintaining availability during attacks.
+
+**DNS: Route 53**
+- **Health Checks**: Route 53 monitors endpoint health and automatically fails over to DR region if primary region becomes unhealthy.
+- **DNSSEC**: Supports DNSSEC for preventing DNS spoofing attacks.
+
+#### Compute Layer
+
+**Backend: ECS Fargate Containers**
+- **Isolation**: Each container runs in its own micro-VM, providing process-level isolation between requests—important when handling sensitive patient data.
+- **Auto-scaling**: ECS automatically scales containers based on CPU/memory metrics or custom metrics like request count.
+- **Blue-Green Deployments**: ECS native support for blue-green deployments enables zero-downtime updates.
+
+**Frontend: S3 + CloudFront Static Hosting**
+- **Infinite Scalability**: S3 automatically scales to handle any request volume. No server capacity planning needed for web assets.
+- **Cost Efficiency**: Static hosting is ~10x cheaper than running web servers. For a Flutter web app that's mostly static after build, this is ideal.
+
+**Functions: Lambda for Serverless Tasks**
+- **Event-Driven**: Lambda functions respond to S3 events (new file uploaded), SQS messages (async job queue), or scheduled CloudWatch Events (nightly reports).
+- **No Idle Costs**: Unlike containers that run 24/7, Lambda charges only for execution time. Perfect for sporadic tasks like PDF generation.
+
+**Admin: EC2 Instances for Administrative Tasks**
+- **Why EC2 for Admin**: Admin tasks (database migrations, bulk data imports) sometimes require long-running processes that exceed Lambda's 15-minute timeout.
+- **Bastion Host**: EC2 instances also serve as secure bastion hosts for accessing private resources.
+
+#### Storage Layer
+
+**Database: RDS PostgreSQL (Multi-AZ)**
+- **Why PostgreSQL**: Advanced features like JSONB columns, row-level security, and excellent ACID compliance make it ideal for healthcare data.
+- **Multi-AZ**: Automatic synchronous replication to standby in different Availability Zone provides ~99.95% availability and protects against AZ failures.
+- **Automated Backups**: RDS automatically takes daily snapshots and retains transaction logs, enabling point-in-time recovery.
+
+**Cache: ElastiCache Redis**
+- **Why Redis over Memcached**: Redis supports complex data structures (sorted sets for leaderboards, pub/sub for real-time features) and persistence, making it suitable for both caching and session storage.
+- **Performance**: Caching frequent database queries (user profiles, permissions) reduces database load and improves response times from ~200ms to ~5ms.
+
+**Files: S3 Buckets**
+- **Durability**: S3's 99.999999999% durability means medical records are safe from data loss.
+- **Lifecycle Policies**: Automatically transition old medical records to Glacier for cost-effective long-term archival while maintaining compliance with retention requirements.
+- **Versioning**: S3 versioning protects against accidental deletion and allows recovery of previous file versions.
+
+**Backup: S3 with Lifecycle Policies**
+- **Compliance**: Healthcare regulations often require 7-10 year retention of medical records. S3 Glacier Deep Archive provides cost-effective long-term storage.
+- **Cross-Region Replication**: Critical backups are replicated to a different AWS region for geographic redundancy.
+
+#### Security Layer
+
+**WAF: AWS WAF for Application Protection**
+- **OWASP Protection**: Managed rule sets protect against SQL injection, XSS, and other common attacks without manual rule tuning.
+- **Rate Limiting**: Protects API endpoints from brute force and DDoS attacks by limiting request rates per IP.
+
+**Certificates: ACM (AWS Certificate Manager)**
+- **Automatic Renewal**: ACM automatically renews SSL/TLS certificates before expiration, preventing the service outages caused by expired certificates.
+- **Wildcard Support**: Single wildcard certificate (`*.careconnect.health`) covers all subdomains.
+
+**Secrets: AWS Secrets Manager**
+- **Why Secrets Manager over Parameter Store**: Automatic rotation of database passwords and API keys reduces the risk of compromised credentials. In healthcare, regular credential rotation is often a compliance requirement.
+- **Encryption**: All secrets are encrypted at rest using AWS KMS with customer-managed keys.
+
+**IAM: Role-Based Access Control**
+- **Principle of Least Privilege**: Each ECS task, Lambda function, and admin user has only the permissions needed for their specific function.
+- **No Long-Lived Credentials**: ECS tasks use IAM roles (temporary credentials) instead of hardcoded access keys, reducing credential leakage risk.
+
+### Technology Stack Summary
 
 **Infrastructure:**
 - **Cloud Provider**: Amazon Web Services (AWS)
@@ -78,7 +204,7 @@
 - **Admin**: EC2 instances for administrative tasks
 
 **Storage:**
-- **Database**: RDS MySQL (Multi-AZ)
+- **Database**: RDS PostgreSQL (Multi-AZ)
 - **Cache**: ElastiCache Redis
 - **Files**: S3 buckets
 - **Backup**: S3 with lifecycle policies
@@ -89,25 +215,104 @@
 - **Secrets**: AWS Secrets Manager
 - **IAM**: Role-based access control
 
-## Environment Setup
+## Environment Setup and Strategy
 
-### Environment Structure
+### Environment Structure and Promotion Path
 
-CareConnect uses four distinct environments:
+CareConnect employs a four-environment strategy that balances development agility with production safety. Each environment serves a distinct purpose in the software delivery pipeline:
 
-1. **Development** (`dev`): Local and feature development
-2. **Staging** (`staging`): Integration testing and QA
-3. **Production** (`prod`): Live production environment
-4. **DR** (`dr`): Disaster recovery environment
+#### 1. Development Environment (`dev`)
 
-### Environment Configuration
+**Purpose**: Rapid iteration and feature development without impacting other environments.
 
-#### Development Environment
+**Characteristics**:
+- **Local-First**: Developers run most components locally (database, Redis, backend) for fast iteration
+- **AWS Integration**: Connects to development S3 buckets and other AWS services for testing cloud integration
+- **Relaxed Security**: Uses development credentials and simplified authentication to reduce friction
+- **Data**: Synthetic test data only—no real patient information ever exists in dev
+
+**When to Use**: 
+- Individual developer feature work
+- Unit and integration testing during development
+- Debugging and troubleshooting new features
+
+**Infrastructure**: Minimal AWS resources—primarily S3 buckets for file uploads and testing cloud integrations.
+
+#### 2. Staging Environment (`staging`)
+
+**Purpose**: Pre-production validation and integration testing in an environment that mirrors production as closely as possible.
+
+**Characteristics**:
+- **Production Mirror**: Infrastructure, networking, and configurations match production (except scale)
+- **Integration Testing**: Full end-to-end testing of all components together
+- **QA Validation**: Quality assurance team validates features before production release
+- **Performance Testing**: Load testing to identify bottlenecks before they impact production users
+- **Smaller Scale**: Runs fewer containers and smaller database instances to reduce costs while maintaining architectural parity
+
+**When to Use**:
+- Testing feature branches before merging to main
+- QA validation of release candidates
+- Integration testing of multiple features together
+- Training and demo purposes
+
+**Infrastructure**: Full AWS stack but scaled down (1-2 ECS tasks vs 10+ in production, smaller RDS instance).
+
+#### 3. Production Environment (`prod`)
+
+**Purpose**: Serve live traffic for real healthcare providers and patients.
+
+**Characteristics**:
+- **High Availability**: Multi-AZ deployment, auto-scaling, automated failover
+- **Full Monitoring**: Comprehensive CloudWatch dashboards, alarms, and log aggregation
+- **Security Hardening**: All security controls enabled, minimal IAM permissions, encryption everywhere
+- **Real Data**: Contains actual patient health information—HIPAA compliance is mandatory
+- **Change Control**: Strict deployment procedures with approvals and rollback capabilities
+
+**When to Use**: Only after thorough testing in staging and approval from technical leads.
+
+**Infrastructure**: Full-scale AWS infrastructure with redundancy and auto-scaling.
+
+#### 4. Disaster Recovery Environment (`dr`)
+
+**Purpose**: Geographic redundancy and business continuity in case of regional AWS outage.
+
+**Characteristics**:
+- **Passive Standby**: Normally inactive, activated only during DR scenarios
+- **Different Region**: Deployed in a separate AWS region (us-west-2 vs us-east-1 for production)
+- **Data Replication**: Receives asynchronous replication from production database and S3
+- **Lower Cost**: Minimal compute resources until failover is triggered
+
+**When to Use**:
+- Primary region experiences significant outage (entire AZ down, networking issues)
+- Disaster recovery drills (quarterly validation that DR actually works)
+
+**Infrastructure**: Full infrastructure defined in Terraform but scaled to minimum (1 ECS task, smallest RDS instance) until activated.
+
+### Environment Promotion Workflow
+
+Code flows through environments in a controlled progression:
+
+```
+Developer Workstation → dev → staging → production → dr (replicated)
+                         ↓       ↓          ↓
+                      Feature   QA      Release
+                       Test     Test     to Users
+```
+
+**Promotion Gates**: Each promotion requires:
+- Automated tests passing in current environment
+- Manual QA signoff (for staging → production)
+- Technical lead approval (for production deployments)
+- Deployment during approved change window (production only)
+
+### Environment Configuration Details
+
+#### Development Environment Configuration
 
 ```bash
 # Local development configuration
 export ENVIRONMENT=dev
-export DATABASE_URL=jdbc:mysql://localhost:3306/careconnect_dev
+export DATABASE_URL=jdbc:postgresql://localhost:5432/careconnect_dev
 export REDIS_URL=redis://localhost:6379
 export JWT_SECRET=dev_jwt_secret_key_32_characters
 export AWS_REGION=us-east-1
@@ -119,7 +324,7 @@ export S3_BUCKET=careconnect-dev-files
 ```bash
 # Staging environment configuration
 export ENVIRONMENT=staging
-export DATABASE_URL=jdbc:mysql://staging-db.region.rds.amazonaws.com:3306/careconnect
+export DATABASE_URL=jdbc:postgresql://staging-db.region.rds.amazonaws.com:5432/careconnect
 export REDIS_URL=staging-cache.region.cache.amazonaws.com:6379
 export JWT_SECRET=${JWT_SECRET_STAGING}  # From AWS Secrets Manager
 export AWS_REGION=us-east-1
@@ -131,7 +336,7 @@ export S3_BUCKET=careconnect-staging-files
 ```bash
 # Production environment configuration
 export ENVIRONMENT=prod
-export DATABASE_URL=jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect
+export DATABASE_URL=jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect
 export REDIS_URL=prod-cache.region.cache.amazonaws.com:6379
 export JWT_SECRET=${JWT_SECRET_PROD}  # From AWS Secrets Manager
 export AWS_REGION=us-east-1
@@ -143,6 +348,21 @@ export S3_BUCKET=careconnect-prod-files
 ### Terraform Configuration
 
 #### Main Infrastructure Configuration
+
+This main Terraform configuration file orchestrates all infrastructure components for CareConnect. Rather than defining resources directly, it uses a modular approach where each major component (VPC, database, compute) is encapsulated in its own module. This separation provides several benefits:
+
+**Why Modular Architecture**: 
+- **Reusability**: The same VPC module can be used for dev, staging, and prod environments with different parameters
+- **Maintainability**: Changes to database configuration don't require touching networking code
+- **Testing**: Each module can be tested independently before integration
+- **Team Collaboration**: Different team members can work on different modules without conflicts
+
+**State Management**: The `backend "s3"` configuration stores Terraform state remotely in S3, which is critical for team collaboration. Without this, each developer would have their own local state file, leading to infrastructure drift and conflicts. DynamoDB locking prevents two people from running Terraform simultaneously, which could corrupt the state.
+
+**Why These Specific Module Parameters Matter**:
+- `multi_az = var.environment == "prod" ? true : false`: Production databases span multiple availability zones for high availability, but dev environments use single-AZ to reduce costs
+- `backup_retention_period = var.environment == "prod" ? 30 : 7`: Production keeps 30 days of backups for compliance, dev only needs 7
+- `deletion_protection = var.environment == "prod" ? true : false`: Prevents accidental deletion of production database
 
 ```hcl
 # terraform_aws/main.tf
@@ -343,7 +563,43 @@ module "monitoring" {
 }
 ```
 
+**Understanding the Module Structure**:
+
+Each `module` block creates a set of related resources. For example, `module "vpc"` creates the entire networking infrastructure (VPC, subnets, NAT gateways, route tables). The module receives inputs via parameters and returns outputs that other modules can use.
+
+**Critical Module Dependencies**:
+1. **VPC** must be created first (provides `vpc_id` needed by others)
+2. **Security Groups** need the VPC ID to define network rules
+3. **RDS** needs both VPC and security groups before it can launch
+4. **ECS** needs VPC, security groups, and connects to RDS/ElastiCache
+5. **ALB** sits in front of ECS, routing traffic to containers
+6. **Monitoring** observes all the above components
+
+This dependency chain is why we use Terraform's module system—it automatically handles creation order based on resource dependencies.
+
 #### VPC Module
+
+The VPC (Virtual Private Cloud) module creates isolated networking infrastructure for CareConnect. Think of it as creating a private data center in AWS—complete with multiple network zones, internet gateways, and routing rules.
+
+**Network Architecture Philosophy**:
+
+CareConnect uses a **three-tier network design** to balance security and accessibility:
+1. **Public Subnets**: Host load balancers that accept traffic from the internet
+2. **Private Subnets**: Host application containers (ECS tasks) that should NOT be directly accessible from internet
+3. **Database Subnets**: Host RDS instances in the most isolated layer, accessible only from application tier
+
+**Why Three Tiers**: This follows the principle of defense-in-depth. Even if an attacker compromises the load balancer, they can't directly access the application layer. Even if they compromise an application container, they can't directly access the database.
+
+**Multi-AZ Design**: Each subnet type is created in multiple Availability Zones (us-east-1a, us-east-1b, etc.). If one AZ fails (rare but happens), the other AZs continue serving traffic. This is why `count = length(var.availability_zones)` appears throughout—we're creating resources in each AZ.
+
+**NAT Gateway Strategy**: Private subnets need internet access for downloading packages and reaching external APIs, but shouldn't accept inbound connections. NAT gateways provide one-way internet access: outbound traffic is allowed, inbound is blocked.
+
+**CIDR Block Math**: The `cidrsubnet(var.vpc_cidr, 8, count.index + 1)` function divides the VPC's IP address space into smaller subnets. For a VPC with CIDR `10.0.0.0/16`, this creates:
+- Public subnets: `10.0.1.0/24`, `10.0.2.0/24`, `10.0.3.0/24`
+- Private subnets: `10.0.11.0/24`, `10.0.12.0/24`, `10.0.13.0/24` (note the +10 offset)
+- Database subnets: `10.0.21.0/24`, `10.0.22.0/24`, `10.0.23.0/24` (note the +20 offset)
+
+The offsets ensure no IP overlap between subnet types.
 
 ```hcl
 # terraform_aws/modules/vpc/main.tf
@@ -485,7 +741,51 @@ resource "aws_route_table_association" "database" {
 }
 ```
 
+**Key VPC Module Concepts Explained**:
+
+**Internet Gateway**: The bridge between our VPC and the public internet. Without this, nothing in the VPC could reach the internet, and the internet couldn't reach our load balancers.
+
+**Route Tables**: Define how traffic flows within the VPC. The public route table says "send `0.0.0.0/0` (all traffic) to the internet gateway." The private route table says "send `0.0.0.0/0` to the NAT gateway" (for outbound-only access).
+
+**Route Table Associations**: Connect subnets to route tables. Public subnets use the public route table (bidirectional internet), private and database subnets use private route tables (outbound-only via NAT).
+
+**Why `depends_on` Matters**: NAT gateways can't be created until the internet gateway exists, because they need a way to route traffic. Terraform's `depends_on` ensures resources are created in the correct order.
+
+**Cost Optimization Note**: NAT gateways are expensive (~$0.045/hour each + $0.045/GB data). We create one per AZ for high availability, but in development environments, you might create just one to save costs (at the expense of AZ resilience).
+
 #### ECS Module
+
+The ECS (Elastic Container Service) module defines how CareConnect's Spring Boot backend runs in production. ECS is AWS's container orchestration service—think of it as the system that ensures your Docker containers are always running, automatically replaces failed containers, and scales up/down based on load.
+
+**Why Fargate Over EC2**: ECS can run containers on EC2 instances (you manage the VMs) or Fargate (AWS manages the infrastructure). We chose Fargate because:
+- **No Server Management**: AWS handles patching, scaling, and maintaining the underlying VMs
+- **Pay-Per-Container**: You're billed only for container resources used, not idle VM capacity
+- **Security**: Each Fargate task runs in its own isolated micro-VM, stronger isolation than shared EC2 instances
+- **Healthcare Compliance**: Less infrastructure to audit and secure = easier HIPAA compliance
+
+**Container Insights**: The `containerInsights = "enabled"` setting turns on detailed CloudWatch metrics for every container. This visibility is critical for diagnosing production issues—you can see exactly which container is consuming CPU, making database calls, or experiencing errors.
+
+**Capacity Providers**: The `FARGATE` and `FARGATE_SPOT` configuration allows ECS to use spot instances (cheaper but can be interrupted) for non-critical workloads while using standard Fargate for production traffic. The `base = 1, weight = 100` means "always run at least 1 task on standard Fargate, but prefer standard for all tasks."
+
+**Task Definition Breakdown**:
+
+A "task definition" is like a Docker Compose file—it defines which containers to run, how much CPU/memory they need, environment variables, and health checks. The task definition is versioned, so you can roll back to previous versions if a deployment fails.
+
+**Network Mode `awsvpc`**: Each container gets its own elastic network interface (ENI) with a private IP address. This provides stronger network isolation and allows security groups to control traffic to individual containers (not just the host EC2 instance).
+
+**IAM Roles Explained**:
+- **Execution Role** (`ecs_execution_role`): Permissions ECS needs to launch the container (pull from ECR, write to CloudWatch logs, read secrets from Secrets Manager)
+- **Task Role** (`ecs_task_role`): Permissions the application code needs at runtime (access S3 buckets, send SNS notifications, etc.)
+
+Separating these roles follows the principle of least privilege—ECS can start containers without giving the application excessive permissions.
+
+**Environment vs. Secrets**: Environment variables are for non-sensitive config (`ENVIRONMENT=prod`). Secrets are pulled from AWS Secrets Manager at runtime and never logged. This prevents accidentally exposing database passwords in CloudWatch Logs.
+
+**Health Check Strategy**: The health check `curl -f http://localhost:${var.container_port}/actuator/health` calls Spring Boot's health endpoint. If this fails 3 times (`retries = 3`), ECS kills the container and starts a new one. The `startPeriod = 60` gives the application 60 seconds to start before health checks begin—important because Spring Boot takes time to initialize.
+
+**Deployment Circuit Breaker**: The `deployment_circuit_breaker` with `rollback = true` is a safety mechanism. If a new deployment causes containers to repeatedly fail health checks, ECS automatically rolls back to the previous version. This prevents a bad deployment from taking down the entire application.
+
+**Auto Scaling Logic**: The `aws_appautoscaling_policy` monitors CPU utilization and automatically scales containers. When average CPU exceeds 70%, ECS launches more containers. When it drops below 70%, ECS terminates excess containers. This balances cost (don't run more containers than needed) with performance (scale up before users notice slowness).
 
 ```hcl
 # terraform_aws/modules/ecs/main.tf
@@ -689,9 +989,39 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 ```
 
+**ECS Module Key Concepts**:
+
+**Service Discovery**: The `service_registries` block registers each container in AWS Cloud Map (service discovery). This allows containers to find each other using DNS names rather than hard-coding IP addresses. When container IP addresses change (due to scaling or failures), service discovery automatically updates the DNS.
+
+**Load Balancer Integration**: The `load_balancer` block connects ECS to the Application Load Balancer. The ALB distributes incoming HTTP requests across all healthy containers. If a container fails its health check, the ALB stops sending traffic to it until it recovers or is replaced.
+
+**Deployment Strategy**: The `maximum_percent = 200, minimum_healthy_percent = 100` configuration enables **blue-green deployments**. When deploying a new version:
+1. ECS starts new containers (up to 200% of desired count, e.g., 6 containers if you normally run 3)
+2. Once new containers pass health checks, ECS drains traffic from old containers
+3. After old containers finish existing requests, ECS terminates them
+4. You're left with 100% new containers (the desired count of 3)
+
+This ensures zero downtime during deployments—old containers keep serving requests until new ones are ready.
+
+**Why This Complexity Is Worth It**: While this ECS configuration is extensive, it provides enterprise-grade reliability with automatic recovery, rolling deployments, and autoscaling. In a healthcare application where downtime could impact patient care, these safeguards justify the complexity.
+
 ### Deployment Commands
 
 #### Initial Infrastructure Deployment
+
+These commands provision the entire AWS infrastructure from scratch. You'll run this once when setting up a new environment (dev, staging, prod) and rarely thereafter (infrastructure changes are typically done through Terraform updates, not teardown/rebuild).
+
+**Terraform Initialization**: `terraform init` downloads provider plugins (AWS) and sets up the backend (S3 state storage). This must be run whenever you clone the repo or change provider versions.
+
+**Workspaces for Multi-Environment**: Terraform workspaces allow managing multiple environments (dev, staging, prod) with the same configuration but separate state files. `terraform workspace new prod` creates an isolated state for production, preventing accidental changes to dev when you meant to modify prod.
+
+**The Plan-Apply Workflow**: This two-step process is critical for safety:
+1. **terraform plan**: Shows what Terraform WOULD do without actually doing it. Review this carefully—if it says "destroy database," something is wrong!
+2. **terraform apply**: Actually makes the changes. Only run this after reviewing the plan.
+
+The `-var-file` flag loads environment-specific variables (prod.tfvars) so the same code can deploy different-sized resources for each environment.
+
+**Why Save Outputs**: `terraform output > infrastructure-outputs.txt` captures important values (database endpoint, load balancer DNS) needed by the application. Without this, you'd have to manually look up these values in the AWS console.
 
 ```bash
 # Navigate to terraform directory
@@ -715,6 +1045,24 @@ terraform output > ../infrastructure-outputs.txt
 ```
 
 #### Environment-Specific Variables
+
+These variable files (`.tfvars`) allow the same Terraform code to create different infrastructure for each environment. Production uses larger, more resilient resources; development uses smaller, cheaper resources.
+
+**Critical Variable Choices Explained**:
+
+**Database Instance Class**: `db.r6g.large` for production is a memory-optimized instance (16 GB RAM) because PostgreSQL performance is heavily memory-dependent. Dev environments might use `db.t4g.micro` (1 GB RAM) to save costs—acceptable for testing but would be too slow for production traffic.
+
+**Storage Auto-Scaling**: `db_max_allocated_storage = 1000` allows PostgreSQL to automatically grow from 100GB to 1TB as data accumulates. This prevents "disk full" failures without pre-allocating expensive storage you don't need yet.
+
+**ECS Auto-Scaling Limits**: `ecs_min_capacity = 2, ecs_max_capacity = 10` means:
+- Always run at least 2 containers (for high availability—if one fails, the other handles traffic)
+- Never run more than 10 containers (cost control—prevents runaway scaling from attacks or bugs)
+
+Production should always have `min_capacity >= 2` because running a single container means downtime during deployments or failures.
+
+**CPU/Memory Allocation**: `ecs_cpu = 1024, ecs_memory = 2048` allocates 1 vCPU and 2GB RAM per container. Fargate charges based on these values, so right-sizing is important. Too little = out-of-memory errors; too much = wasted money.
+
+**Why Separate Container Images**: `backend_container_image` uses the full ECR URL, not just a tag. This ensures you're pulling from your own private registry, not Docker Hub (where malicious images could exist with similar names).
 
 ```hcl
 # terraform_aws/environments/prod.tfvars
@@ -756,7 +1104,25 @@ backend_container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/careconn
 
 ### Backend Deployment
 
+Deploying the Spring Boot backend involves building a Docker container image, pushing it to AWS's Elastic Container Registry (ECR), and updating the ECS service to use the new image.
+
+**Why Containers for Backend**: Containers ensure the application runs identically in all environments. If it works on your laptop, it works in production—eliminating "works on my machine" problems. The container includes the exact JDK version, dependencies, and configuration.
+
 #### Docker Build and Push
+
+**The Build Process Explained**:
+
+1. **Maven Build** (`./mvnw clean package`): Compiles Java code, runs tests (skip with `-DskipTests` for faster builds, but NOT recommended for production deployments), and packages everything into a JAR file.
+
+2. **Docker Build**: Uses the Dockerfile in `backend/core/` to create a container image. This typically starts with a base image (e.g., `openjdk:17-jdk-slim`), copies the JAR file, and defines how to run the application.
+
+3. **Tagging**: `docker tag` creates an alias pointing to the same image. We tag as both `latest` (for convenience) and with the ECR repository URL (required for pushing to ECR).
+
+4. **ECR Login**: AWS ECR requires authentication. `get-login-password` retrieves a temporary token valid for 12 hours. Docker uses this to authenticate push operations.
+
+5. **Push to ECR**: Uploads the container image layers to ECR. Only changed layers are uploaded (not the entire image each time), speeding up subsequent pushes.
+
+**Security Note**: Never push `:latest` to production without also tagging with a specific version (e.g., `:v1.2.3` or commit SHA). The `:latest` tag can change, making rollbacks difficult. Always use immutable tags in production.
 
 ```bash
 # Build backend Docker image
@@ -780,6 +1146,22 @@ docker push 123456789012.dkr.ecr.us-east-1.amazonaws.com/careconnect-backend:lat
 
 #### ECS Service Update
 
+After pushing a new container image to ECR, you must tell ECS to deploy it.
+
+**Force New Deployment**: The `--force-new-deployment` flag tells ECS to pull the latest image and replace existing containers, even if the task definition hasn't changed. This is useful when you push a new image with the same tag (e.g., `:latest`).
+
+**How the Deployment Works**:
+1. ECS pulls the new container image from ECR
+2. Starts new tasks (containers) running the new image
+3. Waits for new tasks to pass health checks (the Spring Boot `/actuator/health` endpoint)
+4. Once healthy, updates the load balancer to send traffic to new tasks
+5. Drains connections from old tasks (waits for in-flight requests to complete)
+6. Terminates old tasks
+
+This entire process takes 2-5 minutes typically. The `aws ecs wait services-stable` command monitors the deployment and only returns when it's complete (or fails).
+
+**Monitoring During Deployment**: Watch CloudWatch Logs for errors from new tasks. If new tasks fail health checks repeatedly, ECS's circuit breaker will automatically roll back to the previous version.
+
 ```bash
 # Update ECS service with new image
 aws ecs update-service \
@@ -795,7 +1177,24 @@ aws ecs wait services-stable \
 
 ### Frontend Deployment
 
+The Flutter web app is deployed as static files (HTML, JavaScript, CSS) to S3 and distributed globally via CloudFront CDN. Mobile apps follow platform-specific release processes through app stores.
+
 #### Build and Deploy to S3
+
+**Flutter Web Build Process**:
+
+`flutter build web --release` compiles Dart code to optimized JavaScript, minifies assets, and generates a production-ready web app in the `build/web/` directory. The `--release` flag enables:
+- Code minification (smaller files = faster load times)
+- Dead code elimination (removes unused functions)
+- Optimization passes (faster JavaScript execution)
+
+Never deploy a debug build to production—they're 10x larger and include debug symbols attackers could exploit.
+
+**S3 Sync Strategy**: `aws s3 sync` is smarter than `aws s3 cp`. It only uploads files that changed (based on content hash), making deployments faster. The `--delete` flag removes files from S3 that no longer exist locally (e.g., if you renamed a page).
+
+**Why Invalidate CloudFront**: CloudFront caches files at edge locations worldwide (for fast delivery). After deploying new files to S3, CloudFront doesn't automatically know—it might serve old cached versions for hours. The `create-invalidation` command tells CloudFront "discard all cached copies, fetch fresh from S3." The `/*` path means "invalidate everything."
+
+**Cost Note**: CloudFront invalidations cost $0.005 per path invalidated. Invalidating `/*` counts as ~1000 paths. Use specific paths in production to save costs: `--paths "/index.html" "/main.js"`.
 
 ```bash
 cd frontend
@@ -817,6 +1216,14 @@ aws cloudfront create-invalidation \
 
 #### Mobile App Deployment
 
+**Android App Bundle**: `flutter build appbundle` creates an `.aab` file optimized for Google Play. App bundles allow Google Play to generate APKs customized for each device (different screen sizes, architectures) rather than one giant APK containing everything.
+
+**iOS Archive**: `flutter build ios` generates an Xcode archive (`.ipa` file). This must be signed with your Apple Developer certificate before upload to App Store Connect.
+
+**Why Manual Upload**: Unlike web deployments (fully automated), mobile app stores require human review. You upload through the platform's console, fill out release notes, screenshots, and privacy info, then submit for review. Google typically reviews in hours; Apple in 1-3 days.
+
+**Versioning Strategy**: Always increment version numbers in `pubspec.yaml` before building. App stores reject uploads with duplicate version numbers. Use semantic versioning (e.g., 1.2.3 → 1.2.4 for bug fix, → 1.3.0 for new feature).
+
 ```bash
 # Android
 flutter build appbundle --release
@@ -833,7 +1240,43 @@ flutter build ios --release
 
 ### Blue-Green Deployment Strategy
 
+Blue-green deployment is a technique for achieving zero-downtime deployments by running two identical production environments ("blue" and "green") and switching traffic between them. For CareConnect, ECS handles much of this automatically, but understanding the process helps troubleshoot deployment issues.
+
+**What "Blue-Green" Means**: 
+- **Blue** = Current production version serving live traffic
+- **Green** = New version being deployed
+- **Switchover**: Once green is healthy, traffic switches from blue to green
+- **Rollback**: If green has issues, immediately switch back to blue
+
+ECS's deployment configuration (`maximum_percent = 200, minimum_healthy_percent = 100`) implements this automatically, but the script below gives you manual control for complex deployments.
+
 #### Automated Blue-Green Deployment
+
+**Script Workflow Explained**:
+
+1. **Fetch Current Task Definition**: Gets the currently running task definition (which includes container image, environment variables, resource limits). This is the "blue" version.
+
+2. **Create New Task Definition**: Uses `jq` to modify the JSON, replacing the old container image with the new one. All other settings (CPU, memory, environment variables) stay the same. This creates the "green" version.
+
+3. **Register New Task Definition**: ECS assigns a new revision number (e.g., `careconnect-backend:42` becomes `:43`).
+
+4. **Update Service**: Tells ECS to use the new task definition. ECS then:
+   - Starts new tasks (green)
+   - Waits for them to pass health checks
+   - Adds them to the load balancer
+   - Drains blue tasks
+   - Terminates blue tasks
+
+5. **Wait for Stability**: The `aws ecs wait services-stable` command monitors the deployment. It returns when all desired tasks are running and healthy.
+
+6. **Post-Deployment Health Check**: Even after ECS says tasks are healthy, this script performs an additional health check by calling the actual API. This catches issues ECS health checks might miss (e.g., database connection errors that occur after startup).
+
+**Rollback Logic**: If health checks fail after 10 attempts (5 minutes), the script should roll back by updating the service to use the old task definition. In practice, ECS's circuit breaker would have already rolled back by this point, but this provides an additional safety net.
+
+**Why This Manual Script**: While ECS deployments are usually automatic (via CI/CD), having this script allows manual control for:
+- Debugging deployment issues
+- Testing deployment procedures
+- Emergency rollbacks when automation fails
 
 ```bash
 #!/bin/bash
@@ -903,49 +1346,88 @@ echo "Blue-green deployment completed successfully!"
 
 ## Database Management
 
+Managing a PostgreSQL database in production requires careful attention to user permissions, performance tuning, and migration strategies. In healthcare applications, the database is the most critical component—patient data integrity and availability directly impact care quality.
+
 ### Database Initialization
 
+Initial database setup involves more than just creating a database. We create multiple users with different permission levels, following the principle of least privilege: each user gets only the permissions needed for their role.
+
 #### Production Database Setup
+
+**User Roles Strategy**:
+
+1. **careconnect_app**: The application user. Has full CRUD permissions on tables but CANNOT create/drop tables or modify schema. This prevents a compromised application from destroying the database structure.
+
+2. **careconnect_readonly**: For analytics and reporting tools. Can only SELECT data, preventing accidental modifications during report generation.
+
+3. **careconnect_backup**: For backup tools. Can SELECT all data but cannot modify anything. Some backup tools need database credentials, and this ensures they can't accidentally corrupt data.
+
+**Why Not Use `postgres` Superuser**: The default `postgres` user has unrestricted access, including the ability to drop the entire database. If an attacker compromises the application and finds database credentials, limiting permissions reduces damage.
+
+**Performance Parameters Explained**:
+
+- `shared_buffers = '1GB'`: Memory PostgreSQL uses for caching. More memory = fewer disk reads = faster queries. Rule of thumb: 25% of system RAM.
+- `max_connections = 200`: Maximum concurrent database connections. Each connection consumes memory, so this must balance capacity with resource constraints.
+- `log_min_duration_statement = 2000`: Logs any query taking longer than 2 seconds. This helps identify slow queries without logging every query (which would fill disk space quickly).
+
+**Character Encoding**: `UTF8` encoding supports international characters (accents, non-Latin scripts) which is important for patient names and medical terminology from any language.
 
 ```sql
 -- scripts/init-prod-db.sql
 
 -- Create database
-CREATE DATABASE IF NOT EXISTS careconnect
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE careconnect
+    WITH ENCODING 'UTF8'
+    LC_COLLATE 'en_US.UTF-8'
+    LC_CTYPE 'en_US.UTF-8';
 
 -- Create application user
-CREATE USER 'careconnect_app'@'%' IDENTIFIED BY 'secure_password_here';
-GRANT SELECT, INSERT, UPDATE, DELETE ON careconnect.* TO 'careconnect_app'@'%';
+CREATE USER careconnect_app WITH ENCRYPTED PASSWORD 'secure_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_app;
+GRANT USAGE ON SCHEMA public TO careconnect_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO careconnect_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO careconnect_app;
 
 -- Create read-only user for reporting
-CREATE USER 'careconnect_readonly'@'%' IDENTIFIED BY 'readonly_password_here';
-GRANT SELECT ON careconnect.* TO 'careconnect_readonly'@'%';
+CREATE USER careconnect_readonly WITH ENCRYPTED PASSWORD 'readonly_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_readonly;
+GRANT USAGE ON SCHEMA public TO careconnect_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO careconnect_readonly;
 
 -- Create backup user
-CREATE USER 'careconnect_backup'@'%' IDENTIFIED BY 'backup_password_here';
-GRANT SELECT, LOCK TABLES ON careconnect.* TO 'careconnect_backup'@'%';
+CREATE USER careconnect_backup WITH ENCRYPTED PASSWORD 'backup_password_here';
+GRANT CONNECT ON DATABASE careconnect TO careconnect_backup;
+GRANT USAGE ON SCHEMA public TO careconnect_backup;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO careconnect_backup;
 
-FLUSH PRIVILEGES;
-
--- Create initial tables (will be managed by Flyway migrations)
-USE careconnect;
-
--- Enable binary logging for replication
-SET GLOBAL log_bin = 1;
-SET GLOBAL binlog_format = 'ROW';
+-- Connect to the database
+\c careconnect;
 
 -- Configure performance parameters
-SET GLOBAL innodb_buffer_pool_size = 1024 * 1024 * 1024; -- 1GB
-SET GLOBAL max_connections = 200;
-SET GLOBAL slow_query_log = 1;
-SET GLOBAL long_query_time = 2;
+ALTER SYSTEM SET shared_buffers = '1GB';
+ALTER SYSTEM SET max_connections = 200;
+ALTER SYSTEM SET log_min_duration_statement = 2000; -- Log queries taking > 2s
+SELECT pg_reload_conf();
 ```
 
 ### Database Migration Strategy
 
+Database migrations allow you to evolve the database schema over time while preserving data. Flyway is a migration tool that tracks which schema changes have been applied, ensuring migrations run exactly once in the correct order.
+
+**Why Flyway Over Manual SQL**: Without a migration tool, you'd have to manually track which SQL scripts ran in each environment (dev, staging, prod). Missed scripts lead to schema drift—dev has columns prod doesn't, causing deployment failures. Flyway solves this by maintaining a `flyway_schema_history` table that records every migration.
+
 #### Flyway Migration Setup
+
+**How Flyway Works**:
+1. **Version-Named Files**: Migrations are SQL files named `V001__description.sql`, `V002__another_change.sql`. The version number determines execution order.
+2. **Checksum Validation**: Flyway calculates a checksum of each migration file. If you modify a file after it's been applied, Flyway detects the change and fails—preventing accidental modifications to historical migrations.
+3. **Automatic Execution**: On application startup (or via Maven command), Flyway checks which migrations haven't run yet and executes them in order.
+
+**Configuration Parameters**:
+- `baselineOnMigrate=true`: If the database already has tables (e.g., you're adding Flyway to an existing database), this treats the current schema as "version 0" instead of failing.
+- `validateOnMigrate=true`: Before running migrations, verifies all previously applied migrations haven't been modified. Prevents database corruption from changing historical migrations.
+
+**Common Pitfall**: Never modify a migration file after it's been deployed. If you need to change something, create a NEW migration file that reverses or corrects the previous one.
 
 ```xml
 <!-- backend/core/pom.xml - Flyway plugin -->
@@ -954,7 +1436,7 @@ SET GLOBAL long_query_time = 2;
     <artifactId>flyway-maven-plugin</artifactId>
     <version>9.16.0</version>
     <configuration>
-        <url>jdbc:mysql://${db.host}:${db.port}/${db.name}</url>
+        <url>jdbc:postgresql://${db.host}:${db.port}/${db.name}</url>
         <user>${db.username}</user>
         <password>${db.password}</password>
         <locations>
@@ -968,48 +1450,80 @@ SET GLOBAL long_query_time = 2;
 
 #### Sample Migration Files
 
+These migration files demonstrate best practices for database schema evolution. Each file is versioned (V001, V002, V003) and runs exactly once in order.
+
+**Key Design Patterns in These Migrations**:
+
+**Primary Keys as BIGSERIAL**: Using `BIGSERIAL` instead of `SERIAL` provides 64-bit integers (vs 32-bit), supporting up to 9 quintillion records. While healthcare apps rarely need this, the performance cost is negligible and it prevents "ran out of IDs" failures 10 years from now.
+
+**Foreign Key Constraints**: `REFERENCES users(id) ON DELETE CASCADE` ensures referential integrity. If a user is deleted, their vital signs and medications are automatically deleted too, preventing orphaned records. Healthcare compliance often requires retaining records even after account deletion, so in production you might use `ON DELETE RESTRICT` instead.
+
+**Check Constraints**: `CHECK (role IN ('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER'))` enforces valid values at the database level. Even if application code has a bug, invalid roles can't be inserted. This is defense-in-depth.
+
+**Index Strategy**:
+- `idx_users_email`: Unique index on email enables fast lookup during login
+- `idx_vital_signs_user_type_time`: Composite index optimized for querying "all blood pressure readings for user X in the last month"—a common healthcare query pattern
+- `measurement_time DESC`: Descending order because we usually want recent measurements first
+
+**Auto-updating Timestamps**: The trigger `update_updated_at_column()` automatically sets `updated_at` on every UPDATE. This audit trail is critical in healthcare for compliance and debugging ("when did this medication dosage change?").
+
+**DECIMAL for Medical Values**: Vital signs use `DECIMAL(10,2)` not `FLOAT` because floating-point arithmetic has rounding errors. For blood pressure like "120.5 mmHg," exact precision matters for medical accuracy.
+
 ```sql
 -- src/main/resources/db/migration/V001__Create_initial_schema.sql
 CREATE TABLE users (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    role ENUM('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER') NOT NULL,
+    role VARCHAR(20) CHECK (role IN ('PATIENT', 'CAREGIVER', 'FAMILY_MEMBER')) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    INDEX idx_users_email (email),
-    INDEX idx_users_role (role),
-    INDEX idx_users_active (active)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_active ON users(active);
+
+-- Create trigger for updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = CURRENT_TIMESTAMP;
+   RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- src/main/resources/db/migration/V002__Create_vital_signs_table.sql
 CREATE TABLE vital_signs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     value DECIMAL(10,2) NOT NULL,
     unit VARCHAR(20) NOT NULL,
     notes TEXT,
-    measurement_time DATETIME NOT NULL,
+    measurement_time TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-
-    INDEX idx_vital_signs_user_id (user_id),
-    INDEX idx_vital_signs_type (type),
-    INDEX idx_vital_signs_measurement_time (measurement_time),
-    INDEX idx_vital_signs_user_type_time (user_id, type, measurement_time DESC)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_vital_signs_user_id ON vital_signs(user_id);
+CREATE INDEX idx_vital_signs_type ON vital_signs(type);
+CREATE INDEX idx_vital_signs_measurement_time ON vital_signs(measurement_time);
+CREATE INDEX idx_vital_signs_user_type_time ON vital_signs(user_id, type, measurement_time DESC);
+
+CREATE TRIGGER update_vital_signs_updated_at BEFORE UPDATE ON vital_signs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- src/main/resources/db/migration/V003__Add_health_monitoring_tables.sql
 CREATE TABLE medications (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     dosage VARCHAR(100),
     frequency VARCHAR(100),
@@ -1017,30 +1531,62 @@ CREATE TABLE medications (
     end_date DATE,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_medications_user_id (user_id),
-    INDEX idx_medications_active (active)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_medications_user_id ON medications(user_id);
+CREATE INDEX idx_medications_active ON medications(active);
+
+CREATE TRIGGER update_medications_updated_at BEFORE UPDATE ON medications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE allergies (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     allergen VARCHAR(255) NOT NULL,
-    severity ENUM('MILD', 'MODERATE', 'SEVERE') NOT NULL,
+    severity VARCHAR(20) CHECK (severity IN ('MILD', 'MODERATE', 'SEVERE')) NOT NULL,
     reaction TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_allergies_user_id (user_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_allergies_user_id ON allergies(user_id);
+
+CREATE TRIGGER update_allergies_updated_at BEFORE UPDATE ON allergies
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ### Database Backup Strategy
 
+Database backups are critical for disaster recovery and compliance. Healthcare regulations often require maintaining backups for 7-10 years. Our strategy combines automated daily backups with AWS RDS's built-in continuous backup.
+
+**Two-Tier Backup Approach**:
+1. **RDS Automated Backups**: Continuous transaction log backups enabling point-in-time recovery within the last 30 days
+2. **Manual pg_dump Backups**: Full logical backups stored in S3 with long-term retention for compliance
+
 #### Automated Backup Script
+
+**Why Both RDS Snapshots AND pg_dump**:
+- **RDS Snapshots**: Fast to restore, perfect for recent disasters (accidental deletion, bad deployment)
+- **pg_dump Backups**: Platform-independent SQL dumps you can restore to any PostgreSQL instance (not locked into AWS)
+
+**Script Components Explained**:
+
+**Custom Format**: `--format=custom` creates a PostgreSQL-specific binary format that's:
+- Smaller than plain SQL (important for large databases)
+- Faster to restore than plain SQL
+- Allows selective restoration (restore just one table if needed)
+
+**Compression Level 9**: `--compress=9` provides maximum compression at the cost of CPU time. For nightly backups, we have time; for emergency backups, you might use lower compression for speed.
+
+**Clean and Create**: `--clean --create` means the restore script will:
+- Drop the database if it exists (`--clean`)
+- Recreate the database (`--create`)
+This makes restores idempotent—running twice gives same result.
+
+**Retention Policy**: The script deletes backups older than `RETENTION_DAYS` (30). Adjust this based on compliance requirements. Healthcare apps might need 2555 days (7 years).
+
+**Backup Verification**: The script checks if the backup file is at least 1MB. A tiny backup likely indicates a failure (empty database or pg_dump error). In production, you'd also test-restore backups periodically to verify they're actually usable.
 
 ```bash
 #!/bin/bash
@@ -1064,16 +1610,17 @@ BACKUP_FILENAME="${BACKUP_PREFIX}_${TIMESTAMP}.sql.gz"
 echo "Starting database backup: $BACKUP_FILENAME"
 
 # Create backup
-mysqldump \
+pg_dump \
     --host=$DB_HOST \
-    --user=$DB_USER \
-    --password=$DB_PASSWORD \
-    --single-transaction \
-    --routines \
-    --triggers \
-    --add-drop-database \
-    --databases $DB_NAME | \
-    gzip > /tmp/$BACKUP_FILENAME
+    --username=$DB_USER \
+    --no-password \
+    --format=custom \
+    --compress=9 \
+    --clean \
+    --create \
+    --dbname=$DB_NAME \
+    --file=/tmp/$BACKUP_FILENAME
+export PGPASSWORD=$DB_PASSWORD
 
 # Upload to S3
 aws s3 cp /tmp/$BACKUP_FILENAME s3://$S3_BUCKET/database/
@@ -1103,6 +1650,28 @@ fi
 ```
 
 #### Point-in-Time Recovery
+
+RDS's automated backups enable point-in-time recovery (PITR)—restoring the database to any second within the last 30 days. This is invaluable when you discover data corruption hours after it occurred.
+
+**When to Use PITR**:
+- Accidental data deletion discovered hours later ("someone deleted all patients yesterday at 2:15 PM")
+- Bad migration or deployment corrupted data
+- Ransomware attack encrypted your data (restore to just before attack)
+
+**How PITR Works**:
+1. **Base Snapshot**: RDS takes daily snapshots of your entire database
+2. **Transaction Logs**: Every database modification is logged continuously
+3. **Restoration**: To restore to time T, RDS takes the most recent snapshot before T, then replays transaction logs up to time T
+
+**Script Workflow**:
+1. Specify restore time (e.g., "2024-10-15 14:30:00" - just before the bad deployment)
+2. AWS creates a NEW RDS instance with data from that exact time
+3. You can query this instance to verify it has correct data
+4. If good, redirect application to this instance; if not, delete and try different time
+
+**Why Restore to New Instance**: Never restore to the production instance directly—you might overwrite good data with bad data if you picked wrong restore time. Always restore to a new instance, verify, THEN promote to production.
+
+**Cost Note**: The restored instance runs at full cost until you delete it. Don't forget to clean up after recovery!
 
 ```bash
 #!/bin/bash
@@ -1150,7 +1719,43 @@ echo "Restored database endpoint: $RESTORE_ENDPOINT"
 
 ## CI/CD Pipeline
 
+Continuous Integration and Continuous Deployment (CI/CD) automate the path from code commit to production deployment. For CareConnect, GitHub Actions orchestrates testing, building, and deploying both backend and frontend whenever code is pushed to the main branch.
+
+**Why Automate Deployment**: Manual deployments are error-prone—it's easy to forget a step, deploy to the wrong environment, or skip testing. Automated pipelines ensure every deployment follows the same tested process.
+
+**Pipeline Philosophy**: Our pipeline follows a strict sequence: Test → Build → Deploy → Migrate → Smoke Test → Notify. If any step fails, the pipeline stops immediately, preventing broken code from reaching production.
+
 ### GitHub Actions Workflow
+
+GitHub Actions is tightly integrated with GitHub, making it ideal for open-source and team projects. Workflows are defined in YAML and run in ephemeral containers, ensuring clean build environments every time.
+
+**Workflow Triggers Explained**:
+- `on: push: branches: [main]`: Automatically deploys whenever code is merged to main branch
+- `workflow_dispatch`: Allows manual triggering from GitHub UI (useful for hotfixes)
+
+**Job Dependencies**: The `needs` keyword creates a directed acyclic graph (DAG) of jobs:
+```
+test → build-and-deploy-backend → run-migrations → smoke-tests → notify
+    → build-and-deploy-frontend ───────────↗
+```
+Backend and frontend deploy in parallel (faster), but migrations wait for backend deployment (migrations need the new code to be live).
+
+**Services in GitHub Actions**: The `services: postgres:` block starts a PostgreSQL container alongside the test runner. This gives tests a real database rather than mocks, catching more bugs. The health check ensures PostgreSQL is ready before tests run.
+
+**Why Cache Maven Packages**: Maven downloads dependencies from the internet, which is slow. The `cache` action stores `~/.m2` between builds, turning 5-minute dependency downloads into 10-second cache restores.
+
+**Immutable Image Tags**: Each build tags the Docker image with `$GITHUB_SHA` (the git commit hash). This creates an immutable reference—you can always deploy commit `abc123` exactly as it was built, essential for rollbacks.
+
+**Secrets Management**: `${{ secrets.AWS_ACCESS_KEY_ID }}` references secrets stored in GitHub's encrypted secrets store. Never hardcode credentials in workflows—they'd be visible in version history forever.
+
+**Deployment Safety**: The workflow waits (`aws ecs wait services-stable`) until deployment completes before running smoke tests. This prevents false positives from testing the old version while new version is still deploying.
+
+**Smoke Tests Strategy**: After deployment, the pipeline makes real HTTP requests to production endpoints:
+- `curl -f` fails if HTTP status isn't 2xx, causing the job to fail
+- Testing `/actuator/health` verifies Spring Boot started correctly
+- Testing a known-failure case (invalid login) verifies the API logic works, not just the health endpoint
+
+**Notification Strategy**: The `if: always()` ensures notifications run even if previous jobs failed. The `if: ${{ success() }}` vs `if: ${{ failure() }}` conditionals send appropriate messages. This is how the team learns about deployment results immediately via Slack.
 
 ```yaml
 # .github/workflows/deploy-production.yml
@@ -1172,14 +1777,14 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:15
         env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: careconnect_test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: careconnect_test
         ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
     - name: Checkout code
@@ -1202,8 +1807,8 @@ jobs:
       working-directory: backend/core
       run: ./mvnw test
       env:
-        SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/careconnect_test
-        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/careconnect_test
+        SPRING_DATASOURCE_USERNAME: postgres
         SPRING_DATASOURCE_PASSWORD: test
 
     - name: Set up Flutter
@@ -1335,7 +1940,7 @@ jobs:
         DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id careconnect/prod/db-password --query SecretString --output text)
 
         ./mvnw flyway:migrate \
-          -Dflyway.url=jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect \
+          -Dflyway.url=jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect \
           -Dflyway.user=careconnect_app \
           -Dflyway.password=$DB_PASSWORD
 
@@ -1729,8 +2334,8 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 3306
-    to_port         = 3306
+    from_port       = 5432
+    to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs.id]
   }
@@ -2335,34 +2940,37 @@ echo "DR test completed successfully"
 ```sql
 -- Analyze slow queries
 SELECT
-    query_time,
-    lock_time,
-    rows_sent,
-    rows_examined,
-    sql_text
-FROM mysql.slow_log
-WHERE start_time >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-ORDER BY query_time DESC
+    query,
+    calls,
+    total_exec_time,
+    mean_exec_time,
+    rows
+FROM pg_stat_statements
+WHERE total_exec_time > 1000  -- queries taking more than 1 second total
+ORDER BY total_exec_time DESC
 LIMIT 20;
 
 -- Optimize frequently accessed tables
-ANALYZE TABLE users, vital_signs, medications;
+ANALYZE users, vital_signs, medications;
 
 -- Add missing indexes
-CREATE INDEX idx_vital_signs_user_type_date
+CREATE INDEX CONCURRENTLY idx_vital_signs_user_type_date
 ON vital_signs(user_id, type, measurement_time DESC);
 
-CREATE INDEX idx_messages_conversation_unread
+CREATE INDEX CONCURRENTLY idx_messages_conversation_unread
 ON messages(conversation_id, is_read, created_at DESC);
 
--- Partition large tables
-ALTER TABLE vital_signs
-PARTITION BY RANGE (YEAR(measurement_time)) (
-    PARTITION p2023 VALUES LESS THAN (2024),
-    PARTITION p2024 VALUES LESS THAN (2025),
-    PARTITION p2025 VALUES LESS THAN (2026),
-    PARTITION p2026 VALUES LESS THAN MAXVALUE
-);
+-- Partition large tables (PostgreSQL 12+ declarative partitioning)
+CREATE TABLE vital_signs_partitioned (
+    LIKE vital_signs INCLUDING ALL
+) PARTITION BY RANGE (measurement_time);
+
+CREATE TABLE vital_signs_2023 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+CREATE TABLE vital_signs_2024 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+CREATE TABLE vital_signs_2025 PARTITION OF vital_signs_partitioned
+    FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 ```
 
 #### Connection Pooling
@@ -2652,7 +3260,7 @@ public class DatabaseConfig {
     @Primary
     public DataSource primaryDataSource() {
         return DataSourceBuilder.create()
-            .url("jdbc:mysql://prod-db.region.rds.amazonaws.com:3306/careconnect")
+            .url("jdbc:postgresql://prod-db.region.rds.amazonaws.com:5432/careconnect")
             .username("careconnect_app")
             .password("${spring.datasource.password}")
             .build();
@@ -2661,7 +3269,7 @@ public class DatabaseConfig {
     @Bean
     public DataSource readOnlyDataSource() {
         return DataSourceBuilder.create()
-            .url("jdbc:mysql://prod-db-read-replica.region.rds.amazonaws.com:3306/careconnect")
+            .url("jdbc:postgresql://prod-db-read-replica.region.rds.amazonaws.com:5432/careconnect")
             .username("careconnect_readonly")
             .password("${spring.datasource.readonly.password}")
             .build();
@@ -2725,9 +3333,12 @@ if [ "$UPGRADE_DB_INSTANCE" = "true" ]; then
 fi
 
 # Run database maintenance
-mysql -h prod-db.region.rds.amazonaws.com -u admin -p << EOF
-OPTIMIZE TABLE users, vital_signs, medications, allergies;
-ANALYZE TABLE users, vital_signs, medications, allergies;
+psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect << EOF
+VACUUM ANALYZE users;
+VACUUM ANALYZE vital_signs;
+VACUUM ANALYZE medications;
+VACUUM ANALYZE allergies;
+REINDEX DATABASE careconnect;
 EOF
 
 # 4. Update infrastructure if needed
@@ -2805,7 +3416,7 @@ echo "Checking for security updates..."
 
 # Update base Docker images
 docker pull openjdk:17-jdk-slim
-docker pull mysql:8.0
+docker pull postgres:15
 
 # Check for OS-level patches (for EC2 instances if any)
 yum list-security --security 2>/dev/null || true
@@ -2850,58 +3461,264 @@ fi
 echo "Security patching completed successfully."
 ```
 
-## Troubleshooting
+## Troubleshooting Production Issues
 
-### Common Issues and Solutions
+This section provides systematic approaches to diagnosing and resolving common production issues in the CareConnect platform. Each issue follows a structured format: **Problem** → **Root Causes** → **Diagnostic Steps** → **Resolution** → **Prevention**, enabling both quick fixes during incidents and long-term improvements to prevent recurrence.
 
-#### Application Won't Start
+### Common Issues and Systematic Solutions
 
+#### Problem: ECS Tasks Fail to Start or Immediately Exit
+
+**Symptoms**: 
+- New deployments show tasks starting but immediately transitioning to STOPPED state
+- CloudWatch Logs show containers exiting with non-zero exit codes
+- ALB health checks report unhealthy targets
+- Users experience 503 Service Unavailable errors
+
+**Root Causes**:
+This issue typically stems from one of several configuration or dependency problems:
+
+1. **Environment Variable Misconfiguration**: Missing or incorrect environment variables (database URL, API keys, JWT secrets) cause application startup failures
+2. **Database Connectivity Issues**: Application can't reach RDS due to security group rules, subnet configuration, or database being unavailable
+3. **Container Image Problems**: ECR image is corrupt, missing dependencies, or built for wrong architecture (amd64 vs arm64)
+4. **IAM Permission Errors**: ECS task lacks permissions to access Secrets Manager, S3, or other AWS services needed at startup
+5. **Resource Constraints**: Task definition specifies insufficient memory/CPU, causing OOM kills during startup
+
+**Systematic Diagnostic Steps**:
+
+1. **Check ECS Task Exit Reason**:
+   ```bash
+   # Get detailed information about stopped tasks
+   aws ecs describe-tasks \
+       --cluster careconnect-prod \
+       --tasks $(aws ecs list-tasks \
+           --cluster careconnect-prod \
+           --service-name careconnect-prod-service \
+           --desired-status STOPPED \
+           --query 'taskArns[0]' \
+           --output text) \
+       --query 'tasks[0].{StopReason:stoppedReason,ExitCode:containers[0].exitCode,LastStatus:lastStatus}'
+   ```
+   **What this tells you**: The exit code and stop reason often indicate the category of failure. Exit code 137 = OOM kill. Exit code 1 with "Essential container exited" = application crash.
+
+2. **Examine Container Logs**:
+   ```bash
+   # View recent logs from failed containers
+   aws logs filter-log-events \
+       --log-group-name "/ecs/careconnect-prod" \
+       --start-time $(date -d '10 minutes ago' +%s)000 \
+       --query 'events[*].[timestamp,message]' \
+       --output text | sort
+   ```
+   **What to look for**: 
+   - "Connection refused" or "Connection timeout" = network/database issue
+   - "Environment variable X not set" = configuration issue
+   - "OutOfMemoryError" or "Killed" = resource constraint
+   - Stack traces with "AccessDeniedException" = IAM permission issue
+
+3. **Verify Task Definition Configuration**:
+   ```bash
+   # Review current task definition
+   aws ecs describe-task-definition \
+       --task-definition careconnect-backend \
+       --query 'taskDefinition.{CPU:cpu,Memory:memory,Env:containerDefinitions[0].environment[*].name}' \
+       --output json
+   ```
+   **What to check**: Ensure all required environment variables are present. Cross-reference with working configuration in staging.
+
+4. **Test Database Connectivity from VPC**:
+   ```bash
+   # Launch a test container in same VPC/subnet to isolate network issues
+   aws ecs run-task \
+       --cluster careconnect-prod \
+       --task-definition careconnect-test-connectivity \
+       --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx]}" \
+       --launch-type FARGATE
+   
+   # Then exec into it and test database connection
+   aws ecs execute-command \
+       --cluster careconnect-prod \
+       --task <task-id> \
+       --container connectivity-test \
+       --interactive \
+       --command "/bin/sh"
+   
+   # Inside the container:
+   nc -zv prod-db.region.rds.amazonaws.com 5432
+   ```
+   **What this proves**: If this succeeds but application fails, the issue is in application configuration, not network connectivity.
+
+5. **Check Security Group Rules**:
+   ```bash
+   # Verify ECS tasks can reach RDS
+   aws ec2 describe-security-groups \
+       --filters "Name=group-name,Values=careconnect-prod-ecs-tasks" \
+       --query 'SecurityGroups[0].IpPermissionsEgress[*]'
+   
+   # Verify RDS accepts connections from ECS
+   aws ec2 describe-security-groups \
+       --filters "Name=group-name,Values=careconnect-prod-rds" \
+       --query 'SecurityGroups[0].IpPermissions[*]'
+   ```
+   **What to verify**: ECS security group allows outbound to port 5432. RDS security group allows inbound from ECS security group on port 5432.
+
+**Resolution Steps**:
+
+**If Environment Variable Missing**:
 ```bash
-# Check ECS service logs
-aws logs filter-log-events \
-    --log-group-name "/ecs/careconnect-prod" \
-    --start-time $(date -d '1 hour ago' +%s)000
+# Update task definition with missing variable
+aws ecs register-task-definition \
+    --cli-input-json file://updated-task-def.json
 
-# Check service status
-aws ecs describe-services \
+# Force new deployment to use updated task definition
+aws ecs update-service \
     --cluster careconnect-prod \
-    --services careconnect-prod-service
-
-# Check task definition
-aws ecs describe-task-definition \
-    --task-definition careconnect-backend
-
-# Check security groups and network connectivity
-aws ec2 describe-security-groups \
-    --filters "Name=group-name,Values=careconnect-prod-*"
+    --service careconnect-prod-service \
+    --force-new-deployment
 ```
 
-#### Database Connection Issues
-
+**If Database Connectivity Issue**:
 ```bash
-# Test database connectivity
-mysql -h prod-db.region.rds.amazonaws.com \
-      -u careconnect_app \
-      -p careconnect \
-      -e "SELECT 1"
-
-# Check database performance
-mysql -h prod-db.region.rds.amazonaws.com \
-      -u admin -p \
-      -e "SHOW PROCESSLIST; SHOW ENGINE INNODB STATUS;"
-
-# Check RDS metrics
-aws cloudwatch get-metric-statistics \
-    --namespace AWS/RDS \
-    --metric-name DatabaseConnections \
-    --dimensions Name=DBInstanceIdentifier,Value=careconnect-prod-db \
-    --start-time $(date -d '1 hour ago' --iso-8601) \
-    --end-time $(date --iso-8601) \
-    --period 300 \
-    --statistics Average,Maximum
+# Add rule to RDS security group allowing ECS tasks
+aws ec2 authorize-security-group-ingress \
+    --group-id sg-rds-id \
+    --protocol tcp \
+    --port 5432 \
+    --source-group sg-ecs-tasks-id
 ```
 
-#### High Response Times
+**If Resource Constraint**:
+```bash
+# Update task definition with more resources
+# Modify task-def.json: increase "memory": "2048" to "4096"
+aws ecs register-task-definition --cli-input-json file://task-def.json
+aws ecs update-service --cluster careconnect-prod --service careconnect-prod-service --task-definition careconnect-backend:NEW_REVISION
+```
+
+**If IAM Permission Missing**:
+```bash
+# Attach missing policy to ECS task role
+aws iam attach-role-policy \
+    --role-name careconnect-ecs-task-role \
+    --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+```
+
+**Prevention**:
+- **Infrastructure as Code**: All task definitions and security groups should be in Terraform, reviewed in pull requests
+- **Automated Testing**: CI/CD should deploy to staging and run health checks before allowing production deployment
+- **Gradual Rollout**: Use blue-green or canary deployments so issues affect only a subset of traffic initially
+- **Resource Monitoring**: Set up CloudWatch alarms for task stop reasons and OOM events
+
+#### Problem: Database Connection Pool Exhaustion
+
+**Symptoms**:
+- Application logs show "Could not obtain connection from pool" errors
+- Response times spike to >30 seconds
+- Health checks start failing intermittently
+- CloudWatch metrics show DatabaseConnections at or near maximum
+
+**Root Causes**:
+Connection pool issues occur when the application exhausts available database connections, usually due to:
+
+1. **Connection Leaks**: Application code opens database connections but doesn't properly close them in exception paths
+2. **Slow Queries**: Long-running queries hold connections for extended periods, starving the pool
+3. **Traffic Spikes**: Sudden increase in traffic creates more concurrent requests than pool can handle
+4. **Misconfigured Pool Size**: Pool max size is too small for the number of ECS tasks and request concurrency
+5. **Database Performance**: Database is CPU-bound or experiencing high I/O wait, slowing all queries
+
+**Systematic Diagnostic Steps**:
+
+1. **Check Current Database Connections**:
+   ```bash
+   # Connect to RDS and query active connections
+   psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+       SELECT 
+           state, 
+           COUNT(*) as count,
+           MAX(EXTRACT(EPOCH FROM (now() - state_change))) as max_duration_seconds
+       FROM pg_stat_activity 
+       WHERE datname = 'careconnect'
+       GROUP BY state
+       ORDER BY count DESC;
+   "
+   ```
+   **What to look for**: High count of "idle in transaction" (connection leak) or "active" queries with very long durations (slow queries).
+
+2. **Identify Long-Running Queries**:
+   ```bash
+   psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+       SELECT 
+           pid,
+           usename,
+           state,
+           query,
+           now() - state_change as duration
+       FROM pg_stat_activity
+       WHERE state != 'idle'
+         AND now() - state_change > interval '30 seconds'
+       ORDER BY duration DESC;
+   "
+   ```
+   **What this reveals**: Specific queries that are holding connections for excessive time.
+
+3. **Check HikariCP Metrics** (from application logs):
+   ```bash
+   aws logs filter-log-events \
+       --log-group-name "/ecs/careconnect-prod" \
+       --filter-pattern "HikariPool" \
+       --start-time $(date -d '1 hour ago' +%s)000 \
+       | jq -r '.events[].message' \
+       | grep -E "active|idle|waiting"
+   ```
+   **What to look for**: Messages like "Thread starvation or clock leap detected" or "Total connections X (active Y, idle 0, waiting Z)".
+
+**Resolution Steps**:
+
+**Immediate (During Incident)**:
+```bash
+# 1. Scale up ECS tasks temporarily to distribute load
+aws ecs update-service \
+    --cluster careconnect-prod \
+    --service careconnect-prod-service \
+    --desired-count 10  # Double current count
+
+# 2. Kill problematic long-running queries
+psql -h prod-db.region.rds.amazonaws.com -U admin -d careconnect -c "
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE state = 'active'
+      AND now() - state_change > interval '5 minutes';
+"
+
+# 3. Restart ECS tasks to clear connection pools
+aws ecs update-service \
+    --cluster careconnect-prod \
+    --service careconnect-prod-service \
+    --force-new-deployment
+```
+
+**Long-Term (Post-Incident)**:
+1. **Increase Connection Pool Size**: 
+   Update `application.properties`:
+   ```properties
+   spring.datasource.hikari.maximum-pool-size=20  # Was 10
+   spring.datasource.hikari.connection-timeout=30000
+   ```
+
+2. **Fix Connection Leaks**: 
+   Review application code for improper connection handling. Ensure all `@Transactional` methods complete successfully or use try-with-resources for manual connection management.
+
+3. **Optimize Slow Queries**:
+   ```sql
+   -- Add missing indexes identified in query analysis
+   CREATE INDEX idx_vital_signs_user_time ON vital_signs(user_id, measurement_time DESC);
+   ```
+
+**Prevention**:
+- **Connection Pool Monitoring**: Set up CloudWatch alarm when active connections > 80% of max
+- **Query Performance Monitoring**: Use pg_stat_statements to track slow queries over time
+- **Load Testing**: Regular load tests identify connection pool limits before production traffic hits them
+- **Code Reviews**: Require review of all database access patterns for proper connection lifecycle management
 
 ```bash
 # Check ALB metrics
@@ -2955,11 +3772,10 @@ fi
 
 # 2. Database Health Check
 echo "Checking database connectivity..."
-DB_CHECK=$(mysql -h prod-db.region.rds.amazonaws.com \
-               -u careconnect_app \
-               -p$DB_PASSWORD \
-               careconnect \
-               -e "SELECT 1" 2>&1)
+DB_CHECK=$(PGPASSWORD=$DB_PASSWORD psql -h prod-db.region.rds.amazonaws.com \
+               -U careconnect_app \
+               -d careconnect \
+               -c "SELECT 1" 2>&1)
 if [ $? -eq 0 ]; then
     echo "✅ Database is accessible"
 else

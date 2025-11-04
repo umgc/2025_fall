@@ -1,3 +1,6 @@
+// 1. You MUST add this import for jsonEncode and jsonDecode
+import 'dart:convert';
+
 class FallAlert {
   final String id;
   final String patientId;
@@ -9,6 +12,10 @@ class FallAlert {
   final String? patientPhone; // E.164 like +15551234567
   final String? emergencyContactName;
   final String? emergencyContactPhone;
+
+  // --- 2. ADDED THIS FIELD ---
+  final Map<String, dynamic>? playbackData; // Holds the SAMPLE_RESPONSE map
+
   FallAlert({
     required this.id,
     required this.patientId,
@@ -19,7 +26,8 @@ class FallAlert {
     this.liveVideoUrl,
     this.patientPhone,
     this.emergencyContactName,
-    this.emergencyContactPhone,
+    this.emergencyContactPhone, 
+    this.playbackData,
   });
 
   Map<String, String> toPayload() {
@@ -32,8 +40,12 @@ class FallAlert {
       'hasLiveVideo': hasLiveVideo.toString(),
       'liveVideoUrl': liveVideoUrl?.toString() ?? '',
       'patientPhone': patientPhone ?? '',
-       'emergencyContactName': emergencyContactName ?? '',
+      'emergencyContactName': emergencyContactName ?? '',
       'emergencyContactPhone': emergencyContactPhone ?? '',
+      
+      // --- 4. ADDED JSON ENCODING ---
+      // Encodes the map into a JSON string for storage
+      'playbackData': playbackData != null ? jsonEncode(playbackData!) : '',
     };
   }
 
@@ -47,8 +59,14 @@ class FallAlert {
       hasLiveVideo: p['hasLiveVideo'] == 'true',
       liveVideoUrl: (p['liveVideoUrl']?.isNotEmpty ?? false) ? Uri.parse(p['liveVideoUrl']!) : null,
       patientPhone: (p['patientPhone']?.isNotEmpty ?? false) ? p['patientPhone']! : null,
-       emergencyContactName: (p['emergencyContactName']?.isNotEmpty ?? false) ? p['emergencyContactName']! : null,
+      emergencyContactName: (p['emergencyContactName']?.isNotEmpty ?? false) ? p['emergencyContactName']! : null,
       emergencyContactPhone: (p['emergencyContactPhone']?.isNotEmpty ?? false) ? p['emergencyContactPhone']! : null,
+      
+      // --- 5. ADDED JSON DECODING ---
+      // Parses the JSON string back into a Map
+      playbackData: (p['playbackData']?.isNotEmpty ?? false)
+          ? jsonDecode(p['playbackData']!) as Map<String, dynamic>
+          : null,
     );
   }
 }

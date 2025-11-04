@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
+// Pain level card
+import '../widgets/pain_level_card.dart';
+
 // Header
 import '../widgets/patient_header_card.dart';
 
@@ -14,15 +17,20 @@ import '../widgets/emergency_contact_card.dart';
 import '../widgets/mood_history_card.dart';
 
 // Health tab
-import '../models/symptom_entry.dart';
-import '../widgets/recent_symptom_card.dart';
 import '../widgets/current_medications_card.dart';
+
+// Recent Activity tab
+import '../widgets/recent_activity_tab.dart';
 
 // Virtual Check-in history
 import '../models/virtual_check_in.dart';
 import '../widgets/virtual_check_in_config_sheet.dart';
 import '../widgets/virtual_check_in_history_card.dart';
 import '../models/virtual_check_in_question.dart';
+
+// 👉 Alias BOTH sides to avoid type clashes
+import '../models/symptom_entry.dart' as model;
+import '../widgets/recent_symptom_card.dart' as sympt;
 
 // API and models
 import '../../../../services/api_service.dart';
@@ -68,7 +76,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         return;
       }
 
-      final http.Response resp = await ApiService.getPatientMedicationsForPatient(patientIdInt);
+      final http.Response resp =
+          await ApiService.getPatientMedicationsForPatient(patientIdInt);
 
       if (resp.statusCode == 200) {
         final List<dynamic> data = jsonDecode(resp.body);
@@ -120,8 +129,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               Text(
                 _medicationError!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -137,23 +146,25 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     }
 
     // Get caregiverId from user provider
-    final caregiverId = Provider.of<UserProvider>(context, listen: false).user?.caregiverId;
+    final caregiverId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).user?.caregiverId;
 
     return CurrentMedicationsSection(
       entries: medications,
-      onMedicationUpdated: _fetchMedications, // Refresh medications after delete/approve
+      onMedicationUpdated: _fetchMedications,
+      // Refresh medications after delete/approve
       caregiverId: caregiverId,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Fetch from your store/service using patientId.
-    // For now, demo data mirrors your mockups (Sarah Johnson).
+    // Demo data
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
-    // --- Mood demo data ---
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -191,35 +202,60 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       ),
     ];
 
-    // --- Health demo data ---
-    final symptomEntries = <SymptomEntry>[
-      SymptomEntry(
+    // MODEL entries
+    final modelSymptomEntries = <model.SymptomEntry>[
+      model.SymptomEntry(
         id: 's4',
         date: DateTime(2024, 12, 27),
         name: 'Fatigue, Headache, Joint pain',
         severity: 'Moderate',
         note: 'Symptoms worsened during holiday stress',
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's3',
         date: DateTime(2024, 12, 25),
         name: 'Fatigue, Nausea',
         severity: 'Severe',
         note: 'Emergency contact needed due to severe symptoms',
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's2',
         date: DateTime(2024, 12, 23),
         name: 'Mild headache',
         severity: 'Mild',
-        note: '',
+        note: null, // demo of nullable
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's1',
         date: DateTime(2024, 12, 21),
         name: 'No symptoms reported',
         severity: 'Mild',
         note: 'Feeling much better, no symptoms reported',
+      ),
+    ];
+
+    // Convert to the WIDGET type
+    final uiSymptomEntries = <sympt.SymptomEntry>[
+      for (final s in modelSymptomEntries)
+        sympt.SymptomEntry(
+          id: s.id,
+          date: s.date,
+          name: s.name,
+          severity: s.severity,
+          note: s.note ?? '', // <-- fix: ensure non-null String
+        ),
+    ];
+
+    final activityList = const [
+      ActivityEntry(
+        title: 'Took medication: Lisinopril 10mg',
+        when: '2 hours ago',
+      ),
+      ActivityEntry(title: 'Video call completed', when: '4 hours ago'),
+      ActivityEntry(title: 'Reported pain level: 3/10', when: '6 hours ago'),
+      ActivityEntry(
+        title: 'Appointment with Dr. Smith scheduled',
+        when: 'Yesterday',
       ),
     ];
 
@@ -260,7 +296,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       ),
     ];
 
-// --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -283,12 +318,14 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     ];
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
-        appBar: _DetailsAppBar(title: patientName, subtitle: 'Patient Details • $mrn'),
+        appBar: _DetailsAppBar(
+          title: patientName,
+          subtitle: 'Patient Details • $mrn',
+        ),
         body: Column(
           children: [
-            // Header card always visible above the tabs
             PatientHeaderCard(
               fullName: patientName,
               mrn: mrn,
@@ -302,19 +339,23 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                 'Chronic Fatigue Syndrome',
               ],
               allergies: const ['Penicillin', 'Shellfish'],
+              /*heartRateBpm: 72,
+              bpSystolic: 120,
+              bpDiastolic: 80,
+              oxygenPercent: 98,
+              temperatureF: 98.0,*/
+              emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
-            // Tab bar row (like your mock)
             _TabsStrip(),
 
-            // Tab views
             Expanded(
               child: TabBarView(
                 children: [
-                  // ---- Info ----
+                  // Info
                   ListView(
                     padding: const EdgeInsets.only(top: 12, bottom: 16),
-                    children:  [
+                    children: [
                       ContactInfoCard(
                         phone: '(555) 123-4567',
                         email: 'sarah.johnson@email.com',
@@ -333,25 +374,34 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     ],
                   ),
 
-                  // ---- Mood ----
+                  // Mood
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    children: [
-                      MoodHistorySection(entries: moodEntries),
-                    ],
+                    children: [MoodHistorySection(entries: moodEntries)],
                   ),
 
-                  // ---- Health ----
+                  // Health
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      RecentSymptomsSection(entries: symptomEntries),
+                      const PainLevelCard(
+                        lastReportedText: '6 hours ago',
+                        currentPain: 4,
+                        location: 'Lower back',
+                        dizziness: 2,
+                        fatigue: 7,
+                      ),
+                      // Recent Symptoms (UI-typed list)
+                      sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
                       _buildMedicationsSection(),
                     ],
                   ),
 
-                  // ---- virtual check-in ----
+                  // Activity
+                  RecentActivityTab(items: activityList),
+
+                  // Virtual check-in
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
@@ -359,18 +409,29 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         entries: virtualCheckIns,
                         onConfigure: () async {
                           final messenger = ScaffoldMessenger.of(context);
-                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>>(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                            ),
-                            builder: (_) => VirtualCheckInConfigSheet(initial: initialQuestions),
-                          );
+                          final updated =
+                              await showModalBottomSheet<
+                                List<VirtualCheckInQuestion>
+                              >(
+                                context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                ),
+                                builder: (_) => VirtualCheckInConfigSheet(
+                                  initial: initialQuestions,
+                                ),
+                              );
                           if (updated != null) {
                             messenger.showSnackBar(
-                              const SnackBar(content: Text('Virtual check-in configuration saved')),
+                              const SnackBar(
+                                content: Text(
+                                  'Virtual check-in configuration saved',
+                                ),
+                              ),
                             );
                           }
                         },
@@ -387,9 +448,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   }
 }
 
-/// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _DetailsAppBar({required this.title, required this.subtitle});
+
   final String title;
   final String subtitle;
 
@@ -416,9 +477,9 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
       ),
@@ -426,8 +487,6 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-
-/// The tab buttons row (Info • Mood • Health • Virtual Check-In) styled like your mock.
 class _TabsStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -439,20 +498,25 @@ class _TabsStrip extends StatelessWidget {
         child: TabBar(
           isScrollable: false,
           labelColor: cs.primary,
-          unselectedLabelColor: cs.onSurface.withValues(alpha: .7),
+          unselectedLabelColor: cs.onSurface.withOpacity(.7),
           indicator: UnderlineTabIndicator(
             borderSide: BorderSide(color: cs.primary, width: 3),
           ),
           tabs: const [
             Tab(text: 'Info', icon: Icon(Icons.info_outline, size: 18)),
             Tab(text: 'Mood', icon: Icon(Icons.favorite_border, size: 18)),
-            Tab(text: 'Health', icon: Icon(Icons.health_and_safety_outlined, size: 18)),
-            Tab(text: 'Virtual Check-In', icon: Icon(Icons.video_call_outlined, size: 18)),
+            Tab(
+              text: 'Health',
+              icon: Icon(Icons.health_and_safety_outlined, size: 18),
+            ),
+            Tab(text: 'Activity', icon: Icon(Icons.history, size: 18)),
+            Tab(
+              text: 'Virtual Check-In',
+              icon: Icon(Icons.video_call_outlined, size: 18),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-

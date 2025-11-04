@@ -272,7 +272,7 @@ public class PatientController {
             throw new AppException(HttpStatus.FORBIDDEN, "Only patients can access this endpoint");
         }
         
-        Patient patient = patientService.getPatientById(currentUser.getId());
+        Patient patient = patientService.getPatientByUserId(currentUser.getId());
         log.debug("Retrieved patient profile: id={}, userId={}", patient.getId(), patient.getUser().getId());
         return ResponseEntity.ok(patient);
     }
@@ -632,6 +632,100 @@ public class PatientController {
                 .body(Map.of("error", "Failed to retrieve enhanced patient profile"));
         }
     }
+    
+    @GetMapping("/{patientId}/provider")
+    public ResponseEntity<Map<String, Object>> getPrimaryCareProvider(@PathVariable Long patientId) {
+        return ResponseEntity.ok(patientService.getPrimaryProvider(patientId));
+    }
+    
+    @GetMapping("/{patientID}/medications")
+    @Operation(summary = "Get all medications for patient",
+            description = "Get all medications for a specific patient")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Medications retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
+    })
+    public ResponseEntity<List<MedicationDTO>> getAllMedications(@PathVariable Long patientID) {
+        User currentUser = getCurrentUser();
 
+        // Convert patientId to userId for validation
+        Patient patient = patientService.getPatientById(patientID);
+        validatePatientAccess(patient.getUser().getId(), currentUser);
+
+        List<MedicationDTO> allMeds = medicationService.getAllMedicationsForPatient(patientID);
+        return ResponseEntity.ok(allMeds);
+    }
+
+    @PostMapping("/{patientID}/medications")
+    @Operation(summary = "Add medication for patient",
+            description = "Create a new medication for a specific patient")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Medication created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid medication data"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
+    })
+    public ResponseEntity<MedicationDTO> addMedication(
+            @PathVariable Long patientID,
+            @Valid @RequestBody MedicationDTO medicationDTO) {
+        User currentUser = getCurrentUser();
+
+        // Family members have read-only access, cannot add medications
+        if (currentUser.getRole() == Role.FAMILY_MEMBER) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Family members have read-only access");
+        }
+
+        // Convert patientId to userId for validation
+        Patient patient = patientService.getPatientById(patientID);
+        validatePatientAccess(patient.getUser().getId(), currentUser);
+
+        // Ensure the patientId in the DTO matches the path parameter
+        MedicationDTO medicationWithPatientId = new MedicationDTO(
+                null, // id will be generated
+                patientID,
+                medicationDTO.medicationName(),
+                medicationDTO.dosage(),
+                medicationDTO.frequency(),
+                medicationDTO.route(),
+                medicationDTO.medicationType(),
+                medicationDTO.prescribedBy(),
+                medicationDTO.prescribedDate(),
+                medicationDTO.startDate(),
+                medicationDTO.endDate(),
+                medicationDTO.notes(),
+                true // Set as active by default
+        );
+
+        MedicationDTO createdMedication = medicationService.createMedication(medicationWithPatientId);
+        return ResponseEntity.ok(createdMedication);
+    }
+
+    @DeleteMapping("/{patientID}/medications/{medicationId}")
+    @Operation(summary = "Remove medication for patient",
+            description = "Deactivate a medication for a specific patient (soft delete)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Medication deactivated successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient or medication not found")
+    })
+    public ResponseEntity<Void> removeMedication(
+            @PathVariable Long patientID,
+            @PathVariable Long medicationId) {
+        User currentUser = getCurrentUser();
+
+        // Family members have read-only access, cannot remove medications
+        if (currentUser.getRole() == Role.FAMILY_MEMBER) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Family members have read-only access");
+        }
+
+        // Convert patientId to userId for validation
+        Patient patient = patientService.getPatientById(patientID);
+        validatePatientAccess(patient.getUser().getId(), currentUser);
+
+        // Deactivate the medication (soft delete)
+        medicationService.deactivateMedication(medicationId);
+        return ResponseEntity.noContent().build();
+    }
 
 }

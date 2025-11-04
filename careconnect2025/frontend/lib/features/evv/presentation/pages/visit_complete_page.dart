@@ -20,7 +20,8 @@ class VisitCompletePage extends StatefulWidget {
   final double? checkoutLongitude;
   final String notes;
   final int duration; // Duration in seconds
-  
+  final int? scheduledVisitId;
+
   const VisitCompletePage({
     super.key,
     required this.patientId,
@@ -33,6 +34,7 @@ class VisitCompletePage extends StatefulWidget {
     this.checkoutLongitude,
     required this.notes,
     required this.duration,
+    this.scheduledVisitId,
   });
 
   @override
@@ -65,7 +67,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
 
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
@@ -76,7 +78,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        
+
         // Find the specific patient
         for (var json in data) {
           try {
@@ -98,7 +100,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
                 _selectedPatient = patient;
                 _isLoading = false;
               });
-              
+
               // Set check-in and check-out locations
               _setLocations(patient);
               return;
@@ -107,10 +109,12 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
             print('Error parsing patient: $e');
           }
         }
-        
+
         throw Exception('Patient not found');
       } else {
-        throw Exception('Failed to load patient details: ${response.statusCode}');
+        throw Exception(
+          'Failed to load patient details: ${response.statusCode}',
+        );
       }
     } catch (e) {
       setState(() {
@@ -127,9 +131,12 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
       setState(() {
         _checkinLocation = address;
       });
-    } else if (widget.checkinLocationType == 'gps' && widget.checkinLatitude != null && widget.checkinLongitude != null) {
+    } else if (widget.checkinLocationType == 'gps' &&
+        widget.checkinLatitude != null &&
+        widget.checkinLongitude != null) {
       setState(() {
-        _checkinLocation = 'GPS: ${widget.checkinLatitude!.toStringAsFixed(6)}, ${widget.checkinLongitude!.toStringAsFixed(6)}';
+        _checkinLocation =
+            'GPS: ${widget.checkinLatitude!.toStringAsFixed(6)}, ${widget.checkinLongitude!.toStringAsFixed(6)}';
       });
     }
 
@@ -139,15 +146,20 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
       setState(() {
         _checkoutLocation = address;
       });
-    } else if (widget.checkoutLocationType == 'gps' && widget.checkoutLatitude != null && widget.checkoutLongitude != null) {
+    } else if (widget.checkoutLocationType == 'gps' &&
+        widget.checkoutLatitude != null &&
+        widget.checkoutLongitude != null) {
       setState(() {
-        _checkoutLocation = 'GPS: ${widget.checkoutLatitude!.toStringAsFixed(6)}, ${widget.checkoutLongitude!.toStringAsFixed(6)}';
+        _checkoutLocation =
+            'GPS: ${widget.checkoutLatitude!.toStringAsFixed(6)}, ${widget.checkoutLongitude!.toStringAsFixed(6)}';
       });
     }
 
     // Set check-in time (approximately duration before check-out)
     setState(() {
-      _checkinTime = _checkoutTime!.subtract(Duration(seconds: widget.duration));
+      _checkinTime = _checkoutTime!.subtract(
+        Duration(seconds: widget.duration),
+      );
     });
   }
 
@@ -197,34 +209,41 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
     try {
       // Create EVV record using the EVV service
       final evvService = EvvService();
-      
+
       // Get current user for caregiver ID
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
-      
+
       if (user == null) {
         throw Exception('User not authenticated');
       }
 
-      // Use check-out location as primary location
-      double? locationLat;
-      double? locationLng;
-      String locationSource;
-      
-      if (widget.checkoutLocationType == 'gps' && 
-          widget.checkoutLatitude != null && 
-          widget.checkoutLongitude != null) {
-        locationLat = widget.checkoutLatitude;
-        locationLng = widget.checkoutLongitude;
-        locationSource = 'GPS';
-      } else {
-        // Use patient address coordinates (you might want to geocode this)
-        locationLat = null;
-        locationLng = null;
-        locationSource = 'PATIENT_ADDRESS';
-      }
+      // Determine check-in location data
+      String checkinLocationSource = widget.checkinLocationType == 'gps'
+          ? 'GPS'
+          : 'PATIENT_ADDRESS';
+      double? checkinLat = widget.checkinLocationType == 'gps'
+          ? widget.checkinLatitude
+          : null;
+      double? checkinLng = widget.checkinLocationType == 'gps'
+          ? widget.checkinLongitude
+          : null;
 
-      // Create EVV record request
+      // Determine check-out location data
+      String checkoutLocationSource = widget.checkoutLocationType == 'gps'
+          ? 'GPS'
+          : 'PATIENT_ADDRESS';
+      double? checkoutLat = widget.checkoutLocationType == 'gps'
+          ? widget.checkoutLatitude
+          : null;
+      double? checkoutLng = widget.checkoutLocationType == 'gps'
+          ? widget.checkoutLongitude
+          : null;
+
+      // Get state from patient address or default to MD
+      String stateCode = _selectedPatient?.address?.state ?? 'MD';
+
+      // Create EVV record request with both check-in and check-out locations
       final request = EvvRecordRequest(
         serviceType: widget.serviceType,
         patientId: widget.patientId,
@@ -232,10 +251,19 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
         dateOfService: _checkinTime ?? DateTime.now(),
         timeIn: _checkinTime ?? DateTime.now(),
         timeOut: _checkoutTime ?? DateTime.now(),
-        locationLat: locationLat,
-        locationLng: locationLng,
-        locationSource: locationSource,
-        stateCode: 'MD', // Default state, you might want to get this from patient address
+        // Legacy fields for backward compatibility (use check-out data)
+        locationLat: checkoutLat,
+        locationLng: checkoutLng,
+        locationSource: widget.checkoutLocationType,
+        // New separate check-in and check-out location fields
+        checkinLocationLat: checkinLat,
+        checkinLocationLng: checkinLng,
+        checkinLocationSource: checkinLocationSource,
+        checkoutLocationLat: checkoutLat,
+        checkoutLocationLng: checkoutLng,
+        checkoutLocationSource: checkoutLocationSource,
+        stateCode: stateCode,
+        scheduledVisitId: widget.scheduledVisitId,
       );
 
       // Submit the EVV record
@@ -248,7 +276,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           backgroundColor: Colors.green,
         ),
       );
-      
+
       // Navigate to visit completed success page
       final queryParams = {
         'patientId': widget.patientId.toString(),
@@ -301,7 +329,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
         title: const Text('Visit Complete'),
         actions: [
           TextButton.icon(
-            onPressed: () => context.go('/dashboard?role=CAREGIVER'),
+            onPressed: () => context.go('/evv'),
             icon: const Icon(Icons.cancel, color: Colors.red),
             label: const Text('Cancel', style: TextStyle(color: Colors.red)),
           ),
@@ -315,15 +343,15 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return _buildErrorState();
     }
-    
+
     if (_selectedPatient == null) {
       return _buildPatientNotFoundState();
     }
-    
+
     return _buildVisitComplete();
   }
 
@@ -402,43 +430,15 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
   Widget _buildVisitComplete() {
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
-
+    final maNumber =
+        patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
+    final cs = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    );
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Header with success icon
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Text(
-                  'Visit Complete',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // Success message banner
           Container(
             width: double.infinity,
@@ -447,10 +447,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
             decoration: BoxDecoration(
               color: Colors.green[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.green[200]!,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.green[200]!, width: 1),
             ),
             child: Row(
               children: [
@@ -461,11 +458,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
                     color: Colors.green,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 16),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -505,13 +498,24 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 _buildSummaryRow('Patient:', fullName),
                 _buildSummaryRow('MA Number:', maNumber),
                 _buildSummaryRow('Service Type:', widget.serviceType),
-                _buildSummaryRow('Check-in:', _checkinTime != null ? _formatTime(_checkinTime!) : 'Unknown'),
-                _buildSummaryRow('Check-out:', _checkoutTime != null ? _formatTime(_checkoutTime!) : 'Unknown'),
-                _buildSummaryRow('Duration:', _formatDuration(Duration(seconds: widget.duration))),
+                _buildSummaryRow(
+                  'Check-in:',
+                  _checkinTime != null ? _formatTime(_checkinTime!) : 'Unknown',
+                ),
+                _buildSummaryRow(
+                  'Check-out:',
+                  _checkoutTime != null
+                      ? _formatTime(_checkoutTime!)
+                      : 'Unknown',
+                ),
+                _buildSummaryRow(
+                  'Duration:',
+                  _formatDuration(Duration(seconds: widget.duration)),
+                ),
                 _buildSummaryRow('Check-in Location:', _checkinLocation),
                 _buildSummaryRow('Check-out Location:', _checkoutLocation),
               ],
@@ -524,38 +528,26 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           Container(
             width: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 20),
-            child: ElevatedButton.icon(
-              onPressed: _isSubmitting ? null : _completeVisit,
-              icon: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                    ),
-              label: Text(
-                _isSubmitting ? 'Completing Visit...' : 'Complete Visit',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[800],
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-            ),
+
+ 
+child: FilledButton.icon(
+  onPressed: _isSubmitting ? null : _completeVisit,
+  style: FilledButton.styleFrom(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    shape: shape,
+    backgroundColor: cs.primary,
+    foregroundColor: cs.onPrimary,
+  ),
+  icon: _isSubmitting
+      ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        )
+      : const Icon(Icons.check, size: 18),
+  label: Text(_isSubmitting ? 'Completing Visit...' : 'Complete Visit'),
+),
+
           ),
 
           const SizedBox(height: 24),
@@ -584,10 +576,7 @@ class _VisitCompletePageState extends State<VisitCompletePage> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
           ),
         ],

@@ -21,6 +21,7 @@ class ApiConstants {
   static final String baseUrl = '$_host/v1/api/';
   static final String familyMembers = '$_host/v1/api/family-members';
   static final String patient = '$_host/v1/api/patient';
+  static final String mood = '$_host/v1/api/patient';
   static final String patients = '$_host/v1/api/patients';
   static final String caregivers = '$_host/v1/api/caregivers';
   static final String files = '$_host/v1/api/files';
@@ -427,6 +428,134 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
   }
 
+    // ========================
+    // CAREGIVER MOOD SUMMARY
+    // ========================
+    static Future<Map<String, dynamic>> getCaregiverMoodSummaries(int caregiverId) async {
+      final headers = {'Content-Type': 'application/json'};
+      final url = Uri.parse('${ApiConstants.mood}/caregiver/$caregiverId/moods');
+
+      try {
+        final response = await http
+            .get(url, headers: headers)
+            .timeout(const Duration(seconds: 30));
+
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else {
+          print('⚠️ getCaregiverMoodSummaries failed: ${response.statusCode}');
+          return {};
+        }
+      } catch (e) {
+        print('❌ getCaregiverMoodSummaries error: $e');
+        return {};
+      }
+    }
+
+
+
+    // ========================
+    // MEDICATIONS
+    // ========================
+    static Future<List<dynamic>> getActiveMedications(int userId) async {
+      final headers = {'Content-Type': 'application/json'};
+      final url = Uri.parse('${ApiConstants.patients}/$userId/active');
+
+      try {
+        final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 30));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data is List) return data;
+          return [];
+        } else {
+          print('⚠️ getActiveMedications failed: ${response.statusCode}');
+          return [];
+        }
+      } catch (e) {
+        print('❌ getActiveMedications error: $e');
+        return [];
+      }
+    }
+
+    // ========================
+    // MEDICATION REMINDERS
+    // ========================
+    static Future<List<dynamic>> getTodaysMedications(int userId) async {
+      final headers = {'Content-Type': 'application/json'};
+      final url = Uri.parse('${ApiConstants.patient}/$userId/medications/today');
+
+      try {
+        final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 30));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data is List) return data;
+          return [];
+        } else {
+          print('⚠️ getTodaysMedications failed: ${response.statusCode}');
+          return [];
+        }
+      } catch (e) {
+        print('❌ getTodaysMedications error: $e');
+        return [];
+      }
+    }
+
+  // ========================
+  // MOOD TRACKER METHODS
+  // ========================
+
+  static Future<http.Response> saveMoodScore({
+    required int userId,
+    required int score,
+    required String label,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    final url = Uri.parse('${ApiConstants.mood}/$userId/mood');
+
+    final body = jsonEncode({
+      'score': score,
+      'label': label,
+    });
+
+    try {
+      final response = await _httpClient
+          .post(url, headers: headers, body: body)
+          .timeout(const Duration(seconds: 30));
+
+      print('🔍 saveMoodScore response: ${response.statusCode} - ${response.body}');
+      return response;
+    } catch (e) {
+      print('❌ saveMoodScore error: $e');
+      rethrow;
+    }
+  }
+
+  static Future<List<dynamic>> getMoodHistory(int userId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final url = Uri.parse('${ApiConstants.mood}/$userId/mood');
+
+    try {
+      final response = await _httpClient
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        return [];
+      } else {
+        print('⚠️ getMoodHistory failed: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ getMoodHistory error: $e');
+      return [];
+    }
+  }
+
   // ========================
   // UTILITY METHODS
   // ========================
@@ -463,9 +592,9 @@ class ApiService {
 
   // ========================
   //   SYMPTOMS (CRUD)
- // ========================
+  // ========================
 
-// GET /v1/api/symptoms/patient/{patientId}
+  // GET /v1/api/symptoms/patient/{patientId}
   static Future<List<Map<String, dynamic>>> getSymptomsForPatient(int patientId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     final uri = Uri.parse('${ApiConstants.baseUrl}symptoms/patient/$patientId');
@@ -717,6 +846,7 @@ class ApiService {
   }
 
   // FAMILY
+  // FAMILY
   static Future<List<Map<String, dynamic>>> getAccessiblePatients() async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
@@ -903,6 +1033,14 @@ class ApiService {
     );
   }
 
+
+  static Future<http.Response> getPatientDetails(int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final url = Uri.parse('${ApiConstants._host}/v1/api/patients/$patientId');
+    return await http.get(url, headers: headers);
+  }
+
+
   static Future<http.Response> addFamilyMember(
     int patientId,
     Map<String, dynamic> familyMemberData,
@@ -964,14 +1102,8 @@ class ApiService {
     required String patientEmail,
   }) async {
     final headers = await AuthTokenManager.getAuthHeaders();
-
-    print('🔍 addExistingPatientToCaregiver caregiverId: $caregiverId');
-    print('🔍 patientEmail: $patientEmail');
-    print('🔍 Headers: $headers');
-    print('🔍 Has Authorization header: ${headers.containsKey('Authorization')}');
-
+    print('addExistingPatientToCaregiver caregiverId: $caregiverId');
     final url = '${ApiConstants.baseUrl}caregivers/$caregiverId/patients/add';
-    print('🔍 URL: $url');
 
     return await _httpClient
         .post(
@@ -1115,6 +1247,36 @@ class ApiService {
     }
   }
 
+
+
+  // ========================
+  // PRIMARY CARE PROVIDER
+  // ========================
+  static Future<Map<String, dynamic>> getPrimaryCareProvider(int userId) async {
+    final headers = {'Content-Type': 'application/json'};
+    final url = Uri.parse('${ApiConstants.patients}/$userId/provider');
+
+    try {
+      final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) return data;
+        return {};
+      } else {
+        print('⚠️ getPrimaryCareProvider failed: ${response.statusCode}');
+        return {};
+      }
+    } catch (e) {
+      print('❌ getPrimaryCareProvider error: $e');
+      return {};
+    }
+  }
+
+
+
+
+
+
   // ========================
   // MESSAGING METHODS
   // ========================
@@ -1124,298 +1286,298 @@ class ApiService {
     required int receiverId,
     required String content,
   }) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    final body = jsonEncode({
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'content': content,
-    });
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final body = jsonEncode({
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'content': content,
+      });
 
-    return await _httpClient
-        .post(
-          Uri.parse('${ApiConstants.baseUrl}messages/send'),
-          headers: headers,
-          body: body,
-        )
-        .timeout(const Duration(seconds: 15));
-  }
-
-  static Future<List<dynamic>> getConversation({
-    required int user1,
-    required int user2,
-  }) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    final url = Uri.parse(
-      '${ApiConstants.baseUrl}messages/conversation?user1=$user1&user2=$user2',
-    );
-
-    final response = await _httpClient.get(url, headers: headers);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load conversation');
+      return await _httpClient
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}messages/send'),
+            headers: headers,
+            body: body,
+          )
+          .timeout(const Duration(seconds: 15));
     }
-  }
 
-  static Future<List<dynamic>> getInbox(int userId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    final url = Uri.parse('${ApiConstants.baseUrl}messages/inbox/$userId');
-
-    final response = await _httpClient.get(url, headers: headers);
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load inbox');
-    }
-  }
-
-  // ========================
-  // TASK METHODS
-  // ========================
-
-  // Get patient tasks
-  static Future<http.Response> getPatientTasks(int patientId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .get(
-          Uri.parse('${ApiConstants.tasks}/patient/$patientId'),
-          headers: headers,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Delete a task by task ID
-  static Future<http.Response> deleteTask(int taskId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .delete(Uri.parse('${ApiConstants.tasks}/$taskId'), headers: headers)
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Edit a task by task ID
-  static Future<http.Response> editTask(
-    int taskId,
-    Map<String, dynamic> taskData,
-  ) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    return await _httpClient
-        .put(
-          Uri.parse('${ApiConstants.tasks}/$taskId'),
-          headers: headers,
-          body: jsonEncode(taskData),
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Get task templates
-  static Future<http.Response> getTaskTemplates(int patientId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .get(
-          Uri.parse('${ApiConstants.baseUrl}templates/all'), // get all for now
-          headers: headers,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  static Future<http.Response> getTaskTemplate(int templateId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .get(
-          Uri.parse('${ApiConstants.baseUrl}templates/$templateId'),
-          headers: headers,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Create a task
-  static Future<http.Response> createTask(int patientId, String task) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    return await _httpClient
-        .post(
-          Uri.parse('${ApiConstants.tasks}/patient/$patientId'),
-          headers: headers,
-          body: task,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-  // ========================
-  // TASK METHODS (V2)
-  // ========================
-
-  // Get patient tasks (v2)
-  static Future<http.Response> getPatientTasksV2(int patientId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .get(
-          Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
-          headers: headers,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Delete a task by task ID (v2)
-  // Delete a task by task ID (v2), with optional deleteSeries flag
-  static Future<http.Response> deleteTaskV2(
-    int taskId, {
-    bool deleteSeries = false,
-  }) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-
-    final url = Uri.parse(
-      '${ApiConstants.tasksV2}/$taskId',
-    ).replace(queryParameters: {'deleteSeries': deleteSeries.toString()});
-
-    return await _httpClient
-        .delete(url, headers: headers)
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Edit a task by task ID (v2)
-  static Future<http.Response> editTaskV2(
-    int taskId,
-    Map<String, dynamic> body, {
-    bool updateSeries = false,
-  }) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    final payload = Map<String, dynamic>.from(body);
-    payload['updateSeries'] = updateSeries;
-    return await _httpClient
-        .put(
-          Uri.parse('${ApiConstants.tasksV2}/$taskId'),
-          headers: headers,
-          body: jsonEncode(payload),
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  /// Update a task's completion status (V2)
-  ///
-  /// Sends a PUT request to /v2/api/tasks/{id}/complete with a JSON body:
-  /// `{ "isComplete": true/false }`
-  ///
-  /// Throws an [Exception] if the request fails.
-  static Future<void> updateTaskCompletionV2(
-    int taskId,
-    bool isComplete,
-  ) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    final url = Uri.parse('${ApiConstants.tasksV2}/$taskId/complete');
-    final body = jsonEncode({'isComplete': isComplete});
-
-    final response = await _httpClient
-        .put(url, headers: headers, body: body)
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to update task completion: ${response.statusCode} ${response.body}',
-      );
-    }
-  }
-
-  // Create a task (v2)
-  static Future<http.Response> createTaskV2(
-    int patientId,
-    String taskJson,
-  ) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    headers['Content-Type'] = 'application/json';
-
-    return await _httpClient
-        .post(
-          Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
-          headers: headers,
-          body: taskJson,
-        )
-        .timeout(const Duration(seconds: 30));
-  }
-
-  // Get a single task by ID (v2)
-  static Future<http.Response> getTaskByIdV2(int taskId) async {
-    final headers = await AuthTokenManager.getAuthHeaders();
-    return await _httpClient
-        .get(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
-        .timeout(const Duration(seconds: 30));
-  }
-
-  static Future<Map<String, dynamic>?> getEnhancedPatientProfile(
-    int patientId,
-  ) async {
-    try {
+    static Future<List<dynamic>> getConversation({
+      required int user1,
+      required int user2,
+    }) async {
       final headers = await AuthTokenManager.getAuthHeaders();
       final url = Uri.parse(
-        '${ApiConstants.patients}/$patientId/profile/enhanced',
+        '${ApiConstants.baseUrl}messages/conversation?user1=$user1&user2=$user2',
       );
-      final response = await _httpClient
-          .get(url, headers: headers)
-          .timeout(const Duration(seconds: 30));
+
+      final response = await _httpClient.get(url, headers: headers);
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>?;
-        } else {
-          return decoded as Map<String, dynamic>?;
-        }
+        return jsonDecode(response.body);
       } else {
-        print('Failed to fetch enhanced profile: ${response.statusCode}');
+        throw Exception('Failed to load conversation');
+      }
+    }
+
+    static Future<List<dynamic>> getInbox(int userId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final url = Uri.parse('${ApiConstants.baseUrl}messages/inbox/$userId');
+
+      final response = await _httpClient.get(url, headers: headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load inbox');
+      }
+    }
+
+    // ========================
+    // TASK METHODS
+    // ========================
+
+    // Get patient tasks
+    static Future<http.Response> getPatientTasks(int patientId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .get(
+            Uri.parse('${ApiConstants.tasks}/patient/$patientId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Delete a task by task ID
+    static Future<http.Response> deleteTask(int taskId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .delete(Uri.parse('${ApiConstants.tasks}/$taskId'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Edit a task by task ID
+    static Future<http.Response> editTask(
+      int taskId,
+      Map<String, dynamic> taskData,
+    ) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      return await _httpClient
+          .put(
+            Uri.parse('${ApiConstants.tasks}/$taskId'),
+            headers: headers,
+            body: jsonEncode(taskData),
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Get task templates
+    static Future<http.Response> getTaskTemplates(int patientId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}templates/all'), // get all for now
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    static Future<http.Response> getTaskTemplate(int templateId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}templates/$templateId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Create a task
+    static Future<http.Response> createTask(int patientId, String task) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      return await _httpClient
+          .post(
+            Uri.parse('${ApiConstants.tasks}/patient/$patientId'),
+            headers: headers,
+            body: task,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+    // ========================
+    // TASK METHODS (V2)
+    // ========================
+
+    // Get patient tasks (v2)
+    static Future<http.Response> getPatientTasksV2(int patientId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .get(
+            Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Delete a task by task ID (v2)
+    // Delete a task by task ID (v2), with optional deleteSeries flag
+    static Future<http.Response> deleteTaskV2(
+      int taskId, {
+      bool deleteSeries = false,
+    }) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+
+      final url = Uri.parse(
+        '${ApiConstants.tasksV2}/$taskId',
+      ).replace(queryParameters: {'deleteSeries': deleteSeries.toString()});
+
+      return await _httpClient
+          .delete(url, headers: headers)
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Edit a task by task ID (v2)
+    static Future<http.Response> editTaskV2(
+      int taskId,
+      Map<String, dynamic> body, {
+      bool updateSeries = false,
+    }) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      final payload = Map<String, dynamic>.from(body);
+      payload['updateSeries'] = updateSeries;
+      return await _httpClient
+          .put(
+            Uri.parse('${ApiConstants.tasksV2}/$taskId'),
+            headers: headers,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    /// Update a task's completion status (V2)
+    ///
+    /// Sends a PUT request to /v2/api/tasks/{id}/complete with a JSON body:
+    /// `{ "isComplete": true/false }`
+    ///
+    /// Throws an [Exception] if the request fails.
+    static Future<void> updateTaskCompletionV2(
+      int taskId,
+      bool isComplete,
+    ) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      final url = Uri.parse('${ApiConstants.tasksV2}/$taskId/complete');
+      final body = jsonEncode({'isComplete': isComplete});
+
+      final response = await _httpClient
+          .put(url, headers: headers, body: body)
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to update task completion: ${response.statusCode} ${response.body}',
+        );
+      }
+    }
+
+    // Create a task (v2)
+    static Future<http.Response> createTaskV2(
+      int patientId,
+      String taskJson,
+    ) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      return await _httpClient
+          .post(
+            Uri.parse('${ApiConstants.tasksV2}/patient/$patientId'),
+            headers: headers,
+            body: taskJson,
+          )
+          .timeout(const Duration(seconds: 30));
+    }
+
+    // Get a single task by ID (v2)
+    static Future<http.Response> getTaskByIdV2(int taskId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      return await _httpClient
+          .get(Uri.parse('${ApiConstants.tasksV2}/$taskId'), headers: headers)
+          .timeout(const Duration(seconds: 30));
+    }
+
+    static Future<Map<String, dynamic>?> getEnhancedPatientProfile(
+      int patientId,
+    ) async {
+      try {
+        final headers = await AuthTokenManager.getAuthHeaders();
+        final url = Uri.parse(
+          '${ApiConstants.patients}/$patientId/profile/enhanced',
+        );
+        final response = await _httpClient
+            .get(url, headers: headers)
+            .timeout(const Duration(seconds: 30));
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+            return decoded['data'] as Map<String, dynamic>?;
+          } else {
+            return decoded as Map<String, dynamic>?;
+          }
+        } else {
+          print('Failed to fetch enhanced profile: ${response.statusCode}');
+          return null;
+        }
+      } catch (e) {
+        print('Error fetching enhanced patient profile: ${e.toString()}');
         return null;
       }
-    } catch (e) {
-      print('Error fetching enhanced patient profile: ${e.toString()}');
-      return null;
     }
-  }
-  
-  static Future<http.Response> getPatientMedicationsForPatient(int patientId) async {
-    try {
-      final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(
-          '${ApiConstants.patients}/$patientId/medications');
-      return await httpClient
-          .get(uri, headers: headers)
-          .timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-      );
-    }  catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
+    
+    static Future<http.Response> getPatientMedicationsForPatient(int patientId) async {
+      try {
+        final headers = await AuthTokenManager.getAuthHeaders();
+        final uri = Uri.parse(
+            '${ApiConstants.patients}/$patientId/medications');
+        return await httpClient
+            .get(uri, headers: headers)
+            .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+        );
+      }  catch (e) {
+        return http.Response(jsonEncode({'error': e.toString()}), 500);
+      }
     }
-  }
 
-  /// Add a new medication for a patient
-  static Future<http.Response> addPatientMedication(
-    int patientId,
-    Map<String, dynamic> medicationData,
-  ) async {
-    try {
-      final headers = await AuthTokenManager.getAuthHeaders();
-      final uri = Uri.parse(
-        '${ApiConstants.patients}/$patientId/medications',
-      );
+    /// Add a new medication for a patient
+    static Future<http.Response> addPatientMedication(
+      int patientId,
+      Map<String, dynamic> medicationData,
+    ) async {
+      try {
+        final headers = await AuthTokenManager.getAuthHeaders();
+        final uri = Uri.parse(
+          '${ApiConstants.patients}/$patientId/medications',
+        );
 
-      return await httpClient
-          .post(
-            uri,
-            headers: headers,
-            body: jsonEncode(medicationData),
-          )
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-          );
-    } catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
+        return await httpClient
+            .post(
+              uri,
+              headers: headers,
+              body: jsonEncode(medicationData),
+            )
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+            );
+      } catch (e) {
+        return http.Response(jsonEncode({'error': e.toString()}), 500);
+      }
     }
-  }
 
   /// Remove (deactivate) a medication for a patient (Patient-side soft delete)
   static Future<http.Response> removePatientMedication(
@@ -1428,16 +1590,51 @@ class ApiService {
         '${ApiConstants.patients}/$patientId/medications/$medicationId',
       );
 
-      return await httpClient
-          .delete(uri, headers: headers)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
-          );
-    } catch (e) {
-      return http.Response(jsonEncode({'error': e.toString()}), 500);
+        return await httpClient
+            .delete(uri, headers: headers)
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => http.Response('{"error": "Request timeout"}', 408),
+            );
+      } catch (e) {
+        return http.Response(jsonEncode({'error': e.toString()}), 500);
+      }
     }
-  }
+
+
+      // Get latest mood and related data
+      static Future<Map<String, dynamic>?> getMoodData(int userId) async {
+        final String baseUrl = ApiConstants._host;
+        final response = await http.get(
+          Uri.parse('$baseUrl/patient/$userId/mood'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else {
+          return null;
+        }
+      }
+
+
+      // Get today's average mood and check-ins
+      static Future<Map<String, dynamic>?> getDailyMoodAverage(int userId) async {
+        final String baseUrl = ApiConstants._host;
+        final response = await http.get(
+          Uri.parse('$baseUrl/patient/$userId/mood/average'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else {
+          return null;
+        }
+      }
+
+      
+
 
   /// Delete medication by caregiver (Caregiver-side hard delete)
   static Future<http.Response> deleteMedicationByCaregiver(
@@ -1485,24 +1682,24 @@ class ApiService {
   }
 }
 
-// Save speech-to-text to a file and upload it to S3
-Future<http.Response> uploadUserFileFromBytes({
-  required int userId,
-  required Uint8List fileBytes,
-  required String fileName,
-  required String category,
-  String? role,
-}) async {
-  final headers = await AuthTokenManager.getAuthHeaders();
-  headers.remove('Content-Type'); // Multipart will handle it
+  // Save speech-to-text to a file and upload it to S3
+  Future<http.Response> uploadUserFileFromBytes({
+    required int userId,
+    required Uint8List fileBytes,
+    required String fileName,
+    required String category,
+    String? role,
+  }) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers.remove('Content-Type'); // Multipart will handle it
 
-  var request = http.MultipartRequest(
-    'POST',
-    Uri.parse('${ApiConstants.files}/users/$userId/upload'),
-  );
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('${ApiConstants.files}/users/$userId/upload'),
+    );
 
-  // Add headers
-  request.headers.addAll(headers);
+    // Add headers
+    request.headers.addAll(headers);
 
   // Create MultipartFile from bytes
   var fileStream = http.ByteStream(Stream.fromIterable([fileBytes]));

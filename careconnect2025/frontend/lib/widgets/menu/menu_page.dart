@@ -43,14 +43,14 @@ class _MenuPageState extends State<MenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
+    final local = AppLocalizations.of(context)!;
 
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(t.menuTitle)),
+        appBar: AppBar(title: Text(local.menuTitle)),
         body: _LoggedOutPrompt(onLogin: () => context.push('/login')),
       );
     }
@@ -60,7 +60,7 @@ class _MenuPageState extends State<MenuPage> {
     final items = <_MenuItem>[
       _MenuItem(
         icon: Icons.receipt_long,
-        label: t.invoiceAssistant,
+        label: local.invoiceAssistant,
         route: '/invoice-assistant/dashboard',
         visibleFor: const {'CAREGIVER', 'ADMIN', 'PATIENT'},
         onTap: () {
@@ -73,13 +73,13 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.verified_user,
-        label: t.evv,
+        label: local.evv,
         route: '/evv',
         visibleFor: const {'CAREGIVER', 'ADMIN'},
       ),
       _MenuItem(
         icon: Icons.calendar_month,
-        label: t.calendarAssistant,
+        label: local.calendarAssistant,
         route: '/calendar',
       ),
       _MenuItem(
@@ -96,57 +96,74 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.public,
-        label: t.socialFeed,
+        label: local.socialFeed,
         onTap: () => context.go('/social-feed?userId=${user.id}'),
       ),
       _MenuItem(
         icon: Icons.emoji_events,
-        label: t.gamification,
+        label: local.gamification,
         route: '/gamification',
       ),
-      _MenuItem(icon: Icons.watch, label: t.wearables, route: '/wearables'),
+      _MenuItem(icon: Icons.watch, label: local.wearables, route: '/wearables'),
       _MenuItem(
         icon: Icons.folder,
-        label: t.notetakerAssistant,
+        label: local.notetakerAssistant,
         route: '/notetaker-search',
       ),
       _MenuItem(
         icon: Icons.person_add,
-        label: t.addPatient,
+        label: local.addPatient,
         route: '/add-patient',
         visibleFor: const {'CAREGIVER'},
       ),
       _MenuItem(
         icon: Icons.mail,
-        label: 'Informed Delivery',
+        label: local.informedDelivery,
         route: '/informed-delivery',
       ),
       _MenuItem(
         icon: Icons.settings,
-        label: t.settings,
+        label: local.settings,
         route: '/settings',
         section: _Section.settings,
       ),
       _MenuItem(
         icon: Icons.devices,
-        label: 'Smart Devices',
+        label: local.smartDevices,
         route: '/smart-devices',
       ),
       _MenuItem(
         icon: Icons.folder,
-        label: 'File Management',
+        label:  local.fileManagement,
         route: '/file-management',
       ),
       _MenuItem(
         icon: Icons.sensors,
-        label: 'Fall Detection',
+        label: local.fallDetection,
         route: '/alertpage',
+      ),
+      _MenuItem(
+        icon: Icons.mail,
+        label: 'USPS Mail Digest',
+        route: '/usps-test'
+      ),
+      _MenuItem(
+        icon: Icons.person_add,
+        label: 'Add Patient',
+        route: '/add-patient',
+        visibleFor: const {'CAREGIVER', 'ADMIN'},
+      ),
+      _MenuItem(
+        icon: Icons.settings,
+        label: 'Settings',
+        route: '/settings',
+        section: _Section.settings,
       ),
     ].where((m) => m.isVisibleFor(role)).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.menuTitle),
+        title: Text(local.menuTitle),
       ),
       body: CustomScrollView(
         slivers: [
@@ -165,7 +182,7 @@ class _MenuPageState extends State<MenuPage> {
                     : null,
               ),
               title: Text(
-                user.name ?? t.fallbackUser,
+                user.name ?? local.fallbackUser,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -183,7 +200,7 @@ class _MenuPageState extends State<MenuPage> {
           ),
 
           // Tools
-          SliverToBoxAdapter(child: _SectionHeader(title: t.tools)),
+          SliverToBoxAdapter(child: _SectionHeader(title: local.tools)),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             sliver: SliverGrid(
@@ -201,7 +218,7 @@ class _MenuPageState extends State<MenuPage> {
           ),
 
           // Preferences
-          SliverToBoxAdapter(child: _SectionHeader(title: t.preferences)),
+          SliverToBoxAdapter(child: _SectionHeader(title: local.preferences)),
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -216,12 +233,12 @@ class _MenuPageState extends State<MenuPage> {
 
                   final localeProvider = context.watch<LocaleProvider>();
                   final currentLabel = localeProvider.locale == null
-                      ? t.systemDefault
+                      ? local.systemDefault
                       : LanguagePicker.labelFor(localeProvider.locale!);
 
                   final darkTile = ListTile(
                     leading: const Icon(Icons.brightness_6),
-                    title: Text(t.darkMode),
+                    title: Text(local.darkMode),
                     trailing: const ThemeToggleSwitch(
                       showIcon: false,
                       showLabel: false,
@@ -231,7 +248,7 @@ class _MenuPageState extends State<MenuPage> {
 
                   final langTile = ListTile(
                     leading: const Icon(Icons.language),
-                    title: Text(t.language),
+                    title: Text(local.language),
                     subtitle: Text(currentLabel),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => LanguagePicker.show(context),
@@ -266,7 +283,7 @@ class _MenuPageState extends State<MenuPage> {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 title: Text(
-                  t.logout,
+                  local.logout,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () async {

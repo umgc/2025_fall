@@ -318,15 +318,17 @@ IEA*1*$controlNumber~
     required DateTime serviceDate,
     required int durationMinutes,
     String? notes,
+    String? maNumber, // Optional: Use actual MA number if provided
   }) {
     final units = (durationMinutes / 15).ceil();
     final charge = calculateTotalCharge(durationMinutes * 60);
-    final maNumber = 'MA${patientId.padLeft(9, '0')}';
+    // Use provided MA number or generate from patientId as fallback
+    final finalMaNumber = maNumber ?? 'MA${patientId.padLeft(9, '0')}';
 
     return generateMockEdi837(
       patientFirstName: patientFirstName,
       patientLastName: patientLastName,
-      maNumber: maNumber,
+      maNumber: finalMaNumber,
       serviceType: serviceType,
       serviceDate: serviceDate,
       chargeAmount: charge,

@@ -69,6 +69,15 @@ class AppLocalizationsNe extends AppLocalizations {
   String get settings => 'सेटिङ';
 
   @override
+  String get fallDetection => 'खस्ने पहिचान';
+
+  @override
+  String get informedDelivery => 'जानकारीसहितको वितरण';
+
+  @override
+  String get smartDevices => 'स्मार्ट उपकरणहरू';
+
+  @override
   String get pleaseLogIn => 'कृपया लगइन गर्नुहोस्';
 
   @override

@@ -50,19 +50,22 @@ public class SecurityConfig {
                                 "/configuration/security"
                         ).permitAll()
 
-                        /* ---------- CORS preflight ------------------------------------ */
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                /* ---------- public API endpoints ------------------------ */
+                .requestMatchers(
+                        "/v1/api/auth/**",
+                        "/api/v1/auth/**",  // Support both URL patterns
+                        "/api/auth/**",     // Support auth endpoints under /api/auth/
+                        "/v1/api/users/reset-password",  // Allow password reset (current)
+                        "/v1/api/users/setup-password",
+                        "/v1/api/email-test/**",  // Allow email testing endpoints
+                        "/v1/api/test/**", // Allow test endpoints (health check, swagger info)
+                        "/oauth/**"// Permit OAuth paths
+                ).permitAll()
 
-                        /* ---------- Public auth & misc endpoints ---------------------- */
-                        .requestMatchers(
-                                "/v1/api/auth/**",
-                                "/api/v1/auth/**",
-                                "/api/auth/**",
-                                "/v1/api/users/reset-password",
-                                "/v1/api/users/setup-password",
-                                "/v1/api/email-test/**",
-                                "/v1/api/test/**"
-                        ).permitAll()
+                /* ---------- public static assets ------------------------ */
+                .requestMatchers(
+                        "/", "/index.html", "/favicon.ico", "/static/**"
+                ).permitAll()
 
                         /* ---------- Static assets ------------------------------------- */
                         .requestMatchers("/", "/index.html", "/favicon.ico", "/static/**").permitAll()

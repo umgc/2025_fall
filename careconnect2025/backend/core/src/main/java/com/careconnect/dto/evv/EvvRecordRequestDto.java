@@ -26,14 +26,28 @@ public class EvvRecordRequestDto {
     @NotNull
     private OffsetDateTime timeOut;
 
+    // Legacy location fields (kept for backward compatibility)
+    // Note: New implementations should use the EVV Location API endpoints instead
     @DecimalMin(value = "-90.0", inclusive = true) @DecimalMax(value = "90.0", inclusive = true)
     private Double locationLat;
 
     @DecimalMin(value = "-180.0", inclusive = true) @DecimalMax(value = "180.0", inclusive = true)
     private Double locationLng;
 
-    @NotBlank @Pattern(regexp = "gps|manual")
+    @Pattern(regexp = "gps|manual|GPS|PATIENT_ADDRESS")
     private String locationSource;
+    
+    // Check-in/check-out location fields for convenience
+    // These will be saved to evv_record_location table via EvvLocationService
+    private Double checkinLocationLat;
+    private Double checkinLocationLng;
+    @Pattern(regexp = "GPS|PATIENT_ADDRESS")
+    private String checkinLocationSource;
+    
+    private Double checkoutLocationLat;
+    private Double checkoutLocationLng;
+    @Pattern(regexp = "GPS|PATIENT_ADDRESS")
+    private String checkoutLocationSource;
 
     @NotNull @Positive
     private Long patientId; // Direct reference to patient receiving care
@@ -42,4 +56,7 @@ public class EvvRecordRequestDto {
     private String stateCode;
 
     private Map<String, Object> deviceInfo;
+    
+    // Optional link to scheduled visit (if this EVV record fulfills a scheduled visit)
+    private Long scheduledVisitId;
 }

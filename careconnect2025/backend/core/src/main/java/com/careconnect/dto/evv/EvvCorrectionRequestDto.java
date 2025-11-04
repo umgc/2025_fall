@@ -32,5 +32,13 @@ public class EvvCorrectionRequestDto {
     private String locationSource;
     private String stateCode;
     private Map<String, Object> deviceInfo;
+    
+    // Check-in/check-out location fields for saving to evv_record_location table
+    private Double checkinLocationLat;
+    private Double checkinLocationLng;
+    private String checkinLocationSource;
+    private Double checkoutLocationLat;
+    private Double checkoutLocationLng;
+    private String checkoutLocationSource;
 }
 
