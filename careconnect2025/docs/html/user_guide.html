@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>CareConnect User Guide</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">CareConnect User Guide</h1>
+</header>
+<h1 id="fall-careconnect-2025-user-guide">Fall CareConnect 2025 User
+Guide</h1>
+<p>University of Maryland Global Campus<br />
+SWEN 670 – Software Engineering Capstone<br />
+Dr. Mir Assadullah<br />
+November 4, 2025</p>
+<hr />
+<h2 id="document-control">Document Control</h2>
+<h3 id="revision-history">Revision History</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Version</th>
+<th>Description</th>
+<th>Author</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11/04/2025</td>
+<td>1.0</td>
+<td>Initial release</td>
+<td>CareConnect Team</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#1-introduction">1. Introduction – Purpose, Audience,
+Document Map</a>
+<ul>
+<li><a href="#purpose">1.1 Purpose</a></li>
+<li><a href="#intended-audience">1.2 Intended Audience</a></li>
+<li><a href="#project-documents">1.3 Project Documents</a></li>
+<li><a href="#acronyms-terms-and-definitions">1.4 Acronyms, Terms, and
+Definitions</a></li>
+</ul></li>
+<li><a href="#2-system-capabilities">2. System Capabilities – Platform
+Overview and Dataflow</a>
+<ul>
+<li><a href="#overview">2.1 Overview</a></li>
+<li><a href="#dataflow">2.2 Dataflow</a></li>
+</ul></li>
+<li><a href="#3-technical-specifications-and-requirements">3. Technical
+Specifications and Requirements – Hardware, Software, Network</a>
+<ul>
+<li><a href="#hardware">3.1 Hardware</a></li>
+<li><a href="#software">3.2 Software</a></li>
+<li><a href="#network">3.3 Network</a></li>
+</ul></li>
+<li><a href="#4-user-guide">4. User Guide – Feature Walkthroughs and
+How-To Scenarios</a>
+<ul>
+<li><a href="#onboarding-authentication">4.1 Onboarding &amp;
+Authentication</a>
+<ul>
+<li><a href="#welcome">4.1.1 Welcome</a></li>
+<li><a href="#user-registration">4.1.2 User Registration</a></li>
+<li><a href="#login-session-management">4.1.3 Login &amp; Session
+Management</a></li>
+<li><a href="#password-reset-account-recovery">4.1.4 Password Reset
+&amp; Account Recovery</a></li>
+<li><a href="#session-timeout-mfa">4.1.5 Session Timeout &amp;
+MFA</a></li>
+</ul></li>
+<li><a href="#billing-subscription-management">4.2 Billing &amp;
+Subscription Management</a>
+<ul>
+<li><a href="#plan-selection-activation">4.2.1 Plan Selection &amp;
+Activation</a></li>
+<li><a href="#payment-methods-grace-periods">4.2.2 Payment Methods &amp;
+Grace Periods</a></li>
+<li><a href="#managing-invoices-receipts">4.2.3 Managing Invoices &amp;
+Receipts</a></li>
+</ul></li>
+<li><a href="#user-role-management">4.3 User &amp; Role Management</a>
+<ul>
+<li><a href="#role-based-access-permissions">4.3.1 Role-Based Access
+&amp; Permissions</a></li>
+<li><a href="#caregiver-profiles">4.3.2 Caregiver Profiles</a></li>
+<li><a href="#patient-profiles-linking">4.3.3 Patient Profiles &amp;
+Linking</a></li>
+<li><a href="#family-guest-access">4.3.4 Family &amp; Guest
+Access</a></li>
+</ul></li>
+<li><a href="#dashboards-menus">4.4 Dashboards &amp; Menus</a>
+<ul>
+<li><a href="#patient-dashboard">4.4.1 Patient Dashboard</a></li>
+<li><a href="#caregiver-command-center">4.4.2 Caregiver Command
+Center</a></li>
+<li><a href="#global-navigation-quick-actions">4.4.3 Global Navigation
+&amp; Quick Actions</a></li>
+</ul></li>
+<li><a href="#scheduling-calendars-notifications">4.5 Scheduling,
+Calendars &amp; Notifications</a>
+<ul>
+<li><a href="#task-templates-custom-scheduling">4.5.1 Task Templates
+&amp; Custom Scheduling</a></li>
+<li><a href="#caregiver-shift-scheduling">4.5.2 Caregiver Shift
+Scheduling</a></li>
+<li><a href="#patient-calendar-assistant">4.5.3 Patient Calendar
+Assistant</a></li>
+<li><a href="#notification-channels-quiet-hours">4.5.4 Notification
+Channels &amp; Quiet Hours</a></li>
+</ul></li>
+<li><a href="#health-wellness-tracking">4.6 Health &amp; Wellness
+Tracking</a>
+<ul>
+<li><a href="#symptom-libraries-alerts">4.6.1 Symptom Libraries &amp;
+Alerts</a></li>
+<li><a href="#nutrition-meal-journaling">4.6.2 Nutrition &amp; Meal
+Journaling</a></li>
+<li><a href="#mood-pain-and-virtual-check-ins">4.6.3 Mood, Pain, and
+Virtual Check-Ins</a></li>
+</ul></li>
+<li><a href="#ai-integration">4.7 AI Integration</a>
+<ul>
+<li><a href="#ask-ai-health-assistant">4.7.1 Ask AI Health
+Assistant</a></li>
+<li><a href="#ai-mood-detection-during-calls">4.7.2 AI Mood Detection
+During Calls</a></li>
+<li><a href="#streaming-voice-notes-diarization">4.7.3 Streaming Voice
+Notes &amp; Diarization</a></li>
+</ul></li>
+<li><a href="#communication-telehealth">4.8 Communication &amp;
+Telehealth</a>
+<ul>
+<li><a href="#messaging-broadcasts">4.8.1 Messaging &amp;
+Broadcasts</a></li>
+<li><a href="#voice-video-telehealth-bridge">4.8.2 Voice, Video, &amp;
+Telehealth Bridge</a></li>
+<li><a href="#virtual-check-in-rounds">4.8.3 Virtual Check-In
+Rounds</a></li>
+<li><a href="#emergency-sos-qr-escalation">4.8.4 Emergency SOS &amp; QR
+Escalation</a></li>
+<li><a href="#vial-of-life-printable-card">4.8.5 Vial of Life Printable
+Card</a></li>
+</ul></li>
+<li><a href="#device-third-party-integrations">4.9 Device &amp;
+Third-Party Integrations</a>
+<ul>
+<li><a href="#wearables-remote-monitoring">4.9.1 Wearables &amp; Remote
+Monitoring</a></li>
+<li><a href="#smart-home-safety-sensors">4.9.2 Smart Home &amp; Safety
+Sensors</a></li>
+<li><a href="#usps-digest-informed-delivery">4.9.3 USPS Digest &amp;
+Informed Delivery</a></li>
+</ul></li>
+<li><a href="#files-media-management">4.10 Files &amp; Media
+Management</a></li>
+<li><a href="#gamification-community-engagement">4.11 Gamification &amp;
+Community Engagement</a></li>
+<li><a href="#analytics-reporting">4.12 Analytics &amp;
+Reporting</a></li>
+<li><a href="#electronic-visit-verification-evv">4.13 Electronic Visit
+Verification (EVV)</a>
+<ul>
+<li><a href="#launching-the-evv-workspace">4.13.1 Launching the EVV
+Workspace</a></li>
+<li><a href="#scheduling-visits">4.13.2 Scheduling Visits</a></li>
+<li><a href="#conducting-visits-capturing-evidence">4.13.3 Conducting
+Visits &amp; Capturing Evidence</a></li>
+<li><a href="#submitting-exporting-syncing">4.13.4 Submitting,
+Exporting, &amp; Syncing</a></li>
+<li><a href="#evv-video-walkthroughs">4.13.5 EVV Video
+Walkthroughs</a></li>
+</ul></li>
+<li><a href="#invoice-billing-assistant">4.14 Invoice &amp; Billing
+Assistant</a>
+<ul>
+<li><a href="#dashboard-kpis-trends">4.14.1 Dashboard KPIs &amp;
+Trends</a></li>
+<li><a href="#uploading-bills-ocr-extraction">4.14.2 Uploading Bills
+&amp; OCR Extraction</a></li>
+<li><a href="#reviewing-editing-and-saving-invoices">4.14.3 Reviewing,
+Editing, and Saving Invoices</a></li>
+<li><a href="#ai-insights-history-exports">4.14.4 AI Insights, History,
+&amp; Exports</a></li>
+<li><a href="#video-walkthrough">4.14.5 Video Walkthrough</a></li>
+</ul></li>
+<li><a href="#clinical-documentation-note-taking">4.15 Clinical
+Documentation &amp; Note Taking</a>
+<ul>
+<li><a href="#real-time-note-capture">4.15.1 Real-Time Note
+Capture</a></li>
+<li><a href="#managing-patient-notes">4.15.2 Managing Patient
+Notes</a></li>
+<li><a href="#configuring-speech-models">4.15.3 Configuring Speech
+Models</a></li>
+<li><a href="#video-walkthroughs">4.15.4 Video Walkthroughs</a></li>
+</ul></li>
+<li><a href="#safety-monitoring-fall-alerts">4.16 Safety Monitoring
+&amp; Fall Alerts</a>
+<ul>
+<li><a href="#understanding-fall-alert-streams">4.16.1 Understanding
+Fall Alert Streams</a></li>
+<li><a href="#reviewing-alert-details">4.16.2 Reviewing Alert
+Details</a></li>
+<li><a href="#responding-documenting-outcomes">4.16.3 Responding &amp;
+Documenting Outcomes</a></li>
+</ul></li>
+<li><a href="#postal-delivery-insights">4.17 Postal &amp; Delivery
+Insights</a>
+<ul>
+<li><a href="#connecting-email-sources">4.17.1 Connecting Email
+Sources</a></li>
+<li><a href="#navigating-the-digest-viewer">4.17.2 Navigating the Digest
+Viewer</a></li>
+<li><a href="#search-filtering-and-accessibility">4.17.3 Search,
+Filtering, and Accessibility</a></li>
+<li><a href="#usps-digest-video-walkthrough">4.17.4 USPS Digest Video
+Walkthrough</a></li>
+</ul></li>
+<li><a href="#localization-multilingual-experience">4.18 Localization
+&amp; Multilingual Experience</a>
+<ul>
+<li><a href="#internationalization-walkthrough">4.18.1
+Internationalization Walkthrough</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#5-security-data-management-and-general-settings">5.
+Security, Data Management, and General Settings</a>
+<ul>
+<li><a href="#ai-configuration">5.1 AI Configuration</a></li>
+<li><a href="#clear-cache-offline-queues">5.2 Clear Cache &amp; Offline
+Queues</a></li>
+<li><a href="#appearance-personalization">5.3 Appearance &amp;
+Personalization</a></li>
+</ul></li>
+<li><a href="#6-troubleshooting--support">6. Troubleshooting &amp;
+Support</a>
+<ul>
+<li><a href="#common-issues-and-solutions">6.1 Common Issues and
+Solutions</a></li>
+<li><a href="#contact-support">6.2 Contact Support</a></li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<h3 id="purpose">1.1 Purpose</h3>
+<p>The Fall CareConnect 2025 User Guide offers in-depth instructions for
+every capability available in the CareConnect ecosystem—from initial
+onboarding through advanced clinical documentation, electronic visit
+verification, and invoice automation. The guide blends narrative
+explanations with procedural steps so that patients, caregivers,
+administrators, and support staff can confidently navigate the latest
+feature set documented in SRS v5.3, TDD v4.1, PMP v4.2, and STP
+v2.1.</p>
+<h3 id="intended-audience">1.2 Intended Audience</h3>
+<ul>
+<li><strong>Patients and care recipients</strong> who use CareConnect to
+monitor health, review schedules, and stay connected to their support
+network.</li>
+<li><strong>Professional and family caregivers</strong> responsible for
+executing care plans, documenting visits, and responding to safety
+events.</li>
+<li><strong>Clinical administrators and coordinators</strong> who manage
+billing, EVV compliance, staffing, and analytics.</li>
+<li><strong>IT support specialists and developers</strong> who maintain
+integrations, troubleshoot issues, and roll out configuration
+changes.</li>
+</ul>
+<h3 id="project-documents">1.3 Project Documents</h3>
+<p>Table 1 lists the controlling project documents. Each provides deeper
+background for topics summarized in this guide.</p>
+<table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 8%" />
+<col style="width: 11%" />
+<col style="width: 49%" />
+</colgroup>
+<thead>
+<tr>
+<th>Document</th>
+<th>Version</th>
+<th>Date</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project Plan</td>
+<td>4.2</td>
+<td>11/04/2025</td>
+<td>Project charter, scope, milestones</td>
+</tr>
+<tr>
+<td>Software Requirements Specification</td>
+<td>5.3</td>
+<td>11/04/2025</td>
+<td>Functional and non-functional requirements</td>
+</tr>
+<tr>
+<td>Technical Design Document</td>
+<td>4.1</td>
+<td>11/04/2025</td>
+<td>Architecture diagrams and component designs</td>
+</tr>
+<tr>
+<td>Software Test Plan</td>
+<td>2.1</td>
+<td>11/04/2025</td>
+<td>Test strategy, test cases, acceptance criteria</td>
+</tr>
+<tr>
+<td>Programmer’s Guide</td>
+<td>1.0</td>
+<td>11/04/2025</td>
+<td>Code structure, development standards</td>
+</tr>
+<tr>
+<td>Deployment &amp; Operations Guide</td>
+<td>1.0</td>
+<td>11/04/2025</td>
+<td>Release process, infrastructure management</td>
+</tr>
+<tr>
+<td>User Guide</td>
+<td>1.0</td>
+<td>11/04/2025</td>
+<td>Platform instructions for end users</td>
+</tr>
+</tbody>
+</table>
+<h3 id="acronyms-terms-and-definitions">1.4 Acronyms, Terms, and
+Definitions</h3>
+<ul>
+<li><strong>AI</strong> – Artificial Intelligence</li>
+<li><strong>ASR</strong> – Automatic Speech Recognition</li>
+<li><strong>EDI</strong> – Electronic Data Interchange</li>
+<li><strong>EVV</strong> – Electronic Visit Verification</li>
+<li><strong>HIPAA</strong> – Health Insurance Portability and
+Accountability Act</li>
+<li><strong>MFA</strong> – Multi-Factor Authentication</li>
+<li><strong>OCR</strong> – Optical Character Recognition</li>
+<li><strong>SOS</strong> – Emergency distress signal</li>
+<li><strong>USPS</strong> – United States Postal Service</li>
+</ul>
+<hr />
+<h2 id="system-capabilities">2. System Capabilities</h2>
+<h3 id="overview">2.1 Overview</h3>
+<p>CareConnect unifies clinical coordination, remote monitoring,
+AI-assisted documentation, billing automation, and family engagement in
+a single, role-aware experience. Fall 2025 highlights include: -
+<strong>EVV workspace</strong> with visit scheduling, GPS or
+address-based check-in/out, compliance-ready EDI exports, and offline
+synchronization queues. - <strong>Invoice &amp; Billing
+Assistant</strong> for high-volume document intake, AI-powered OCR,
+duplicate detection, collaborative review, and financial KPIs. -
+<strong>Streaming voice diarization</strong> that transcribes
+multi-speaker conversations, tags participants, and stores structured
+patient notes. - <strong>Emergency response tooling</strong> featuring
+an exportable medical QR card, SOS escalation flows, fall-alert skeleton
+playback, and integration with smart-home sensors. - <strong>USPS
+informed delivery digest</strong> pulling mail previews straight from
+linked email accounts to assist with medication-by-mail tracking and
+insurance correspondence. - <strong>Expanded scheduling and calendar
+utilities</strong> covering caregiver shift planning, patient calendar
+assistants, and configurable notification windows.</p>
+<h3 id="dataflow">2.2 Dataflow</h3>
+<p>The multi-tier architecture distributes responsibilities across
+secure services: 1. <strong>Flutter front-end</strong> applications
+render dashboards, capture sensor data, perform on-device inference
+(Sherpa ONNX for speech, AI mood detection), and support offline queues.
+2. <strong>Backend services</strong> manage authentication, RBAC
+policies, visit and invoice persistence, AI orchestration, and
+notification routing over REST and WebSocket channels. 3. <strong>Data
+stores</strong> encrypt PHI at rest while maintaining immutable audit
+logs for EVV, invoice edits, and emergency events. 4.
+<strong>Integration services</strong> connect to payment processors
+(Stripe, PayPal), wearable APIs, email providers (Gmail for informed
+delivery), and AI model endpoints. 5. <strong>Notification
+engine</strong> aggregates push, SMS, email, and in-app alerts,
+respecting user-defined quiet hours and escalation rules.</p>
+<hr />
+<h2 id="technical-specifications-and-requirements">3. Technical
+Specifications and Requirements</h2>
+<h3 id="hardware">3.1 Hardware</h3>
+<ul>
+<li><strong>Mobile devices:</strong> Android 10+ or iOS 13+ with 4 GB
+RAM, camera, microphone, GPS, and Bluetooth LE for wearables.</li>
+<li><strong>Desktop/laptop:</strong> Windows 10+, macOS 12+, or Ubuntu
+22.04+ with 8 GB RAM, dual-core CPU, webcam, and dedicated storage for
+downloaded PDFs and audio notes.</li>
+<li><strong>Peripherals:</strong> Barcode scanners for medication
+intake, ECG/BP monitors, fall-detection wearables, smart speakers for
+voice commands, and printers for EVV/Invoice reports.</li>
+</ul>
+<h3 id="software">3.2 Software</h3>
+<ul>
+<li><strong>CareConnect app:</strong> Latest production build with
+access to Sherpa ONNX assets for on-device ASR, OAuth libraries for
+Google integrations, and share_plus for PDF exports.</li>
+<li><strong>Browsers:</strong> Chrome 118+, Firefox 119+, Safari 16+,
+Edge 118+.</li>
+<li><strong>Mobile permissions:</strong> Camera, microphone, location,
+file storage, motion sensors, notification access, and calendar
+integration.</li>
+<li><strong>Third-party connectors:</strong> Google API credentials for
+Gmail digest, Stripe/PayPal API keys for billing, and FHIR endpoints for
+facility EHRs if enabled.</li>
+</ul>
+<h3 id="network">3.3 Network</h3>
+<ul>
+<li><strong>Bandwidth:</strong> 10 Mbps down / 5 Mbps up for HD video; 2
+Mbps sustained uplink required for ASR streaming.</li>
+<li><strong>Security:</strong> TLS 1.2+ for all APIs, secure WebSockets
+for live dashboards, VPN support for enterprise rollouts, and DNS
+allowlists for wearable providers.</li>
+<li><strong>Offline tolerance:</strong> EVV and invoice modules queue
+transactions for later sync; ensure devices have at least 200 MB free
+storage for cached assets.</li>
+</ul>
+<hr />
+<h2 id="user-guide">4. User Guide</h2>
+<p>The following sections describe each feature in operational detail.
+Screenshots referenced in project documentation will be supplemented
+with narrated walkthrough videos in upcoming releases.</p>
+<h3 id="onboarding-authentication">4.1 Onboarding &amp;
+Authentication</h3>
+<h4 id="welcome">4.1.1 Welcome</h4>
+<ol type="1">
+<li>Launch the CareConnect app (mobile or desktop) or browse to the web
+portal.</li>
+<li>Review carousel highlights covering EVV, invoices, AI notes, and
+safety tools. Tap <code>Next</code> to advance or <code>Skip</code> to
+jump to role selection.</li>
+<li>Select <code>Get Started</code> to see the role chooser (Patient,
+Caregiver, Organization Admin, Family Viewer).</li>
+<li>Optional: open the <code>Platform Tour</code> overlay for a guided
+walkthrough of new Fall 2025 capabilities.</li>
+</ol>
+<h4 id="user-registration">4.1.2 User Registration</h4>
+<ol type="1">
+<li>Choose your role. Organization administrators may invite additional
+staff post-registration.</li>
+<li>Enter personal details (legal name, preferred display name, email,
+mobile). Caregivers can scan a QR invite from an administrator to
+pre-fill credentials.</li>
+<li>Create a strong password (minimum 12 characters). Password strength
+meters enforce policies documented in the SRS.</li>
+<li>Select a sign-in method: email/password, SSO (Azure AD, Google
+Workspace), or SMS one-time passcode for limited-use caregiver
+kiosks.</li>
+<li>Accept Terms of Service and Privacy Policy, then submit.</li>
+<li>Confirm the verification email or SMS. For SSO, the IdP redirect
+completes activation.</li>
+</ol>
+<h4 id="login-session-management">4.1.3 Login &amp; Session
+Management</h4>
+<ol type="1">
+<li>Enter your credentials on the <code>Login</code> screen or choose
+your SSO provider.</li>
+<li>Devices remember trusted sessions for 30 days unless policy
+overrides apply.</li>
+<li>Idle sessions auto-lock based on role: 10 minutes for caregiver
+clinical consoles, 30 minutes for family viewers.</li>
+<li>View active sessions under <code>Settings &gt; Security</code> to
+terminate remote devices if needed.</li>
+</ol>
+<h4 id="password-reset-account-recovery">4.1.4 Password Reset &amp;
+Account Recovery</h4>
+<ol type="1">
+<li>Tap <code>Forgot Password?</code> on the login screen.</li>
+<li>Provide the registered email address and confirm the reset
+request.</li>
+<li>Click the secure link delivered via email/SMS within 15 minutes and
+set a new password.</li>
+<li>Administrators can issue temporary access codes for clinicians who
+cannot access email.</li>
+<li>For compromised accounts, administrators can force a password reset
+and revoke tokens in the admin console.</li>
+</ol>
+<h4 id="session-timeout-mfa">4.1.5 Session Timeout &amp; MFA</h4>
+<ol type="1">
+<li>Enable MFA via authenticator app, SMS, or hardware key under
+<code>Settings &gt; Security</code>.</li>
+<li>Configure session timeout overrides for shared devices—CareConnect
+enforces maximums defined in the Deployment Guide (15 minutes for EVV
+tablets, 5 minutes for kiosk tablets).</li>
+<li>If MFA fails while offline, use backup codes generated during setup.
+Store them securely.</li>
+</ol>
+<h3 id="billing-subscription-management">4.2 Billing &amp; Subscription
+Management</h3>
+<h4 id="plan-selection-activation">4.2.1 Plan Selection &amp;
+Activation</h4>
+<ol type="1">
+<li>Navigate to <code>Settings &gt; Billing</code>.</li>
+<li>Review plan tiers (Patient Essentials, Care Team Pro, Organization
+Suite) with side-by-side comparisons that highlight EVV capacity,
+invoice automation, and AI note allocations.</li>
+<li>Click <code>Activate</code> to launch the checkout wizard. Stripe
+handles cards and ACH; PayPal is available for agencies with existing
+agreements.</li>
+<li>Confirm billing contact, business name, tax ID, and auto-renew
+preferences before finalizing.</li>
+</ol>
+<h4 id="payment-methods-grace-periods">4.2.2 Payment Methods &amp; Grace
+Periods</h4>
+<ol type="1">
+<li>Add or update payment methods under
+<code>Manage Payment Methods</code>.</li>
+<li>Define a backup method to avoid service interruption. The system
+cascades to the backup if the primary fails.</li>
+<li>Failed charges trigger a 7-day grace period. During grace, premium
+features display warning badges but remain accessible for critical
+workflows (EVV submission, invoice review).</li>
+<li>After grace expiration, premium features downgrade while core data
+remains intact for 60 days pending payment.</li>
+</ol>
+<h4 id="managing-invoices-receipts">4.2.3 Managing Invoices &amp;
+Receipts</h4>
+<ol type="1">
+<li>Download billing receipts and statements directly from the Billing
+page.</li>
+<li>Export histories as CSV for finance reconciliation.</li>
+<li>Toggle email invoice delivery to route copies to accounting
+addresses.</li>
+<li>See Section <a href="#414-invoice--billing-assistant">4.14</a> for
+managing clinical invoices within the Invoice Assistant.</li>
+</ol>
+<h3 id="user-role-management">4.3 User &amp; Role Management</h3>
+<h4 id="role-based-access-permissions">4.3.1 Role-Based Access &amp;
+Permissions</h4>
+<ol type="1">
+<li>Open <code>Admin Console &gt; Roles</code> to view default RBAC
+templates.</li>
+<li>Duplicate a role to customize permissions (e.g., allow Caregiver
+Supervisors to approve EVV corrections while restricting invoice
+edits).</li>
+<li>Each toggle controls view/edit/export rights for invoices, EVV, ASR
+notes, USPS digest, and safety dashboards.</li>
+<li>All role changes write to the immutable audit log with timestamp,
+actor, and rationale.</li>
+</ol>
+<h4 id="caregiver-profiles">4.3.2 Caregiver Profiles</h4>
+<ol type="1">
+<li>Access <code>Profile &gt; Caregiver Profile</code>.</li>
+<li>Update contact information, licenses, specialties, shift
+preferences, and language fluency.</li>
+<li>Upload credential PDFs; the system surfaces expiry alerts 30 days in
+advance.</li>
+<li>Link to wearables (step trackers) or smart badges used for fall
+detection verification.</li>
+</ol>
+<h4 id="patient-profiles-linking">4.3.3 Patient Profiles &amp;
+Linking</h4>
+<ol type="1">
+<li>Patients edit demographics, medical history, allergies, and
+medication lists from <code>Profile &gt; View Profile</code>.</li>
+<li>Caregivers can invite patients via email or secure QR code. Patients
+scan the QR from their device to accept relationships quickly.</li>
+<li>Administrators can bulk-upload patient rosters via CSV and assign
+primary caregivers.</li>
+<li>Each patient profile shows integrated modules: upcoming EVV visits,
+invoice balances, fall-alert status, and mail digest snapshots.</li>
+</ol>
+<h4 id="family-guest-access">4.3.4 Family &amp; Guest Access</h4>
+<ol type="1">
+<li>Patients open <code>Profile &gt; Family Access</code> to invite
+viewers (read-only, wellness summaries, emergency contacts).</li>
+<li>Invitations send via email with configurable expiry (24 hours, 3
+days, 7 days).</li>
+<li>Family members can elevate to <code>Care Partner</code> status upon
+patient approval, granting permissions to respond to fall alerts and
+view EVV history.</li>
+<li>Administrators may revoke access or downgrade roles if misuse is
+detected.</li>
+</ol>
+<h3 id="dashboards-menus">4.4 Dashboards &amp; Menus</h3>
+<h4 id="patient-dashboard">4.4.1 Patient Dashboard</h4>
+<ol type="1">
+<li>Displays wellness widgets (mood, pain, vitals), today’s tasks,
+upcoming EVV visits, outstanding invoices, and USPS mail previews.</li>
+<li>The <code>Health Snapshot</code> combines symptom trends with
+medication adherence, pulling data from standardized templates.</li>
+<li><code>Financial Summary</code> shows unpaid invoices and insurance
+reimbursements awaiting review.</li>
+<li>Patients can rearrange widgets and pin the <code>Ask AI</code> panel
+for quick guidance.</li>
+</ol>
+<h4 id="caregiver-command-center">4.4.2 Caregiver Command Center</h4>
+<ol type="1">
+<li>Caregivers land on a roster with priority flags (overdue EVV visit,
+negative mood alert, high-risk fall detection).</li>
+<li>Quick actions on each patient card include <code>Message</code>,
+<code>Start Video Visit</code>, <code>Document Note</code>,
+<code>Invoice Review</code>, and <code>Emergency QR</code>.</li>
+<li>The top banner highlights shift assignments, offline items pending
+sync, and broadcast announcements from administrators.</li>
+<li>Integrated <code>Invoice Overview</code> cards display unpaid
+counts, linking directly to relevant invoice filters.</li>
+</ol>
+<h4 id="global-navigation-quick-actions">4.4.3 Global Navigation &amp;
+Quick Actions</h4>
+<ol type="1">
+<li>The universal hamburger menu exposes modules: Dashboard, EVV,
+Invoice Assistant, AI Notetaker, Files, Wearables, USPS Digest,
+Settings, and Help Center.</li>
+<li><code>More</code> drawers differ by role—patients see wellness and
+financial tools; caregivers see documentation and scheduling
+utilities.</li>
+<li>The floating action button toggles contextually (add task, start
+note, upload document).</li>
+</ol>
+<h3 id="scheduling-calendars-notifications">4.5 Scheduling, Calendars
+&amp; Notifications</h3>
+<h4 id="task-templates-custom-scheduling">4.5.1 Task Templates &amp;
+Custom Scheduling</h4>
+<ol type="1">
+<li>From a patient profile, select <code>Assign Task</code>.</li>
+<li>Choose a template (e.g., Post-Operative Pain Management) to
+auto-fill instructions, frequencies, and responsible parties.</li>
+<li>Customize tasks with start/end times, recurrence (daily, weekly,
+interval), and reminder windows.</li>
+<li>Save to notify assignees and log the addition in the patient
+timeline.</li>
+</ol>
+<h4 id="caregiver-shift-scheduling">4.5.2 Caregiver Shift
+Scheduling</h4>
+<ol type="1">
+<li>Open <code>Scheduling &gt; Caregiver Shifts</code>.</li>
+<li>Toggle <code>Recurring Shift</code> to define weekly patterns or
+leave disabled for one-time coverage.</li>
+<li>Select start/end times via the time picker and tap days (S–S) to
+indicate coverage.</li>
+<li>Save to publish to the organization calendar. Peers see availability
+and can request swaps through the messaging channel.</li>
+</ol>
+<h4 id="patient-calendar-assistant">4.5.3 Patient Calendar
+Assistant</h4>
+<ol type="1">
+<li>Access <code>Calendar Assistant</code> from the patient
+dashboard.</li>
+<li>View consolidated appointments (EVV visits, telehealth, medication
+refills, USPS package deliveries).</li>
+<li>Enable smart suggestions to auto-fill routine events based on
+historical adherence.</li>
+<li>Sync with external calendars (Google, Outlook) by authorizing
+integration; read-only links are available for family.</li>
+</ol>
+<p><strong>Video walkthrough:</strong><br />
+<video src="../user-videos/calendar-assistant.mp4" controls width="640" poster="../user-videos/thumbnails/calendar-assistant.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/calendar-assistant.mp4">here</a>. </video></p>
+<h4 id="notification-channels-quiet-hours">4.5.4 Notification Channels
+&amp; Quiet Hours</h4>
+<ol type="1">
+<li>Navigate to <code>Settings &gt; Notifications</code>.</li>
+<li>Enable delivery methods (push, SMS, email) individually for EVV,
+invoices, ASR note tasks, fall alerts, and USPS digests.</li>
+<li>Set quiet hours to pause non-critical alerts; critical alerts (SOS,
+high-impact fall) automatically override.</li>
+<li>Use <code>Test Notification</code> to verify channel health.</li>
+</ol>
+<h3 id="health-wellness-tracking">4.6 Health &amp; Wellness
+Tracking</h3>
+<h4 id="symptom-libraries-alerts">4.6.1 Symptom Libraries &amp;
+Alerts</h4>
+<ol type="1">
+<li>Caregivers assign default symptom libraries (fatigue, nausea,
+dizziness) or add custom symptoms per patient.</li>
+<li>Patients respond to symptom prompts triggered via push
+notifications. Responses populate charts and trigger alerts when
+thresholds are exceeded.</li>
+<li>Mood-symptom correlation graphs help clinicians identify
+interactions between treatments and reported wellness.</li>
+</ol>
+<h4 id="nutrition-meal-journaling">4.6.2 Nutrition &amp; Meal
+Journaling</h4>
+<ol type="1">
+<li>Patients log meals under <code>Health &gt; Meal Log</code> with
+time, ingredients, and portion size.</li>
+<li>Caregivers configure default questions (hydration status, appetite
+changes) and attach to patients individually.</li>
+<li>AI summarization flags nutrition trends and suggests follow-ups
+inside the caregiver dashboard.</li>
+</ol>
+<h4 id="mood-pain-and-virtual-check-ins">4.6.3 Mood, Pain, and Virtual
+Check-Ins</h4>
+<ol type="1">
+<li>The <code>How are you feeling today?</code> widget captures mood via
+emojis and optional comments.</li>
+<li>The pain slider records intensity on a 1–10 scale with clear
+iconography.</li>
+<li>Caregivers review results in the <code>Vital Data</code> card.
+Negative moods trigger notifications and auto-suggest a virtual
+check-in.</li>
+<li>Virtual check-in histories display clinician, duration, mood
+outcomes, and summary notes with next scheduled sessions.</li>
+</ol>
+<h3 id="ai-integration">4.7 AI Integration</h3>
+<h4 id="ask-ai-health-assistant">4.7.1 Ask AI Health Assistant</h4>
+<ol type="1">
+<li>Tap the blue <code>Ask AI</code> button to open the conversational
+assistant.</li>
+<li>Type or upload documents (discharge instructions, lab results). AI
+provides context-aware answers, using on-device summaries when
+offline.</li>
+<li>Share responses with caregivers or append them to patient notes for
+review.</li>
+</ol>
+<h4 id="ai-mood-detection-during-calls">4.7.2 AI Mood Detection During
+Calls</h4>
+<ol type="1">
+<li>Start a video call from patient or caregiver dashboards.</li>
+<li>Grant camera and microphone permissions when prompted.</li>
+<li>During the call, the left panel displays emoji mood assessments
+derived from facial cues, refreshing every few seconds.</li>
+<li>Post-call summaries capture mood trends for longitudinal
+review.</li>
+</ol>
+<h4 id="streaming-voice-notes-diarization">4.7.3 Streaming Voice Notes
+&amp; Diarization</h4>
+<ol type="1">
+<li>Open <code>AI Notetaker</code> or start a note from within a
+telehealth session.</li>
+<li>Press <code>Record</code> to capture audio. The system uses Sherpa
+ONNX models to transcribe speech in real time and detect speaker
+changes.</li>
+<li>Label speakers (Patient, Caregiver, Specialist) to improve
+diarization. Add new speaker names on the fly.</li>
+<li>After recording, review the transcript, remove sensitive segments,
+and save to the patient chart. Notes can be exported as PDF or shared
+with supervisors.</li>
+</ol>
+<h3 id="communication-telehealth">4.8 Communication &amp;
+Telehealth</h3>
+<h4 id="messaging-broadcasts">4.8.1 Messaging &amp; Broadcasts</h4>
+<ol type="1">
+<li>Use <code>Messages</code> for one-to-one or group chats. Attach
+photos, documents, or audio snippets.</li>
+<li>Mark messages as <code>High Priority</code> to escalate
+notifications.</li>
+<li>Administrators send broadcasts from
+<code>Messages &gt; Broadcasts</code> to disseminate policy updates;
+recipients acknowledge receipt for audit tracking.</li>
+</ol>
+<h4 id="voice-video-telehealth-bridge">4.8.2 Voice, Video, &amp;
+Telehealth Bridge</h4>
+<ol type="1">
+<li>Start audio/video calls from patient cards, invoices (for billing
+disputes), or EVV visit details.</li>
+<li>Telehealth Bridge integrates third-party providers; join meetings
+from within CareConnect without switching apps.</li>
+<li>Screen share (web) or share files mid-call to collaborate on care
+plans.</li>
+</ol>
+<h4 id="virtual-check-in-rounds">4.8.3 Virtual Check-In Rounds</h4>
+<ol type="1">
+<li>Access <code>Virtual Check-In</code> from patient dashboards or the
+navigation drawer.</li>
+<li>Configure question sets, cadence, and responsible clinicians.</li>
+<li>During rounds, clinicians document key observations and mark
+follow-up actions. Completed rounds feed analytics and trigger
+notifications if critical responses are captured.</li>
+</ol>
+<h4 id="emergency-sos-qr-escalation">4.8.4 Emergency SOS &amp; QR
+Escalation</h4>
+<ol type="1">
+<li>Activate SOS by pressing and holding the red button for three
+seconds.</li>
+<li>Confirm emergency type (medical, safety, other). CareConnect sends
+GPS, profile, and contact info to responders.</li>
+<li>Generate an emergency QR card under
+<code>Safety &gt; Emergency QR</code>. Share or print the card; first
+responders scan to access vital details and contacts.</li>
+</ol>
+<h4 id="vial-of-life-printable-card">4.8.5 Vial of Life Printable
+Card</h4>
+<ol type="1">
+<li>From the Emergency QR screen, tap
+<code>Generate Vial of Life PDF</code> to build a printable summary of
+vital medical information and emergency contacts.</li>
+<li>Review the preview to confirm details such as medications,
+allergies, and primary physician before printing.</li>
+<li>Use the <code>Download</code> or <code>Share</code> buttons to
+distribute the PDF to caregivers, place it on the refrigerator, or store
+it in emergency kits.</li>
+<li>Reprint after any profile update so responders always have the
+latest information.</li>
+</ol>
+<p><strong>Video walkthrough:</strong><br />
+<video src="../user-videos/vial-of-life.mov" controls width="640" poster="../user-videos/thumbnails/vial-of-life.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/vial-of-life.mov">here</a>. </video></p>
+<h3 id="device-third-party-integrations">4.9 Device &amp; Third-Party
+Integrations</h3>
+<h4 id="wearables-remote-monitoring">4.9.1 Wearables &amp; Remote
+Monitoring</h4>
+<ol type="1">
+<li>Open <code>Integrations &gt; Wearables</code> to connect Fitbit,
+Apple Health, Garmin, or proprietary devices.</li>
+<li>Authorize data sharing. Vital metrics sync into the patient
+dashboard and trigger alerts when out of range.</li>
+<li>Remote monitoring devices (glucometers, BP cuffs) pair via
+Bluetooth/Wi-Fi; configure thresholds and escalation rules in the setup
+wizard.</li>
+</ol>
+<h4 id="smart-home-safety-sensors">4.9.2 Smart Home &amp; Safety
+Sensors</h4>
+<ol type="1">
+<li>Access <code>Integrations &gt; Smart Home</code> to link
+fall-detection mats, motion sensors, or voice assistants.</li>
+<li>Map each sensor to a room or patient. Alerts appear in the Fall
+Alert module with skeletal playback when available.</li>
+<li>Use automation rules to turn on lights or notify caregivers when
+movement patterns change unexpectedly.</li>
+</ol>
+<p><strong>Video walkthrough:</strong><br />
+<video src="../user-videos/smart-devices-alexa.mp4" controls width="640" poster="../user-videos/thumbnails/smart-devices-alexa.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/smart-devices-alexa.mp4">here</a>. </video></p>
+<h4 id="usps-digest-informed-delivery">4.9.3 USPS Digest &amp; Informed
+Delivery</h4>
+<p>See Section <a href="#417-postal--delivery-insights">4.17</a> for a
+full walkthrough.</p>
+<h3 id="files-media-management">4.10 Files &amp; Media Management</h3>
+<ol type="1">
+<li>Navigate to <code>Files Management</code> to upload photos, PDFs,
+scans, or transcribed documents.</li>
+<li>Categorize uploads (Lab Results, Insurance, Care Plans). Add tags
+for fast retrieval.</li>
+<li>Use speech-to-text capture for dictated documents, or enter text
+manually.</li>
+<li>Share files with specific team members or generate expiring public
+links for external specialists.</li>
+</ol>
+<h3 id="gamification-community-engagement">4.11 Gamification &amp;
+Community Engagement</h3>
+<ol type="1">
+<li><code>Achievements</code> track XP earned from completing tasks,
+check-ins, and note documentation.</li>
+<li>Patients opt into leaderboards to compare progress with peers using
+anonymized identifiers.</li>
+<li>Daily motivation messages adapt to adherence patterns and wellness
+logs.</li>
+<li>The <code>Community</code> tab enables social posts, friend
+requests, and direct messaging among approved contacts.</li>
+</ol>
+<h3 id="analytics-reporting">4.12 Analytics &amp; Reporting</h3>
+<ol type="1">
+<li>Open <code>Analytics</code> to view adherence rates, EVV completion
+metrics, invoice payment trends, and fall alert outcomes.</li>
+<li>Filter by date range, care team, or facility.</li>
+<li>Export dashboards as PDF or data tables (CSV). Scheduled reports
+deliver to specified emails weekly or monthly.</li>
+<li>Toggle <code>Real-time</code> vs <code>Batch</code> processing
+depending on operational needs. Real-time streams update dashboards
+instantly; batch modes process overnight for performance.</li>
+</ol>
+<h3 id="electronic-visit-verification-evv">4.13 Electronic Visit
+Verification (EVV)</h3>
+<h4 id="launching-the-evv-workspace">4.13.1 Launching the EVV
+Workspace</h4>
+<ol type="1">
+<li>Select <code>EVV</code> from the caregiver navigation drawer.</li>
+<li>Summary tiles show Overdue, Ready, Upcoming, and Total Today counts
+to prioritize action.</li>
+<li>Toggle between <code>Today</code> and <code>Upcoming</code> lists;
+filters allow sorting by patient or service type.</li>
+</ol>
+<h4 id="scheduling-visits">4.13.2 Scheduling Visits</h4>
+<ol type="1">
+<li>Tap <code>Schedule New Visit</code>.</li>
+<li>Complete required fields (Patient, Service Type, Date, Time).
+Optional inputs include duration, priority, and notes.</li>
+<li>Save to notify patients and populate the EVV calendar. Conflicts
+prompt warnings for double-booked caregivers.</li>
+</ol>
+<h4 id="conducting-visits-capturing-evidence">4.13.3 Conducting Visits
+&amp; Capturing Evidence</h4>
+<ol type="1">
+<li>When ready, tap <code>Start Visit</code> from the EVV dashboard or
+patient card.</li>
+<li>Choose check-in location (patient address or GPS). GPS requires
+location permissions; address defaults to the patient profile.</li>
+<li>During the visit, timers track duration. Add mid-visit notes or
+attach photos for documentation.</li>
+<li>Tap <code>Ready to Check Out</code>, select exit location, review
+summary, and add final notes.</li>
+</ol>
+<h4 id="submitting-exporting-syncing">4.13.4 Submitting, Exporting,
+&amp; Syncing</h4>
+<ol type="1">
+<li>Submit the visit to finalize and lock timestamps.</li>
+<li>Generate EDI exports from the visit summary. Save or share files via
+system share sheets for upload to payer portals.</li>
+<li>Offline completions queue in <code>Offline Sync</code>. When
+connectivity returns, open the queue and tap <code>Sync</code> to
+upload.</li>
+<li>Correction requests route to supervisors for approval, maintaining
+audit compliance.</li>
+</ol>
+<h4 id="evv-video-walkthroughs">4.13.5 EVV Video Walkthroughs</h4>
+<ul>
+<li><strong>Mobile caregiver app tour:</strong><br />
+<video src="../user-videos/evv-mobile.mp4" controls width="640" poster="../user-videos/thumbnails/evv-mobile.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/evv-mobile.mp4">here</a>. </video></li>
+<li><strong>Web console tour:</strong><br />
+<video src="../user-videos/evv-web.mp4" controls width="640" poster="../user-videos/thumbnails/evv-web.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/evv-web.mp4">here</a>. </video></li>
+</ul>
+<h3 id="invoice-billing-assistant">4.14 Invoice &amp; Billing
+Assistant</h3>
+<h4 id="dashboard-kpis-trends">4.14.1 Dashboard KPIs &amp; Trends</h4>
+<ol type="1">
+<li>Launch <code>Invoice Assistant</code> from the drawer.</li>
+<li>Dashboard widgets display total invoices, total amount, pending
+payments, overdue counts, and recent activity.</li>
+<li>Charts visualize payment progress, status breakdown, and monthly
+trends to highlight bottlenecks.</li>
+</ol>
+<h4 id="uploading-bills-ocr-extraction">4.14.2 Uploading Bills &amp; OCR
+Extraction</h4>
+<ol type="1">
+<li>Choose the <code>Upload Invoice</code> tab.</li>
+<li>Select files from device storage (PNG, JPG, JPEG, PDF) or capture
+using the camera. Multiple files are supported per session.</li>
+<li>Review selected files in the <code>Review Photos</code>
+screen—rotate, reorder, or remove before continuing.</li>
+<li>The system invokes the Invoice OCR + LLM service to extract vendors,
+services, patient identifiers, amounts, and line items. Offline status
+is monitored and notifications appear when connectivity resumes.</li>
+</ol>
+<h4 id="reviewing-editing-and-saving-invoices">4.14.3 Reviewing,
+Editing, and Saving Invoices</h4>
+<ol type="1">
+<li>After extraction, confirm duplicate detection messages. Proceed if
+the invoice is intentional; otherwise cancel.</li>
+<li>The detail page organizes content into tabs: <code>Details</code>,
+<code>Services</code>, <code>Payment</code>, <code>AI Insights</code>,
+and <code>History</code>.</li>
+<li>Enter edit mode to adjust fields, mark services as covered by
+insurance, or update payment status.</li>
+<li>Save changes to persist the invoice. The system logs who edited,
+when, and what changed for auditability.</li>
+</ol>
+<h4 id="ai-insights-history-exports">4.14.4 AI Insights, History, &amp;
+Exports</h4>
+<ol type="1">
+<li>Review AI-generated summaries that highlight anomalies, missing
+authorizations, or prior trends.</li>
+<li>Use <code>History</code> to see every revision with timestamps and
+comments.</li>
+<li>Download PDFs using <code>Open PDF</code> (requires original
+document link) or export structured data for accounting systems.</li>
+<li>Configure invoice notifications (overdue reminders, new upload
+alerts) in <code>Invoice Settings</code> within the module.</li>
+</ol>
+<h4 id="video-walkthrough">4.14.5 Video Walkthrough</h4>
+<video src="../user-videos/invoice-assistant.mp4" controls width="640" poster="../user-videos/thumbnails/invoice-assistant.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/invoice-assistant.mp4">here</a>.
+</video>
+<h3 id="clinical-documentation-note-taking">4.15 Clinical Documentation
+&amp; Note Taking</h3>
+<h4 id="real-time-note-capture">4.15.1 Real-Time Note Capture</h4>
+<ol type="1">
+<li>Open <code>AI Notetaker</code> or tap <code>Document Note</code>
+during a visit.</li>
+<li>Start streaming audio; transcripts populate live while diarization
+labels each speaker.</li>
+<li>Insert manual annotations or flag key moments for later review.</li>
+<li>Stop recording to finalize the transcript. Preview, redact sensitive
+content, and save to the patient record.</li>
+</ol>
+<h4 id="managing-patient-notes">4.15.2 Managing Patient Notes</h4>
+<ol type="1">
+<li>Access <code>Documentation &gt; Patient Notes</code> to search by
+patient, date, or clinician.</li>
+<li>Open a note to view transcript, summary, attachments, and related
+tasks.</li>
+<li>Share notes with team members or export to PDF. Revision history
+tracks edits and approvals.</li>
+</ol>
+<h4 id="configuring-speech-models">4.15.3 Configuring Speech Models</h4>
+<ol type="1">
+<li>Navigate to <code>Settings &gt; AI Configuration</code>.</li>
+<li>Select ASR model preferences (on-device Sherpa ONNX vs. cloud
+transcription) and diarization sensitivity.</li>
+<li>Manage audio retention policies—choose to keep raw audio locally
+only, upload encrypted copies, or delete after transcription.</li>
+</ol>
+<h4 id="video-walkthroughs">4.15.4 Video Walkthroughs</h4>
+<ul>
+<li><strong>Notetaker overview and setup:</strong><br />
+<video src="../user-videos/notetaker-overview.mp4" controls width="640" poster="../user-videos/thumbnails/notetaker-overview.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/notetaker-overview.mp4">here</a>. </video></li>
+<li><strong>Detailed transcription workflow:</strong><br />
+<video src="../user-videos/notetaker-workflow.mp4" controls width="640" poster="../user-videos/thumbnails/notetaker-transcripts.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/notetaker-workflow.mp4">here</a>. </video></li>
+</ul>
+<h3 id="safety-monitoring-fall-alerts">4.16 Safety Monitoring &amp; Fall
+Alerts</h3>
+<h4 id="understanding-fall-alert-streams">4.16.1 Understanding Fall
+Alert Streams</h4>
+<ol type="1">
+<li>Open <code>Safety &gt; Fall Alerts</code>.</li>
+<li>The timeline lists recent detections classified by severity,
+location, and source (wearable, smart home sensor, manual SOS).</li>
+<li>Skeleton playback visualizes detected falls to help clinicians
+assess legitimacy.</li>
+</ol>
+<h4 id="reviewing-alert-details">4.16.2 Reviewing Alert Details</h4>
+<ol type="1">
+<li>Tap an alert to view patient info, captured sensor data, and
+contextual notes.</li>
+<li><code>Mock Alert Lab</code> allows training drills—simulate events
+to practice response workflows.</li>
+<li>Patients can view a simplified alert history to understand caregiver
+follow-up.</li>
+</ol>
+<h4 id="responding-documenting-outcomes">4.16.3 Responding &amp;
+Documenting Outcomes</h4>
+<ol type="1">
+<li>Use the <code>Respond</code> action to call, message, or initiate a
+telehealth session with the patient.</li>
+<li>Document the resolution (assisted recovery, false alarm, escalated
+to EMS) and assign follow-up tasks.</li>
+<li>Alerts automatically notify primary caregivers, family contacts (if
+permitted), and administrators for severe events.</li>
+</ol>
+<h3 id="postal-delivery-insights">4.17 Postal &amp; Delivery
+Insights</h3>
+<h4 id="connecting-email-sources">4.17.1 Connecting Email Sources</h4>
+<ol type="1">
+<li>Navigate to <code>Integrations &gt; USPS Digest</code> or open the
+USPS Digest module directly.</li>
+<li>Authorize access to the Gmail account receiving USPS Informed
+Delivery emails.</li>
+<li>CareConnect fetches daily digests and caches images for faster
+viewing. Offline viewing uses stored thumbnails.</li>
+</ol>
+<h4 id="navigating-the-digest-viewer">4.17.2 Navigating the Digest
+Viewer</h4>
+<ol type="1">
+<li>The digest groups mailpieces and packages by delivery date. Select a
+day from the left rail to view previews.</li>
+<li>Mailpiece cards show sender, summary, and the scanned envelope
+image. Tap to enlarge or access action buttons (Track, Redelivery,
+Dashboard).</li>
+<li>Packages list tracking numbers with expected delivery dates and
+quick links to USPS services.</li>
+</ol>
+<h4 id="search-filtering-and-accessibility">4.17.3 Search, Filtering,
+and Accessibility</h4>
+<ol type="1">
+<li>Use the search bar to filter by sender or keywords; results update
+after a short debounce to reduce load.</li>
+<li>Toggle between grid and list view for accessibility. High-contrast
+mode and keyboard navigation ensure compliance with ADA guidelines.</li>
+<li>Download envelope images or share with caregivers responsible for
+medication-by-mail coordination.</li>
+</ol>
+<h4 id="usps-digest-video-walkthrough">4.17.4 USPS Digest Video
+Walkthrough</h4>
+<video src="../user-videos/InformedDelivery_USPS.mov" controls width="640" poster="../user-videos/thumbnails/usps-digest.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/InformedDelivery_USPS.mov">here</a>.
+</video>
+<h3 id="localization-multilingual-experience">4.18 Localization &amp;
+Multilingual Experience</h3>
+<p>CareConnect supports multilingual caregivers and patients through
+dynamic localization and regional formatting.</p>
+<h4 id="internationalization-walkthrough">4.18.1 Internationalization
+Walkthrough</h4>
+<ol type="1">
+<li>Open <code>Settings &gt; Preferences &gt; Language</code> to switch
+between supported locales. Text, date/time formats, and numeric
+separators update instantly.</li>
+<li>Verify RTL (right-to-left) layouts and translated UI strings using
+the localization preview panel before rolling changes into
+production.</li>
+<li>Combine localization with accessibility settings (text scaling, high
+contrast) to tailor experiences for diverse users.</li>
+</ol>
+<video src="../user-videos/localization.mp4" controls width="640" poster="../user-videos/thumbnails/internationalization.svg" preload="none">
+Your browser does not support embedded videos. Download it
+<a href="../user-videos/localization.mp4">here</a>.
+</video>
+<hr />
+<h2 id="security-data-management-and-general-settings">5. Security, Data
+Management, and General Settings</h2>
+<h3 id="ai-configuration">5.1 AI Configuration</h3>
+<ol type="1">
+<li>Open <code>Settings &gt; AI Configuration</code>.</li>
+<li>Select AI providers for Ask AI, invoice extraction, and ASR. Mix
+on-device and cloud options as permitted by organizational policy.</li>
+<li>Adjust data minimization settings (strip PHI before cloud
+processing, anonymize transcripts) and test responses with sample
+prompts.</li>
+</ol>
+<h3 id="clear-cache-offline-queues">5.2 Clear Cache &amp; Offline
+Queues</h3>
+<ol type="1">
+<li>Under <code>Settings &gt; General</code>, tap
+<code>Clear Cache</code> to remove temporary files (invoice images, ASR
+audio, USPS thumbnails).</li>
+<li>Review the <code>Offline Queue</code> to monitor pending EVV
+submissions, invoice uploads, or note saves awaiting connectivity.
+Trigger manual sync if needed.</li>
+</ol>
+<h3 id="appearance-personalization">5.3 Appearance &amp;
+Personalization</h3>
+<ol type="1">
+<li>Toggle dark or light mode from the appearance switch in the
+hamburger menu.</li>
+<li>Choose accent colors, text scaling, and widget density to match
+accessibility needs.</li>
+<li>Configure dashboard layout presets (Clinical Focus, Financial Focus,
+Safety Focus) to tailor the experience by role.</li>
+</ol>
+<hr />
+<h2 id="troubleshooting-support">6. Troubleshooting &amp; Support</h2>
+<h3 id="common-issues-and-solutions">6.1 Common Issues and
+Solutions</h3>
+<ul>
+<li><strong>Cannot log in:</strong> Verify credentials, ensure MFA
+device is available, and check for admin-issued forced resets. Use
+backup codes when offline.</li>
+<li><strong>EVV check-in fails:</strong> Confirm GPS permissions, ensure
+the patient address is correct, or switch to manual address entry when
+indoors.</li>
+<li><strong>Invoice OCR errors:</strong> Re-upload higher-resolution
+images, ensure full pages are captured, or manually key critical fields
+before saving.</li>
+<li><strong>ASR transcript inaccurate:</strong> Calibrate microphone
+placement, reduce background noise, and retrain speaker profiles in
+<code>AI Configuration</code>.</li>
+<li><strong>Fall alert false positives:</strong> Adjust sensor
+sensitivity, review smart home placement, and mark the alert as false to
+refine future detection.</li>
+<li><strong>USPS digest empty:</strong> Reauthorize Gmail access,
+confirm digest emails are arriving, or enable mock data for
+demonstration mode.</li>
+<li><strong>Notifications not received:</strong> Review notification
+settings, confirm quiet hours, and ensure device-level notification
+permissions are enabled.</li>
+</ul>
+<h3 id="contact-support">6.2 Contact Support</h3>
+<ol type="1">
+<li>Open <code>Settings &gt; Help Center</code>.</li>
+<li>Browse knowledge base articles or submit a support ticket with logs
+and screenshots.</li>
+<li>Urgent needs (failed EVV submission, SOS malfunction) trigger
+priority routing via phone or secure chat. Expect acknowledgment within
+one hour and full response within 24 hours.</li>
+</ol>
+<hr />
+<p><strong>Future Enhancements:</strong> The team is preparing guided
+video tours, interactive checklists, and localized translations to
+complement this written guide and support diverse learning
+preferences.</p>
+</body>
+</html>

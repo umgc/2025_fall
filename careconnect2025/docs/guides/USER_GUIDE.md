@@ -20,98 +20,98 @@ November 4, 2025
 ## Table of Contents
 
 - [1. Introduction – Purpose, Audience, Document Map](#1-introduction)
-  - [1.1 Purpose](#11-purpose)
-  - [1.2 Intended Audience](#12-intended-audience)
-  - [1.3 Project Documents](#13-project-documents)
-  - [1.4 Acronyms, Terms, and Definitions](#14-acronyms-terms-and-definitions)
+  - [1.1 Purpose](#purpose)
+  - [1.2 Intended Audience](#intended-audience)
+  - [1.3 Project Documents](#project-documents)
+  - [1.4 Acronyms, Terms, and Definitions](#acronyms-terms-and-definitions)
 - [2. System Capabilities – Platform Overview and Dataflow](#2-system-capabilities)
-  - [2.1 Overview](#21-overview)
-  - [2.2 Dataflow](#22-dataflow)
+  - [2.1 Overview](#overview)
+  - [2.2 Dataflow](#dataflow)
 - [3. Technical Specifications and Requirements – Hardware, Software, Network](#3-technical-specifications-and-requirements)
-  - [3.1 Hardware](#31-hardware)
-  - [3.2 Software](#32-software)
-  - [3.3 Network](#33-network)
+  - [3.1 Hardware](#hardware)
+  - [3.2 Software](#software)
+  - [3.3 Network](#network)
 - [4. User Guide – Feature Walkthroughs and How-To Scenarios](#4-user-guide)
-  - [4.1 Onboarding & Authentication](#41-onboarding--authentication)
-    - [4.1.1 Welcome](#411-welcome)
-    - [4.1.2 User Registration](#412-user-registration)
-    - [4.1.3 Login & Session Management](#413-login--session-management)
-    - [4.1.4 Password Reset & Account Recovery](#414-password-reset--account-recovery)
-    - [4.1.5 Session Timeout & MFA](#415-session-timeout--mfa)
-  - [4.2 Billing & Subscription Management](#42-billing--subscription-management)
-    - [4.2.1 Plan Selection & Activation](#421-plan-selection--activation)
-    - [4.2.2 Payment Methods & Grace Periods](#422-payment-methods--grace-periods)
-    - [4.2.3 Managing Invoices & Receipts](#423-managing-invoices--receipts)
-  - [4.3 User & Role Management](#43-user--role-management)
-    - [4.3.1 Role-Based Access & Permissions](#431-role-based-access--permissions)
-    - [4.3.2 Caregiver Profiles](#432-caregiver-profiles)
-    - [4.3.3 Patient Profiles & Linking](#433-patient-profiles--linking)
-    - [4.3.4 Family & Guest Access](#434-family--guest-access)
-  - [4.4 Dashboards & Menus](#44-dashboards--menus)
-    - [4.4.1 Patient Dashboard](#441-patient-dashboard)
-    - [4.4.2 Caregiver Command Center](#442-caregiver-command-center)
-    - [4.4.3 Global Navigation & Quick Actions](#443-global-navigation--quick-actions)
-  - [4.5 Scheduling, Calendars & Notifications](#45-scheduling-calendars--notifications)
-    - [4.5.1 Task Templates & Custom Scheduling](#451-task-templates--custom-scheduling)
-    - [4.5.2 Caregiver Shift Scheduling](#452-caregiver-shift-scheduling)
-    - [4.5.3 Patient Calendar Assistant](#453-patient-calendar-assistant)
-    - [4.5.4 Notification Channels & Quiet Hours](#454-notification-channels--quiet-hours)
-  - [4.6 Health & Wellness Tracking](#46-health--wellness-tracking)
-    - [4.6.1 Symptom Libraries & Alerts](#461-symptom-libraries--alerts)
-    - [4.6.2 Nutrition & Meal Journaling](#462-nutrition--meal-journaling)
-    - [4.6.3 Mood, Pain, and Virtual Check-Ins](#463-mood-pain-and-virtual-check-ins)
-  - [4.7 AI Integration](#47-ai-integration)
-    - [4.7.1 Ask AI Health Assistant](#471-ask-ai-health-assistant)
-    - [4.7.2 AI Mood Detection During Calls](#472-ai-mood-detection-during-calls)
-    - [4.7.3 Streaming Voice Notes & Diarization](#473-streaming-voice-notes--diarization)
-  - [4.8 Communication & Telehealth](#48-communication--telehealth)
-    - [4.8.1 Messaging & Broadcasts](#481-messaging--broadcasts)
-    - [4.8.2 Voice, Video, & Telehealth Bridge](#482-voice-video--telehealth-bridge)
-    - [4.8.3 Virtual Check-In Rounds](#483-virtual-check-in-rounds)
-    - [4.8.4 Emergency SOS & QR Escalation](#484-emergency-sos--qr-escalation)
-    - [4.8.5 Vial of Life Printable Card](#485-vial-of-life-printable-card)
-  - [4.9 Device & Third-Party Integrations](#49-device--third-party-integrations)
-    - [4.9.1 Wearables & Remote Monitoring](#491-wearables--remote-monitoring)
-    - [4.9.2 Smart Home & Safety Sensors](#492-smart-home--safety-sensors)
-    - [4.9.3 USPS Digest & Informed Delivery](#493-usps-digest--informed-delivery)
-  - [4.10 Files & Media Management](#410-files--media-management)
-  - [4.11 Gamification & Community Engagement](#411-gamification--community-engagement)
-  - [4.12 Analytics & Reporting](#412-analytics--reporting)
-  - [4.13 Electronic Visit Verification (EVV)](#413-electronic-visit-verification-evv)
-    - [4.13.1 Launching the EVV Workspace](#4131-launching-the-evv-workspace)
-    - [4.13.2 Scheduling Visits](#4132-scheduling-visits)
-    - [4.13.3 Conducting Visits & Capturing Evidence](#4133-conducting-visits--capturing-evidence)
-    - [4.13.4 Submitting, Exporting, & Syncing](#4134-submitting-exporting--syncing)
-    - [4.13.5 EVV Video Walkthroughs](#4135-evv-video-walkthroughs)
-  - [4.14 Invoice & Billing Assistant](#414-invoice--billing-assistant)
-    - [4.14.1 Dashboard KPIs & Trends](#4141-dashboard-kpis--trends)
-    - [4.14.2 Uploading Bills & OCR Extraction](#4142-uploading-bills--ocr-extraction)
-    - [4.14.3 Reviewing, Editing, and Saving Invoices](#4143-reviewing-editing-and-saving-invoices)
-    - [4.14.4 AI Insights, History, & Exports](#4144-ai-insights-history--exports)
-    - [4.14.5 Video Walkthrough](#4145-video-walkthrough)
-  - [4.15 Clinical Documentation & Note Taking](#415-clinical-documentation--note-taking)
-    - [4.15.1 Real-Time Note Capture](#4151-real-time-note-capture)
-    - [4.15.2 Managing Patient Notes](#4152-managing-patient-notes)
-    - [4.15.3 Configuring Speech Models](#4153-configuring-speech-models)
-    - [4.15.4 Video Walkthroughs](#4154-video-walkthroughs)
-  - [4.16 Safety Monitoring & Fall Alerts](#416-safety-monitoring--fall-alerts)
-    - [4.16.1 Understanding Fall Alert Streams](#4161-understanding-fall-alert-streams)
-    - [4.16.2 Reviewing Alert Details](#4162-reviewing-alert-details)
-    - [4.16.3 Responding & Documenting Outcomes](#4163-responding--documenting-outcomes)
-  - [4.17 Postal & Delivery Insights](#417-postal--delivery-insights)
-    - [4.17.1 Connecting Email Sources](#4171-connecting-email-sources)
-    - [4.17.2 Navigating the Digest Viewer](#4172-navigating-the-digest-viewer)
-    - [4.17.3 Search, Filtering, and Accessibility](#4173-search-filtering-and-accessibility)
-    - [4.17.4 USPS Digest Video Walkthrough](#4174-usps-digest-video-walkthrough)
-  - [4.18 Localization & Multilingual Experience](#418-localization--multilingual-experience)
-    - [4.18.1 Internationalization Walkthrough](#4181-internationalization-walkthrough)
+  - [4.1 Onboarding & Authentication](#onboarding-authentication)
+    - [4.1.1 Welcome](#welcome)
+    - [4.1.2 User Registration](#user-registration)
+    - [4.1.3 Login & Session Management](#login-session-management)
+    - [4.1.4 Password Reset & Account Recovery](#password-reset-account-recovery)
+    - [4.1.5 Session Timeout & MFA](#session-timeout-mfa)
+  - [4.2 Billing & Subscription Management](#billing-subscription-management)
+    - [4.2.1 Plan Selection & Activation](#plan-selection-activation)
+    - [4.2.2 Payment Methods & Grace Periods](#payment-methods-grace-periods)
+    - [4.2.3 Managing Invoices & Receipts](#managing-invoices-receipts)
+  - [4.3 User & Role Management](#user-role-management)
+    - [4.3.1 Role-Based Access & Permissions](#role-based-access-permissions)
+    - [4.3.2 Caregiver Profiles](#caregiver-profiles)
+    - [4.3.3 Patient Profiles & Linking](#patient-profiles-linking)
+    - [4.3.4 Family & Guest Access](#family-guest-access)
+  - [4.4 Dashboards & Menus](#dashboards-menus)
+    - [4.4.1 Patient Dashboard](#patient-dashboard)
+    - [4.4.2 Caregiver Command Center](#caregiver-command-center)
+    - [4.4.3 Global Navigation & Quick Actions](#global-navigation-quick-actions)
+  - [4.5 Scheduling, Calendars & Notifications](#scheduling-calendars-notifications)
+    - [4.5.1 Task Templates & Custom Scheduling](#task-templates-custom-scheduling)
+    - [4.5.2 Caregiver Shift Scheduling](#caregiver-shift-scheduling)
+    - [4.5.3 Patient Calendar Assistant](#patient-calendar-assistant)
+    - [4.5.4 Notification Channels & Quiet Hours](#notification-channels-quiet-hours)
+  - [4.6 Health & Wellness Tracking](#health-wellness-tracking)
+    - [4.6.1 Symptom Libraries & Alerts](#symptom-libraries-alerts)
+    - [4.6.2 Nutrition & Meal Journaling](#nutrition-meal-journaling)
+    - [4.6.3 Mood, Pain, and Virtual Check-Ins](#mood-pain-and-virtual-check-ins)
+  - [4.7 AI Integration](#ai-integration)
+    - [4.7.1 Ask AI Health Assistant](#ask-ai-health-assistant)
+    - [4.7.2 AI Mood Detection During Calls](#ai-mood-detection-during-calls)
+    - [4.7.3 Streaming Voice Notes & Diarization](#streaming-voice-notes-diarization)
+  - [4.8 Communication & Telehealth](#communication-telehealth)
+    - [4.8.1 Messaging & Broadcasts](#messaging-broadcasts)
+    - [4.8.2 Voice, Video, & Telehealth Bridge](#voice-video-telehealth-bridge)
+    - [4.8.3 Virtual Check-In Rounds](#virtual-check-in-rounds)
+    - [4.8.4 Emergency SOS & QR Escalation](#emergency-sos-qr-escalation)
+    - [4.8.5 Vial of Life Printable Card](#vial-of-life-printable-card)
+  - [4.9 Device & Third-Party Integrations](#device-third-party-integrations)
+    - [4.9.1 Wearables & Remote Monitoring](#wearables-remote-monitoring)
+    - [4.9.2 Smart Home & Safety Sensors](#smart-home-safety-sensors)
+    - [4.9.3 USPS Digest & Informed Delivery](#usps-digest-informed-delivery)
+  - [4.10 Files & Media Management](#files-media-management)
+  - [4.11 Gamification & Community Engagement](#gamification-community-engagement)
+  - [4.12 Analytics & Reporting](#analytics-reporting)
+  - [4.13 Electronic Visit Verification (EVV)](#electronic-visit-verification-evv)
+    - [4.13.1 Launching the EVV Workspace](#launching-the-evv-workspace)
+    - [4.13.2 Scheduling Visits](#scheduling-visits)
+    - [4.13.3 Conducting Visits & Capturing Evidence](#conducting-visits-capturing-evidence)
+    - [4.13.4 Submitting, Exporting, & Syncing](#submitting-exporting-syncing)
+    - [4.13.5 EVV Video Walkthroughs](#evv-video-walkthroughs)
+  - [4.14 Invoice & Billing Assistant](#invoice-billing-assistant)
+    - [4.14.1 Dashboard KPIs & Trends](#dashboard-kpis-trends)
+    - [4.14.2 Uploading Bills & OCR Extraction](#uploading-bills-ocr-extraction)
+    - [4.14.3 Reviewing, Editing, and Saving Invoices](#reviewing-editing-and-saving-invoices)
+    - [4.14.4 AI Insights, History, & Exports](#ai-insights-history-exports)
+    - [4.14.5 Video Walkthrough](#video-walkthrough)
+  - [4.15 Clinical Documentation & Note Taking](#clinical-documentation-note-taking)
+    - [4.15.1 Real-Time Note Capture](#real-time-note-capture)
+    - [4.15.2 Managing Patient Notes](#managing-patient-notes)
+    - [4.15.3 Configuring Speech Models](#configuring-speech-models)
+    - [4.15.4 Video Walkthroughs](#video-walkthroughs)
+  - [4.16 Safety Monitoring & Fall Alerts](#safety-monitoring-fall-alerts)
+    - [4.16.1 Understanding Fall Alert Streams](#understanding-fall-alert-streams)
+    - [4.16.2 Reviewing Alert Details](#reviewing-alert-details)
+    - [4.16.3 Responding & Documenting Outcomes](#responding-documenting-outcomes)
+  - [4.17 Postal & Delivery Insights](#postal-delivery-insights)
+    - [4.17.1 Connecting Email Sources](#connecting-email-sources)
+    - [4.17.2 Navigating the Digest Viewer](#navigating-the-digest-viewer)
+    - [4.17.3 Search, Filtering, and Accessibility](#search-filtering-and-accessibility)
+    - [4.17.4 USPS Digest Video Walkthrough](#usps-digest-video-walkthrough)
+  - [4.18 Localization & Multilingual Experience](#localization-multilingual-experience)
+    - [4.18.1 Internationalization Walkthrough](#internationalization-walkthrough)
 - [5. Security, Data Management, and General Settings](#5-security-data-management-and-general-settings)
-  - [5.1 AI Configuration](#51-ai-configuration)
-  - [5.2 Clear Cache & Offline Queues](#52-clear-cache--offline-queues)
-  - [5.3 Appearance & Personalization](#53-appearance--personalization)
+  - [5.1 AI Configuration](#ai-configuration)
+  - [5.2 Clear Cache & Offline Queues](#clear-cache-offline-queues)
+  - [5.3 Appearance & Personalization](#appearance-personalization)
 - [6. Troubleshooting & Support](#6-troubleshooting--support)
-  - [6.1 Common Issues and Solutions](#61-common-issues-and-solutions)
-  - [6.2 Contact Support](#62-contact-support)
+  - [6.1 Common Issues and Solutions](#common-issues-and-solutions)
+  - [6.2 Contact Support](#contact-support)
 
 ---
 
@@ -316,10 +316,8 @@ The following sections describe each feature in operational detail. Screenshots 
 4. Sync with external calendars (Google, Outlook) by authorizing integration; read-only links are available for family.
 
 **Video walkthrough:**  
-<video src="../user-videos/calendar-assistant.mp4" controls width="640" poster="../user-videos/thumbnails/calendar-assistant.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/calendar-assistant.mp4">here</a>.
-</video>
+![Calendar assistant walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)
 
 #### 4.5.4 Notification Channels & Quiet Hours
 1. Navigate to `Settings > Notifications`.
@@ -393,10 +391,8 @@ The following sections describe each feature in operational detail. Screenshots 
 4. Reprint after any profile update so responders always have the latest information.
 
 **Video walkthrough:**  
-<video src="../user-videos/vial-of-life.mov" controls width="640" poster="../user-videos/thumbnails/vial-of-life.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/vial-of-life.mov">here</a>.
-</video>
+![Vial of Life walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/vial-of-life.mov)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/vial-of-life.mov)
 
 ### 4.9 Device & Third-Party Integrations
 
@@ -411,10 +407,8 @@ The following sections describe each feature in operational detail. Screenshots 
 3. Use automation rules to turn on lights or notify caregivers when movement patterns change unexpectedly.
 
 **Video walkthrough:**  
-<video src="../user-videos/smart-devices-alexa.mp4" controls width="640" poster="../user-videos/thumbnails/smart-devices-alexa.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/smart-devices-alexa.mp4">here</a>.
-</video>
+![Smart devices integration walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)
 
 #### 4.9.3 USPS Digest & Informed Delivery
 See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
@@ -462,16 +456,12 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 4. Correction requests route to supervisors for approval, maintaining audit compliance.
 
 #### 4.13.5 EVV Video Walkthroughs
-- **Mobile caregiver app tour:**  
-  <video src="../user-videos/evv-mobile.mp4" controls width="640" poster="../user-videos/thumbnails/evv-mobile.svg" preload="none">
-    Your browser does not support embedded videos. Download it
-    <a href="../user-videos/evv-mobile.mp4">here</a>.
-  </video>
-- **Web console tour:**  
-  <video src="../user-videos/evv-web.mp4" controls width="640" poster="../user-videos/thumbnails/evv-web.svg" preload="none">
-    Your browser does not support embedded videos. Download it
-    <a href="../user-videos/evv-web.mp4">here</a>.
-  </video>
+- **Mobile caregiver app tour**  
+  ![EVV mobile caregiver walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-mobile.mp4)  
+  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-mobile.mp4)
+- **Web console tour**  
+  ![EVV web console walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-web.mp4)  
+  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-web.mp4)
 
 ### 4.14 Invoice & Billing Assistant
 
@@ -499,10 +489,8 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 4. Configure invoice notifications (overdue reminders, new upload alerts) in `Invoice Settings` within the module.
 
 #### 4.14.5 Video Walkthrough
-<video src="../user-videos/invoice-assistant.mp4" controls width="640" poster="../user-videos/thumbnails/invoice-assistant.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/invoice-assistant.mp4">here</a>.
-</video>
+![Invoice Assistant walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)
 
 ### 4.15 Clinical Documentation & Note Taking
 
@@ -523,16 +511,12 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 3. Manage audio retention policies—choose to keep raw audio locally only, upload encrypted copies, or delete after transcription.
 
 #### 4.15.4 Video Walkthroughs
-- **Notetaker overview and setup:**  
-  <video src="../user-videos/notetaker-overview.mp4" controls width="640" poster="../user-videos/thumbnails/notetaker-overview.svg" preload="none">
-    Your browser does not support embedded videos. Download it
-    <a href="../user-videos/notetaker-overview.mp4">here</a>.
-  </video>
-- **Detailed transcription workflow:**  
-  <video src="../user-videos/notetaker-workflow.mp4" controls width="640" poster="../user-videos/thumbnails/notetaker-transcripts.svg" preload="none">
-    Your browser does not support embedded videos. Download it
-    <a href="../user-videos/notetaker-workflow.mp4">here</a>.
-  </video>
+- **Notetaker overview and setup**  
+  ![Notetaker overview walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)  
+  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)
+- **Detailed transcription workflow**  
+  ![Notetaker transcription workflow walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)  
+  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)
 
 ### 4.16 Safety Monitoring & Fall Alerts
 
@@ -569,10 +553,8 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 3. Download envelope images or share with caregivers responsible for medication-by-mail coordination.
 
 #### 4.17.4 USPS Digest Video Walkthrough
-<video src="../user-videos/InformedDelivery_USPS.mov" controls width="640" poster="../user-videos/thumbnails/usps-digest.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/InformedDelivery_USPS.mov">here</a>.
-</video>
+![USPS digest walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)
 
 ### 4.18 Localization & Multilingual Experience
 CareConnect supports multilingual caregivers and patients through dynamic localization and regional formatting.
@@ -582,10 +564,8 @@ CareConnect supports multilingual caregivers and patients through dynamic locali
 2. Verify RTL (right-to-left) layouts and translated UI strings using the localization preview panel before rolling changes into production.
 3. Combine localization with accessibility settings (text scaling, high contrast) to tailor experiences for diverse users.
 
-<video src="../user-videos/localization.mp4" controls width="640" poster="../user-videos/thumbnails/internationalization.svg" preload="none">
-  Your browser does not support embedded videos. Download it
-  <a href="../user-videos/localization.mp4">here</a>.
-</video>
+![Localization experience walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/localization.mp4)  
+[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/localization.mp4)
 
 ---
 
