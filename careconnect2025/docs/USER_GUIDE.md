@@ -14,17 +14,18 @@ F# CareConnect 2025 User Guide
 10. [AI and Voice Commands](#ai-and-voice-commands)
 11. [Video Calling and Telehealth](#video-calling-and-telehealth)
 12. [Task Management](#task-management)
-13. [Gamification and Achievements](#gamification-and-achievements)
-14. [Payment and Subscriptions](#payment-and-subscriptions)
-15. [File Management](#file-management)
-16. [Device Integration](#device-integration)
-17. [Notifications and Alerts](#notifications-and-alerts)
-18. [Emergency Features](#emergency-features)
-19. [Electronic Visit Verification](#electronic-visit-verification)
-20. [Invoice Assistant](#invoice-assistant)
-21. [Privacy and Security](#privacy-and-security)
-22. [Troubleshooting](#troubleshooting)
-23. [Support and Contact](#support-and-contact)
+13. [Notetaking](#notetaking)
+14. [Gamification and Achievements](#gamification-and-achievements)
+15. [Payment and Subscriptions](#payment-and-subscriptions)
+16. [File Management](#file-management)
+17. [Device Integration](#device-integration)
+18. [Notifications and Alerts](#notifications-and-alerts)
+19. [Emergency Features](#emergency-features)
+20. [Electronic Visit Verification](#electronic-visit-verification)
+21. [Invoice Assistant](#invoice-assistant)
+22. [Privacy and Security](#privacy-and-security)
+23. [Troubleshooting](#troubleshooting)
+24. [Support and Contact](#support-and-contact)
 
 ## Introduction
 
@@ -230,6 +231,11 @@ The CareConnect dashboard is your central hub for all activities and information
    - Allows for submission and discarding of videos
    - Videos are submitted to an AI service for mood analysis
 
+5. **Virtual Check-In**
+   - Patients receive scheduled check-ins configured by their caregivers
+   - Each check-in includes simple questions (e.g., pain level, medication taken, mood)
+   - Patients can answer directly through the app and submit responses for review
+
 ### Medication Management
 
 #### Medication Schedule
@@ -324,7 +330,8 @@ The CareConnect dashboard is your central hub for all activities and information
      
 3. **Vial of Life**:
    - Patients can create, update, and share an emergency profile which shows important health information.
-   - The profile can be shared through a QR code or link with the patient’s consent.  
+   - The profile can be shared through a QR code or link with the patient’s consent.
+     
 ## Caregiver Features
 
 ### Patient Management
@@ -389,6 +396,24 @@ The CareConnect dashboard is your central hub for all activities and information
    - Share photos and documents
    - Voice message recording
    - Group conversations
+
+3. **Virtual Check-Ins**
+    - Caregivers can create and manage virtual check-ins for their assigned patients. 
+    - These check-ins allow for regular updates on patient well-being without requiring a video call or in-person visit.
+
+   **Key Capabilities**
+   - Configure question templates (mood, medication, vitals, lifestyle)
+   - Schedule frequency (daily, weekly, custom)
+   - Enable/disable specific questions per patient
+   - Review submitted responses in the dashboard
+   - Receive alerts for abnormal or missed responses
+  
+   **Workflow Overview**
+   - Go to the Caregiver Dashboard.
+   - Select “Virtual Check-Ins”.
+   - Choose a patient and click “Configure”.
+   - Select or create questions, then save and assign.
+   - Patients receive notifications to complete their check-ins
 
 #### Care Team Coordination
 1. **Team Communication**:
@@ -586,6 +611,10 @@ The CareConnect dashboard is your central hub for all activities and information
    - Achievement milestones
    - Performance metrics
    - Improvement areas
+  
+3. **Virtual Check ins**
+   - Responses collected through virtual check-ins are automatically integrated into the patient’s health dashboard
+   - Caregivers can monitor trends and receive early alerts for concerning patterns
 
 #### Predictive Analytics
 1. **Health Predictions**:
@@ -687,6 +716,9 @@ The CareConnect dashboard is your central hub for all activities and information
    - Schedule follow-ups
 
 ## Task Management
+
+## Notetaking
+[demo video] [https://github.com/umgc/2025_fall/issues/603#issue-3562327269]
 
 ### Personal Tasks
 
