@@ -17,7 +17,7 @@ public class EvvSubmissionService {
     private final AuditLogger audit;
 
     public String destinationFor(String stateCode) {
-        return switch (stateCode) {
+        return switch (stateCode.toUpperCase()) {
             case "MD" -> "maryland-info-only";
             case "DC" -> "dc-sandata";
             case "VA" -> "virginia-mco";

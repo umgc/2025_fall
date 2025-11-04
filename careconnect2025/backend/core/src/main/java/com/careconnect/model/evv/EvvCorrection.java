@@ -66,5 +66,12 @@ public class EvvCorrection {
         this.approvedAt = OffsetDateTime.now();
         this.approvalComment = comment;
     }
+
+    public void reject(Long reviewerId, String comment) {
+        this.approvedBy = reviewerId; // Store who rejected it
+        this.approvedAt = OffsetDateTime.now(); // Store when it was rejected
+        this.approvalComment = comment;
+        this.approvalRequired = false; // No longer requires approval
+    }
 }
 

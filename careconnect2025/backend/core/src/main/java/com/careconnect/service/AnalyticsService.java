@@ -30,7 +30,7 @@ import org.springframework.http.HttpStatus;
 @Transactional(readOnly = true)
 public class AnalyticsService {
 
-    private final SymptomEntryRepository symptomRepo;     
+    private final SymptomEntryRepository symptomRepo;
     private final WearableMetricRepository wearableRepo;
     private final SummaryMetricRepository summaryRepo;
     private final MoodPainLogRepository moodPainLogRepo;
@@ -120,8 +120,8 @@ public class AnalyticsService {
     private VitalSampleDTO toDTO(Long pid, Instant ts, List<WearableMetric> wearableList, List<com.careconnect.model.MoodPainLog> moodPainList) {
         Map<WearableMetric.MetricType, Double> wearableMap = wearableList.stream()
                 .collect(Collectors.toMap(WearableMetric::getMetric,
-                                          WearableMetric::getMetricValue,
-                                          (a, b) -> b)); // last wins
+                        WearableMetric::getMetricValue,
+                        (a, b) -> b)); // last wins
 
         // Get the most recent mood and pain values for this timestamp
         Integer moodValue = null;
@@ -166,75 +166,75 @@ public class AnalyticsService {
     }
 
     /**
- * Get patient by patient ID
- * Note: patientId is the actual patient table ID, not the user ID
- */
-private Patient getPatientById(Long patientId) {
-    return patientRepo.findById(patientId)
-            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient profile not found"));
-}
+     * Get patient by patient ID
+     * Note: patientId is the actual patient table ID, not the user ID
+     */
+    private Patient getPatientById(Long patientId) {
+        return patientRepo.findById(patientId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient profile not found"));
+    }
 
     public byte[] exportVitalsCsv(Long patientId, Period period) {
-    List<VitalSampleDTO> vitals = getVitals(patientId, period);
+        List<VitalSampleDTO> vitals = getVitals(patientId, period);
 
-    StringBuilder sb = new StringBuilder();
-    sb.append("timestamp,heartRate,spo2,systolic,diastolic,weight,moodValue,painValue\n");
-    for (VitalSampleDTO v : vitals) {
-        sb.append(v.timestamp()).append(",")
-          .append(v.heartRate()).append(",")
-          .append(v.spo2()).append(",")
-          .append(v.systolic()).append(",")
-          .append(v.diastolic()).append(",")
-          .append(v.weight()).append(",")
-          .append(v.moodValue()).append(",")
-          .append(v.painValue()).append("\n");
-    }
-    return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-}
-
-public byte[] exportVitalsPdf(Long patientId, Period period) {
-    List<VitalSampleDTO> vitals = getVitals(patientId, period);
-
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-        Document document = new Document();
-        PdfWriter.getInstance(document, baos);
-        document.open();
-
-        document.add(new Paragraph("Vitals & Wellness Report"));
-        document.add(new Paragraph("Patient ID: " + patientId));
-        document.add(new Paragraph("Period: Last " + period.getDays() + " days"));
-        document.add(new Paragraph(" "));
-
-        PdfPTable table = new PdfPTable(8);
-        table.addCell("Timestamp");
-        table.addCell("Heart Rate");
-        table.addCell("SpO2");
-        table.addCell("Systolic");
-        table.addCell("Diastolic");
-        table.addCell("Weight");
-        table.addCell("Mood (1-10)");
-        table.addCell("Pain (1-10)");
-
+        StringBuilder sb = new StringBuilder();
+        sb.append("timestamp,heartRate,spo2,systolic,diastolic,weight,moodValue,painValue\n");
         for (VitalSampleDTO v : vitals) {
-            table.addCell(String.valueOf(v.timestamp()));
-            table.addCell(String.valueOf(v.heartRate()));
-            table.addCell(String.valueOf(v.spo2()));
-            table.addCell(String.valueOf(v.systolic()));
-            table.addCell(String.valueOf(v.diastolic()));
-            table.addCell(String.valueOf(v.weight()));
-            table.addCell(String.valueOf(v.moodValue()));
-            table.addCell(String.valueOf(v.painValue()));
+            sb.append(v.timestamp()).append(",")
+                    .append(v.heartRate()).append(",")
+                    .append(v.spo2()).append(",")
+                    .append(v.systolic()).append(",")
+                    .append(v.diastolic()).append(",")
+                    .append(v.weight()).append(",")
+                    .append(v.moodValue()).append(",")
+                    .append(v.painValue()).append("\n");
         }
-
-        document.add(table);
-        document.close();
-        return baos.toByteArray();
-    } catch (Exception e) {
-        throw new RuntimeException("Failed to generate PDF", e);
+        return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
-}
 
-  private VitalSampleDTO createEmptyVitalSample(Long patientId, Instant timestamp) {
+    public byte[] exportVitalsPdf(Long patientId, Period period) {
+        List<VitalSampleDTO> vitals = getVitals(patientId, period);
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            Document document = new Document();
+            PdfWriter.getInstance(document, baos);
+            document.open();
+
+            document.add(new Paragraph("Vitals & Wellness Report"));
+            document.add(new Paragraph("Patient ID: " + patientId));
+            document.add(new Paragraph("Period: Last " + period.getDays() + " days"));
+            document.add(new Paragraph(" "));
+
+            PdfPTable table = new PdfPTable(8);
+            table.addCell("Timestamp");
+            table.addCell("Heart Rate");
+            table.addCell("SpO2");
+            table.addCell("Systolic");
+            table.addCell("Diastolic");
+            table.addCell("Weight");
+            table.addCell("Mood (1-10)");
+            table.addCell("Pain (1-10)");
+
+            for (VitalSampleDTO v : vitals) {
+                table.addCell(String.valueOf(v.timestamp()));
+                table.addCell(String.valueOf(v.heartRate()));
+                table.addCell(String.valueOf(v.spo2()));
+                table.addCell(String.valueOf(v.systolic()));
+                table.addCell(String.valueOf(v.diastolic()));
+                table.addCell(String.valueOf(v.weight()));
+                table.addCell(String.valueOf(v.moodValue()));
+                table.addCell(String.valueOf(v.painValue()));
+            }
+
+            document.add(table);
+            document.close();
+            return baos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate PDF", e);
+        }
+    }
+
+    private VitalSampleDTO createEmptyVitalSample(Long patientId, Instant timestamp) {
         return VitalSampleDTO.builder()
                 .id(null) // This is an empty template, not a persisted entity
                 .patientId(patientId)
