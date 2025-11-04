@@ -56,6 +56,9 @@ public class PatientController {
     @Autowired
     private MoodPainLogService moodPainLogService;
 
+    @Autowired
+    private MedicationService medicationService;
+    
     // Helper method to get current user
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -724,7 +727,7 @@ public class PatientController {
         validatePatientAccess(patient.getUser().getId(), currentUser);
 
         // Deactivate the medication (soft delete)
-        medicationService.deactivateMedication(medicationId);
+        medicationService.deactivateMedication(patientID, medicationId);
         return ResponseEntity.noContent().build();
     }
 

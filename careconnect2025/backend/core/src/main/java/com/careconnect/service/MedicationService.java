@@ -171,7 +171,7 @@ public class MedicationService {
      * Soft delete (mark inactive and notify)
      */
     @Transactional
-    public void deleteMedication(Long patientId, Long medicationId) {
+    public void deactivateMedication(Long patientId, Long medicationId) {
         Medication medication = medicationRepository.findById(medicationId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Medication not found with id: " + medicationId));
 

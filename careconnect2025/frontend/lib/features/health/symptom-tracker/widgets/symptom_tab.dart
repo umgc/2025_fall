@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'symptom_input_form.dart';
 import 'symptom_card.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 
 class SymptomTab extends StatefulWidget {
@@ -15,105 +14,123 @@ class SymptomTab extends StatefulWidget {
 }
 
 class _SymptomTabState extends State<SymptomTab> {
-
-  // TODO - move to api services
-  final String baseUrl = 'https://localhost:8080/v1/api/symptoms';
-
-  late List<Map<String, dynamic>> _symptoms;
+  List<Map<String, dynamic>> _symptoms = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _symptoms = []; // pulls from wherever your backend or input provides it
     _fetchSymptoms();
+  }
+
+  // Transform backend symptom data to UI format
+  Map<String, dynamic> _transformSymptomToUI(Map<String, dynamic> apiSymptom) {
+    final int severity = apiSymptom['severity'] ?? 1;
+    String severityLabel;
+    bool requiresAttention;
+
+    if (severity >= 5) {
+      severityLabel = 'severe';
+      requiresAttention = true;
+    } else if (severity >= 3) {
+      severityLabel = 'moderate';
+      requiresAttention = false;
+    } else {
+      severityLabel = 'mild';
+      requiresAttention = false;
+    }
+
+    final symptomKey = apiSymptom['symptomKey'] ?? '';
+    final symptomValue = apiSymptom['symptomValue'] ?? '';
+    final title = symptomValue.isNotEmpty ? '$symptomKey $symptomValue' : symptomKey;
+
+    final takenAt = apiSymptom['takenAt'] as String?;
+    String timeDisplay = 'Unknown time';
+    if (takenAt != null) {
+      try {
+        final dt = DateTime.parse(takenAt);
+        final now = DateTime.now();
+        final diff = now.difference(dt);
+
+        if (diff.inMinutes < 60) {
+          timeDisplay = '${diff.inMinutes}m ago';
+        } else if (diff.inHours < 24) {
+          timeDisplay = '${diff.inHours}h ago';
+        } else {
+          timeDisplay = '${diff.inDays}d ago';
+        }
+      } catch (e) {
+        timeDisplay = takenAt;
+      }
+    }
+
+    return {
+      'id': apiSymptom['id'],
+      'title': title,
+      'severity': severityLabel,
+      'time': timeDisplay,
+      'description': apiSymptom['clinicalNotes'] ?? 'No additional notes',
+      'requiresAttention': requiresAttention,
+      'caregiverAlert': requiresAttention,
+    };
+  }
+
+  // Fetch all symptoms for this patient
+  Future<void> _fetchSymptoms() async {
+    final int? patientIdInt = int.tryParse(widget.patientId);
+    if (patientIdInt == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final symptoms = await ApiService.getSymptomsForPatient(patientIdInt);
+      setState(() {
+        _symptoms = symptoms.map((s) => _transformSymptomToUI(s)).toList();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load symptoms: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   // Function to add symptoms
   Future<void> _addSymptom(Map<String, dynamic> symptomData) async {
-    try {
-      final patientId = 1; // 🔸 Replace with logged-in patient ID
-      final body = jsonEncode({
-        'patientId': patientId,
-        'symptomKey': symptomData['title'],
-        'symptomValue': symptomData['description'],
-        'severity': symptomData['severity'],
-      });
-
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body)['data'];
-        setState(() {
-          _symptoms.insert(0, {
-            'id': data['id'],
-            'title': data['symptomKey'] ?? '',
-            'severity': data['severity'] ?? 'Unknown',
-            'time': data['takenAt'] ?? '',
-            'description': data['symptomValue'] ?? '',
-            'requiresAttention': false,
-            'caregiverAlert': false,
-          });
-        });
-      } else {
-        print('Failed to add symptom: ${response.body}');
-      }
-    } catch (e) {
-      print('Error adding symptom: $e');
-    }
+    setState(() {
+      _symptoms.insert(0, symptomData);
+    });
   }
-
 
   // Function to remove a symptom at a given index
   Future<void> _removeSymptom(int index) async {
     final symptom = _symptoms[index];
-    final id = symptom['id'];
+    final symptomId = symptom['id'] as int?;
+
+    if (symptomId == null) return;
 
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/$id'));
-      if (response.statusCode == 200) {
-        setState(() {
-          _symptoms.removeAt(index);
-        });
-      } else {
-        print('Failed to delete symptom: ${response.body}');
+      await ApiService.deleteSymptom(symptomId);
+      setState(() {
+        _symptoms.removeAt(index);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Symptom deleted successfully')),
+        );
       }
     } catch (e) {
-      print('Error deleting symptom: $e');
-    }
-  }
-
-
-
-  // Fetch all symptoms for this patient
-  Future<void> _fetchSymptoms() async {
-    try {
-      final patientId = 1; // 🔸 Replace with logged-in patient ID
-      final response = await http.get(Uri.parse('$baseUrl/patient/$patientId'));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> list = data['data'] ?? [];
-        setState(() {
-          _symptoms.clear();
-          _symptoms.addAll(list.map((s) => {
-                'id': s['id'],
-                'title': s['symptomKey'] ?? '',
-                'severity': s['severity'] ?? 'Unknown',
-                'time': s['takenAt'] ?? '',
-                'description': s['symptomValue'] ?? '',
-                'requiresAttention': false,
-                'caregiverAlert': false,
-              }));
-        });
-      } else {
-        print('Failed to fetch symptoms: ${response.body}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete symptom: $e')),
+        );
       }
-    } catch (e) {
-      print('Error fetching symptoms: $e');
     }
   }
 
@@ -138,25 +155,45 @@ class _SymptomTabState extends State<SymptomTab> {
             ),
           ),
           const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _symptoms.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final symptom = _symptoms[index];
-              return SymptomCard(
-                title: symptom['title'],
-                severity: symptom['severity'],
-                time: symptom['time'],
-                description: symptom['description'],
-                requiresAttention: symptom['requiresAttention'],
-                caregiverAlert: symptom['caregiverAlert'],
-                // Pass the delete callback to the SymptomCard
-                onDelete: () => _removeSymptom(index),
-              );
-            },
-          ),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_symptoms.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  'No symptoms recorded yet',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _symptoms.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final symptom = _symptoms[index];
+                return SymptomCard(
+                  title: symptom['title'],
+                  severity: symptom['severity'],
+                  time: symptom['time'],
+                  description: symptom['description'],
+                  requiresAttention: symptom['requiresAttention'],
+                  caregiverAlert: symptom['caregiverAlert'],
+                  // Pass the delete callback to the SymptomCard
+                  onDelete: () => _removeSymptom(index),
+                );
+              },
+            ),
         ],
       ),
     );

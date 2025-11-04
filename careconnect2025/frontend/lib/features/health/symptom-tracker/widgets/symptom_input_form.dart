@@ -295,6 +295,7 @@ class _SymptomInputFormState extends State<SymptomInputForm> {
                     // Transform API response to UI format for SymptomCard
                     final String severityLabel = _selectedSeverity.toLowerCase();
                     final uiSymptom = {
+                      'id': saved['id'], // Include id from backend for deletion
                       'title': display,
                       'severity': severityLabel,
                       'time': 'Just now',

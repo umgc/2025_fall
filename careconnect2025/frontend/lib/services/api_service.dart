@@ -28,6 +28,8 @@ class ApiConstants {
   static final String connectionRequests = '$_host/v1/api/connection-requests';
   static final String subscriptions = '$_host/v1/api/subscriptions';
   static final String tasks = '$_host/v1/api/tasks';
+  static final String allergies = '$_host/v1/api/allergies';
+  static final String symptoms = '$_host/v1/api/symptoms';
 
   //V2 endpoints
   static final String baseUrlV2 = '$_host/v2/api/';
@@ -597,7 +599,7 @@ class ApiService {
   // GET /v1/api/symptoms/patient/{patientId}
   static Future<List<Map<String, dynamic>>> getSymptomsForPatient(int patientId) async {
     final headers = await AuthTokenManager.getAuthHeaders();
-    final uri = Uri.parse('${ApiConstants.baseUrl}symptoms/patient/$patientId');
+    final uri = Uri.parse('${ApiConstants.symptoms}/patient/$patientId');
 
     final res = await _httpClient.get(uri, headers: headers)
         .timeout(const Duration(seconds: 20));
@@ -615,7 +617,7 @@ class ApiService {
 // ✅ NEW - GET /v1/api/symptoms/{id}
   static Future<Map<String, dynamic>> getSymptomById(int id) async {
     final headers = await AuthTokenManager.getAuthHeaders();
-    final uri = Uri.parse('${ApiConstants.baseUrl}symptoms/$id');
+    final uri = Uri.parse('${ApiConstants.symptoms}/$id');
 
     final res = await _httpClient.get(uri, headers: headers)
         .timeout(const Duration(seconds: 20));
@@ -655,7 +657,7 @@ class ApiService {
     };
 
     final res = await _httpClient
-        .post(Uri.parse('${ApiConstants.baseUrl}symptoms'),
+        .post(Uri.parse(ApiConstants.symptoms),
         headers: headers, body: jsonEncode(payload))
         .timeout(const Duration(seconds: 20));
 
@@ -692,7 +694,7 @@ class ApiService {
     };
 
     final res = await _httpClient
-        .put(Uri.parse('${ApiConstants.baseUrl}symptoms/$id'),
+        .put(Uri.parse('${ApiConstants.symptoms}/$id'),
         headers: headers, body: jsonEncode(payload))
         .timeout(const Duration(seconds: 20));
 
@@ -710,7 +712,7 @@ class ApiService {
   static Future<void> deleteSymptom(int id) async {
     final headers = await AuthTokenManager.getAuthHeaders();
     final res = await _httpClient
-        .delete(Uri.parse('${ApiConstants.baseUrl}symptoms/$id'), headers: headers)
+        .delete(Uri.parse('${ApiConstants.symptoms}/$id'), headers: headers)
         .timeout(const Duration(seconds: 20));
 
     if (res.statusCode != 200 && res.statusCode != 204) {
@@ -1680,6 +1682,61 @@ class ApiService {
       return http.Response(jsonEncode({'error': e.toString()}), 500);
     }
   }
+  
+  // fetch from backend
+  static Future<List<dynamic>> fetchAllergies(final int patientId) async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final uri = Uri.parse('${ApiConstants.allergies}/patient/$patientId');
+
+    final response = await _httpClient.get(uri, headers: headers)
+        .timeout(const Duration(seconds: 20));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final List<dynamic> list = data['data'] ?? [];
+      return list;
+    } else {
+      throw HttpException('Failed to fetch allergies: ${response.body}');
+    }
+  }
+  
+  static Future<Map<String, dynamic>> addAllergy(final Map<String, dynamic> allergyData,
+      final int patientId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+
+      final body = jsonEncode({
+        'patientId': patientId,
+        'allergen': allergyData['drug'],
+        'severity': allergyData['severity'],
+        'reaction': allergyData['reaction'],
+        'notes': allergyData['note'],
+        'isActive': true
+      });
+
+      final response = await _httpClient.post(
+        Uri.parse(ApiConstants.allergies),
+        headers: headers,
+        body: body,
+      ).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body)['data'];
+      } else {
+        throw HttpException("Failed to add allergy for patient.");
+      }
+  }
+
+  static Future<bool> removeAllergy(int allergyId) async {
+      final headers = await AuthTokenManager.getAuthHeaders();
+      final uri = Uri.parse('${ApiConstants.allergies}/$allergyId');
+
+      final response = await _httpClient.delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 20));
+
+      return response.statusCode == 200 || response.statusCode == 204;
+  }
+  
 }
 
   // Save speech-to-text to a file and upload it to S3

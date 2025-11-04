@@ -80,7 +80,7 @@ public class MedicationController {
             @PathVariable Long patientId,
             @PathVariable Long medicationId) {
 
-        medicationService.deleteMedication(patientId, medicationId);
+        medicationService.deactivateMedication(patientId, medicationId);
         return ResponseEntity.ok(Map.of(
                 "message", "Medication removed and notification sent"
         ));
