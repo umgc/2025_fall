@@ -1,113 +1,145 @@
 import 'package:care_connect_app/features/health/symptom-tracker/widgets/allergies_input_form.dart';
+import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'allergies_card.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
 
 class AllergiesTab extends StatefulWidget {
-  const AllergiesTab({super.key});
+  final String patientId;
+
+  const AllergiesTab({super.key, required this.patientId});
 
   @override
   State<AllergiesTab> createState() => _AllergiesTabState();
 }
 
-final String baseUrl = 'https://localhost:8080/v1/api/allergies';
-
-
 class _AllergiesTabState extends State<AllergiesTab> {
-  
+  List<Map<String, dynamic>> _allergies = [];
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
     _fetchAllergies();
   }
 
-  // fetch from backend
+  // Fetch allergies from backend
   Future<void> _fetchAllergies() async {
-    try {
-      final patientId = 1; // 🔸 Replace with actual logged-in patient ID
-      final response = await http.get(Uri.parse('$baseUrl/patient/$patientId'));
+    setState(() => _isLoading = true);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> list = data['data'] ?? [];
-        setState(() {
-          _allergies.clear();
-          _allergies.addAll(list.map((a) => {
-                'id': a['id'],
-                'drug': a['allergen'],
-                'severity': a['severity'] ?? 'Unknown',
-                'reaction': a['reaction'] ?? '',
-                'note': a['notes'] ?? '',
-              }));
-        });
-      } else {
-        print('Failed to fetch allergies: ${response.body}');
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final patientId = userProvider.user?.patientId;
+
+      if (patientId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Patient ID not found')),
+          );
+        }
+        return;
       }
+
+      final List<dynamic> allergies = await ApiService.fetchAllergies(patientId);
+
+      setState(() {
+        _allergies.clear();
+        _allergies.addAll(
+          allergies.map(
+            (a) => {
+              'id': a['id'],
+              'drug': a['allergen'],
+              'severity': a['severity'] ?? 'Unknown',
+              'reaction': a['reaction'] ?? '',
+              'note': a['notes'] ?? '',
+            },
+          ),
+        );
+      });
     } catch (e) {
-      print('Error fetching allergies: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load allergies: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
-
-  final List<Map<String, dynamic>> _allergies = []; // dynamically managed list
 
   Future<void> _addAllergy(Map<String, dynamic> allergyData) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final patientId = userProvider.user?.patientId;
+
     try {
-      final patientId = 1; // 🔸 Replace with actual logged-in patient ID
-      final body = jsonEncode({
-        'patientId': patientId,
-        'allergen': allergyData['drug'],
-        'severity': allergyData['severity'],
-        'reaction': allergyData['reaction'],
-        'notes': allergyData['note'],
-        'isActive': true
+      if (patientId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Patient ID not found')),
+          );
+        }
+        return;
+      }
+
+      final data = await ApiService.addAllergy(allergyData, patientId);
+      setState(() {
+        _allergies.insert(0, {
+          'id': data['id'],
+          'drug': data['allergen'],
+          'severity': data['severity'] ?? 'Unknown',
+          'reaction': data['reaction'] ?? '',
+          'note': data['notes'] ?? '',
+        });
       });
 
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body)['data'];
-        setState(() {
-          _allergies.insert(0, {
-            'id': data['id'],
-            'drug': data['allergen'],
-            'severity': data['severity'] ?? 'Unknown',
-            'reaction': data['reaction'] ?? '',
-            'note': data['notes'] ?? '',
-          });
-        });
-      } else {
-        print('Failed to add allergy: ${response.body}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Allergy added successfully')),
+        );
       }
     } catch (e) {
-      print('Error adding allergy: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add allergy: $e')),
+        );
+      }
     }
   }
-  
 
   Future<void> _removeAllergy(int index) async {
     final allergy = _allergies[index];
     final id = allergy['id'];
 
     try {
-      final response = await http.delete(Uri.parse('$baseUrl/$id'));
-      if (response.statusCode == 200) {
+      final success = await ApiService.removeAllergy(id);
+      if (success) {
         setState(() {
           _allergies.removeAt(index);
         });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Allergy deleted successfully')),
+          );
+        }
       } else {
-        print('Failed to delete allergy: ${response.body}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete allergy')),
+          );
+        }
       }
     } catch (e) {
-      print('Error deleting allergy: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting allergy: $e')),
+        );
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +148,10 @@ class _AllergiesTabState extends State<AllergiesTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AllergyInputForm(onAllergyAdded: _addAllergy),
+          AllergyInputForm(
+            patientId: widget.patientId,
+            onAllergyAdded: _addAllergy,
+          ),
           const SizedBox(height: 24),
           Text(
             'Known Drug Allergies',
@@ -127,22 +162,42 @@ class _AllergiesTabState extends State<AllergiesTab> {
             ),
           ),
           const SizedBox(height: 12),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _allergies.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final allergy = _allergies[index];
-              return AllergyCard(
-                drug: allergy['drug'],
-                severity: allergy['severity'],
-                reaction: allergy['reaction'],
-                note: allergy['note'],
-                onDelete: () => _removeAllergy(index), // ✅ delete on X
-              );
-            },
-          ),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_allergies.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  'No allergies recorded yet',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _allergies.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final allergy = _allergies[index];
+                return AllergyCard(
+                  drug: allergy['drug'],
+                  severity: allergy['severity'],
+                  reaction: allergy['reaction'],
+                  note: allergy['note'],
+                  onDelete: () => _removeAllergy(index),
+                );
+              },
+            ),
         ],
       ),
     );

@@ -1,14 +1,14 @@
 import 'package:care_connect_app/core/services/api_service.dart';
+import 'package:care_connect_app/features/health/medication-tracker/pages/medication-tracker.dart';
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/screens/tabs/patient_tabs.dart';
 import 'package:care_connect_app/widgets/language/language_picker.dart';
-import 'package:care_connect_app/widgets/menu/shortcut_search_delegate.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:care_connect_app/providers/shortcut_provider.dart';
 import 'package:care_connect_app/features/invoices/screens/invoice_tabbed_page.dart';
 
 class MenuPage extends StatefulWidget {
@@ -58,15 +58,6 @@ class _MenuPageState extends State<MenuPage> {
 
     final role = user.role.toUpperCase();
 
-    final shortcutProvider = context.watch<ShortcutProvider>();
-    if (!shortcutProvider.isLoaded) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    final activeShortcuts = shortcutProvider.visibleActiveForRole(role);
-    String resolveRoute(ShortcutDef d) =>
-        d.resolveRoute({'userId': user.id.toString()});
-
     final items = <_MenuItem>[
       _MenuItem(
         icon: Icons.receipt_long,
@@ -81,6 +72,19 @@ class _MenuPageState extends State<MenuPage> {
           );
         },
       ),
+      _MenuItem(icon: 
+      Icons.report, 
+        label: 'Patient Report',
+        route: '/patient-report'
+          ,visibleFor: const {'PATIENT'},
+        onTap: () {
+        Navigator.pop(context);
+        Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (context) => const PatientReportsTab())
+        );
+        }
+      ),
       _MenuItem(
         icon: Icons.verified_user,
         label: local.evv,
@@ -94,8 +98,15 @@ class _MenuPageState extends State<MenuPage> {
       ),
       _MenuItem(
         icon: Icons.medication,
-        label: local.medicationManagement,
-        route: '/medication',
+        label: 'Medication Tracker',
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MedicationsTrackerPage()),
+          );
+        },
+        visibleFor: {"PATIENT"}
       ),
       _MenuItem(
         icon: Icons.public,
@@ -167,19 +178,6 @@ class _MenuPageState extends State<MenuPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(local.menuTitle),
-        actions: [
-          IconButton(
-            onPressed: () => showSearch(
-              context: context,
-              delegate: ShortcutSearchDelegate(
-                roleUpper: role,
-                userId: user.id.toString(),
-              ),
-            ),
-            icon: const Icon(Icons.search),
-            tooltip: local.search,
-          ),
-        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -212,53 +210,6 @@ class _MenuPageState extends State<MenuPage> {
                 onPressed: () => context.push('/profile'),
               ),
               onTap: () => context.push('/profile'),
-            ),
-          ),
-
-          // Shortcuts header + customize
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: [
-                  Text(
-                    local.yourShortcuts,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.tune),
-                    tooltip: local.customize,
-                    onPressed: () => _openCustomizeShortcuts(context, role),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Shortcuts grid from provider
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisExtent: 88,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final t = AppLocalizations.of(context)!;
-                final d = activeShortcuts[index];
-                final label = d.localizedLabel(t);
-                return _ShortcutTile(
-                  key: ValueKey('shortcut_${d.key}_${t.localeName}'),
-                  shortcut: _Shortcut(
-                    d.icon,
-                    label,
-                    onTap: () => context.push(resolveRoute(d)),
-                  ),
-                );
-              }, childCount: activeShortcuts.length),
             ),
           ),
 
@@ -362,92 +313,6 @@ class _MenuPageState extends State<MenuPage> {
       ),
     );
   }
-
-  Future<void> _openCustomizeShortcuts(
-    BuildContext context,
-    String roleUpper,
-  ) async {
-    final t = AppLocalizations.of(context)!;
-    final sp = context.read<ShortcutProvider>();
-    final list = sp.visibleCatalogForRole(roleUpper);
-    final working = Set<String>.from(sp.activeKeys);
-    final max = ShortcutProvider.maxShortcuts;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 12,
-            bottom: 12 + MediaQuery.of(ctx).padding.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                t.customizeShortcuts,
-                style: Theme.of(ctx).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: list.map((d) {
-                    final checked = working.contains(d.key);
-                    final t2 = AppLocalizations.of(ctx)!;
-                    return CheckboxListTile(
-                      key: ValueKey('sheet_${d.key}_${t2.localeName}'),
-                      value: checked,
-                      title: Row(
-                        children: [
-                          Icon(d.icon),
-                          const SizedBox(width: 12),
-                          Text(d.localizedLabel(t2)),
-                        ],
-                      ),
-                      onChanged: (v) {
-                        setState(() {
-                          if (v == true) {
-                            if (working.length < max) working.add(d.key);
-                          } else {
-                            working.remove(d.key);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text(t.cancel),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await sp.setAll(working);
-                        if (mounted) Navigator.pop(ctx);
-                      },
-                      child: Text(t.save),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /* ---------- Small components ---------- */
@@ -521,46 +386,6 @@ class _ToolTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Shortcut {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  _Shortcut(this.icon, this.label, {required this.onTap});
-}
-
-class _ShortcutTile extends StatelessWidget {
-  final _Shortcut shortcut;
-  const _ShortcutTile({super.key, required this.shortcut});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: Theme.of(context).colorScheme.surface,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: shortcut.onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Icon(shortcut.icon, size: 24),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          shortcut.label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
     );
   }
 }
