@@ -126,7 +126,7 @@ test_video_calls.dart
 **/test/**/*secret*
 **/test/**/*key*
 
-# Donn't check AI models
+# Don't check AI models
 *.onnx
 *.GGUF
 *.bin
