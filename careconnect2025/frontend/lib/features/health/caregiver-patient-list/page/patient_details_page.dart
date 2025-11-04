@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../widgets/pain_level_card.dart';
 
 // Header
-import '../widgets/pain_level_card.dart';
 import '../widgets/patient_header_card.dart';
 
 // Info tab pieces
@@ -18,9 +17,6 @@ import '../widgets/emergency_contact_card.dart';
 import '../widgets/mood_history_card.dart';
 
 // Health tab
-import '../models/symptom_entry.dart';
-import '../widgets/recent_symptom_card.dart';
-import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
 // Recent Activity tab
@@ -66,7 +62,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   List<Medication> medications = [];
   bool _isLoadingMedications = false;
   String? _medicationError;
-
+  
   @override
   void initState() {
     super.initState();
@@ -426,9 +422,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     children: [
                       VirtualCheckInHistoryCard(
                         entries: virtualCheckIns,
-                        showConfigure: isCaregiver, // caregivers only
-                        onConfigure: isCaregiver
-                            ? () async {
+                        showConfigure: widget.isCaregiver, // caregivers only
+                        onConfigure: widget.isCaregiver ? () async {
                           // Seed with your current config if you have it:
                           final initialQuestions = <VirtualCheckInQuestion>[];
                           // TODO: replace with your real ID source:
@@ -455,8 +450,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                               const SnackBar(content: Text('Virtual check-in configuration saved')),
                             );
                           }
-                        }
-                            : null, // patients: no button
+                        } : null, // patients: no button
                       ),
                     ],
                   ),
