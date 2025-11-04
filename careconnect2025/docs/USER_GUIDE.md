@@ -230,6 +230,11 @@ The CareConnect dashboard is your central hub for all activities and information
    - Allows for submission and discarding of videos
    - Videos are submitted to an AI service for mood analysis
 
+5. **Virtual Check-In**
+   - Patients receive scheduled check-ins configured by their caregivers
+   - Each check-in includes simple questions (e.g., pain level, medication taken, mood)
+   - Patients can answer directly through the app and submit responses for review
+
 ### Medication Management
 
 #### Medication Schedule
@@ -324,7 +329,8 @@ The CareConnect dashboard is your central hub for all activities and information
      
 3. **Vial of Life**:
    - Patients can create, update, and share an emergency profile which shows important health information.
-   - The profile can be shared through a QR code or link with the patient’s consent.  
+   - The profile can be shared through a QR code or link with the patient’s consent.
+     
 ## Caregiver Features
 
 ### Patient Management
@@ -389,6 +395,24 @@ The CareConnect dashboard is your central hub for all activities and information
    - Share photos and documents
    - Voice message recording
    - Group conversations
+
+3. **Virtual Check-Ins**
+    - Caregivers can create and manage virtual check-ins for their assigned patients. 
+    - These check-ins allow for regular updates on patient well-being without requiring a video call or in-person visit.
+
+   **Key Capabilities**
+   - Configure question templates (mood, medication, vitals, lifestyle)
+   - Schedule frequency (daily, weekly, custom)
+   - Enable/disable specific questions per patient
+   - Review submitted responses in the dashboard
+   - Receive alerts for abnormal or missed responses
+  
+   **Workflow Overview**
+   - Go to the Caregiver Dashboard.
+   - Select “Virtual Check-Ins”.
+   - Choose a patient and click “Configure”.
+   - Select or create questions, then save and assign.
+   - Patients receive notifications to complete their check-ins
 
 #### Care Team Coordination
 1. **Team Communication**:
@@ -586,6 +610,10 @@ The CareConnect dashboard is your central hub for all activities and information
    - Achievement milestones
    - Performance metrics
    - Improvement areas
+  
+3. **Virtual Check ins**
+   - Responses collected through virtual check-ins are automatically integrated into the patient’s health dashboard
+   - Caregivers can monitor trends and receive early alerts for concerning patterns
 
 #### Predictive Analytics
 1. **Health Predictions**:
