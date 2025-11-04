@@ -52,13 +52,20 @@ class LanguagePicker {
   // Minimal labels. Expand as you add locales, or derive from your ARB metadata.
   static String labelFor(Locale l) {
 if (l.languageCode == 'en') return 'English';
-if (l.languageCode == 'es') return 'Español';
-if (l.languageCode == 'ur') return 'اردو';        // Urdu
-if (l.languageCode == 'ar') return 'العربية';     // Arabic
-if (l.languageCode == 'fr') return 'Français';
-if (l.languageCode == 'am') return 'አማርኛ';       // Amharic
-if (l.languageCode == 'ne') return 'नेपाली';       // Nepali
-if (l.languageCode == 'hi') return 'हिन्दी';       // Hindi
+if (l.languageCode == 'es') return 'Español (Spanish)';
+if (l.languageCode == 'ur') return 'اردو (Urdu)';        // Urdu
+if (l.languageCode == 'ar') return 'العربية (Arabic)';     // Arabic
+if (l.languageCode == 'fr') return 'Français (French)';
+if (l.languageCode == 'am') return 'አማርኛ (Amharic)';       // Amharic
+if (l.languageCode == 'ne') return 'नेपाली (Nepali)';       // Nepali
+if (l.languageCode == 'hi') return 'हिन्दी (Hindi)';       // Hindi 
+if (l.languageCode == 'fa') return 'فارسی (Farsi)';
+if (l.languageCode == 'zh') return '中文 (Mandarin Chinese)'; // Mandarin Chinese
+if (l.languageCode == 'pt') return 'Português (Portuguese)'; // Portuguese
+if (l.languageCode == 'bn') return 'বাংলা (Bengali)';      // Bengali
+if (l.languageCode == 'ru') return 'Русский (Russian)';    // Russian
+if (l.languageCode == 'ja') return '日本語 (Japanese)';
+ 
     return l.toLanguageTag();
   }
 }

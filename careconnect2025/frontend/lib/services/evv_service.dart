@@ -186,6 +186,7 @@ class EvvService {
     
     print('🔍 EVV Service: Formatted timeIn: $timeInFormatted');
     print('🔍 EVV Service: Formatted timeOut: $timeOutFormatted');
+    print('🔍 EVV Service: ScheduledVisitId: ${request.scheduledVisitId}');
 
     final body = jsonEncode({
       'serviceType': request.serviceType,
@@ -194,12 +195,23 @@ class EvvService {
       'dateOfService': request.dateOfService.toIso8601String().split('T')[0],
       'timeIn': timeInFormatted,
       'timeOut': timeOutFormatted,
+      // Legacy location fields
       'locationLat': request.locationLat,
       'locationLng': request.locationLng,
       'locationSource': request.locationSource,
+      // New check-in/check-out location fields
+      'checkinLocationLat': request.checkinLocationLat,
+      'checkinLocationLng': request.checkinLocationLng,
+      'checkinLocationSource': request.checkinLocationSource,
+      'checkoutLocationLat': request.checkoutLocationLat,
+      'checkoutLocationLng': request.checkoutLocationLng,
+      'checkoutLocationSource': request.checkoutLocationSource,
       'stateCode': request.stateCode,
       'deviceInfo': deviceInfo,
+      'scheduledVisitId': request.scheduledVisitId,
     });
+    
+    print('📤 EVV Service: Request body: $body');
 
     final isOnline = await _isOnline();
     final endpoint = isOnline ? '$_baseUrl/records' : '$_baseUrl/records/offline';
@@ -454,9 +466,20 @@ class EvvRecord {
   final DateTime dateOfService;
   final DateTime timeIn;
   final DateTime timeOut;
+  
+  // Legacy location fields
   final double? locationLat;
   final double? locationLng;
-  final String locationSource;
+  final String? locationSource;
+  
+  // New check-in/check-out location fields
+  final double? checkinLocationLat;
+  final double? checkinLocationLng;
+  final String? checkinLocationSource;
+  final double? checkoutLocationLat;
+  final double? checkoutLocationLng;
+  final String? checkoutLocationSource;
+  
   final String status;
   final String stateCode;
   final Map<String, dynamic>? deviceInfo;
@@ -487,7 +510,13 @@ class EvvRecord {
     required this.timeOut,
     this.locationLat,
     this.locationLng,
-    required this.locationSource,
+    this.locationSource,
+    this.checkinLocationLat,
+    this.checkinLocationLng,
+    this.checkinLocationSource,
+    this.checkoutLocationLat,
+    this.checkoutLocationLng,
+    this.checkoutLocationSource,
     required this.status,
     required this.stateCode,
     this.deviceInfo,
@@ -518,9 +547,17 @@ class EvvRecord {
       dateOfService: DateTime.parse(json['dateOfService']),
       timeIn: DateTime.parse(json['timeIn']),
       timeOut: DateTime.parse(json['timeOut']),
+      // Legacy location fields
       locationLat: json['locationLat']?.toDouble(),
       locationLng: json['locationLng']?.toDouble(),
       locationSource: json['locationSource'],
+      // New check-in/check-out location fields
+      checkinLocationLat: json['checkinLocationLat']?.toDouble(),
+      checkinLocationLng: json['checkinLocationLng']?.toDouble(),
+      checkinLocationSource: json['checkinLocationSource'],
+      checkoutLocationLat: json['checkoutLocationLat']?.toDouble(),
+      checkoutLocationLng: json['checkoutLocationLng']?.toDouble(),
+      checkoutLocationSource: json['checkoutLocationSource'],
       status: json['status'],
       stateCode: json['stateCode'],
       deviceInfo: json['deviceInfo'],
@@ -648,10 +685,24 @@ class EvvRecordRequest {
   final DateTime dateOfService;
   final DateTime timeIn;
   final DateTime timeOut;
+  
+  // Legacy location fields (for backward compatibility)
   final double? locationLat;
   final double? locationLng;
-  final String locationSource;
+  final String? locationSource;
+  
+  // New check-in/check-out location fields
+  final double? checkinLocationLat;
+  final double? checkinLocationLng;
+  final String? checkinLocationSource;
+  final double? checkoutLocationLat;
+  final double? checkoutLocationLng;
+  final String? checkoutLocationSource;
+  
   final String stateCode;
+  
+  // Optional link to scheduled visit
+  final int? scheduledVisitId;
 
   EvvRecordRequest({
     required this.serviceType,
@@ -662,8 +713,15 @@ class EvvRecordRequest {
     required this.timeOut,
     this.locationLat,
     this.locationLng,
-    required this.locationSource,
+    this.locationSource,
+    this.checkinLocationLat,
+    this.checkinLocationLng,
+    this.checkinLocationSource,
+    this.checkoutLocationLat,
+    this.checkoutLocationLng,
+    this.checkoutLocationSource,
     required this.stateCode,
+    this.scheduledVisitId,
   });
 }
 

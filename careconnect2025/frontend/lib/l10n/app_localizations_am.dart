@@ -69,6 +69,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settings => 'ቅንብሮች';
 
   @override
+  String get fallDetection => 'የመውደቅ ማወቂያ';
+
+  @override
+  String get informedDelivery => 'የታወቀ መላኪያ';
+
+  @override
+  String get smartDevices => 'ስማርት መሳሪያዎች';
+
+  @override
   String get pleaseLogIn => 'እባክዎ ይግቡ';
 
   @override

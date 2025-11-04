@@ -1,3 +1,5 @@
+import 'package:care_connect_app/features/usps/domain/models/action_links.dart';
+
 class MailPiece {
   final String id;
   final String? sender, summary, imageDataUrl, dateIso;

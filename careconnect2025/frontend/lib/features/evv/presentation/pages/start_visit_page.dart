@@ -11,10 +11,12 @@ import 'package:http/http.dart' as http;
 
 class StartVisitPage extends StatefulWidget {
   final int patientId;
+  final int? scheduledVisitId;
   
   const StartVisitPage({
     super.key,
     required this.patientId,
+    this.scheduledVisitId,
   });
 
   @override
@@ -118,7 +120,8 @@ class _StartVisitPageState extends State<StartVisitPage> {
     }
 
     // Navigate to Check-In Location page with selected patient and service type
-    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}');
+    final scheduledVisitParam = widget.scheduledVisitId != null ? '&scheduledVisitId=${widget.scheduledVisitId}' : '';
+    context.push('/evv/checkin-location?patientId=${widget.patientId}&serviceType=${Uri.encodeComponent(_selectedServiceType!)}$scheduledVisitParam');
   }
 
   String _formatAddress(Patient patient) {
@@ -256,7 +259,7 @@ class _StartVisitPageState extends State<StartVisitPage> {
     final theme = Theme.of(context);
     final patient = _selectedPatient!;
     final fullName = '${patient.firstName} ${patient.lastName}';
-    final maNumber = 'MA${patient.id.toString().padLeft(9, '0')}';
+    final maNumber = patient.maNumber ?? 'MA${patient.id.toString().padLeft(9, '0')}';
     final address = _formatAddress(patient);
 
     return Container(

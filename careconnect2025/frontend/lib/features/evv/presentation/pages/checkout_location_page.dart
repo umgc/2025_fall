@@ -19,6 +19,7 @@ class CheckoutLocationPage extends StatefulWidget {
   final double? longitude;
   final String notes;
   final int duration; // Duration in seconds
+  final int? scheduledVisitId;
   
   const CheckoutLocationPage({
     super.key,
@@ -29,6 +30,7 @@ class CheckoutLocationPage extends StatefulWidget {
     this.longitude,
     required this.notes,
     required this.duration,
+    this.scheduledVisitId,
   });
 
   @override
@@ -191,6 +193,10 @@ class _CheckoutLocationPageState extends State<CheckoutLocationPage> {
     if (latitude != null && longitude != null) {
       queryParams['checkoutLatitude'] = latitude.toString();
       queryParams['checkoutLongitude'] = longitude.toString();
+    }
+    
+    if (widget.scheduledVisitId != null) {
+      queryParams['scheduledVisitId'] = widget.scheduledVisitId.toString();
     }
 
     final queryString = queryParams.entries

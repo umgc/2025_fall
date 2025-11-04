@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart'; // this is not free, we need to find alternative.
+import 'package:pdfx/pdfx.dart';
 
 class ReviewPhotosScreen extends StatefulWidget {
   final List<XFile> initialPhotos;
@@ -304,22 +304,65 @@ class _ReviewPhotosScreenState extends State<ReviewPhotosScreen> {
 }
 
 // --- THIS IS THE MODIFIED WIDGET ---
-class _FullScreenPdfViewer extends StatelessWidget {
+class _FullScreenPdfViewer extends StatefulWidget {
   final XFile file;
   const _FullScreenPdfViewer({required this.file});
+
+  @override
+  State<_FullScreenPdfViewer> createState() => _FullScreenPdfViewerState();
+}
+
+// --- Replace the entire _FullScreenPdfViewerState widget with this ---
+class _FullScreenPdfViewerState extends State<_FullScreenPdfViewer> {
+  // Use PdfControllerPinch instead
+  late final PdfControllerPinch pdfControllerPinch;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the controller based on platform
+    if (kIsWeb) {
+      // On web, read the bytes first, then use openData.
+      pdfControllerPinch = PdfControllerPinch( // <-- Use PdfControllerPinch
+        document: PdfDocument.openData(widget.file.readAsBytes()),
+      );
+    } else {
+      // On mobile, file.path is a file path, so use .openFile
+      pdfControllerPinch = PdfControllerPinch( // <-- Use PdfControllerPinch
+        document: PdfDocument.openFile(widget.file.path),
+      );
+    }
+  }
+
+  // Remember to dispose the controller
+  @override
+  void dispose() {
+    pdfControllerPinch.dispose(); // <-- Dispose the pinch controller
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(file.name),
+        title: Text(widget.file.name),
       ),
-      // Use platform-specific viewers
-      body: kIsWeb
-      // On web, XFile.path is a blob URL, so we use the network viewer
-          ? SfPdfViewer.network(file.path)
-      // On mobile, XFile.path is a file system path, so we use the file viewer
-          : SfPdfViewer.file(File(file.path)),
+      // Use the PdfViewPinch widget from the pdfx package
+      body: PdfViewPinch( // <-- Use PdfViewPinch
+        controller: pdfControllerPinch, // <-- Pass the pinch controller
+        // Optional: Add builders for loading/error states
+        builders: PdfViewPinchBuilders<DefaultBuilderOptions>( // <-- Use PdfViewPinchBuilders
+          options: const DefaultBuilderOptions(
+            // You might experiment with these options for initial fit
+            // fitPolicy: FitPolicy.WIDTH,
+          ),
+          documentLoaderBuilder: (_) =>
+          const Center(child: CircularProgressIndicator()),
+          pageLoaderBuilder: (_) =>
+          const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, error) => Center(child: Text('Error loading PDF: ${error.toString()}')),
+        ),
+      ),
     );
   }
 }

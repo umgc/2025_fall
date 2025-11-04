@@ -142,7 +142,8 @@ dependencies:
   new_simple_audio_trimmer: ^0.1.5
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
-  # Team D - Dependencies Begin
+# Team D - Dependencies Begin
+  pdfx: ^2.9.2
   qr_flutter: ^4.1.0
   #llm_toolkit: ^0.0.4
   #llama_cpp_dart: 
@@ -168,6 +169,7 @@ dependency_overrides:
   #     url: https://github.com/netdur/llama_cpp_dart.git
   #     ref: main
   calendar_view: ^1.0.0
+  accordion: ^2.6.0
 
 dev_dependencies:
   flutter_test:

@@ -28,8 +28,6 @@ class CaregiverTasksTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tasks'),
-        backgroundColor: const Color(0xFF14366E),
-        foregroundColor: Colors.white,
       ),
       body: const Center(
         child: Column(
@@ -73,8 +71,6 @@ class CaregiverAnalyticsTab extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Analytics'),
-        backgroundColor: const Color(0xFF14366E),
-        foregroundColor: Colors.white,
       ),
       body: const Center(
         child: Column(
@@ -120,11 +116,7 @@ class CaregiverMessagesTab extends StatelessWidget {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Messages'),
-          backgroundColor: const Color(0xFF14366E),
-          foregroundColor: Colors.white,
-        ),
+       
         body: const Center(
           child: Text('Please log in to view messages'),
         ),
@@ -132,11 +124,7 @@ class CaregiverMessagesTab extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-        backgroundColor: const Color(0xFF14366E),
-        foregroundColor: Colors.white,
-      ),
+       
       body: const ChatInboxScreen(),
     );
   }

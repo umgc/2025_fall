@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import 'dart:io';
+import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'package:universal_html/html.dart' as html;
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../../providers/user_provider.dart';
 import '../../../../services/evv_service.dart';
 import '../../../../widgets/common_drawer.dart';
 import '../../../../widgets/app_bar_helper.dart';
+import '../../../dashboard/models/patient_model.dart';
 
 class EvvRecordReviewPage extends StatefulWidget {
   const EvvRecordReviewPage({super.key});
@@ -72,6 +80,12 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
     });
   }
 
+  String _uniqueFileName(String base) {
+    final ts = DateTime.now().toUtc().microsecondsSinceEpoch;
+    final rand = math.Random().nextInt(0xFFFF).toRadixString(16).padLeft(4, '0');
+    return '${base}_${ts}_${rand}.edi';
+  }
+
   Future<void> _reviewRecord(EvvRecord record, bool approve, String? comment) async {
     try {
       await _evvService.reviewRecord(
@@ -86,8 +100,8 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(approve ? 'Record approved' : 'Record returned for review'),
-            backgroundColor: Colors.green,
+            content: Text(approve ? 'Record approved' : 'Record rejected'),
+            backgroundColor: approve ? Colors.green : Colors.red,
           ),
         );
       }
@@ -103,32 +117,67 @@ class _EvvRecordReviewPageState extends State<EvvRecordReviewPage> {
     }
   }
 
-  void _exportEDI(EvvRecord record) {
+  Future<void> _exportEDI(EvvRecord record) async {
     try {
       final ediContent = _generateEDIContent(record);
-      
-      // Create blob and download
       final bytes = utf8.encode(ediContent);
-      final blob = html.Blob([bytes], 'text/plain');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      
-      final anchor = html.document.createElement('a') as html.AnchorElement
-        ..href = url
-        ..style.display = 'none'
-        ..download = 'evv_record_${record.id}_${DateTime.now().millisecondsSinceEpoch}.edi';
-      
-      html.document.body?.children.add(anchor);
-      anchor.click();
-      html.document.body?.children.remove(anchor);
-      html.Url.revokeObjectUrl(url);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('EDI document exported successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
+      if (kIsWeb) {
+        // Web: trigger a file download using a Blob and hidden anchor
+        final blob = html.Blob([bytes], 'text/plain');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.document.createElement('a') as html.AnchorElement
+          ..href = url
+          ..style.display = 'none'
+          ..download = _uniqueFileName('evv_record_${record.id}');
+        html.document.body?.children.add(anchor);
+        anchor.click();
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(url);
+      } else {
+        // Mobile/Desktop: save to Downloads and open
+        final fileName = _uniqueFileName('evv_record_${record.id}');
+        String? downloadsPath;
+        try {
+          // Android common downloads directory
+          downloadsPath = '/storage/emulated/0/Download';
+          final downloadsDir = Directory(downloadsPath);
+          if (!await downloadsDir.exists()) {
+            // Fallback to app external storage
+            final ext = await getExternalStorageDirectory();
+            downloadsPath = ext?.path;
+          }
+          final savePath = '$downloadsPath/$fileName';
+          final file = File(savePath);
+          await file.writeAsBytes(Uint8List.fromList(bytes), flush: true);
+
+          // Try open the file
+          await OpenFilex.open(savePath);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Saved to: $savePath')),
+            );
+          }
+        } catch (saveErr, st) {
+          // Fallback: write to temp and share
+          final tempDir = await getTemporaryDirectory();
+          final tempPath = '${tempDir.path}/$fileName';
+          await File(tempPath).writeAsBytes(Uint8List.fromList(bytes), flush: true);
+          final xfile = XFile(tempPath, mimeType: 'text/plain', name: fileName);
+          await Share.shareXFiles([xfile], text: 'EVV EDI export');
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('EDI document exported successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Export failed: $e'),
@@ -250,9 +299,9 @@ IEA*1*$controlNumber~
             child: const Text('Cancel'),
           ),
           TextButton.icon(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _exportEDI(record);
+              await _exportEDI(record);
             },
             icon: const Icon(Icons.download),
             label: const Text('Export EDI'),
@@ -263,8 +312,8 @@ IEA*1*$controlNumber~
               Navigator.pop(context);
               _reviewRecord(record, false, commentController.text.trim());
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.orange),
-            child: const Text('Return for Review'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Reject'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -298,7 +347,29 @@ IEA*1*$controlNumber~
             _buildDetailRow('Date', _formatDate(record.dateOfService)),
             _buildDetailRow('Time In', _formatTime(record.timeIn)),
             _buildDetailRow('Time Out', _formatTime(record.timeOut)),
-            _buildDetailRow('Location', '${record.locationLat?.toStringAsFixed(4)}, ${record.locationLng?.toStringAsFixed(4)}'),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+            // Check-in location
+            _buildLocationSection(
+              'Check-In Location',
+              record.checkinLocationSource,
+              record.checkinLocationLat,
+              record.checkinLocationLng,
+              record.patient,
+            ),
+            const SizedBox(height: 8),
+            // Check-out location
+            _buildLocationSection(
+              'Check-Out Location',
+              record.checkoutLocationSource,
+              record.checkoutLocationLat,
+              record.checkoutLocationLng,
+              record.patient,
+            ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
             _buildDetailRow('State', record.stateCode),
             _buildDetailRow('Status', record.status),
             if (record.isOffline)
@@ -341,6 +412,100 @@ IEA*1*$controlNumber~
     );
   }
 
+  Widget _buildLocationSection(
+    String title,
+    String? locationSource,
+    double? latitude,
+    double? longitude,
+    Patient? patient,
+  ) {
+    String locationDisplay;
+    Color iconColor;
+    IconData iconData;
+    
+    if (locationSource == null || locationSource.isEmpty) {
+      locationDisplay = 'Not recorded';
+      iconColor = Colors.grey;
+      iconData = Icons.help_outline;
+    } else if (locationSource == 'GPS') {
+      if (latitude != null && longitude != null) {
+        locationDisplay = 'GPS: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
+        iconColor = Colors.blue;
+        iconData = Icons.gps_fixed;
+      } else {
+        locationDisplay = 'GPS (coordinates not available)';
+        iconColor = Colors.orange;
+        iconData = Icons.gps_off;
+      }
+    } else if (locationSource == 'PATIENT_ADDRESS') {
+      if (patient?.address != null) {
+        final addr = patient!.address!;
+        final parts = <String>[];
+        if (addr.line1?.isNotEmpty == true) parts.add(addr.line1!);
+        if (addr.line2?.isNotEmpty == true) parts.add(addr.line2!);
+        if (addr.city?.isNotEmpty == true) parts.add(addr.city!);
+        if (addr.state?.isNotEmpty == true) parts.add(addr.state!);
+        if (addr.zip?.isNotEmpty == true) parts.add(addr.zip!);
+        locationDisplay = parts.isNotEmpty ? parts.join(', ') : 'Address not available';
+        iconColor = Colors.green;
+        iconData = Icons.home;
+      } else {
+        locationDisplay = 'Patient Address (not available)';
+        iconColor = Colors.orange;
+        iconData = Icons.home_outlined;
+      }
+    } else {
+      locationDisplay = locationSource;
+      iconColor = Colors.grey;
+      iconData = Icons.location_on;
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(iconData, size: 16, color: iconColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                locationSource ?? 'Unknown',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: iconColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 22),
+          child: Text(
+            locationDisplay,
+            style: const TextStyle(fontSize: 12, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -373,11 +538,9 @@ IEA*1*$controlNumber~
                     ),
                     items: const [
                       DropdownMenuItem(value: 'ALL', child: Text('All Statuses')),
-                      DropdownMenuItem(value: 'PENDING_REVIEW', child: Text('Pending Review')),
-                      DropdownMenuItem(value: 'CONFIRMED', child: Text('Confirmed')),
-                      DropdownMenuItem(value: 'SUBMITTED', child: Text('Submitted')),
-                      DropdownMenuItem(value: 'FAILED_SUBMISSION', child: Text('Failed Submission')),
-                      DropdownMenuItem(value: 'CORRECTED', child: Text('Corrected')),
+                      DropdownMenuItem(value: 'UNDER_REVIEW', child: Text('Under Review')),
+                      DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
+                      DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -519,13 +682,11 @@ IEA*1*$controlNumber~
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'PENDING_REVIEW':
+      case 'UNDER_REVIEW':
         return Colors.orange;
-      case 'CONFIRMED':
-        return Colors.blue;
-      case 'SUBMITTED':
+      case 'APPROVED':
         return Colors.green;
-      case 'FAILED_SUBMISSION':
+      case 'REJECTED':
         return Colors.red;
       default:
         return Colors.grey;
@@ -534,14 +695,12 @@ IEA*1*$controlNumber~
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'PENDING_REVIEW':
+      case 'UNDER_REVIEW':
         return Icons.pending;
-      case 'CONFIRMED':
+      case 'APPROVED':
         return Icons.check_circle;
-      case 'SUBMITTED':
-        return Icons.send;
-      case 'FAILED_SUBMISSION':
-        return Icons.error;
+      case 'REJECTED':
+        return Icons.cancel;
       default:
         return Icons.help;
     }
