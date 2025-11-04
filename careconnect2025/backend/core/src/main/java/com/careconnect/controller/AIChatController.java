@@ -2,10 +2,10 @@ package com.careconnect.controller;
 
 import com.careconnect.dto.*;
 import com.careconnect.model.ChatConversation;
- import com.careconnect.service.ChatCleanupService;
+import com.careconnect.service.AIChatService;
+import com.careconnect.service.ChatCleanupService;
 import com.careconnect.service.UserAIConfigService;
 import com.careconnect.repository.ChatConversationRepository;
-import com.careconnect.service.chat.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,14 +13,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @RestController

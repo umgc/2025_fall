@@ -6,7 +6,6 @@ import com.careconnect.dto.ChatConversationSummary;
 import com.careconnect.dto.ChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.repository.*;
-import com.careconnect.service.chat.AIChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
