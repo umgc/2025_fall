@@ -1,4 +1,4 @@
-# CareConnect 2025 User Guide
+F# CareConnect 2025 User Guide
 
 ## Table of Contents
 
@@ -14,15 +14,18 @@
 10. [AI and Voice Commands](#ai-and-voice-commands)
 11. [Video Calling and Telehealth](#video-calling-and-telehealth)
 12. [Task Management](#task-management)
-13. [Gamification and Achievements](#gamification-and-achievements)
-14. [Payment and Subscriptions](#payment-and-subscriptions)
-15. [File Management](#file-management)
-16. [Device Integration](#device-integration)
-17. [Notifications and Alerts](#notifications-and-alerts)
-18. [Emergency Features](#emergency-features)
-19. [Privacy and Security](#privacy-and-security)
-20. [Troubleshooting](#troubleshooting)
-21. [Support and Contact](#support-and-contact)
+13. [Notetaking](#notetaking)
+14. [Gamification and Achievements](#gamification-and-achievements)
+15. [Payment and Subscriptions](#payment-and-subscriptions)
+16. [File Management](#file-management)
+17. [Device Integration](#device-integration)
+18. [Notifications and Alerts](#notifications-and-alerts)
+19. [Emergency Features](#emergency-features)
+20. [Electronic Visit Verification](#electronic-visit-verification)
+21. [Invoice Assistant](#invoice-assistant)
+22. [Privacy and Security](#privacy-and-security)
+23. [Troubleshooting](#troubleshooting)
+24. [Support and Contact](#support-and-contact)
 
 ## Introduction
 
@@ -220,6 +223,18 @@ The CareConnect dashboard is your central hub for all activities and information
    - Record symptoms and severity
    - Add photos for visual documentation
    - Track symptom patterns
+   
+4. **Video Check-In**
+   - Activated from the Check-In Screen
+   - Captures a short video using the user's camera
+   - Includes pause functionality
+   - Allows for submission and discarding of videos
+   - Videos are submitted to an AI service for mood analysis
+
+5. **Virtual Check-In**
+   - Patients receive scheduled check-ins configured by their caregivers
+   - Each check-in includes simple questions (e.g., pain level, medication taken, mood)
+   - Patients can answer directly through the app and submit responses for review
 
 ### Medication Management
 
@@ -315,7 +330,8 @@ The CareConnect dashboard is your central hub for all activities and information
      
 3. **Vial of Life**:
    - Patients can create, update, and share an emergency profile which shows important health information.
-   - The profile can be shared through a QR code or link with the patient’s consent.  
+   - The profile can be shared through a QR code or link with the patient’s consent.
+     
 ## Caregiver Features
 
 ### Patient Management
@@ -380,6 +396,24 @@ The CareConnect dashboard is your central hub for all activities and information
    - Share photos and documents
    - Voice message recording
    - Group conversations
+
+3. **Virtual Check-Ins**
+    - Caregivers can create and manage virtual check-ins for their assigned patients. 
+    - These check-ins allow for regular updates on patient well-being without requiring a video call or in-person visit.
+
+   **Key Capabilities**
+   - Configure question templates (mood, medication, vitals, lifestyle)
+   - Schedule frequency (daily, weekly, custom)
+   - Enable/disable specific questions per patient
+   - Review submitted responses in the dashboard
+   - Receive alerts for abnormal or missed responses
+  
+   **Workflow Overview**
+   - Go to the Caregiver Dashboard.
+   - Select “Virtual Check-Ins”.
+   - Choose a patient and click “Configure”.
+   - Select or create questions, then save and assign.
+   - Patients receive notifications to complete their check-ins
 
 #### Care Team Coordination
 1. **Team Communication**:
@@ -577,6 +611,10 @@ The CareConnect dashboard is your central hub for all activities and information
    - Achievement milestones
    - Performance metrics
    - Improvement areas
+  
+3. **Virtual Check ins**
+   - Responses collected through virtual check-ins are automatically integrated into the patient’s health dashboard
+   - Caregivers can monitor trends and receive early alerts for concerning patterns
 
 #### Predictive Analytics
 1. **Health Predictions**:
@@ -678,6 +716,9 @@ The CareConnect dashboard is your central hub for all activities and information
    - Schedule follow-ups
 
 ## Task Management
+
+## Notetaking
+[demo video] [https://github.com/umgc/2025_fall/issues/603#issue-3562327269]
 
 ### Personal Tasks
 
@@ -891,18 +932,41 @@ The CareConnect dashboard is your central hub for all activities and information
 
 ### Smart Home Integration
 
-#### Supported Systems
-1. **Home Monitoring**:
-   - Motion sensors
-   - Door/window sensors
-   - Emergency buttons
-   - Air quality monitors
+#### Supported Systems  
 
-2. **Voice Assistants**:
-   - Amazon Alexa
-   - Google Assistant
-   - Apple Siri
-   - Custom commands
+1. **Home Monitoring**:  
+   - Motion sensors  
+   - Door/window sensors  
+   - Emergency buttons  
+   - Air quality monitors  
+
+
+2. **Voice Assistants**:  
+   - Amazon Alexa (Phase 1 Integration Complete)
+        - [AlexaDemo] https://github.com/umgc/2025_fall/issues/621#issue-3577961974
+        - CareConnect can now connect directly with an Alexa Skill, allowing patients to read or add calendar tasks using voice commands such as:  
+             “Alexa, ask CareConnect what’s on my schedule,” or “Alexa, tell CareConnect to add a doctor’s appointment for tomorrow.”  
+        - Users link their Alexa and CareConnect accounts securely through OAuth 2.0 account linking.  
+        - Once linked, Alexa calls CareConnect’s backend API endpoints  
+             (/v1/api/alexa/calendarTasks/get and /v1/api/alexa/calendarTasks/add) to read and create tasks for the patient’s calendar.  
+        - All requests use JWT authentication and are handled through the CareConnect backend’s Alexa Controller for security and data consistency.  
+        - The Alexa Skill communicates with CareConnect through HTTPS using the ask-sdk-core library.  
+        - Requests are processed by the backend controller, which validates the JWT, interprets the user’s intent, and interacts with the TaskService to retrieve or create patient calendar data.  
+        - The skill is currently available to internal Beta testers via invitation links in the Amazon Developer Console and requires linking through the CareConnect Smart Devices page.  
+        - The integration is currently in Beta mode and limited to patient accounts only.  
+        - Future plans include adding voice authentication to prevent unauthorized users from accessing patient information and expanding caregiver access with limited permissions.  
+
+   - Google Assistant (Planned Future Phase)  
+        - A Google Actions equivalent of the Alexa Skill will allow the same commands through Google Home and Android devices.  
+
+   - Apple Siri  
+   - Custom commands  
+
+#### Integration Summary  
+- The Alexa Integration marks CareConnect’s first major smart-home feature, bridging voice interaction with core health management tasks.  
+- It demonstrates secure communication between Amazon’s Alexa ecosystem and CareConnect’s backend services via OAuth 2.0 and JWT.  
+- This foundation opens the door to further home-automation enhancements such as smart light or speaker notifications for medication reminders, task alerts, and emergency events.  
+- As development continues, additional Alexa-enabled devices such as speakers, smart displays, or lighting systems can be connected to trigger visual or audible reminders for accessibility and safety.  
 
 ## Notifications and Alerts
 
@@ -1000,6 +1064,42 @@ The CareConnect dashboard is your central hub for all activities and information
    - Mental health professionals
    - Emergency services
    - Support group contacts
+
+## Electronic Visit Verification
+
+### Overview
+
+The EVV module in the Care Connect app helps caregivers record, verify, and submit visit data in compliance with Electronic Visit Verification standards.
+
+### Where to find it
+
+* Open ...More page, select **EVV** from the menu.
+
+You can:
+
+* View and manage **Scheduled Visits**
+* **Start**, **complete**, and **submit** EVV visits
+* **Generate EDI files** for completed visits
+* **View past and upcoming visits** from the patient dashboard
+* **Work offline** and sync when reconnected
+
+## Invoice Assistant
+### Invoice Dashboard
+   - Total invoices
+   - Total amount
+   - Pending payments
+   - Overdue bills
+   - Recent activity
+
+### Upload Invoices
+   - Upload PNG, JPEG, JPG, PDF
+   - Take a photo of an invoice or bill
+   - Manually enter invoice or bill details
+
+### Invoice List
+   - Search for stored invoices
+   - Export stored invoices
+   - Filter results by amount, due date, or service date
 
 ## Privacy and Security
 

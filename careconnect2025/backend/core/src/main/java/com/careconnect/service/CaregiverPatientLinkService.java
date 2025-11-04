@@ -282,14 +282,14 @@ public class CaregiverPatientLinkService {
         }
     }
 
-  public boolean hasActiveLink(Long caregiverUserId, Long patientUserId) {
-    User caregiverUser = userRepository.findById(caregiverUserId)
-        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Caregiver user not found"));
-        
-    User patientUser = userRepository.findById(patientUserId)
-        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient user not found"));
-        
-    return caregiverPatientLinkRepository.existsByCaregiverUserAndPatientUserAndStatus(
-        caregiverUser, patientUser, CaregiverPatientLink.LinkStatus.ACTIVE);
-}
+    public boolean hasActiveLink(Long caregiverUserId, Long patientUserId) {
+        User caregiverUser = userRepository.findById(caregiverUserId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Caregiver user not found"));
+
+        User patientUser = userRepository.findById(patientUserId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient user not found"));
+
+        return caregiverPatientLinkRepository.existsByCaregiverUserAndPatientUserAndStatus(
+                caregiverUser, patientUser, CaregiverPatientLink.LinkStatus.ACTIVE);
+    }
 }

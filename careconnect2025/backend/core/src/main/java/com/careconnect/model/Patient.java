@@ -50,6 +50,20 @@ public class Patient {
     @Column(name = "is_alexa_linked", nullable = true) // ← Database column
     private Boolean alexaLinked; // ← Java field name
 
+    // --- inside class Patient ---
+    @ManyToOne
+    @JoinColumn(name = "primary_care_provider_id")
+    private Provider primaryCareProvider;
+
+    public Provider getPrimaryCareProvider() {
+        return primaryCareProvider;
+    }
+
+    public void setPrimaryCareProvider(Provider primaryCareProvider) {
+        this.primaryCareProvider = primaryCareProvider;
+    }
+
+
     // Explicit getter for compatibility if Lombok is not processed
     public User getUser() { return user; }
 

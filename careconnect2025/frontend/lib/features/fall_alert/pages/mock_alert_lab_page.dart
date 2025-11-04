@@ -49,17 +49,17 @@ class _MockAlertLabPageState extends State<MockAlertLabPage> {
               children: [
                 FilledButton(
                   onPressed: _running ? null : _startPeriodic,
-                  child: const Text('Start periodic'),
+                  child: const Text('Start'),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   onPressed: _running ? _stopPeriodic : null,
-                  child: const Text('Stop periodic'),
+                  child: const Text('Stop'),
                 ),
                 const Spacer(),
                 FilledButton.tonal(
                   onPressed: _triggerOnce,
-                  child: const Text('Trigger now'),
+                  child: const Text('Trigger'),
                 ),
               ],
             ),
@@ -67,7 +67,7 @@ class _MockAlertLabPageState extends State<MockAlertLabPage> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                _running ? 'Status: running (emits every ~30s)' : 'Status: stopped',
+                _running ? 'Status: running (emits every ~3s)' : 'Status: stopped',
                 style: theme.textTheme.bodyMedium,
               ),
             ),

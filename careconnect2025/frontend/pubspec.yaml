@@ -45,7 +45,7 @@ dependencies:
   pointycastle: ^4.0.0  # For RSA key operations
   app_links: ^6.4.1  # For handling deep links from OAuth callback (replaced uni_links)
 
-# -- Astha - start
+  # -- Astha - start
   path_provider: ^2.1.5
   mime: ^2.0.0
   image_picker: ^1.2.0  # image upload
@@ -73,11 +73,11 @@ dependencies:
   # Hybrid Video Calling Solution
   # Agora for mobile platforms (iOS/Android) - Using only core engine to avoid namespace issues
   # Note: While included in pubspec, conditional imports prevent web loading
-#  agora_rtc_engine: ^6.5.2
+  #  agora_rtc_engine: ^6.5.2
   
   # WebRTC for web glatform (fallback for web compatibility)
-#  flutter_webrtc: ^1.2.0
-#  socket_io_client: ^3.1.2  # For WebRTC signaling server
+  #  flutter_webrtc: ^1.2.0
+  #  socket_io_client: ^3.1.2  # For WebRTC signaling server
   
   # Keep existing packages for other functionality
   
@@ -86,19 +86,19 @@ dependencies:
   
   # Platform detection
   platform: ^3.1.6
-# my key storage
-#  flutter_dotenv: ^6.0.0
+  # my key storage
+  flutter_dotenv: ^6.0.0
   # Local storage for offline messaging
   sqflite: ^2.4.2
-# -- Astha - start
-# ag
+  # -- Astha - start
+  # ag
   provider: ^6.1.5+1
-  go_router: ^16.2.1 
-#  flutter_stripe: ^10.2.0
+  go_router: ^16.2.1
+  #  flutter_stripe: ^10.2.0
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   fl_chart: ^1.1.0
-    
+
   # AI Voice Commands 
   # ag added as a fix
   porcupine_flutter: ^3.0.5
@@ -121,7 +121,19 @@ dependencies:
     sdk: flutter
   flutter_svg: ^2.0.9  # Add this line
 
-  web: ^1.1.0
+  #USPS Tracking Dependencies
+  #HTML parsing of email content
+  html: ^0.15.5
+  #Gmail API Client
+  googleapis: ^12.0.0
+  googleapis_auth: ^1.6.0
+  #OAuth2 Client + PKCE (Google and Microsoft)
+  flutter_appauth: ^6.0.3
+
+  # UI Components
+  accordion: ^2.6.0
+  syncfusion_flutter_pdfviewer: ^31.2.3
+
   #speech to text, voice recognition, and diarization
   sherpa_onnx: ^1.12.14
   #for recording audio samples for speaker recognition
@@ -131,7 +143,7 @@ dependencies:
   #The following is needed as the calendar for the Calendar Assisstant feature
   table_calendar: ^3.2.0
 # Team D - Dependencies Begin
-  syncfusion_flutter_pdfviewer: ^31.2.3
+  pdfx: ^2.9.2
   qr_flutter: ^4.1.0
   #llm_toolkit: ^0.0.4
   #llama_cpp_dart: 
@@ -144,7 +156,7 @@ dependencies:
   json_schema: ^5.2.1
   flutter_staggered_grid_view: ^0.7.0
   excel: ^4.0.6         # For creating and manipulating Excel files. 
-  open_filex: ^4.7.0  
+  open_filex: ^4.7.0
 
   ##EVV Dependencies
   connectivity_plus: ^6.0.5
@@ -159,7 +171,6 @@ dependency_overrides:
   calendar_view: ^1.0.0
   accordion: ^2.6.0
 
-  
 dev_dependencies:
   flutter_test:
     sdk: flutter

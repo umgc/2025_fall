@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../services/evv_service.dart';
 import '../../../../widgets/common_drawer.dart';
 import '../../../../widgets/app_bar_helper.dart';
+import '../../../dashboard/models/patient_model.dart';
 
 class EvvVisitHistoryPage extends StatefulWidget {
   const EvvVisitHistoryPage({super.key});
@@ -287,11 +288,9 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
                             ),
                             items: const [
                               DropdownMenuItem(value: '', child: Text('All Statuses')),
-                              DropdownMenuItem(value: 'PENDING_REVIEW', child: Text('Pending Review')),
-                              DropdownMenuItem(value: 'CONFIRMED', child: Text('Confirmed')),
-                              DropdownMenuItem(value: 'SUBMITTED', child: Text('Submitted')),
-                              DropdownMenuItem(value: 'FAILED_SUBMISSION', child: Text('Failed Submission')),
-                              DropdownMenuItem(value: 'CORRECTED', child: Text('Corrected')),
+                              DropdownMenuItem(value: 'UNDER_REVIEW', child: Text('Under Review')),
+                              DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
+                              DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
                             ],
                             onChanged: (value) {
                               setState(() {
@@ -487,8 +486,29 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
               _buildDetailRow('Date', _formatDate(record.dateOfService)),
               _buildDetailRow('Time In', _formatTime(record.timeIn)),
               _buildDetailRow('Time Out', _formatTime(record.timeOut)),
-              _buildDetailRow('Location', '${record.locationLat?.toStringAsFixed(6)}, ${record.locationLng?.toStringAsFixed(6)}'),
-              _buildDetailRow('Location Source', record.locationSource),
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 8),
+              // Check-in location
+              _buildLocationSection(
+                'Check-In Location',
+                record.checkinLocationSource,
+                record.checkinLocationLat,
+                record.checkinLocationLng,
+                record.patient,
+              ),
+              const SizedBox(height: 8),
+              // Check-out location
+              _buildLocationSection(
+                'Check-Out Location',
+                record.checkoutLocationSource,
+                record.checkoutLocationLat,
+                record.checkoutLocationLng,
+                record.patient,
+              ),
+              const SizedBox(height: 8),
+              const Divider(),
+              const SizedBox(height: 8),
               _buildDetailRow('State', record.stateCode),
               _buildDetailRow('Status', record.status),
               _buildDetailRow('MA Number', record.patient?.maNumber ?? 'N/A'),
@@ -546,18 +566,103 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
     );
   }
 
+  Widget _buildLocationSection(
+    String title,
+    String? locationSource,
+    double? latitude,
+    double? longitude,
+    Patient? patient,
+  ) {
+    String locationDisplay;
+    Color iconColor;
+    IconData iconData;
+    
+    if (locationSource == null || locationSource.isEmpty) {
+      locationDisplay = 'Not recorded';
+      iconColor = Colors.grey;
+      iconData = Icons.help_outline;
+    } else if (locationSource == 'GPS') {
+      if (latitude != null && longitude != null) {
+        locationDisplay = 'GPS: ${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}';
+        iconColor = Colors.blue;
+        iconData = Icons.gps_fixed;
+      } else {
+        locationDisplay = 'GPS (coordinates not available)';
+        iconColor = Colors.orange;
+        iconData = Icons.gps_off;
+      }
+    } else if (locationSource == 'PATIENT_ADDRESS') {
+      if (patient?.address != null) {
+        final addr = patient!.address!;
+        final parts = <String>[];
+        if (addr.line1?.isNotEmpty == true) parts.add(addr.line1!);
+        if (addr.line2?.isNotEmpty == true) parts.add(addr.line2!);
+        if (addr.city?.isNotEmpty == true) parts.add(addr.city!);
+        if (addr.state?.isNotEmpty == true) parts.add(addr.state!);
+        if (addr.zip?.isNotEmpty == true) parts.add(addr.zip!);
+        locationDisplay = parts.isNotEmpty ? parts.join(', ') : 'Address not available';
+        iconColor = Colors.green;
+        iconData = Icons.home;
+      } else {
+        locationDisplay = 'Patient Address (not available)';
+        iconColor = Colors.orange;
+        iconData = Icons.home_outlined;
+      }
+    } else {
+      locationDisplay = locationSource;
+      iconColor = Colors.grey;
+      iconData = Icons.location_on;
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(iconData, size: 16, color: iconColor),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                locationSource ?? 'Unknown',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: iconColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 22),
+          child: Text(
+            locationDisplay,
+            style: const TextStyle(fontSize: 12, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'PENDING_REVIEW':
+      case 'UNDER_REVIEW':
         return Colors.orange;
-      case 'CONFIRMED':
-        return Colors.blue;
-      case 'SUBMITTED':
+      case 'APPROVED':
         return Colors.green;
-      case 'FAILED_SUBMISSION':
+      case 'REJECTED':
         return Colors.red;
-      case 'CORRECTED':
-        return Colors.purple;
       default:
         return Colors.grey;
     }
@@ -565,16 +670,12 @@ class _EvvVisitHistoryPageState extends State<EvvVisitHistoryPage> {
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'PENDING_REVIEW':
+      case 'UNDER_REVIEW':
         return Icons.pending;
-      case 'CONFIRMED':
+      case 'APPROVED':
         return Icons.check_circle;
-      case 'SUBMITTED':
-        return Icons.send;
-      case 'FAILED_SUBMISSION':
-        return Icons.error;
-      case 'CORRECTED':
-        return Icons.edit;
+      case 'REJECTED':
+        return Icons.cancel;
       default:
         return Icons.help;
     }

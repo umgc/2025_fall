@@ -69,6 +69,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settings => 'Configuración';
 
   @override
+  String get fallDetection => 'Detección de caídas';
+
+  @override
+  String get informedDelivery => 'Entrega informada';
+
+  @override
+  String get smartDevices => 'Dispositivos inteligentes';
+
+  @override
   String get pleaseLogIn => 'Inicia sesión';
 
   @override

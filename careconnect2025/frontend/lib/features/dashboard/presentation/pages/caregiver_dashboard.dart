@@ -14,6 +14,8 @@ import '../../../../services/messaging_service.dart';
 import '../../../../services/call_notification_service.dart';
 import '../../../../widgets/messaging_widget.dart';
 import '../../../../widgets/call_notification_status_indicator.dart';
+import 'package:care_connect_app/features/dashboard/patient_dashboard/widgets/notifications_panel_widget.dart';
+
 
 import 'patient_medical_notes_page.dart';
 
@@ -42,6 +44,10 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
   // Real-time call notification state
   bool _callNotificationInitialized = false;
 
+  // ===== Notifications (collapsible) state =====
+  List<NotificationItem> _notifications = [];
+
+
   // Main content builder method
   Widget _buildMainContent() {
     return _buildContentBasedOnState();
@@ -55,7 +61,25 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
     _loadCaregiverName();
     _initializeServices();
     _initializeCallNotifications();
+    _loadNotifications();
   }
+
+
+
+    Future<void> _loadNotifications() async {
+      try {
+        // TODO: wire to your real service, e.g.:
+        // final items = await NotificationService.fetchForCaregiver(userId);
+        // setState(() => _notifications = items);
+
+        // No hardcoded items; keep empty until service is wired
+        setState(() => _notifications = []);
+      } catch (_) {
+        // keep UI stable on error
+      }
+    }
+
+
 
   Future<void> _initializeServices() async {
     try {
@@ -865,6 +889,15 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
+
+            // ===== Notifications (collapsible) at top =====
+            NotificationsPanel(
+              notifications: _notifications, // List<NotificationItem>
+              heading: 'Notifications',
+              initiallyExpanded: true,
+            ),
+            const SizedBox(height: 16),
+            
             Icon(
               Icons.person_search,
               size: isMobile ? 80.0 : 96.0,
@@ -935,6 +968,31 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       onRefresh: fetchPatients,
       child: CustomScrollView(
         slivers: [
+          
+          // ===== Notifications (collapsible) at top =====
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                horizontalMargin,
+                16,
+                horizontalMargin,
+                16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  NotificationsPanel(
+                    notifications: _notifications, // List<NotificationItem>
+                    heading: 'Notifications',
+                    initiallyExpanded: true,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+
+          
           // Show patient count
           SliverPadding(
             padding: EdgeInsets.fromLTRB(

@@ -69,6 +69,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settings => 'سیٹنگز';
 
   @override
+  String get fallDetection => 'گرنے کی شناخت';
+
+  @override
+  String get informedDelivery => 'باخبر ترسیل';
+
+  @override
+  String get smartDevices => 'ذہین آلات';
+
+  @override
   String get pleaseLogIn => 'براہ کرم لاگ ان کریں';
 
   @override

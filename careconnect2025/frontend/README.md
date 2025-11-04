@@ -295,6 +295,6 @@ Example:
 
 ## Build frontend for deployment to Amplify
  ```
-  flutter build web --dart-define=BACKEND_URL=https://careconnect_dev-1execute-api.us-east-1.amazonaws.com
+  flutter build web --dart-define=BACKEND_URL=https://careconnect_dev-1execute-api.us-east-1.amazonaws.com --no-tree-shake-icons
  ```
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Header
+import '../widgets/pain_level_card.dart';
 import '../widgets/patient_header_card.dart';
 
 // Info tab pieces
@@ -16,6 +17,9 @@ import '../widgets/recent_symptom_card.dart';
 import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
+// Recent Activity tab
+import '../widgets/recent_activity_tab.dart';
+
 // Virtual Check-in history
 // Virtual Check-In domain entities
 import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
@@ -27,6 +31,10 @@ import 'package:care_connect_app/features/health/virtual_check_in/presentation/w
 
 // (If this page calls the APIs, add:)
 
+
+// 👉 Alias BOTH sides to avoid type clashes
+import '../models/symptom_entry.dart' as model;
+import '../widgets/recent_symptom_card.dart' as sympt;
 
 class PatientDetailsPage extends StatelessWidget {
   final String patientId;
@@ -84,36 +92,48 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Health demo data ---
-    final symptomEntries = <SymptomEntry>[
-      SymptomEntry(
+    // MODEL entries
+    final modelSymptomEntries = <model.SymptomEntry>[
+      model.SymptomEntry(
         id: 's4',
         date: DateTime(2024, 12, 27),
         name: 'Fatigue, Headache, Joint pain',
         severity: 'Moderate',
         note: 'Symptoms worsened during holiday stress',
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's3',
         date: DateTime(2024, 12, 25),
         name: 'Fatigue, Nausea',
         severity: 'Severe',
         note: 'Emergency contact needed due to severe symptoms',
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's2',
         date: DateTime(2024, 12, 23),
         name: 'Mild headache',
         severity: 'Mild',
-        note: '',
+        note: null, // demo of nullable
       ),
-      SymptomEntry(
+      model.SymptomEntry(
         id: 's1',
         date: DateTime(2024, 12, 21),
         name: 'No symptoms reported',
         severity: 'Mild',
         note: 'Feeling much better, no symptoms reported',
       ),
+    ];
+
+    // Convert to the WIDGET type
+    final uiSymptomEntries = <sympt.SymptomEntry>[
+      for (final s in modelSymptomEntries)
+        sympt.SymptomEntry(
+          id: s.id,
+          date: s.date,
+          name: s.name,
+          severity: s.severity,
+          note: s.note ?? '', // <-- fix: ensure non-null String
+        ),
     ];
 
     final medicationEntries = <MedicationEntry>[
@@ -149,7 +169,19 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Virtual Check-In demo data ---
+    final activityList = const [
+      ActivityEntry(
+        title: 'Took medication: Lisinopril 10mg',
+        when: '2 hours ago',
+      ),
+      ActivityEntry(title: 'Video call completed', when: '4 hours ago'),
+      ActivityEntry(title: 'Reported pain level: 3/10', when: '6 hours ago'),
+      ActivityEntry(
+        title: 'Appointment with Dr. Smith scheduled',
+        when: 'Yesterday',
+      ),
+    ];
+
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',
@@ -186,7 +218,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-    // --- Virtual Check-In configuration (popup) ---
+// --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -209,12 +241,14 @@ class PatientDetailsPage extends StatelessWidget {
     ];
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
-        appBar: _DetailsAppBar(title: patientName, subtitle: 'Patient Details • $mrn'),
+        appBar: _DetailsAppBar(
+          title: patientName,
+          subtitle: 'Patient Details • $mrn',
+        ),
         body: Column(
           children: [
-            // Header card always visible above the tabs
             PatientHeaderCard(
               fullName: patientName,
               mrn: mrn,
@@ -228,6 +262,12 @@ class PatientDetailsPage extends StatelessWidget {
                 'Chronic Fatigue Syndrome',
               ],
               allergies: const ['Penicillin', 'Shellfish'],
+              /*heartRateBpm: 72,
+              bpSystolic: 120,
+              bpDiastolic: 80,
+              oxygenPercent: 98,
+              temperatureF: 98.0,*/
+              emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
             // Tab bar row (like your mock)
@@ -237,7 +277,7 @@ class PatientDetailsPage extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  // ---- Info ----
+                  // Info
                   ListView(
                     padding: const EdgeInsets.only(top: 12, bottom: 16),
                     children: [
@@ -259,20 +299,25 @@ class PatientDetailsPage extends StatelessWidget {
                     ],
                   ),
 
-
-                  // ---- Mood ----
+                  // Mood
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    children: [
-                      MoodHistorySection(entries: moodEntries),
-                    ],
+                    children: [MoodHistorySection(entries: moodEntries)],
                   ),
 
-                  // ---- Health ----
+                  // Health
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      RecentSymptomsSection(entries: symptomEntries),
+                      const PainLevelCard(
+                        lastReportedText: '6 hours ago',
+                        currentPain: 4,
+                        location: 'Lower back',
+                        dizziness: 2,
+                        fatigue: 7,
+                      ),
+                      // Recent Symptoms (UI-typed list)
+                      sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
                       CurrentMedicationsSection(entries: medicationEntries),
                     ],
@@ -318,8 +363,6 @@ class PatientDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
-
-
                 ],
               ),
             ),
@@ -401,3 +444,5 @@ class _TabsStrip extends StatelessWidget {
     );
   }
 }
+
+

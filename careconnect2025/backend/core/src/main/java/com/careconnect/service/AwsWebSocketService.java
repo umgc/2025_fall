@@ -76,7 +76,7 @@ public class AwsWebSocketService {
 
             connectionRepository.save(connection);
             log.info("Registered AWS WebSocket connection: {} for {} ({})",
-                connectionId, userEmail, subscriptionType);
+                    connectionId, userEmail, subscriptionType);
         } catch (Exception e) {
             log.error("Failed to register WebSocket connection: {}", connectionId, e);
             throw new RuntimeException("Failed to register WebSocket connection", e);
@@ -133,10 +133,10 @@ public class AwsWebSocketService {
     public boolean sendEmailVerificationNotification(String email) {
         try {
             Optional<WebSocketConnection> connectionOpt = connectionRepository
-                .findFirstByUserEmailAndSubscriptionTypeAndIsActiveTrueOrderByConnectedAtDesc(
-                    email.toLowerCase(),
-                    "email-verification"
-                );
+                    .findFirstByUserEmailAndSubscriptionTypeAndIsActiveTrueOrderByConnectedAtDesc(
+                            email.toLowerCase(),
+                            "email-verification"
+                    );
 
             if (connectionOpt.isEmpty()) {
                 log.warn("No active email verification connection found for: {}", email);
@@ -144,11 +144,11 @@ public class AwsWebSocketService {
             }
 
             Map<String, Object> notification = Map.of(
-                "type", "email-verified",
-                "email", email,
-                "verified", true,
-                "message", "Your email has been verified successfully!",
-                "timestamp", System.currentTimeMillis()
+                    "type", "email-verified",
+                    "email", email,
+                    "verified", true,
+                    "message", "Your email has been verified successfully!",
+                    "timestamp", System.currentTimeMillis()
             );
 
             boolean sent = sendMessageToConnection(connectionOpt.get().getConnectionId(), notification);
@@ -171,7 +171,7 @@ public class AwsWebSocketService {
     public int sendMessageToUser(String userEmail, Map<String, Object> message) {
         try {
             List<WebSocketConnection> connections = connectionRepository
-                .findByUserEmailAndIsActiveTrue(userEmail.toLowerCase());
+                    .findByUserEmailAndIsActiveTrue(userEmail.toLowerCase());
 
             int sentCount = 0;
             for (WebSocketConnection connection : connections) {
@@ -235,10 +235,10 @@ public class AwsWebSocketService {
         try {
             // Create API Gateway Management API client
             ApiGatewayManagementApiClient client = ApiGatewayManagementApiClient.builder()
-                .endpointOverride(URI.create(connection.getApiGatewayEndpoint()))
-                .region(Region.of(awsRegion))
-                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
-                .build();
+                    .endpointOverride(URI.create(connection.getApiGatewayEndpoint()))
+                    .region(Region.of(awsRegion))
+                    .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                    .build();
 
             // Convert message to JSON
             String messageJson = objectMapper.writeValueAsString(message);
@@ -246,9 +246,9 @@ public class AwsWebSocketService {
 
             // Send message
             PostToConnectionRequest request = PostToConnectionRequest.builder()
-                .connectionId(connection.getConnectionId())
-                .data(data)
-                .build();
+                    .connectionId(connection.getConnectionId())
+                    .data(data)
+                    .build();
 
             PostToConnectionResponse response = client.postToConnection(request);
 

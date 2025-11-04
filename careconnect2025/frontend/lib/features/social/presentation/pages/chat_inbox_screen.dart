@@ -62,7 +62,7 @@ class _ChatInboxScreenState extends State<ChatInboxScreen> {
   Widget build(BuildContext context) {
     if (_userId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Messages')),
+       // appBar: AppBar(title: const Text('Messages')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
