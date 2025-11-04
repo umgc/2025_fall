@@ -3,6 +3,7 @@ import 'package:care_connect_app/features/health/medication-tracker/pages/medica
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/providers/locale_provider.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:care_connect_app/screens/tabs/patient_tabs.dart';
 import 'package:care_connect_app/widgets/language/language_picker.dart';
 import 'package:care_connect_app/widgets/theme_toggle_switch.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +71,19 @@ class _MenuPageState extends State<MenuPage> {
             MaterialPageRoute(builder: (context) => const InvoiceTabbedPage()),
           );
         },
+      ),
+      _MenuItem(icon: 
+      Icons.report, 
+        label: 'Patient Report',
+        route: '/patient-report'
+          ,visibleFor: const {'PATIENT'},
+        onTap: () {
+        Navigator.pop(context);
+        Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (context) => const PatientReportsTab())
+        );
+        }
       ),
       _MenuItem(
         icon: Icons.verified_user,
