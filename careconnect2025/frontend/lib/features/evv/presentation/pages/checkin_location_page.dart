@@ -14,11 +14,13 @@ import 'package:http/http.dart' as http;
 class CheckinLocationPage extends StatefulWidget {
   final int patientId;
   final String serviceType;
+  final int? scheduledVisitId;
   
   const CheckinLocationPage({
     super.key,
     required this.patientId,
     required this.serviceType,
+    this.scheduledVisitId,
   });
 
   @override
@@ -173,6 +175,10 @@ class _CheckinLocationPageState extends State<CheckinLocationPage> {
     if (latitude != null && longitude != null) {
       queryParams['latitude'] = latitude.toString();
       queryParams['longitude'] = longitude.toString();
+    }
+    
+    if (widget.scheduledVisitId != null) {
+      queryParams['scheduledVisitId'] = widget.scheduledVisitId.toString();
     }
 
     final queryString = queryParams.entries

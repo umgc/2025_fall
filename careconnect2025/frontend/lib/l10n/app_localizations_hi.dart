@@ -69,6 +69,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settings => 'सेटिंग्स';
 
   @override
+  String get fallDetection => 'गिरने का पता लगाना';
+
+  @override
+  String get informedDelivery => 'सूचित वितरण';
+
+  @override
+  String get smartDevices => 'स्मार्ट उपकरण';
+
+  @override
   String get pleaseLogIn => 'कृपया लॉग इन करें';
 
   @override

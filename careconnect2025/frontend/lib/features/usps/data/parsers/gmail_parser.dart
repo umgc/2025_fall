@@ -60,7 +60,7 @@ class GmailParser {
   String _normalizeCid(String raw) =>
       raw.replaceAll('<', '').replaceAll('>', '').trim().toLowerCase();
 
-  DateTime? _resolveDigestDate(Document doc, DateTime fallback) {
+  DateTime? _resolveDigestDate(Document doc,  DateTime?  fallback) {
     String? candidate;
     final timeNode = doc.querySelector('time[datetime]');
     if (timeNode != null) {

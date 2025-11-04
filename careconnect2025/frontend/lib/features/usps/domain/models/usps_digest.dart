@@ -1,3 +1,6 @@
+import 'package:care_connect_app/features/usps/domain/models/mail_piece.dart';
+import 'package:care_connect_app/features/usps/domain/models/package_item.dart';
+
 class USPSDigest {
   final String? digestDateIso;
   final List<MailPiece> mailpieces;

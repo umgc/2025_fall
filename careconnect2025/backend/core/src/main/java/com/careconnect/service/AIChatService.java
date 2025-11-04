@@ -1,4 +1,4 @@
-package com.careconnect.service;
+package com.careconnect.service.chat;
 
 import java.util.List;
 

@@ -7,12 +7,18 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_am.dart';
 import 'app_localizations_ar.dart';
+import 'app_localizations_bn.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
+import 'app_localizations_fa.dart';
 import 'app_localizations_fr.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_ja.dart';
 import 'app_localizations_ne.dart';
+import 'app_localizations_pt.dart';
+import 'app_localizations_ru.dart';
 import 'app_localizations_ur.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -102,12 +108,18 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('am'),
     Locale('ar'),
+    Locale('bn'),
     Locale('en'),
     Locale('es'),
+    Locale('fa'),
     Locale('fr'),
     Locale('hi'),
+    Locale('ja'),
     Locale('ne'),
+    Locale('pt'),
+    Locale('ru'),
     Locale('ur'),
+    Locale('zh'),
   ];
 
   /// No description provided for @systemDefault.
@@ -229,6 +241,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get settings;
+
+  /// No description provided for @fallDetection.
+  ///
+  /// In en, this message translates to:
+  /// **'Fall Detection'**
+  String get fallDetection;
+
+  /// No description provided for @informedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Informed Delivery'**
+  String get informedDelivery;
+
+  /// No description provided for @smartDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Devices'**
+  String get smartDevices;
 
   /// No description provided for @pleaseLogIn.
   ///
@@ -820,12 +850,18 @@ class _AppLocalizationsDelegate
   bool isSupported(Locale locale) => <String>[
     'am',
     'ar',
+    'bn',
     'en',
     'es',
+    'fa',
     'fr',
     'hi',
+    'ja',
     'ne',
+    'pt',
+    'ru',
     'ur',
+    'zh',
   ].contains(locale.languageCode);
 
   @override
@@ -839,18 +875,30 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsAm();
     case 'ar':
       return AppLocalizationsAr();
+    case 'bn':
+      return AppLocalizationsBn();
     case 'en':
       return AppLocalizationsEn();
     case 'es':
       return AppLocalizationsEs();
+    case 'fa':
+      return AppLocalizationsFa();
     case 'fr':
       return AppLocalizationsFr();
     case 'hi':
       return AppLocalizationsHi();
+    case 'ja':
+      return AppLocalizationsJa();
     case 'ne':
       return AppLocalizationsNe();
+    case 'pt':
+      return AppLocalizationsPt();
+    case 'ru':
+      return AppLocalizationsRu();
     case 'ur':
       return AppLocalizationsUr();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(
