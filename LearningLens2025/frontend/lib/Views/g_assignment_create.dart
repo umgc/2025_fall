@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/google_classroom/google_classroom_api.dart';
 import 'package:learninglens_app/Api/lms/google_classroom/google_lms_service.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
 class CreateAssignmentPage extends StatefulWidget {
-  final GoogleClassroomApi _googleClassroomApi = GoogleClassroomApi();
-
   @override
   _CreateAssignmentPageState createState() => _CreateAssignmentPageState();
 }
@@ -22,7 +19,7 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
   int? _points;
   DateTime? _dueDate;
   TimeOfDay? _dueTime;
-  final String _topic = 'Essay'; // Made static with fixed value
+  final String _topic = 'essay'; // Made static with fixed value
   String? _title;
   String? _instructions;
   List<dynamic> _courses = [];
@@ -110,71 +107,30 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
         return;
       }
 
-      final url = Uri.parse(
-          'https://classroom.googleapis.com/v1/courses/$_selectedCourseId/courseWork');
-      final headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-
-      Map<String, dynamic> requestBody = {
-        'title': _title,
-        'description': _instructions,
-        'state': 'PUBLISHED',
-        'workType': 'ASSIGNMENT',
-        'maxPoints': _points,
-      };
-
-      if (_dueDate != null && _dueTime != null) {
-        requestBody['dueDate'] = {
-          'year': _dueDate!.year,
-          'month': _dueDate!.month,
-          'day': _dueDate!.day,
-        };
-        requestBody['dueTime'] = {
-          'hours': _dueTime!.hour,
-          'minutes': _dueTime!.minute,
-          'seconds': 0,
-        };
-      }
-
-      String? topicIdNew = await widget._googleClassroomApi
-          .getTopicId(_selectedCourseId!, _topic);
-      if (topicIdNew != null) {
-        requestBody['topicId'] = topicIdNew;
-      }
-
-      final body = jsonEncode(requestBody);
-
-      try {
-        final response = await http.post(url, headers: headers, body: body);
-
-        if (response.statusCode == 200) {
-          print('Assignment created successfully!');
-          await GoogleLmsService()
-              .courses
-              ?.firstWhere((c) => c.id.toString() == _selectedCourseId)
-              .refreshQuizzes();
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('Error creating assignment: ${response.statusCode}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
+      var ess = await GoogleLmsService().createAssignment(
+          _selectedCourseId!,
+          "",
+          _title!,
+          "",
+          _dueDate?.millisecondsSinceEpoch.toString() ?? "",
+          _points?.toString() ?? "",
+          _instructions ?? "");
+      if (ess != null) {
+        print('Assignment created successfully!');
+        await GoogleLmsService()
+            .courses
+            ?.firstWhere((c) => c.id.toString() == _selectedCourseId)
+            .refreshEssays();
+        Navigator.pop(context);
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Network error: ${e.toString()}'),
+            content: Text('Error creating assignment.'),
             backgroundColor: Colors.red,
           ),
         );
-      } finally {
-        setState(() => _isSubmitting = false);
       }
+      setState(() => _isSubmitting = false);
     }
   }
 

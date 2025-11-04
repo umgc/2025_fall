@@ -63,9 +63,10 @@ class MoodleLmsService implements LmsInterface {
   @override
   UserRole? role;
 
-  List<Override>? overrides;
-
   int? userId;
+
+  @override
+  List<Override>? overrides;
 
   String? get userToken => _userToken;
 
@@ -139,6 +140,7 @@ class MoodleLmsService implements LmsInterface {
     return _userToken != null;
   }
 
+  @override
   Future<void> refreshOverrides() async {
     List<Future<List<Override>>> futures = [
       _getQuizOverrides(),
@@ -1019,16 +1021,17 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-  Future<QuizOverride> addQuizOverride({
-    required int quizId,
-    int? userId,
-    int? groupId,
-    int? timeOpen,
-    int? timeClose,
-    int? timeLimit,
-    int? attempts,
-    String? password,
-  }) async {
+  @override
+  Future<QuizOverride> addQuizOverride(
+      {required int quizId,
+      int? userId,
+      int? groupId,
+      int? timeOpen,
+      int? timeClose,
+      int? timeLimit,
+      int? attempts,
+      String? password,
+      int? courseId}) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
     final url = Uri.parse('$apiURL$serverUrl');
@@ -1061,16 +1064,17 @@ class MoodleLmsService implements LmsInterface {
     }
   }
 
-  Future<String> addEssayOverride({
-    required int assignid,
-    int? userId,
-    int? groupId,
-    int? allowsubmissionsfromdate,
-    int? dueDate,
-    int? cutoffDate,
-    int? timelimit,
-    int? sortorder,
-  }) async {
+  @override
+  Future<String> addEssayOverride(
+      {required int assignid,
+      int? userId,
+      int? groupId,
+      int? allowsubmissionsfromdate,
+      int? dueDate,
+      int? cutoffDate,
+      int? timelimit,
+      int? sortorder,
+      int? courseId}) async {
     if (_userToken == null) throw StateError('User not logged in to Moodle');
 
     final url = Uri.parse('$apiURL$serverUrl');
