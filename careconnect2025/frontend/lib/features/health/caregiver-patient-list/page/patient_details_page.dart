@@ -1,4 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+
+// Pain level card
+import '../widgets/pain_level_card.dart';
 
 // Header
 import '../widgets/pain_level_card.dart';
@@ -36,7 +42,12 @@ import 'package:care_connect_app/features/health/virtual_check_in/presentation/w
 import '../models/symptom_entry.dart' as model;
 import '../widgets/recent_symptom_card.dart' as sympt;
 
-class PatientDetailsPage extends StatelessWidget {
+// API and models
+import '../../../../services/api_service.dart';
+import '../../../health/medication-tracker/models/medication-model.dart';
+import '../../../../providers/user_provider.dart';
+
+class PatientDetailsPage extends StatefulWidget {
   final String patientId;
   /// NEW: when true, caregiver UI (can configure); when false, patient UI (no configure).
   final bool isCaregiver;
@@ -46,6 +57,123 @@ class PatientDetailsPage extends StatelessWidget {
     required this.patientId,
     this.isCaregiver = false, // default to patient behavior
   });
+
+  @override
+  State<PatientDetailsPage> createState() => _PatientDetailsPageState();
+}
+
+class _PatientDetailsPageState extends State<PatientDetailsPage> {
+  List<Medication> medications = [];
+  bool _isLoadingMedications = false;
+  String? _medicationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedications();
+  }
+
+  /// Fetch medications from the backend API
+  Future<void> _fetchMedications() async {
+    setState(() {
+      _isLoadingMedications = true;
+      _medicationError = null;
+    });
+
+    try {
+      // Parse patientId from String to int
+      final patientIdInt = int.tryParse(widget.patientId);
+
+      if (patientIdInt == null) {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Invalid patient ID';
+        });
+        return;
+      }
+
+      final http.Response resp =
+          await ApiService.getPatientMedicationsForPatient(patientIdInt);
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+
+        setState(() {
+          medications = data.map((json) => Medication.fromJson(json)).toList();
+          _isLoadingMedications = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Failed to load medications: ${resp.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingMedications = false;
+        _medicationError = 'Error loading medications: $e';
+      });
+    }
+  }
+
+  /// Build the medications section with loading/error handling
+  Widget _buildMedicationsSection() {
+    if (_isLoadingMedications) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_medicationError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.error,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _medicationError!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _fetchMedications,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Get caregiverId from user provider
+    final caregiverId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).user?.caregiverId;
+
+    return CurrentMedicationsSection(
+      entries: medications,
+      onMedicationUpdated: _fetchMedications,
+      // Refresh medications after delete/approve
+      caregiverId: caregiverId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,39 +264,6 @@ class PatientDetailsPage extends StatelessWidget {
         ),
     ];
 
-    final medicationEntries = <MedicationEntry>[
-      MedicationEntry(
-        id: 'm1',
-        name: 'Metformin',
-        dosage: '500mg',
-        frequency: 'Twice daily',
-        startedOn: DateTime(2024, 1, 15),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 95,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm2',
-        name: 'Lisinopril',
-        dosage: '10mg',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 3, 10),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 92,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm3',
-        name: 'Vitamin D3',
-        dosage: '2000 IU',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 2, 1),
-        lastTakenAt: DateTime(2024, 12, 26, 8, 0),
-        compliancePct: 87,
-        status: MedicationStatus.active,
-      ),
-    ];
-
     final activityList = const [
       ActivityEntry(
         title: 'Took medication: Lisinopril 10mg',
@@ -182,6 +277,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // --- Virtual Check-In demo data ---
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',
@@ -218,7 +314,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
-// --- Virtual Check-In configuration (popup) ---
+    // --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -319,10 +415,11 @@ class PatientDetailsPage extends StatelessWidget {
                       // Recent Symptoms (UI-typed list)
                       sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
-                      CurrentMedicationsSection(entries: medicationEntries),
+                      _buildMedicationsSection(),
                     ],
                   ),
 
+                  // ---- Virtual Check-In tab ----
                   // ---- Virtual Check-In tab ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -363,6 +460,7 @@ class PatientDetailsPage extends StatelessWidget {
                       ),
                     ],
                   ),
+
                 ],
               ),
             ),
@@ -405,9 +503,9 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           Text(
             subtitle,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
       ),
@@ -429,7 +527,7 @@ class _TabsStrip extends StatelessWidget {
         child: TabBar(
           isScrollable: false,
           labelColor: cs.primary,
-          unselectedLabelColor: cs.onSurface.withValues(alpha: .7),
+          unselectedLabelColor: cs.onSurface.withOpacity(.7),
           indicator: UnderlineTabIndicator(
             borderSide: BorderSide(color: cs.primary, width: 3),
           ),
@@ -444,5 +542,3 @@ class _TabsStrip extends StatelessWidget {
     );
   }
 }
-
-

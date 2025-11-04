@@ -1,15 +1,15 @@
+import 'package:care_connect_app/config/navigation/caregiver_more_features_bottom_drawer.dart';
 import 'package:care_connect_app/features/dashboard/caregiver-dashboard/pages/caregiver-dashboard.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import 'package:care_connect_app/features/health/symptom-tracker/pages/symptom_allergies_tracker_screen.dart';
+import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
 import 'package:care_connect_app/features/social/in-app-chat/pages/message-list.dart';
 import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/widgets/menu/menu_page.dart';
 import 'package:flutter/material.dart';
 import '../../screens/tabs/patient_tabs.dart';
 import '../../screens/tabs/caregiver_tabs.dart';
-import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
-
-
+import 'patient_more_features_bottom_drawer.dart';
 
 /// Represents a single item in the bottom navigation bar.
 ///
@@ -101,7 +101,7 @@ class BottomNavConfig {
         screen: const PatientHomeTab(),
       ),
       BottomNavItem(
-        label: 'Symptoms',
+        label: 'Symptoms and Allergies',
         labelKey: 'nav_symptoms',
         icon: Icons.medical_information_outlined,
         activeIcon: Icons.medical_information,
@@ -109,12 +109,12 @@ class BottomNavConfig {
         screen: const SymptomsAllergiesPage(),
       ),
       BottomNavItem(
-        label: 'Health',
+        label: 'Virtual Check-In',
         labelKey: 'nav_health',
         icon: Icons.health_and_safety_outlined,
         activeIcon: Icons.health_and_safety,
-        routeName: 'health',
-        screen: PatientDetailsPage(patientId: '<current-patient-id>'),
+        routeName: 'check-in',
+        screen: const PatientVirtualCheckIn(),
       ),
       BottomNavItem(
         label: 'Messages',
@@ -125,9 +125,9 @@ class BottomNavConfig {
         screen: MessagesListPage(),
       ),
       BottomNavItem(
-        label: 'More',
+        label: 'Menu',
         labelKey: 'nav_more',
-        icon: Icons.more_horiz_outlined,
+        icon: Icons.menu_outlined,
         activeIcon: Icons.menu,
         routeName: 'menupage',
         screen: const MenuPage(),
@@ -184,10 +184,9 @@ static List<BottomNavItem> getCaregiverNavItems() {
         screen: const CaregiverMessagesTab(),
       ),
       BottomNavItem(
-        label: 'More',
-        labelKey: 'nav_more',
-        icon: Icons.more_horiz_outlined,
-        activeIcon: Icons.more,
+        label: 'Menu',
+        icon: Icons.menu_open_outlined,
+        activeIcon: Icons.menu_open,
         routeName: 'profile',
         onPress: (context, builder) {
           showModalBottomSheet<void>(

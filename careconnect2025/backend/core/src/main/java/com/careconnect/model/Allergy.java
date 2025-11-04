@@ -1,5 +1,7 @@
 package com.careconnect.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;
@@ -10,20 +12,22 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(exclude = { "patient" })
 public class Allergy {
+
     public Long getId() { return id; }
     public Patient getPatient() { return patient; }
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
-    
+
     @Column(name = "allergen", nullable = false)
-    private String allergen; // e.g., "Peanuts", "Penicillin", "Latex"
+    private String allergen;
 
     @Column(name = "allergy_type")
     @Enumerated(EnumType.STRING)
@@ -34,17 +38,17 @@ public class Allergy {
     private AllergySeverity severity;
 
     @Column(name = "reaction", columnDefinition = "TEXT")
-    private String reaction; // Description of reaction (e.g., "Hives, difficulty breathing")
+    private String reaction;
 
     @Column(name = "notes", columnDefinition = "TEXT")
-    private String notes; // Additional notes from healthcare provider
+    private String notes;
 
     @Column(name = "diagnosed_date")
-    private String diagnosedDate; // When allergy was first diagnosed
+    private String diagnosedDate; // keep String to match frontend
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private Boolean isActive = true; // Whether allergy is still active
+    private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -52,44 +56,26 @@ public class Allergy {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    // Setters for updatable fields (for use in service/controller)
-    public void setAllergen(String allergen) {
-        this.allergen = allergen;
-    }
-    public void setAllergyType(AllergyType allergyType) {
-        this.allergyType = allergyType;
-    }
-    public void setSeverity(AllergySeverity severity) {
-        this.severity = severity;
-    }
-    public void setReaction(String reaction) {
-        this.reaction = reaction;
-    }
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
-    public void setDiagnosedDate(String diagnosedDate) {
-        this.diagnosedDate = diagnosedDate;
-    }
-    public void setIsActive(Boolean isActive) {
-        this.isActive = isActive;
-    }
-    
+    // setters for updates
+    public void setAllergen(String allergen) { this.allergen = allergen; }
+    public void setAllergyType(AllergyType allergyType) { this.allergyType = allergyType; }
+    public void setSeverity(AllergySeverity severity) { this.severity = severity; }
+    public void setReaction(String reaction) { this.reaction = reaction; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public void setDiagnosedDate(String diagnosedDate) { this.diagnosedDate = diagnosedDate; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
-        if (this.isActive == null) {
-            this.isActive = true;
-        }
+        if (this.isActive == null) this.isActive = true;
     }
-    
     @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
-    
+    protected void onUpdate() { this.updatedAt = Instant.now(); }
+
+    // Enums (nested enums are implicitly static—good)
     public enum AllergyType {
         FOOD("Food Allergy"),
         MEDICATION("Medication Allergy"),
@@ -97,32 +83,51 @@ public class Allergy {
         CONTACT("Contact Allergy"),
         SEASONAL("Seasonal Allergy"),
         OTHER("Other");
-        
+
         private final String displayName;
-        
-        AllergyType(String displayName) {
-            this.displayName = displayName;
+        AllergyType(String displayName) { this.displayName = displayName; }
+        public String getDisplayName() { return displayName; }
+
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        public static AllergyType fromJson(String raw) {
+            if (raw == null) return OTHER;
+            String v = raw.trim().toUpperCase();
+            switch (v) {
+                case "DRUG":
+                case "MEDICATION":  return MEDICATION;
+                case "FOOD":        return FOOD;
+                case "ENVIRONMENTAL": return ENVIRONMENTAL;
+                case "CONTACT":     return CONTACT;
+                case "SEASONAL":    return SEASONAL;
+                case "OTHER":       return OTHER;
+                default:            return OTHER;
+            }
         }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
+        @JsonValue public String toJson() { return name(); }
     }
-    
+
     public enum AllergySeverity {
         MILD("Mild"),
         MODERATE("Moderate"),
         SEVERE("Severe"),
         LIFE_THREATENING("Life-threatening");
-        
+
         private final String displayName;
-        
-        AllergySeverity(String displayName) {
-            this.displayName = displayName;
+        AllergySeverity(String displayName) { this.displayName = displayName; }
+        public String getDisplayName() { return displayName; }
+
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        public static AllergySeverity fromJson(String raw) {
+            if (raw == null) return MILD;
+            String v = raw.trim().toUpperCase();
+            switch (v) {
+                case "MILD":             return MILD;
+                case "MODERATE":         return MODERATE;
+                case "SEVERE":           return SEVERE;
+                case "LIFE_THREATENING": return LIFE_THREATENING;
+                default:                 return MILD;
+            }
         }
-        
-        public String getDisplayName() {
-            return displayName;
-        }
+        @JsonValue public String toJson() { return name(); }
     }
 }
