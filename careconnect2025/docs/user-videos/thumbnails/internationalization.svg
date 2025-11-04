@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
+  <rect width="640" height="360" rx="24" ry="24" fill="#6a1b9a"/>
+  <text x="50%" y="45%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="36" fill="#ffffff">Localization Demo</text>
+  <text x="50%" y="65%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="24" fill="#f4dfff">Tap to watch</text>
+</svg>

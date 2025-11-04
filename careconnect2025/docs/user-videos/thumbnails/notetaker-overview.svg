@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
+  <rect width="640" height="360" rx="24" ry="24" fill="#005f73"/>
+  <text x="50%" y="45%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="38" fill="#ffffff">Notetaker Overview</text>
+  <text x="50%" y="65%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="24" fill="#cdeef3">Tap to watch</text>
+</svg>

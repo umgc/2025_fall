@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1f6feb;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#103d68;stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="24" ry="24" fill="url(#grad)"/>
+  <text x="50%" y="45%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="42" fill="#ffffff">Calendar Assistant</text>
+  <text x="50%" y="65%" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="24" fill="#dce6f2">Tap to watch walkthrough</text>
+</svg>
