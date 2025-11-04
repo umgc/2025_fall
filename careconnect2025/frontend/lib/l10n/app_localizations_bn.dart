@@ -81,8 +81,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get pleaseLogIn => 'অনুগ্রহ করে লগ ইন করুন';
 
   @override
-  String get loginRequiredMessage =>
-      'মেনু অ্যাক্সেস করার জন্য আপনাকে লগ ইন করতে হবে';
+  String get loginRequiredMessage => 'মেনু অ্যাক্সেস করার জন্য আপনাকে লগ ইন করতে হবে';
 
   @override
   String get login => 'লগ ইন';
@@ -166,12 +165,10 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsNotifications => 'বিজ্ঞপ্তি';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'বিজ্ঞপ্তি সেটিংস লোড হচ্ছে...';
+  String get settingsLoadingNotificationSettings => 'বিজ্ঞপ্তি সেটিংস লোড হচ্ছে...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'বিজ্ঞপ্তি সেটিংস লোড করা যায়নি';
+  String get settingsUnableToLoadNotificationSettings => 'বিজ্ঞপ্তি সেটিংস লোড করা যায়নি';
 
   @override
   String get settingsRefresh => 'রিফ্রেশ';
@@ -186,8 +183,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsNotifEmergency => 'জরুরী সতর্কতা';
 
   @override
-  String get settingsNotifEmergencyDesc =>
-      'গুরুত্বপূর্ণ স্বাস্থ্য সতর্কতা এবং জরুরী অবস্থা';
+  String get settingsNotifEmergencyDesc => 'গুরুত্বপূর্ণ স্বাস্থ্য সতর্কতা এবং জরুরী অবস্থা';
 
   @override
   String get settingsNotifVideoCall => 'ভিডিও কল বিজ্ঞপ্তি';
@@ -205,8 +201,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'গুরুত্বপূর্ণ ভাইটালস';
 
   @override
-  String get settingsNotifSignificantVitalsDesc =>
-      'ভাইটাল সাইনগুলিতে গুরুত্বপূর্ণ পরিবর্তন';
+  String get settingsNotifSignificantVitalsDesc => 'ভাইটাল সাইনগুলিতে গুরুত্বপূর্ণ পরিবর্তন';
 
   @override
   String get settingsNotifSMS => 'SMS বিজ্ঞপ্তি';
@@ -236,8 +231,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsAIConfiguration => 'AI কনফিগারেশন';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'আপনার AI অ্যাসিস্ট্যান্ট সেটিংস কাস্টমাইজ করুন';
+  String get settingsAIConfigurationDesc => 'আপনার AI অ্যাসিস্ট্যান্ট সেটিংস কাস্টমাইজ করুন';
 
   @override
   String get settingsSubscription => 'সাবস্ক্রিপশন';
@@ -246,8 +240,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsManageSubscription => 'সাবস্ক্রিপশন পরিচালনা করুন';
 
   @override
-  String get settingsManageSubscriptionDesc =>
-      'আপনার সাবস্ক্রিপশন প্ল্যান দেখুন বা আপডেট করুন';
+  String get settingsManageSubscriptionDesc => 'আপনার সাবস্ক্রিপশন প্ল্যান দেখুন বা আপডেট করুন';
 
   @override
   String get settingsNotetakerAssistant => 'নোটটেকার অ্যাসিস্ট্যান্ট';
@@ -256,8 +249,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'নোটটেকার কনফিগারেশন';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'আপনার নোটটেকার অ্যাসিস্ট্যান্ট সেটিংস কাস্টমাইজ করুন';
+  String get settingsNotetakerConfigurationDesc => 'আপনার নোটটেকার অ্যাসিস্ট্যান্ট সেটিংস কাস্টমাইজ করুন';
 
   @override
   String get settingsGeneral => 'সাধারণ';
@@ -269,8 +261,7 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsClearCacheShortDesc => 'অস্থায়ী ফাইল এবং ক্যাশ ডেটা সরান';
 
   @override
-  String get settingsClearCacheDesc =>
-      'এটি সমস্ত অস্থায়ী ফাইল এবং ক্যাশ ডেটা সাফ করবে। ক্যাশ সাফ করার পরে অ্যাপটি প্রাথমিকভাবে সামগ্রী লোড করতে বেশি সময় নিতে পারে।';
+  String get settingsClearCacheDesc => 'এটি সমস্ত অস্থায়ী ফাইল এবং ক্যাশ ডেটা সাফ করবে। ক্যাশ সাফ করার পরে অ্যাপটি প্রাথমিকভাবে সামগ্রী লোড করতে বেশি সময় নিতে পারে।';
 
   @override
   String get settingsSignOut => 'সাইন আউট';
@@ -279,37 +270,31 @@ class AppLocalizationsBn extends AppLocalizations {
   String get settingsSignOutDesc => 'আপনার অ্যাকাউন্ট থেকে সাইন আউট করুন';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'আপনি কি নিশ্চিত যে আপনি সাইন আউট করতে চান?';
+  String get settingsSignOutConfirmMessage => 'আপনি কি নিশ্চিত যে আপনি সাইন আউট করতে চান?';
 
   @override
   String get settingsDeleteAccount => 'অ্যাকাউন্ট মুছুন';
 
   @override
-  String get settingsDeleteAccountShortDesc =>
-      'স্থায়ীভাবে আপনার অ্যাকাউন্ট মুছুন';
+  String get settingsDeleteAccountShortDesc => 'স্থায়ীভাবে আপনার অ্যাকাউন্ট মুছুন';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'এই পদক্ষেপটি পূর্বাবস্থায় ফেরানো যাবে না। আপনার সমস্ত ডেটা স্থায়ীভাবে মুছে ফেলা হবে।';
+  String get settingsDeleteAccountDesc => 'এই পদক্ষেপটি পূর্বাবস্থায় ফেরানো যাবে না। আপনার সমস্ত ডেটা স্থায়ীভাবে মুছে ফেলা হবে।';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'অ্যাকাউন্ট মোছার অনুরোধ করা হয়েছে। অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।';
+  String get settingsDeleteAccountRequested => 'অ্যাকাউন্ট মোছার অনুরোধ করা হয়েছে। অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।';
 
   @override
   String get settingsDeleteAccountAction => 'অ্যাকাউন্ট মুছুন';
 
   @override
-  String get welcomeInitializingHealthcare =>
-      'আপনার স্বাস্থ্যসেবা অভিজ্ঞতা শুরু হচ্ছে...';
+  String get welcomeInitializingHealthcare => 'আপনার স্বাস্থ্যসেবা অভিজ্ঞতা শুরু হচ্ছে...';
 
   @override
   String get welcomeReadyToConnect => 'আপনার যত্নের সাথে সংযোগ করতে প্রস্তুত!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'ব্যাকএন্ড পরিষেবা সুস্থ নয়। অ্যাপ্লিকেশনটির ক্ষমতা সীমিত।';
+  String get welcomeBackendNotHealthyWarning => 'ব্যাকএন্ড পরিষেবা সুস্থ নয়। অ্যাপ্লিকেশনটির ক্ষমতা সীমিত।';
 
   @override
   String get welcomeContinue => 'চালিয়ে যান';
@@ -333,15 +318,13 @@ class AppLocalizationsBn extends AppLocalizations {
   String get welcome_tagline => 'ভালো যত্ন • ভালো ফলাফল • ভালো জীবন';
 
   @override
-  String get login_tagline =>
-      'যত্নের সাথে সংযোগ করুন, আত্মবিশ্বাসের সাথে ট্র্যাক করুন';
+  String get login_tagline => 'যত্নের সাথে সংযোগ করুন, আত্মবিশ্বাসের সাথে ট্র্যাক করুন';
 
   @override
   String get login_signInTitle => 'আপনার অ্যাকাউন্টে সাইন ইন করুন';
 
   @override
-  String get login_signInSubtitle =>
-      'CareConnect অ্যাক্সেস করতে আপনার শংসাপত্র লিখুন';
+  String get login_signInSubtitle => 'CareConnect অ্যাক্সেস করতে আপনার শংসাপত্র লিখুন';
 
   @override
   String get login_usernameLabel => 'ব্যবহারকারীর নাম';

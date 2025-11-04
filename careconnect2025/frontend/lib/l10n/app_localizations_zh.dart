@@ -261,8 +261,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsClearCacheShortDesc => '移除临时文件和缓存数据';
 
   @override
-  String get settingsClearCacheDesc =>
-      '这将清除所有临时文件和缓存数据。清除缓存后，应用可能需要更长时间才能初始加载内容。';
+  String get settingsClearCacheDesc => '这将清除所有临时文件和缓存数据。清除缓存后，应用可能需要更长时间才能初始加载内容。';
 
   @override
   String get settingsSignOut => '登出';

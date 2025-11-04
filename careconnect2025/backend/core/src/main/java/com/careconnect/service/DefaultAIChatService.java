@@ -6,6 +6,7 @@ import com.careconnect.dto.ChatConversationSummary;
 import com.careconnect.dto.ChatMessageSummary;
 import com.careconnect.model.*;
 import com.careconnect.model.UserAIConfig;
+import com.careconnect.service.chat.AIChatService;
 import com.careconnect.util.UserAIConfigDefaults;
 import com.careconnect.service.security.InputSanitizationService;
 import com.careconnect.service.security.ResponseSanitizationService;

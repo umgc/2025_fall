@@ -165,12 +165,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsNotifications => 'اعلان‌ها';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'در حال بارگذاری تنظیمات اعلان...';
+  String get settingsLoadingNotificationSettings => 'در حال بارگذاری تنظیمات اعلان...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'امکان بارگذاری تنظیمات اعلان وجود ندارد';
+  String get settingsUnableToLoadNotificationSettings => 'امکان بارگذاری تنظیمات اعلان وجود ندارد';
 
   @override
   String get settingsRefresh => 'تازه‌سازی';
@@ -233,8 +231,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAIConfiguration => 'پیکربندی هوش مصنوعی';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'شخصی‌سازی تنظیمات دستیار هوش مصنوعی شما';
+  String get settingsAIConfigurationDesc => 'شخصی‌سازی تنظیمات دستیار هوش مصنوعی شما';
 
   @override
   String get settingsSubscription => 'اشتراک';
@@ -243,8 +240,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsManageSubscription => 'مدیریت اشتراک';
 
   @override
-  String get settingsManageSubscriptionDesc =>
-      'مشاهده یا به‌روزرسانی طرح اشتراک شما';
+  String get settingsManageSubscriptionDesc => 'مشاهده یا به‌روزرسانی طرح اشتراک شما';
 
   @override
   String get settingsNotetakerAssistant => 'دستیار یادداشت‌بردار';
@@ -253,8 +249,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'پیکربندی یادداشت‌بردار';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'شخصی‌سازی تنظیمات دستیار یادداشت‌بردار';
+  String get settingsNotetakerConfigurationDesc => 'شخصی‌سازی تنظیمات دستیار یادداشت‌بردار';
 
   @override
   String get settingsGeneral => 'عمومی';
@@ -266,8 +261,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsClearCacheShortDesc => 'حذف فایل‌های موقت و داده‌های کش';
 
   @override
-  String get settingsClearCacheDesc =>
-      'با این کار تمام فایل‌های موقت و داده‌های کش پاک می‌شوند. ممکن است برنامه برای بارگذاری اولیه محتوای جدید کمی بیشتر زمان ببرد.';
+  String get settingsClearCacheDesc => 'با این کار تمام فایل‌های موقت و داده‌های کش پاک می‌شوند. ممکن است برنامه برای بارگذاری اولیه محتوای جدید کمی بیشتر زمان ببرد.';
 
   @override
   String get settingsSignOut => 'خروج از حساب';
@@ -276,8 +270,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsSignOutDesc => 'خروج از حساب کاربری شما';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'آیا مطمئن هستید که می‌خواهید خارج شوید؟';
+  String get settingsSignOutConfirmMessage => 'آیا مطمئن هستید که می‌خواهید خارج شوید؟';
 
   @override
   String get settingsDeleteAccount => 'حذف حساب';
@@ -286,26 +279,22 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsDeleteAccountShortDesc => 'حذف دائمی حساب کاربری شما';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'این عملیات غیرقابل بازگشت است. تمام داده‌های شما برای همیشه حذف خواهند شد.';
+  String get settingsDeleteAccountDesc => 'این عملیات غیرقابل بازگشت است. تمام داده‌های شما برای همیشه حذف خواهند شد.';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'درخواست حذف حساب ارسال شد. لطفاً با پشتیبانی تماس بگیرید.';
+  String get settingsDeleteAccountRequested => 'درخواست حذف حساب ارسال شد. لطفاً با پشتیبانی تماس بگیرید.';
 
   @override
   String get settingsDeleteAccountAction => 'حذف حساب';
 
   @override
-  String get welcomeInitializingHealthcare =>
-      'در حال راه‌اندازی تجربه مراقبت سلامت شما...';
+  String get welcomeInitializingHealthcare => 'در حال راه‌اندازی تجربه مراقبت سلامت شما...';
 
   @override
   String get welcomeReadyToConnect => 'آماده برای اتصال به مراقبت!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'سرویس پشتیبان فعال نیست. قابلیت‌های برنامه محدود است.';
+  String get welcomeBackendNotHealthyWarning => 'سرویس پشتیبان فعال نیست. قابلیت‌های برنامه محدود است.';
 
   @override
   String get welcomeContinue => 'ادامه';
@@ -335,8 +324,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get login_signInTitle => 'ورود به حساب کاربری';
 
   @override
-  String get login_signInSubtitle =>
-      'برای دسترسی به CareConnect اطلاعات خود را وارد کنید';
+  String get login_signInSubtitle => 'برای دسترسی به CareConnect اطلاعات خود را وارد کنید';
 
   @override
   String get login_usernameLabel => 'نام کاربری';

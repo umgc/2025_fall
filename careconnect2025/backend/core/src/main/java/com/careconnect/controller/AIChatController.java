@@ -2,10 +2,10 @@ package com.careconnect.controller;
 
 import com.careconnect.dto.*;
 import com.careconnect.model.ChatConversation;
-import com.careconnect.service.AIChatService;
-import com.careconnect.service.ChatCleanupService;
+ import com.careconnect.service.ChatCleanupService;
 import com.careconnect.service.UserAIConfigService;
 import com.careconnect.repository.ChatConversationRepository;
+import com.careconnect.service.chat.AIChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

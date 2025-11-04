@@ -261,8 +261,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsClearCacheShortDesc => '一時ファイルとキャッシュデータを削除';
 
   @override
-  String get settingsClearCacheDesc =>
-      'これにより、すべての一時ファイルとキャッシュデータがクリアされます。キャッシュをクリアした後、アプリが最初にコンテンツを読み込むのに時間がかかる場合があります。';
+  String get settingsClearCacheDesc => 'これにより、すべての一時ファイルとキャッシュデータがクリアされます。キャッシュをクリアした後、アプリが最初にコンテンツを読み込むのに時間がかかる場合があります。';
 
   @override
   String get settingsSignOut => 'サインアウト';
@@ -283,8 +282,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsDeleteAccountDesc => 'この操作は元に戻せません。すべてのデータが完全に削除されます。';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'アカウントの削除がリクエストされました。サポートにお問い合わせください。';
+  String get settingsDeleteAccountRequested => 'アカウントの削除がリクエストされました。サポートにお問い合わせください。';
 
   @override
   String get settingsDeleteAccountAction => 'アカウントを削除';
@@ -296,8 +294,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get welcomeReadyToConnect => 'ケアに接続する準備ができました！';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'バックエンドサービスが正常ではありません。アプリケーションの機能は制限されています。';
+  String get welcomeBackendNotHealthyWarning => 'バックエンドサービスが正常ではありません。アプリケーションの機能は制限されています。';
 
   @override
   String get welcomeContinue => '続行';

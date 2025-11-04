@@ -165,12 +165,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsNotifications => 'الإشعارات';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'جارٍ تحميل إعدادات الإشعارات...';
+  String get settingsLoadingNotificationSettings => 'جارٍ تحميل إعدادات الإشعارات...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'تعذّر تحميل إعدادات الإشعارات';
+  String get settingsUnableToLoadNotificationSettings => 'تعذّر تحميل إعدادات الإشعارات';
 
   @override
   String get settingsRefresh => 'تحديث';
@@ -203,8 +201,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'تغيرات حيوية مهمة';
 
   @override
-  String get settingsNotifSignificantVitalsDesc =>
-      'التغيرات المهمة في العلامات الحيوية';
+  String get settingsNotifSignificantVitalsDesc => 'التغيرات المهمة في العلامات الحيوية';
 
   @override
   String get settingsNotifSMS => 'إشعارات الرسائل النصية';
@@ -234,8 +231,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsAIConfiguration => 'إعدادات الذكاء الاصطناعي';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'خصص إعدادات مساعد الذكاء الاصطناعي لديك';
+  String get settingsAIConfigurationDesc => 'خصص إعدادات مساعد الذكاء الاصطناعي لديك';
 
   @override
   String get settingsSubscription => 'الاشتراك';
@@ -262,12 +258,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsClearCache => 'مسح الذاكرة المؤقتة';
 
   @override
-  String get settingsClearCacheShortDesc =>
-      'إزالة الملفات المؤقتة وبيانات الذاكرة المؤقتة';
+  String get settingsClearCacheShortDesc => 'إزالة الملفات المؤقتة وبيانات الذاكرة المؤقتة';
 
   @override
-  String get settingsClearCacheDesc =>
-      'سيؤدي هذا إلى مسح جميع الملفات المؤقتة وبيانات الذاكرة. قد يستغرق التطبيق وقتًا أطول لتحميل المحتوى بعد المسح.';
+  String get settingsClearCacheDesc => 'سيؤدي هذا إلى مسح جميع الملفات المؤقتة وبيانات الذاكرة. قد يستغرق التطبيق وقتًا أطول لتحميل المحتوى بعد المسح.';
 
   @override
   String get settingsSignOut => 'تسجيل الخروج';
@@ -276,8 +270,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsSignOutDesc => 'تسجيل الخروج من حسابك';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'هل أنت متأكد أنك تريد تسجيل الخروج؟';
+  String get settingsSignOutConfirmMessage => 'هل أنت متأكد أنك تريد تسجيل الخروج؟';
 
   @override
   String get settingsDeleteAccount => 'حذف الحساب';
@@ -286,12 +279,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsDeleteAccountShortDesc => 'حذف حسابك نهائيًا';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع بياناتك نهائيًا.';
+  String get settingsDeleteAccountDesc => 'لا يمكن التراجع عن هذا الإجراء. سيتم حذف جميع بياناتك نهائيًا.';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'تم طلب حذف الحساب. يرجى الاتصال بالدعم.';
+  String get settingsDeleteAccountRequested => 'تم طلب حذف الحساب. يرجى الاتصال بالدعم.';
 
   @override
   String get settingsDeleteAccountAction => 'حذف الحساب';
@@ -303,8 +294,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get welcomeReadyToConnect => 'جاهز لربط رعايتك!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'خدمة الخلفية غير سليمة. التطبيق لديه إمكانيات محدودة.';
+  String get welcomeBackendNotHealthyWarning => 'خدمة الخلفية غير سليمة. التطبيق لديه إمكانيات محدودة.';
 
   @override
   String get welcomeContinue => 'المتابعة';
@@ -334,8 +324,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get login_signInTitle => 'تسجيل الدخول إلى حسابك';
 
   @override
-  String get login_signInSubtitle =>
-      'أدخل بيانات اعتمادك للوصول إلى CareConnect';
+  String get login_signInSubtitle => 'أدخل بيانات اعتمادك للوصول إلى CareConnect';
 
   @override
   String get login_usernameLabel => 'اسم المستخدم';
