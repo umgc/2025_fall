@@ -3,7 +3,10 @@ import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
 import 'package:learninglens_app/Controller/custom_appbar.dart';
 import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/Views/dashboard.dart';
+import 'package:learninglens_app/Views/edit_reflection_questions_page.dart';
 import 'dart:convert';
+
+import 'package:learninglens_app/services/reflection_service.dart';
 
 class EssayAssignmentSettings extends StatefulWidget {
   final String updatedJson;
@@ -18,6 +21,7 @@ class EssayAssignmentSettings extends StatefulWidget {
 class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
   // Global key for the form
   final _formKey = GlobalKey<FormState>();
+  List<String> reflectionQuestions = [];
 
   // Date selection variables for "Allow submissions from"
   String selectedDaySubmission = '01';
@@ -232,8 +236,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
         double screenWidth = constraints.maxWidth;
 
         // Example: Calculate sizes dynamically based on screen width
-        double buttonWidth =
-            screenWidth * 0.4; // Buttons take 40% of screen width
+        double buttonWidth = 275.0;
         double descriptionHeight = screenWidth *
             0.2; // Description box takes 20% of screen width height
 
@@ -471,7 +474,7 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                 String allowSubmissionFrom =
                                     '$selectedDaySubmission $selectedMonthSubmission $selectedYearSubmission $selectedHourSubmission:$selectedMinuteSubmission';
 
-                                await api.createAssignment(
+                                final result = await api.createAssignment(
                                   courseId,
                                   sectionNumber, // Section ID
                                   assignmentName,
@@ -480,6 +483,16 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                                   widget.updatedJson,
                                   description,
                                 );
+
+                                print(result);
+
+                                for (String r in reflectionQuestions) {
+                                  await ReflectionService().createReflection(
+                                      Reflection(
+                                          courseId: int.parse(courseId),
+                                          assignmentId: result?['assignmentid'],
+                                          question: r));
+                                }
 
                                 if (mounted) {
                                   final snackBar = SnackBar(
@@ -524,6 +537,53 @@ class EssayAssignmentSettingsState extends State<EssayAssignmentSettings> {
                             Navigator.pop(context);
                           },
                           child: Text('Go Back to Edit Essay'),
+                        ),
+                      ),
+                      SizedBox(
+                        width: buttonWidth,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            // Get course ID from selected course
+                            Course? selectedCourseObj = courses.firstWhere(
+                                (c) => c.fullName == selectedCourse,
+                                orElse: () => Course(0, '', '', '',
+                                    DateTime.now(), DateTime.now()));
+                            if (selectedCourseObj.id == 0) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Please select a course first.')),
+                              );
+                              return;
+                            }
+
+                            String assignmentId =
+                                _assignmentNameController.text.isNotEmpty
+                                    ? _assignmentNameController.text
+                                    : 'temp_assignment';
+
+                            final updatedQuestions = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    EditReflectionQuestionsPage(
+                                  courseId: selectedCourseObj.id.toString(),
+                                  assignmentId: assignmentId,
+                                  initialQuestions: [],
+                                ),
+                              ),
+                            );
+
+                            if (updatedQuestions != null &&
+                                updatedQuestions is List<String>) {
+                              // Store the questions locally in state
+                              setState(() {
+                                reflectionQuestions = updatedQuestions;
+                              });
+                            }
+                          },
+                          icon: Icon(Icons.edit),
+                          label: Text('Edit Reflection Questions'),
                         ),
                       ),
                     ],

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
+import 'package:learninglens_app/Api/lms/enum/lms_enum.dart';
 import 'package:learninglens_app/services/api_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 
@@ -12,26 +13,38 @@ enum GameType { FLASHCARD, MATCHING, QUIZ }
 // AssignedGame model
 class AssignedGame {
   final String? uuid;
-  final int studentId;
   final int courseId;
   final GameType gameType;
   final String title;
   final String gameData;
   final int assignedBy;
   final DateTime assignedDate;
-  final String? studentName;
-  final int? rawCorrect;
-  final int? maxScore;
-  double? score;
+  LmsType lms = LocalStorageService.getSelectedClassroom();
+  AssignedGameScore? score;
 
   AssignedGame(
-      {required this.studentId,
-      required this.courseId,
+      {required this.courseId,
       required this.gameType,
       required this.title,
       required this.gameData,
       required this.assignedDate,
       required this.assignedBy,
+      this.uuid,
+      this.score});
+}
+
+class AssignedGameScore {
+  final String? uuid;
+  final int studentId;
+  final String? studentName;
+  final int? rawCorrect;
+  final int? maxScore;
+  double? score;
+  final String game;
+
+  AssignedGameScore(
+      {required this.studentId,
+      required this.game,
       this.studentName,
       this.rawCorrect,
       this.maxScore,
@@ -109,18 +122,25 @@ class GamificationService {
     return await ApiService().httpPost(uri,
         body: jsonEncode({
           'courseId': game.courseId,
-          'studentId': game.studentId,
           'gameType': game.gameType.index,
           'title': game.title,
           'data': game.gameData,
           'assignedBy': game.assignedBy,
           'assignedDate': game.assignedDate.toString(),
+          'lmsType': game.lms.index,
         }));
+  }
+
+  Future<http.Response> assignGame(AssignedGameScore score) async {
+    final uri = _requireUri('assignGame');
+    return await ApiService().httpPost(uri,
+        body: jsonEncode({'studentId': score.studentId, 'game': score.game}));
   }
 
   /// Starts a program assessment
   Future<http.Response> completeGame(
     String uuid,
+    int studentId,
     double score, {
     int? rawCorrect,
     int? maxScore,
@@ -129,6 +149,7 @@ class GamificationService {
     return await ApiService().httpPost(uri,
         body: jsonEncode({
           'gameId': uuid,
+          'studentId': studentId,
           'score': score,
           'rawCorrect': rawCorrect,
           'maxScore': maxScore,
@@ -139,7 +160,10 @@ class GamificationService {
   Future<List<AssignedGame>> getGamesForTeacher(int createdBy) async {
     final uri = _requireUri(
       'getForTeacher',
-      params: {'createdBy': '$createdBy'},
+      params: {
+        'createdBy': '$createdBy',
+        'lmsType': '${LocalStorageService.getSelectedClassroom().index}'
+      },
     );
     final response = await ApiService().httpGet(uri);
 
@@ -152,7 +176,10 @@ class GamificationService {
   Future<List<AssignedGame>> getGamesForStudent(int assignedTo) async {
     final uri = _requireUri(
       'getForStudent',
-      params: {'assignedTo': '$assignedTo'},
+      params: {
+        'assignedTo': '$assignedTo',
+        'lmsType': '${LocalStorageService.getSelectedClassroom().index}'
+      },
     );
     final response = await ApiService().httpGet(uri);
 
@@ -186,23 +213,24 @@ class GamificationService {
       }
 
       return AssignedGame(
-        uuid: eval['game_id'],
-        courseId: int.parse(eval['course_id']),
-        studentId: int.parse(eval['student_id']),
-        gameType: type,
-        title: eval['title'],
-        gameData: gameData,
-        assignedBy: int.parse(eval['assigned_by']),
-        assignedDate: DateTime.parse(eval['assigned_date']),
-        studentName: eval['student_name'],
-        rawCorrect: eval['raw_correct'] == null
-            ? null
-            : int.tryParse(eval['raw_correct'].toString()),
-        maxScore: eval['max_score'] == null
-            ? null
-            : int.tryParse(eval['max_score'].toString()),
-        score: parsedScore,
-      );
+          uuid: eval['game_id'],
+          courseId: int.parse(eval['course_id']),
+          gameType: type,
+          title: eval['title'],
+          gameData: gameData,
+          assignedBy: int.parse(eval['assigned_by']),
+          assignedDate: DateTime.parse(eval['assigned_date']),
+          score: AssignedGameScore(
+              studentId: int.parse(eval['student_id']),
+              studentName: eval['student_name'],
+              rawCorrect: eval['raw_correct'] == null
+                  ? null
+                  : int.tryParse(eval['raw_correct'].toString()),
+              game: eval['game_id'],
+              maxScore: eval['max_score'] == null
+                  ? null
+                  : int.tryParse(eval['max_score'].toString()),
+              score: parsedScore));
     }).toList();
   }
 

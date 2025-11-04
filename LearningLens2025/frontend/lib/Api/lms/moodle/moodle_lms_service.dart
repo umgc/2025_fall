@@ -928,8 +928,10 @@ class MoodleLmsService implements LmsInterface {
         return [];
       }
 
-      final data = jsonDecode(response.body) as List<dynamic>;
-      if (data.isEmpty || data.first is! Map<String, dynamic>) {
+      final data = jsonDecode(response.body);
+      if (data.isEmpty ||
+          data is! List<dynamic> ||
+          data.first is! Map<String, dynamic>) {
         return [];
       }
       print('Rubric Grades Response: ${jsonEncode(data)}');

@@ -49,10 +49,12 @@ terraform/terraformout.txt
 # npm
 
 /lambda/code_eval/node_modules
-/lambda/gettoken/node_modules
+/lambda/ai_log/node_modules
 /lambda/game_data/node_modules
-/lambda/gettoken/gettoken.zip
+/lambda/reflections/node_modules
+/lambda/ai_log/ai_log.zip
 /lambda/code_eval/code_eval.zip
 /lambda/game_data/game_data.zip
+/lambda/reflections/reflections.zip
 # Any extra javascript files for lambda functions
 !lambda/code_eval/*.js

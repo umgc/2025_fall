@@ -348,6 +348,16 @@ class LocalStorageService {
     return url;
   }
 
+  static String getReflectionsUrl() {
+    String url = _prefs.getString('REFLECTIONS_URL') ??
+        dotenv.env['REFLECTIONS_URL'] ??
+        '';
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
   static void clearAILoggingUrl() {
     _prefs.remove('AI_LOGGING_URL');
   }
@@ -358,6 +368,10 @@ class LocalStorageService {
 
   static void clearGameUrl() {
     _prefs.remove('GAME_URL');
+  }
+
+  static void clearReflectionsUrl() {
+    _prefs.remove('REFLECTIONS_URL');
   }
 
   static hasLLMKey() {

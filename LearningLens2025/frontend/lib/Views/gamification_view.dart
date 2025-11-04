@@ -110,8 +110,8 @@ class _GamificationViewState extends State<GamificationView> {
         });
       } else {
         games = await _gamificationService.getGamesForStudent(userId);
-        final completed = games.where((g) => g.score != null).toList();
-        final pending = games.where((g) => g.score == null).toList();
+        final completed = games.where((g) => g.score!.score != null).toList();
+        final pending = games.where((g) => g.score!.score == null).toList();
         await _ensureCourseNames();
         setState(() {
           assignedGames = pending;
@@ -906,19 +906,22 @@ $text
     });
 
     try {
+      final assignedGame = AssignedGame(
+        uuid: null,
+        courseId: courseId,
+        gameType: gameTypeEnum,
+        title: title,
+        gameData: contentPayload,
+        assignedDate: now,
+        assignedBy: teacherId,
+      );
+      final gameResponse = await _gamificationService.createGame(assignedGame);
+      final responseBody = jsonDecode(gameResponse.body);
+      final gameId = responseBody[0]["game_id"];
+
       await Future.wait(targetStudents.map((student) {
-        final assignedGame = AssignedGame(
-          uuid: null,
-          studentId: student.id,
-          courseId: courseId,
-          gameType: gameTypeEnum,
-          title: title,
-          gameData: contentPayload,
-          assignedDate: now,
-          assignedBy: teacherId,
-          studentName: '${student.firstname} ${student.lastname}'.trim(),
-        );
-        return _gamificationService.createGame(assignedGame);
+        return _gamificationService
+            .assignGame(AssignedGameScore(studentId: student.id, game: gameId));
       }));
 
       await _refreshAssignments();
@@ -1303,6 +1306,7 @@ $text
     try {
       final response = await _gamificationService.completeGame(
         game.uuid!,
+        game.score!.studentId,
         normalizedScore,
         rawCorrect: result.score,
         maxScore: result.maxScore,
@@ -1447,7 +1451,7 @@ $text
                 final groupedByStudent = <int, List<AssignedGame>>{};
                 for (final game in games) {
                   groupedByStudent
-                      .putIfAbsent(game.studentId, () => [])
+                      .putIfAbsent(game.score!.studentId, () => [])
                       .add(game);
                 }
 
@@ -1459,13 +1463,13 @@ $text
                   final studentGames = entry.value
                     ..sort((a, b) => b.assignedDate.compareTo(a.assignedDate));
                   for (final game in studentGames) {
-                    final hasRaw = game.rawCorrect != null &&
-                        game.maxScore != null &&
-                        game.maxScore! > 0;
-                    final isCompleted = game.score != null;
+                    final hasRaw = game.score!.rawCorrect != null &&
+                        game.score!.maxScore != null &&
+                        game.score!.maxScore! > 0;
+                    final isCompleted = game.score!.score != null;
                     final statusText = isCompleted
                         ? hasRaw
-                            ? 'Completed ${game.rawCorrect}/${game.maxScore}'
+                            ? 'Completed ${game.score!.rawCorrect}/${game.score!.maxScore}'
                             : 'Completed'
                         : 'Pending';
                     rows.add(
