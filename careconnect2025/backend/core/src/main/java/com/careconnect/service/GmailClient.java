@@ -3,10 +3,14 @@ package com.careconnect.service;
 import com.careconnect.dto.GmailDigestPayload;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -25,10 +29,18 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GmailClient {
 
-    private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://gmail.googleapis.com/gmail/v1")
-            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-            .build();
+    private final String BASE_URL = "https://gmail.googleapis.com/gmail/v1";
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    /**
+     * Helper method to create authorization headers
+     */
+    private HttpHeaders createHeaders(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
 
     /**
      * Fetch USPS digest email for a specific date.
@@ -42,16 +54,15 @@ public class GmailClient {
 
             System.out.println("[GmailClient] Searching for digest with query: " + query);
 
-            JsonNode search = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/users/me/messages")
-                            .queryParam("q", query)
-                            .queryParam("maxResults", 10)
-                            .build())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
+            String url = UriComponentsBuilder.fromHttpUrl(BASE_URL)
+                    .path("/users/me/messages")
+                    .queryParam("q", query)
+                    .queryParam("maxResults", 10)
+                    .toUriString();
+
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders(accessToken));
+            ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            JsonNode search = response.getBody();
 
             if (search == null || !search.has("messages")) {
                 System.out.println("[GmailClient] No messages found for date " + date);
@@ -68,12 +79,10 @@ public class GmailClient {
                 String messageId = messageRef.path("id").asText(null);
                 if (messageId == null) continue;
 
-                JsonNode message = webClient.get()
-                        .uri("/users/me/messages/{id}?format=full", messageId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .retrieve()
-                        .bodyToMono(JsonNode.class)
-                        .block();
+                String messageUrl = BASE_URL + "/users/me/messages/" + messageId + "?format=full";
+                HttpEntity<Void> messageEntity = new HttpEntity<>(createHeaders(accessToken));
+                ResponseEntity<JsonNode> messageResponse = restTemplate.exchange(messageUrl, HttpMethod.GET, messageEntity, JsonNode.class);
+                JsonNode message = messageResponse.getBody();
 
                 if (message == null) continue;
 
@@ -110,16 +119,15 @@ public class GmailClient {
      */
     public Optional<GmailDigestPayload> fetchLatestDigest(String accessToken) {
         try {
-            JsonNode search = webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/users/me/messages")
-                            .queryParam("q", "from:USPSInformeddelivery@email.informeddelivery.usps.com subject:(Your Daily Digest) newer_than:7d")
-                            .queryParam("maxResults", 5)
-                            .build())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
+            String url = UriComponentsBuilder.fromHttpUrl(BASE_URL)
+                    .path("/users/me/messages")
+                    .queryParam("q", "from:USPSInformeddelivery@email.informeddelivery.usps.com subject:(Your Daily Digest) newer_than:7d")
+                    .queryParam("maxResults", 5)
+                    .toUriString();
+
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders(accessToken));
+            ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            JsonNode search = response.getBody();
 
             if (search == null || !search.has("messages")) {
                 return Optional.empty();
@@ -134,12 +142,10 @@ public class GmailClient {
                 String messageId = messageRef.path("id").asText(null);
                 if (messageId == null) continue;
 
-                JsonNode message = webClient.get()
-                        .uri("/users/me/messages/{id}?format=full", messageId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .retrieve()
-                        .bodyToMono(JsonNode.class)
-                        .block();
+                String messageUrl = BASE_URL + "/users/me/messages/" + messageId + "?format=full";
+                HttpEntity<Void> messageEntity = new HttpEntity<>(createHeaders(accessToken));
+                ResponseEntity<JsonNode> messageResponse = restTemplate.exchange(messageUrl, HttpMethod.GET, messageEntity, JsonNode.class);
+                JsonNode message = messageResponse.getBody();
 
                 if (message == null) continue;
                 GmailDigestPayload payload = buildPayload(accessToken, messageId, message);
@@ -249,12 +255,11 @@ public class GmailClient {
 
     private String fetchAttachment(String accessToken, String messageId, String attachmentId) {
         try {
-            JsonNode attachment = webClient.get()
-                    .uri("/users/me/messages/{messageId}/attachments/{attachmentId}", messageId, attachmentId)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
+            String url = BASE_URL + "/users/me/messages/" + messageId + "/attachments/" + attachmentId;
+            HttpEntity<Void> entity = new HttpEntity<>(createHeaders(accessToken));
+            ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            JsonNode attachment = response.getBody();
+
             if (attachment != null && attachment.has("data")) {
                 return attachment.get("data").asText();
             }

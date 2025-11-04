@@ -129,3 +129,6 @@ test_video_calls.dart
 **/linux/flutter/generated_*
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/windows/flutter/generated_*
+# All the app_localizations_*.dart files are generated automatically from your .arb files 
+lib/l10n/app_localizations.dart
+lib/l10n/app_localizations_*.dart
