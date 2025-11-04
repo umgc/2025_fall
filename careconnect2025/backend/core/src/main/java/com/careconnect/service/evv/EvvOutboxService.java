@@ -15,21 +15,69 @@ public class EvvOutboxService {
     private final ObjectMapper objectMapper;
 
     public void enqueue(EvvRecord record, String destination) {
-        Map<String,Object> payload = Map.of(
-                "id", record.getId(),
-                "patient", record.getPatient().getMaNumber(),
-                "serviceType", record.getServiceType(),
-                "timeIn", record.getTimeIn(),
-                "timeOut", record.getTimeOut(),
-                "loc", Map.of("lat", record.getLocationLat(), "lng", record.getLocationLng())
-        );
-        var params = new MapSqlParameterSource().addValue("recordId", record.getId())
-                .addValue("destination", destination)
-                .addValue("payload", payload);
-        jdbc.update("""
-                INSERT INTO evv_outbox (evv_record_id, destination, payload)
-                VALUES (:recordId, :destination, to_jsonb(:payload::json))
-                """, params);
+        try {
+            // Handle potentially null patient and location data
+            String patientIdentifier;
+            try {
+                patientIdentifier = record.getPatient() != null && record.getPatient().getMaNumber() != null
+                        ? record.getPatient().getMaNumber()
+                        : (record.getPatient() != null ? "PATIENT-" + record.getPatient().getId() : "UNKNOWN");
+            } catch (Exception e) {
+                System.err.println("ERROR: Failed to get patient identifier: " + e.getMessage());
+                patientIdentifier = "UNKNOWN";
+            }
+
+            // Build check-in location map
+            Map<String, Object> checkinLocationMap = new java.util.HashMap<>();
+            if (record.getCheckinLocationLat() != null) checkinLocationMap.put("lat", record.getCheckinLocationLat());
+            if (record.getCheckinLocationLng() != null) checkinLocationMap.put("lng", record.getCheckinLocationLng());
+            if (record.getCheckinLocationSource() != null) checkinLocationMap.put("source", record.getCheckinLocationSource());
+            
+            // Build check-out location map
+            Map<String, Object> checkoutLocationMap = new java.util.HashMap<>();
+            if (record.getCheckoutLocationLat() != null) checkoutLocationMap.put("lat", record.getCheckoutLocationLat());
+            if (record.getCheckoutLocationLng() != null) checkoutLocationMap.put("lng", record.getCheckoutLocationLng());
+            if (record.getCheckoutLocationSource() != null) checkoutLocationMap.put("source", record.getCheckoutLocationSource());
+            
+            // Build legacy location map for backward compatibility
+            Map<String, Object> legacyLocationMap = new java.util.HashMap<>();
+            if (record.getLocationLat() != null) legacyLocationMap.put("lat", record.getLocationLat());
+            if (record.getLocationLng() != null) legacyLocationMap.put("lng", record.getLocationLng());
+            
+            Map<String,Object> payload = new java.util.HashMap<>();
+            payload.put("id", record.getId());
+            payload.put("patient", patientIdentifier);
+            payload.put("serviceType", record.getServiceType() != null ? record.getServiceType() : "UNKNOWN");
+            payload.put("timeIn", record.getTimeIn() != null ? record.getTimeIn().toString() : "");
+            payload.put("timeOut", record.getTimeOut() != null ? record.getTimeOut().toString() : "");
+            payload.put("checkinLocation", checkinLocationMap);
+            payload.put("checkoutLocation", checkoutLocationMap);
+            // Include legacy location for backward compatibility
+            if (!legacyLocationMap.isEmpty()) {
+                payload.put("loc", legacyLocationMap);
+            }
+            
+            
+            // Convert payload to JSON string
+            String payloadJson = objectMapper.writeValueAsString(payload);
+            
+            
+            var params = new MapSqlParameterSource()
+                    .addValue("recordId", record.getId())
+                    .addValue("destination", destination)
+                    .addValue("payload", payloadJson);
+            
+            
+            jdbc.update("""
+                    INSERT INTO evv_outbox (evv_record_id, destination, payload)
+                    VALUES (:recordId, :destination, CAST(:payload AS jsonb))
+                    """, params);
+                    
+        } catch (Exception e) {
+            System.err.println("ERROR in enqueue: " + e.getClass().getName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to enqueue EVV record for submission: " + e.getMessage(), e);
+        }
     }
 
     public void markSent(Long id) {

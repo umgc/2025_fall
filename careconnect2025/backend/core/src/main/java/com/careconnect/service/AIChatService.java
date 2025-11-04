@@ -1,9 +1,9 @@
-package com.careconnect.service.chat;
-
-import java.util.List;
+package com.careconnect.service;
 
 import com.careconnect.dto.ChatRequest;
 import com.careconnect.dto.ChatResponse;
+
+import java.util.List;
 
 public interface AIChatService {
     ChatResponse processChat(ChatRequest request);
