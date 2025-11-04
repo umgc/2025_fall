@@ -14,17 +14,18 @@ F# CareConnect 2025 User Guide
 10. [AI and Voice Commands](#ai-and-voice-commands)
 11. [Video Calling and Telehealth](#video-calling-and-telehealth)
 12. [Task Management](#task-management)
-13. [Gamification and Achievements](#gamification-and-achievements)
-14. [Payment and Subscriptions](#payment-and-subscriptions)
-15. [File Management](#file-management)
-16. [Device Integration](#device-integration)
-17. [Notifications and Alerts](#notifications-and-alerts)
-18. [Emergency Features](#emergency-features)
-19. [Electronic Visit Verification](#electronic-visit-verification)
-20. [Invoice Assistant](#invoice-assistant)
-21. [Privacy and Security](#privacy-and-security)
-22. [Troubleshooting](#troubleshooting)
-23. [Support and Contact](#support-and-contact)
+13. [Notetaking](#notetaking)
+14. [Gamification and Achievements](#gamification-and-achievements)
+15. [Payment and Subscriptions](#payment-and-subscriptions)
+16. [File Management](#file-management)
+17. [Device Integration](#device-integration)
+18. [Notifications and Alerts](#notifications-and-alerts)
+19. [Emergency Features](#emergency-features)
+20. [Electronic Visit Verification](#electronic-visit-verification)
+21. [Invoice Assistant](#invoice-assistant)
+22. [Privacy and Security](#privacy-and-security)
+23. [Troubleshooting](#troubleshooting)
+24. [Support and Contact](#support-and-contact)
 
 ## Introduction
 
@@ -687,6 +688,9 @@ The CareConnect dashboard is your central hub for all activities and information
    - Schedule follow-ups
 
 ## Task Management
+
+## Notetaking
+[demo video] [https://github.com/umgc/2025_fall/issues/603#issue-3562327269]
 
 ### Personal Tasks
 
