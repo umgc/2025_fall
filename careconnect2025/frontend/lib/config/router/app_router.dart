@@ -32,7 +32,7 @@ import '../../screens/main_screen.dart';
 import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
 import '../../services/user_role_storage_service.dart';
-import 'package:care_connect_app/features/health/virtual-check-in/pages/patient-check-in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_page.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/oauth_callback_page.dart';
@@ -838,7 +838,7 @@ final GoRouter appRouter = GoRouter(
             body: Center(child: Text('Invalid note ID or missing note data')),
           );
         }
-        final note = extra as PatientNote;
+        final note = extra;
         return NotetakerDetailView();
       },
     ),

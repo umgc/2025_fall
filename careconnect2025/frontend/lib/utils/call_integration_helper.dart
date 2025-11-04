@@ -79,7 +79,7 @@ class CallIntegrationHelper {
   }) async {
     final callId = 'call_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Extract caregiver and patient data
+    // Extract caregiver and patient models
     final caregiverData = _extractCaregiverData(targetCaregiver);
     final patientData = _extractPatientData(currentUser);
 
@@ -148,7 +148,7 @@ class CallIntegrationHelper {
     await _sendDirectSMS(phoneNumber: caregiverData['phone'], message: message);
   }
 
-  /// Extract patient data from various possible structures
+  /// Extract patient models from various possible structures
   /// Handles both direct patient objects and nested structures from your API
   static Map<String, dynamic> _extractPatientData(dynamic patientObject) {
     if (patientObject == null) {
@@ -194,7 +194,7 @@ class CallIntegrationHelper {
     };
   }
 
-  /// Extract caregiver data from various possible structures
+  /// Extract caregiver models from various possible structures
   static Map<String, dynamic> _extractCaregiverData(dynamic caregiverObject) {
     if (caregiverObject == null) {
       return {

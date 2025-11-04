@@ -23,10 +23,16 @@ import '../widgets/current_medications_card.dart';
 import '../widgets/recent_activity_tab.dart';
 
 // Virtual Check-in history
-import '../models/virtual_check_in.dart';
-import '../widgets/virtual_check_in_config_sheet.dart';
-import '../widgets/virtual_check_in_history_card.dart';
-import '../models/virtual_check_in_question.dart';
+// Virtual Check-In domain entities
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
+
+// Virtual Check-In UI
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_config_sheet.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_history_card.dart';
+
+// (If this page calls the APIs, add:)
+
 
 // 👉 Alias BOTH sides to avoid type clashes
 import '../models/symptom_entry.dart' as model;
@@ -39,8 +45,14 @@ import '../../../../providers/user_provider.dart';
 
 class PatientDetailsPage extends StatefulWidget {
   final String patientId;
+  /// NEW: when true, caregiver UI (can configure); when false, patient UI (no configure).
+  final bool isCaregiver;
 
-  const PatientDetailsPage({super.key, required this.patientId});
+  const PatientDetailsPage({
+    super.key,
+    required this.patientId,
+    this.isCaregiver = false, // default to patient behavior
+  });
 
   @override
   State<PatientDetailsPage> createState() => _PatientDetailsPageState();
@@ -50,7 +62,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   List<Medication> medications = [];
   bool _isLoadingMedications = false;
   String? _medicationError;
-
+  
   @override
   void initState() {
     super.initState();
@@ -161,10 +173,12 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Demo data
+    // TODO: Fetch from your store/service using patientId.
+    // For now, demo data mirrors your mockups (Sarah Johnson).
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
+    // --- Mood demo data ---
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -296,6 +310,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       ),
     ];
 
+    // --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -347,8 +362,10 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
-            _TabsStrip(),
+            // Tab bar row (like your mock)
+            const _TabsStrip(),
 
+            // Tab views
             Expanded(
               child: TabBarView(
                 children: [
@@ -366,7 +383,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         state: 'IL',
                         postalCode: '62701',
                       ),
-                      EmergencyContactCard(
+                      const EmergencyContactCard(
                         contactName: 'Michael Johnson',
                         relationship: 'Spouse',
                         phone: '(555) 987-6543',
@@ -398,46 +415,46 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     ],
                   ),
 
-                  // Activity
-                  RecentActivityTab(items: activityList),
-
-                  // Virtual check-in
+                  // ---- Virtual Check-In tab ----
+                  // ---- Virtual Check-In tab ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
                       VirtualCheckInHistoryCard(
                         entries: virtualCheckIns,
-                        onConfigure: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final updated =
-                              await showModalBottomSheet<
-                                List<VirtualCheckInQuestion>
-                              >(
-                                context: context,
-                                isScrollControlled: true,
-                                useSafeArea: true,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
-                                ),
-                                builder: (_) => VirtualCheckInConfigSheet(
-                                  initial: initialQuestions,
-                                ),
-                              );
+                        showConfigure: widget.isCaregiver, // caregivers only
+                        onConfigure: widget.isCaregiver ? () async {
+                          // Seed with your current config if you have it:
+                          final initialQuestions = <VirtualCheckInQuestion>[];
+                          // TODO: replace with your real ID source:
+                          final checkInId = 1; // TODO: replace with real patient id
+
+
+                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>?>(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                            ),
+                            builder: (_) => VirtualCheckInConfigSheet(
+                              checkInId: checkInId,          // ✅ required
+                              initial: initialQuestions,
+                            ),
+                          );
+
+                          if (!context.mounted) return;
                           if (updated != null) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Virtual check-in configuration saved',
-                                ),
-                              ),
+                            // TODO: persist `updated` to backend and refresh UI
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Virtual check-in configuration saved')),
                             );
                           }
-                        },
+                        } : null, // patients: no button
                       ),
                     ],
                   ),
+
                 ],
               ),
             ),
@@ -447,9 +464,12 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     );
   }
 }
-
+/// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _DetailsAppBar({required this.title, required this.subtitle});
+  const _DetailsAppBar({
+    required this.title,
+    required this.subtitle,
+  });
 
   final String title;
   final String subtitle;
@@ -487,7 +507,10 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// The tab buttons row (Info • Mood • Health • Virtual Check-In)
 class _TabsStrip extends StatelessWidget {
+  const _TabsStrip();     // <-- add const + super.key
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -505,15 +528,8 @@ class _TabsStrip extends StatelessWidget {
           tabs: const [
             Tab(text: 'Info', icon: Icon(Icons.info_outline, size: 18)),
             Tab(text: 'Mood', icon: Icon(Icons.favorite_border, size: 18)),
-            Tab(
-              text: 'Health',
-              icon: Icon(Icons.health_and_safety_outlined, size: 18),
-            ),
-            Tab(text: 'Activity', icon: Icon(Icons.history, size: 18)),
-            Tab(
-              text: 'Virtual Check-In',
-              icon: Icon(Icons.video_call_outlined, size: 18),
-            ),
+            Tab(text: 'Health', icon: Icon(Icons.health_and_safety_outlined, size: 18)),
+            Tab(text: 'Virtual Check-In', icon: Icon(Icons.video_call_outlined, size: 18)),
           ],
         ),
       ),

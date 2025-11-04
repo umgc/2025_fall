@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import '../models/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
+
 
 /// "Virtual Check-In History"
 class VirtualCheckInHistoryCard extends StatelessWidget {
   final List<VirtualCheckIn> entries;
-  final VoidCallback? onConfigure; // opens the config popup
+  final VoidCallback? onConfigure;
+  final bool showConfigure;
 
   const VirtualCheckInHistoryCard({
     super.key,
     required this.entries,
     this.onConfigure,
-  });
+    this.showConfigure = false, // patients default to false
+  }) : assert(!showConfigure || onConfigure != null,
+  'showConfigure=true requires onConfigure');
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +39,7 @@ class VirtualCheckInHistoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row: icon + title (left) | Configure Patient Check-in (right)
+          // Header row
           Row(
             children: [
               Icon(Icons.computer, color: cs.primary, size: 22),
@@ -50,39 +54,26 @@ class VirtualCheckInHistoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: cs.primary, // keep blue border
-                      width: 1.6,
-                    ),
-                    foregroundColor: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white // white text + icon in dark mode
-                        : cs.primary,  // blue in light mode
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    backgroundColor: Theme.of(context).brightness == Brightness.dark
-                        ? cs.primary.withValues(alpha: .08)
-                        : cs.primary.withValues(alpha: .05),
-                  ),
+              if (showConfigure)
+                OutlinedButton.icon(
                   onPressed: onConfigure,
                   icon: const Icon(Icons.settings, size: 18),
-                  label: const Text('Configure Patient Check-in')
-              ),
+                  label: const Text('Configure Patient Check-in'),
+                ),
             ],
           ),
           const SizedBox(height: 12),
 
-          if (entries.isEmpty)
-            _EmptyState()
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: entries.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, i) => _VirtualCheckInTile(entry: entries[i]),
-            ),
+          // Either empty state or the list
+          entries.isEmpty
+              ? const _EmptyState()
+              : ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: entries.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (_, i) => _VirtualCheckInTile(entry: entries[i]),
+          ),
         ],
       ),
     );
@@ -161,7 +152,7 @@ class _VirtualCheckInTile extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Session Summary (subtle container like your mock)
+          // Session Summary
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -171,10 +162,12 @@ class _VirtualCheckInTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Session Summary',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    )),
+                Text(
+                  'Session Summary',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(entry.summary, style: theme.textTheme.bodyMedium),
               ],
@@ -185,7 +178,7 @@ class _VirtualCheckInTile extends StatelessWidget {
     );
   }
 
-  // badge styles per Figma: routine (deep blue), follow-up (orange), urgent (red)
+  // Keep these helpers INSIDE this class to allow `static`
   static (String, Color, Color) _badgeFor(CheckInType t, ColorScheme cs) {
     switch (t) {
       case CheckInType.urgent:
@@ -218,11 +211,13 @@ class _FactsGrid extends StatelessWidget {
     Widget cell(String label, Widget value) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: cs.onSurface.withValues(alpha: .7),
-              fontWeight: FontWeight.w600,
-            )),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurface.withValues(alpha: .7),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 4),
         value,
       ],
@@ -245,7 +240,7 @@ class _FactsGrid extends StatelessWidget {
                     : Icons.error_outline),
                 size: 16,
                 color: entry.status == CheckInStatus.completed
-                    ? Colors.green.shade600     // ✔ like the mock
+                    ? Colors.green.shade600
                     : (entry.status == CheckInStatus.cancelled ? cs.error : cs.error),
               ),
               const SizedBox(width: 6),
@@ -258,14 +253,17 @@ class _FactsGrid extends StatelessWidget {
             Text(_formatDateOnly(entry.nextCheckIn), style: theme.textTheme.bodyMedium)),
       ];
 
-      return GridView.count(
-        crossAxisCount: narrow ? 2 : 4,
-        childAspectRatio: narrow ? 4.2 : 5.2,
+      return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 16,
-        children: children,
+        itemCount: children.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: narrow ? 2 : 4,
+          mainAxisExtent: 58,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 8,
+        ),
+        itemBuilder: (_, i) => children[i],
       );
     });
   }
@@ -277,14 +275,19 @@ class _FactsGrid extends StatelessWidget {
 
   static String _statusLabel(CheckInStatus s) {
     switch (s) {
-      case CheckInStatus.completed: return 'Completed';
-      case CheckInStatus.missed:    return 'Missed';
-      case CheckInStatus.cancelled: return 'Cancelled';
+      case CheckInStatus.completed:
+        return 'Completed';
+      case CheckInStatus.missed:
+        return 'Missed';
+      case CheckInStatus.cancelled:
+        return 'Cancelled';
     }
   }
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -311,4 +314,3 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
-
