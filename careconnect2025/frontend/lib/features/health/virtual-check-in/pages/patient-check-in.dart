@@ -34,6 +34,30 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   ];
 
   late bool videoCallActive = false;
+  bool isCameraAvailable = false;
+  bool isCheckingCamera = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCameraAvailability();
+  }
+
+  Future<void> _checkCameraAvailability() async {
+    try {
+      final cameras = await availableCameras();
+      setState(() {
+        isCameraAvailable = cameras.isNotEmpty;
+        isCheckingCamera = false;
+      });
+    } catch (e) {
+      setState(() {
+        isCameraAvailable = false;
+        isCheckingCamera = false;
+      });
+      print('Error checking camera availability: $e');
+    }
+  }
 
   Future<CameraDescription> setUpCamera() async
   {
@@ -143,11 +167,26 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
     return Scaffold(
       appBar: DefaultAppHeader(),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
+        backgroundColor: isCameraAvailable ? Colors.green : Colors.grey,
         foregroundColor: Colors.white,
-        onPressed: () => cameraHandler(),
-        tooltip: 'Start Video Call',
-        child: const Icon(Icons.video_call),
+        onPressed: (isCheckingCamera || !isCameraAvailable) ? null : () => cameraHandler(),
+        tooltip: isCheckingCamera
+            ? 'Checking camera...'
+            : (isCameraAvailable
+                ? 'Start Video Call'
+                : 'Camera not available'),
+        child: isCheckingCamera
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Icon(
+                isCameraAvailable ? Icons.video_call : Icons.videocam_off,
+              ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -171,6 +210,39 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
                     "Share how you're feeling today",
                     style: TextStyle(color: Colors.grey[600]),
                   ),
+                  if (!isCheckingCamera && !isCameraAvailable)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.orange.shade700,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Camera not available - Video recording disabled',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                 ],
               ),
