@@ -1,12 +1,12 @@
 import 'dart:convert';
 
+import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/models/patient-info.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/widgets/patient-info-card.dart';
 import 'package:care_connect_app/widgets/default_app_header.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/patient_details_page.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/api_service.dart';
-import 'package:care_connect_app/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -354,8 +354,10 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
   /// Opens a dialog or navigates to a screen where caregivers can register
   /// new patients who don't have accounts yet. This creates a new patient account.
   Future<void> _onRegisterPatient() async {
+    final theme = Theme.of(context);
+
     // Open the registration page as a modal, preconfigured for a Patient
-    await showModalBottomSheet(
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -371,16 +373,28 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
           child: const RegistrationPage(
             initialRole: 'Patient',
             lockRole: true,
+            skipEmailVerification: true,
           ),
         );
       },
     );
 
-    // Optionally refresh the list after closing the modal (no-op if unchanged)
-    if (mounted) {
+    // If registration was submitted, show a confirmation message
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Patient should receive a registration email.'),
+          backgroundColor: theme.colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+
+      // Optionally refresh the list after closing the modal
       await _loadPatients();
     }
   }
+
 
   /// Builds the main UI for the caregiver patient list screen.
   ///
@@ -549,7 +563,8 @@ class _CaregiverPatientList extends State<CaregiverPatientList> {
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => PatientDetailsPage(
-                                  patientId: patient.id,   // or patient: patient
+                                  patientId: patient.id,
+                                  isCaregiver: true,   // or patient: patient
                                 ),
                               ),
                             );

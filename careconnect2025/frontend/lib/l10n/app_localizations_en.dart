@@ -136,7 +136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSymptoms => 'Symptoms';
 
   @override
-  String get navHealth => 'Health';
+  String get navHealth => 'Virtual Check-In';
 
   @override
   String get navMessages => 'Messages';

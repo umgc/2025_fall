@@ -12,6 +12,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class Question {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,7 +22,7 @@ public class Question {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
-    private QuestionType type; // TEXT | YES_NO | TRUE_FALSE | NUMBER
+    private QuestionType type;  // TEXT | YES_NO | TRUE_FALSE | NUMBER
 
     @Column(nullable = false)
     private boolean required = false;
@@ -32,7 +33,6 @@ public class Question {
     @Column(nullable = false)
     private int ordinal = 0;
 
-    // Optional: back-reference to check-in selections
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CheckInQuestion> usedInCheckIns;
 }

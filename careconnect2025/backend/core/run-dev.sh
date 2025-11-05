@@ -67,7 +67,7 @@ if ! docker ps --format "table {{.Names}}" | grep -q "postgres_container"; then
 
     # Start PostgreSQL container
     cd pg_docker
-    docker-compose up -d postgres
+    docker compose up -d postgres
     cd ..
 
     echo "Waiting for PostgreSQL to be ready..."

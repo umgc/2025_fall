@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/v1/api/symptoms")
+@RequestMapping("/v1/api/symptoms-entry")
 @RequiredArgsConstructor
 public class SymptomEntryController {
 

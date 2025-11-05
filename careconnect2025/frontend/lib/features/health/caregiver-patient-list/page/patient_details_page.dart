@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 // Pain level card
 import '../widgets/pain_level_card.dart';
@@ -14,33 +17,168 @@ import '../widgets/emergency_contact_card.dart';
 import '../widgets/mood_history_card.dart';
 
 // Health tab
-import '../models/medication_entry.dart';
 import '../widgets/current_medications_card.dart';
 
 // Recent Activity tab
 import '../widgets/recent_activity_tab.dart';
 
 // Virtual Check-in history
-import '../models/virtual_check_in.dart';
-import '../widgets/virtual_check_in_config_sheet.dart';
-import '../widgets/virtual_check_in_history_card.dart';
-import '../models/virtual_check_in_question.dart';
+// Virtual Check-In domain entities
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_question.dart';
+
+// Virtual Check-In UI
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_config_sheet.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/widgets/virtual_check_in_history_card.dart';
+
+// (If this page calls the APIs, add:)
+
 
 // 👉 Alias BOTH sides to avoid type clashes
 import '../models/symptom_entry.dart' as model;
 import '../widgets/recent_symptom_card.dart' as sympt;
 
-class PatientDetailsPage extends StatelessWidget {
-  final String patientId;
+// API and models
+import '../../../../services/api_service.dart';
+import '../../../health/medication-tracker/models/medication-model.dart';
+import '../../../../providers/user_provider.dart';
 
-  const PatientDetailsPage({super.key, required this.patientId});
+class PatientDetailsPage extends StatefulWidget {
+  final String patientId;
+  /// NEW: when true, caregiver UI (can configure); when false, patient UI (no configure).
+  final bool isCaregiver;
+
+  const PatientDetailsPage({
+    super.key,
+    required this.patientId,
+    this.isCaregiver = false, // default to patient behavior
+  });
+
+  @override
+  State<PatientDetailsPage> createState() => _PatientDetailsPageState();
+}
+
+class _PatientDetailsPageState extends State<PatientDetailsPage> {
+  List<Medication> medications = [];
+  bool _isLoadingMedications = false;
+  String? _medicationError;
+  
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedications();
+  }
+
+  /// Fetch medications from the backend API
+  Future<void> _fetchMedications() async {
+    setState(() {
+      _isLoadingMedications = true;
+      _medicationError = null;
+    });
+
+    try {
+      // Parse patientId from String to int
+      final patientIdInt = int.tryParse(widget.patientId);
+
+      if (patientIdInt == null) {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Invalid patient ID';
+        });
+        return;
+      }
+
+      final http.Response resp =
+          await ApiService.getPatientMedicationsForPatient(patientIdInt);
+
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+
+        setState(() {
+          medications = data.map((json) => Medication.fromJson(json)).toList();
+          _isLoadingMedications = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingMedications = false;
+          _medicationError = 'Failed to load medications: ${resp.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingMedications = false;
+        _medicationError = 'Error loading medications: $e';
+      });
+    }
+  }
+
+  /// Build the medications section with loading/error handling
+  Widget _buildMedicationsSection() {
+    if (_isLoadingMedications) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+
+    if (_medicationError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.error,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _medicationError!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _fetchMedications,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Get caregiverId from user provider
+    final caregiverId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).user?.caregiverId;
+
+    return CurrentMedicationsSection(
+      entries: medications,
+      onMedicationUpdated: _fetchMedications,
+      // Refresh medications after delete/approve
+      caregiverId: caregiverId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Demo data
+    // TODO: Fetch from your store/service using patientId.
+    // For now, demo data mirrors your mockups (Sarah Johnson).
     const patientName = 'Sarah Johnson';
     const mrn = 'MRN-2024-0156';
 
+    // --- Mood demo data ---
     final moodEntries = <MoodHistoryEntry>[
       MoodHistoryEntry(
         date: DateTime(2024, 12, 27),
@@ -122,39 +260,6 @@ class PatientDetailsPage extends StatelessWidget {
         ),
     ];
 
-    final medicationEntries = <MedicationEntry>[
-      MedicationEntry(
-        id: 'm1',
-        name: 'Metformin',
-        dosage: '500mg',
-        frequency: 'Twice daily',
-        startedOn: DateTime(2024, 1, 15),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 95,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm2',
-        name: 'Lisinopril',
-        dosage: '10mg',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 3, 10),
-        lastTakenAt: DateTime(2024, 12, 27, 8, 0),
-        compliancePct: 92,
-        status: MedicationStatus.active,
-      ),
-      MedicationEntry(
-        id: 'm3',
-        name: 'Vitamin D3',
-        dosage: '2000 IU',
-        frequency: 'Once daily',
-        startedOn: DateTime(2024, 2, 1),
-        lastTakenAt: DateTime(2024, 12, 26, 8, 0),
-        compliancePct: 87,
-        status: MedicationStatus.active,
-      ),
-    ];
-
     final activityList = const [
       ActivityEntry(
         title: 'Took medication: Lisinopril 10mg',
@@ -168,6 +273,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // --- Virtual Check-In demo data ---
     final virtualCheckIns = <VirtualCheckIn>[
       VirtualCheckIn(
         id: 'vc1',
@@ -204,6 +310,7 @@ class PatientDetailsPage extends StatelessWidget {
       ),
     ];
 
+    // --- Virtual Check-In configuration (popup) ---
     final initialQuestions = <VirtualCheckInQuestion>[
       VirtualCheckInQuestion(
         id: 'q1',
@@ -255,8 +362,10 @@ class PatientDetailsPage extends StatelessWidget {
               emergencyPhones: const ['+15559876543', '+15552227788'],
             ),
 
-            _TabsStrip(),
+            // Tab bar row (like your mock)
+            const _TabsStrip(),
 
+            // Tab views
             Expanded(
               child: TabBarView(
                 children: [
@@ -274,7 +383,7 @@ class PatientDetailsPage extends StatelessWidget {
                         state: 'IL',
                         postalCode: '62701',
                       ),
-                      EmergencyContactCard(
+                      const EmergencyContactCard(
                         contactName: 'Michael Johnson',
                         relationship: 'Spouse',
                         phone: '(555) 987-6543',
@@ -302,50 +411,50 @@ class PatientDetailsPage extends StatelessWidget {
                       // Recent Symptoms (UI-typed list)
                       sympt.RecentSymptomsSection(entries: uiSymptomEntries),
                       const SizedBox(height: 8),
-                      CurrentMedicationsSection(entries: medicationEntries),
+                      _buildMedicationsSection(),
                     ],
                   ),
 
-                  // Activity
-                  RecentActivityTab(items: activityList),
-
-                  // Virtual check-in
+                  // ---- Virtual Check-In tab ----
+                  // ---- Virtual Check-In tab ----
                   ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
                       VirtualCheckInHistoryCard(
                         entries: virtualCheckIns,
-                        onConfigure: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final updated =
-                              await showModalBottomSheet<
-                                List<VirtualCheckInQuestion>
-                              >(
-                                context: context,
-                                isScrollControlled: true,
-                                useSafeArea: true,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
-                                ),
-                                builder: (_) => VirtualCheckInConfigSheet(
-                                  initial: initialQuestions,
-                                ),
-                              );
+                        showConfigure: widget.isCaregiver, // caregivers only
+                        onConfigure: widget.isCaregiver ? () async {
+                          // Seed with your current config if you have it:
+                          final initialQuestions = <VirtualCheckInQuestion>[];
+                          // TODO: replace with your real ID source:
+                          final checkInId = 1; // TODO: replace with real patient id
+
+
+                          final updated = await showModalBottomSheet<List<VirtualCheckInQuestion>?>(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                            ),
+                            builder: (_) => VirtualCheckInConfigSheet(
+                              checkInId: checkInId,          // ✅ required
+                              initial: initialQuestions,
+                            ),
+                          );
+
+                          if (!context.mounted) return;
                           if (updated != null) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Virtual check-in configuration saved',
-                                ),
-                              ),
+                            // TODO: persist `updated` to backend and refresh UI
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Virtual check-in configuration saved')),
                             );
                           }
-                        },
+                        } : null, // patients: no button
                       ),
                     ],
                   ),
+
                 ],
               ),
             ),
@@ -355,9 +464,13 @@ class PatientDetailsPage extends StatelessWidget {
     );
   }
 }
-
+/// shows back arrow + name + MRN line
 class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _DetailsAppBar({required this.title, required this.subtitle});
+  const _DetailsAppBar({
+    required this.title,
+    required this.subtitle,
+  });
+
   final String title;
   final String subtitle;
 
@@ -394,7 +507,10 @@ class _DetailsAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+/// The tab buttons row (Info • Mood • Health • Virtual Check-In)
 class _TabsStrip extends StatelessWidget {
+  const _TabsStrip();     // <-- add const + super.key
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -412,15 +528,8 @@ class _TabsStrip extends StatelessWidget {
           tabs: const [
             Tab(text: 'Info', icon: Icon(Icons.info_outline, size: 18)),
             Tab(text: 'Mood', icon: Icon(Icons.favorite_border, size: 18)),
-            Tab(
-              text: 'Health',
-              icon: Icon(Icons.health_and_safety_outlined, size: 18),
-            ),
-            Tab(text: 'Activity', icon: Icon(Icons.history, size: 18)),
-            Tab(
-              text: 'Virtual Check-In',
-              icon: Icon(Icons.video_call_outlined, size: 18),
-            ),
+            Tab(text: 'Health', icon: Icon(Icons.health_and_safety_outlined, size: 18)),
+            Tab(text: 'Virtual Check-In', icon: Icon(Icons.video_call_outlined, size: 18)),
           ],
         ),
       ),

@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:porcupine_flutter/porcupine_manager.dart';
 import 'package:porcupine_flutter/porcupine_error.dart';
 import 'package:porcupine_flutter/porcupine.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class VoiceCommandAI extends StatefulWidget {
-  const VoiceCommandAI({super.key});
+  final bool singleShot;
+
+  const VoiceCommandAI({
+    super.key,
+    this.singleShot = false,
+  });
 
   @override
   State<VoiceCommandAI> createState() => _VoiceCommandAIState();
@@ -20,56 +26,104 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   bool _wakeDetected = false;
   Timer? _timeoutTimer;
 
+  String _buffer = '';
+  bool _initialized = false;
+
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
-    _initPorcupine();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initPorcupine();
+    }
   }
 
   Future<void> _initPorcupine() async {
+    // Porcupine wake word detection is not supported on web
+    if (kIsWeb) {
+      debugPrint('Porcupine wake word detection disabled on web - use mic button instead');
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     try {
-      _porcupine = await PorcupineManager.fromBuiltInKeywords(
+      final mgr = await PorcupineManager.fromBuiltInKeywords(
         'Qxjb+VJuMnPDRseioWb9czxnyKe7EWFMdNNMbIWrJiARG2q9Tvo5XA==',
         [BuiltInKeyword.PORCUPINE],
         _onWakeDetected,
       );
+
+      if (!mounted) return;
+      _porcupine = mgr;
+
       await _porcupine?.start();
     } on PorcupineException catch (e) {
-      // Log and show the full error message
       debugPrint('Porcupine init failed: ${e.message}');
-      ScaffoldMessenger.of(context).showSnackBar(
+
+      messenger?.showSnackBar(
         SnackBar(content: Text('Wake word init error: ${e.message}')),
       );
-    } catch (e) {
-      // Fallback for other error types
-      debugPrint('Unexpected init error: $e');
+    } catch (e, st) {
+      debugPrint('Unexpected init error: $e\n$st');
     }
   }
 
   void _onWakeDetected(int _) {
+    if (!mounted) return;
     setState(() => _wakeDetected = true);
     _startListening();
   }
 
   Future<void> _startListening() async {
-    if (_isListening) return;
+    if (!mounted || _isListening) return;
 
-    bool available = await _speech.initialize();
-    if (available && await _speech.hasPermission) {
-      setState(() => _isListening = true);
+    // Initialize speech recognition - this will request permission if needed
+    bool available = await _speech.initialize(
+      onError: (error) => debugPrint('Speech error: $error'),
+      onStatus: (status) => debugPrint('Speech status: $status'),
+    );
+
+    if (!mounted || !available) {
+      if (!mounted) return;
+      _showError('Speech recognition not available');
+      _reset();
+      return;
+    }
+
+    // Check if we have permission - initialize() should have requested it
+    final hasPermission = await _speech.hasPermission;
+    if (!mounted || !hasPermission) {
+      if (!mounted) return;
+      _showError('Microphone permission denied');
+      _reset();
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isListening = true);
 
       _speech.listen(
-        listenFor: const Duration(seconds: 3),
+        listenFor: const Duration(seconds: 12),
+        pauseFor: const Duration(seconds: 2),
         onResult: (r) {
+          if (r.recognizedWords.isNotEmpty) {
+            _buffer = r.recognizedWords;
+          }
           if (r.finalResult) {
             _timeoutTimer?.cancel();
-            _process(r.recognizedWords);
+            _process(_buffer.isNotEmpty ? _buffer : r.recognizedWords);
           }
         },
         listenOptions: stt.SpeechListenOptions(
           cancelOnError: true,
-          partialResults: false,
+          partialResults: true,
           listenMode: stt.ListenMode.dictation,
           onDevice: false,
           autoPunctuation: true,
@@ -77,23 +131,35 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
         ),
       );
 
-      _timeoutTimer = Timer(const Duration(seconds: 3), _onTimeout);
-    } else {
-      _showError('Mic permission denied');
-      _reset();
-    }
+      _timeoutTimer = Timer(const Duration(seconds: 12), _onTimeout);
   }
 
   void _process(String words) {
+    if (!mounted) return;
+
     final cmd = words.toLowerCase().trim();
     debugPrint('Heard: $cmd');
 
+    if (widget.singleShot) {
+      _reset();
+      if (mounted) {
+        Navigator.of(context).pop<String>(words);
+      }
+      return;
+    }
+
     if (cmd.contains('take me home')) {
-      Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+      }
     } else if (cmd.contains('take me to calendar')) {
-      Navigator.pushNamed(context, '/telehealth');
+      if (mounted) {
+        Navigator.pushNamed(context, '/telehealth');
+      }
     } else if (cmd.contains('take me to my tracker')) {
-      Navigator.pushNamed(context, '/symptomTracker');
+      if (mounted) {
+        Navigator.pushNamed(context, '/symptomTracker');
+      }
     } else {
       _showError('Command not recognized — please try again.');
     }
@@ -101,28 +167,57 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
   }
 
   void _onTimeout() {
-    if (_isListening) {
-      _showError('Listening timed out — please say the command faster.');
+    if (!mounted || !_isListening) return;
+
+    final txt = _buffer.trim().isNotEmpty
+        ? _buffer
+        : _speech.lastRecognizedWords; // fallback just in case
+
+    if (txt.trim().isNotEmpty) {
+      _process(txt);
+    } else {
+      _showError('Listening timed out.');
       _reset();
     }
   }
 
   void _showError(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _reset() {
     _timeoutTimer?.cancel();
     _speech.stop();
-    setState(() {
-      _isListening = false;
-      _wakeDetected = false;
-    });
+    _buffer = '';
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        _wakeDetected = false;
+      });
+    }
   }
 
   void _onMicPressed() {
-    setState(() => _wakeDetected = true);
-    _startListening();
+    if (_isListening) {
+      // Stop listening and process what we have
+      _timeoutTimer?.cancel();
+      _speech.stop();
+
+      final text = _buffer.trim().isNotEmpty
+          ? _buffer
+          : _speech.lastRecognizedWords;
+
+      if (text.trim().isNotEmpty) {
+        _process(text);
+      } else {
+        _showError('No speech detected.');
+        _reset();
+      }
+    } else {
+      setState(() => _wakeDetected = true);
+      _startListening();
+    }
   }
 
   @override
@@ -151,7 +246,7 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
           const SizedBox(height: 12),
           Text(
             !_wakeDetected
-                ? 'Say wake word or tap mic'
+                ? (kIsWeb ? 'Tap mic to start' : 'Say wake word or tap mic')
                 : _isListening
                     ? 'Listening...'
                     : 'Processing...',
@@ -159,9 +254,11 @@ class _VoiceCommandAIState extends State<VoiceCommandAI> {
           ),
         ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onMicPressed,
-        child: Icon(_isListening ? Icons.mic_off : Icons.mic),
+      floatingActionButton: Builder(
+        builder: (context) => FloatingActionButton(
+          onPressed: _onMicPressed,
+          child: Icon(_isListening ? Icons.mic_off : Icons.mic),
+        ),
       ),
     );
   }

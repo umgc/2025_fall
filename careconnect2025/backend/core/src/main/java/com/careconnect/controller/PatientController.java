@@ -636,32 +636,29 @@ public class PatientController {
         }
     }
     
-    
-    
     @GetMapping("/{patientId}/provider")
-            public ResponseEntity<Map<String, Object>> getPrimaryCareProvider(@PathVariable Long patientId) {
-                return ResponseEntity.ok(patientService.getPrimaryProvider(patientId));
-            }
+    public ResponseEntity<Map<String, Object>> getPrimaryCareProvider(@PathVariable Long patientId) {
+        return ResponseEntity.ok(patientService.getPrimaryProvider(patientId));
+    }
+    
+    @GetMapping("/{patientID}/medications")
+    @Operation(summary = "Get all medications for patient",
+            description = "Get all medications for a specific patient")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Medications retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Patient not found")
+    })
+    public ResponseEntity<List<MedicationDTO>> getAllMedications(@PathVariable Long patientID) {
+        User currentUser = getCurrentUser();
 
-            @GetMapping("/{patientId}/medications")
-            @Operation(summary = "Get all medications for patient",
-                    description = "Get all medications for a specific patient")
-            @ApiResponses(value = {
-                    @ApiResponse(responseCode = "200", description = "Medications retrieved successfully"),
-                    @ApiResponse(responseCode = "403", description = "Access denied"),
-                    @ApiResponse(responseCode = "404", description = "Patient not found")
-            })
-            public ResponseEntity<List<MedicationDTO>> getAllMedications(@PathVariable Long patientId) {
-                User currentUser = getCurrentUser();
+        // Convert patientId to userId for validation
+        Patient patient = patientService.getPatientById(patientID);
+        validatePatientAccess(patient.getUser().getId(), currentUser);
 
-                // Convert patientId to userId for validation
-                Patient patient = patientService.getPatientById(patientId);
-                validatePatientAccess(patient.getUser().getId(), currentUser);
-
-                List<MedicationDTO> allMeds = medicationService.getAllMedicationsForPatient(patientId);
-                return ResponseEntity.ok(allMeds);
-            }
-
+        List<MedicationDTO> allMeds = medicationService.getAllMedicationsForPatient(patientID);
+        return ResponseEntity.ok(allMeds);
+    }
 
     @PostMapping("/{patientID}/medications")
     @Operation(summary = "Add medication for patient",
@@ -730,7 +727,7 @@ public class PatientController {
         validatePatientAccess(patient.getUser().getId(), currentUser);
 
         // Deactivate the medication (soft delete)
-        medicationService.deactivateMedication(medicationId);
+        medicationService.deactivateMedication(patientID, medicationId);
         return ResponseEntity.noContent().build();
     }
 

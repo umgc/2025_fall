@@ -225,7 +225,7 @@ class _AddMedicationModalState extends State<AddMedicationModal> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _selectedRoute,
+                      initialValue: _selectedRoute,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -268,7 +268,7 @@ class _AddMedicationModalState extends State<AddMedicationModal> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<MedicationType>(
-                      value: _selectedMedicationType,
+                      initialValue: _selectedMedicationType,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),

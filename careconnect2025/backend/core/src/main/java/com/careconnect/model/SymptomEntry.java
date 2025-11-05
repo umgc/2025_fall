@@ -14,11 +14,11 @@ public class SymptomEntry extends Auditable {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_user_id")
+    @JoinColumn(name = "patient_id")
     private Patient patient;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "caregiver_user_id")
+    @JoinColumn(name = "caregiver_id")
     private Caregiver caregiver;
 
     @Builder.Default
@@ -31,4 +31,7 @@ public class SymptomEntry extends Auditable {
 
     @Column(name = "taken_at", nullable = false)
     private Instant takenAt;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;           //  Clinical notes
 }

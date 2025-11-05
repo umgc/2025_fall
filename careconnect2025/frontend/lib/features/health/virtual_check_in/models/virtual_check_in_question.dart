@@ -1,3 +1,5 @@
+// lib/features/health/caregiver-patient-list/models/virtual_check_in_question.dart
+
 enum CheckInQuestionType { numerical, yesNo, textInput }
 
 class VirtualCheckInQuestion {
@@ -12,17 +14,4 @@ class VirtualCheckInQuestion {
     required this.required,
     required this.text,
   });
-
-  VirtualCheckInQuestion copyWith({
-    CheckInQuestionType? type,
-    bool? required,
-    String? text,
-  }) {
-    return VirtualCheckInQuestion(
-      id: id,
-      type: type ?? this.type,
-      required: required ?? this.required,
-      text: text ?? this.text,
-    );
-  }
 }
