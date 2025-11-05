@@ -21,6 +21,7 @@ class _FlashcardGameState extends State<FlashcardGame> {
 
   int _currentIndex = 0;
   bool _showAnswer = false;
+  bool _completionReported = false;
 
   @override
   void initState() {
@@ -34,6 +35,26 @@ class _FlashcardGameState extends State<FlashcardGame> {
         _currentIndex = index;
         _showAnswer = false;
       });
+      if (!_completionReported && index == _limitedQuestions.length - 1) {
+        _markComplete(auto: true);
+      }
+    }
+  }
+
+  void _markComplete({bool auto = false}) {
+    if (_completionReported) return;
+    setState(() {
+      _completionReported = true;
+    });
+    if (!widget.previewMode) {
+      widget.onComplete();
+      if (!auto) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Flashcards completed!'),
+          ),
+        );
+      }
     }
   }
 
@@ -91,11 +112,19 @@ class _FlashcardGameState extends State<FlashcardGame> {
             ElevatedButton(
               onPressed: _currentIndex < _limitedQuestions.length - 1
                   ? () => _goTo(_currentIndex + 1)
-                  : null,
+                  : () => _markComplete(auto: true),
               child: const Text('Next'),
             ),
           ],
         ),
+        if (!widget.previewMode)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: ElevatedButton(
+              onPressed: _completionReported ? null : _markComplete,
+              child: Text(_completionReported ? 'Completed' : 'Mark Complete'),
+            ),
+          ),
       ],
     );
   }

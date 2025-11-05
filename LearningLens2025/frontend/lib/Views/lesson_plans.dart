@@ -330,7 +330,7 @@ class _LessonPlanState extends State<LessonPlans> {
                                 if (selectedLLM == LlmType.LOCAL) ...[
                                   const SizedBox(height: 6),
                                   const Text(
-                                    "Running a Large Language Model (LLM) requires substantial hardware resources. The recommended model for this task is 7B or higher reasoning models (Qwen), however smaller models may be used without generating errors. Smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                                    "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nThe recommended model for this task is 3B or higher general/chat models. Using smaller models may produce inaccurate or misleading responses.\nFor best results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.black54,
@@ -393,30 +393,23 @@ class _LessonPlanState extends State<LessonPlans> {
                                                   if (selectedLLM ==
                                                       LlmType.LOCAL)
                                                     TextButton(
-                                                      onPressed: () {
-                                                        setState(() {
-                                                          isGeneratingLesson =
-                                                              false;
-                                                        });
-                                                        // Cancel inference from Local LLM (may break)
-                                                        LocalLLMService()
-                                                            .cancel();
+                                                      onPressed: () async {
+                                                        await LocalLLMService()
+                                                            .showCancelConfirmationDialog();
                                                       },
                                                       style:
                                                           TextButton.styleFrom(
                                                         foregroundColor:
-                                                            Colors.black,
-                                                        padding:
-                                                            EdgeInsets.zero,
-                                                        textStyle:
-                                                            const TextStyle(
-                                                          decoration:
-                                                              TextDecoration
-                                                                  .underline,
-                                                        ),
+                                                            Colors.redAccent,
                                                       ),
                                                       child: const Text(
-                                                          'Cancel Generation'),
+                                                        'Cancel Generation',
+                                                        style: TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w500),
+                                                      ),
                                                     ),
                                                 ],
                                               )

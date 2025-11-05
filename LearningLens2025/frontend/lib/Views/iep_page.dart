@@ -11,7 +11,6 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import "package:learninglens_app/Api/lms/factory/lms_factory.dart";
-import "package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart";
 import "package:learninglens_app/Controller/custom_appbar.dart";
 import 'package:learninglens_app/Controller/html_converter.dart';
 import 'package:learninglens_app/beans/assessment.dart';
@@ -61,7 +60,7 @@ class _IepPageState extends State<IepPage> {
   @override
   void initState() {
     super.initState();
-    overrides = MoodleLmsService().overrides;
+    overrides = LmsFactory.getLmsService().overrides;
     overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     selectedLLM = LlmType.values
         .firstWhereOrNull((llm) => LocalStorageService.userHasLlmKey(llm));
@@ -361,7 +360,7 @@ class _IepPageState extends State<IepPage> {
                           child: Align(
                             alignment: AlignmentGeometry.topRight,
                             child: Text(
-                              "Running a Large Language Model (LLM) requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor optimal results, we recommend using the external API.\nPlease use the local LLM responsibly and independently verify any critical information.",
+                              "Running a Large Language Model (LLM) locally typically requires substantial hardware resources.\nThe recommended model for this task is 7B or higher reasoning models (Qwen). Using smaller models may produce inaccurate or misleading responses.\nFor best results, we recommend using the external LLM.\nPlease use the local LLM responsibly and independently verify any critical information.",
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.black54,
@@ -561,14 +560,22 @@ class _IepPageState extends State<IepPage> {
                                     attempts != null) &&
                                 (selectedAssignment?.type != "essay" ||
                                     epochTime2 != null)
-                            ? () {
+                            ? () async {
                                 if (selectedAssignment?.type == 'quiz') {
-                                  quizOver(epochTime!, selectedAssignment!.id,
-                                      userId!, attempts!);
+                                  await quizOver(
+                                      epochTime!,
+                                      int.parse(selectedCourse!),
+                                      selectedAssignment!.id,
+                                      userId!,
+                                      attempts!);
                                 } else if (selectedAssignment?.type ==
                                     'essay') {
-                                  essayOver(epochTime!, selectedAssignment!.id,
-                                      userId!, epochTime2!);
+                                  await essayOver(
+                                      epochTime!,
+                                      int.parse(selectedCourse!),
+                                      selectedAssignment!.id,
+                                      userId!,
+                                      epochTime2!);
                                 }
                                 resetForm(false);
                               }
@@ -697,13 +704,14 @@ class _IepPageState extends State<IepPage> {
 
   List<Course>? getAllCourses() {
     List<Course>? result;
-    result = MoodleLmsService().courses;
+    result = LmsFactory.getLmsService().courses;
     return result;
   }
 
   Future<List<Participant>>? getAllParticipants(String courseID) async {
     List<Participant>? participants;
-    participants = await MoodleLmsService().getCourseParticipants(courseID);
+    participants =
+        await LmsFactory.getLmsService().getCourseParticipants(courseID);
     return participants;
   }
 
@@ -723,11 +731,12 @@ class _IepPageState extends State<IepPage> {
 
   Future<List<Assessment>> handleAssessmentSelection(int? courseID) async {
     if (courseID != null) {
-      List<Assignment> essayList = await MoodleLmsService().getEssays(courseID);
+      List<Assignment> essayList =
+          await LmsFactory.getLmsService().getEssays(courseID);
       // Fetch quizzes (if available).
       List<Quiz> quizList = [];
       try {
-        quizList = await MoodleLmsService().getQuizzes(courseID);
+        quizList = await LmsFactory.getLmsService().getQuizzes(courseID);
       } catch (e) {
         print("getQuizzes not available or failed: $e");
       }
@@ -760,15 +769,17 @@ class _IepPageState extends State<IepPage> {
     });
   }
 
-  void quizOver(int epochTime, int quizId, int userId, int attempts) async {
-    await MoodleLmsService().addQuizOverride(
+  Future<void> quizOver(
+      int epochTime, int courseId, int quizId, int userId, int attempts) async {
+    await LmsFactory.getLmsService().addQuizOverride(
         quizId: quizId,
+        courseId: courseId,
         userId: userId,
         timeClose: epochTime,
         attempts: attempts);
-    await MoodleLmsService().refreshOverrides();
+    await LmsFactory.getLmsService().refreshOverrides();
     setState(() {
-      overrides = MoodleLmsService().overrides;
+      overrides = LmsFactory.getLmsService().overrides;
       overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -776,15 +787,17 @@ class _IepPageState extends State<IepPage> {
     );
   }
 
-  void essayOver(int epochTime, int essayId, int userId, int epochTime2) async {
-    await MoodleLmsService().addEssayOverride(
+  Future<void> essayOver(int epochTime, int courseId, int essayId, int userId,
+      int epochTime2) async {
+    await LmsFactory.getLmsService().addEssayOverride(
         assignid: essayId,
+        courseId: courseId,
         userId: userId,
         dueDate: epochTime,
         cutoffDate: epochTime2);
-    await MoodleLmsService().refreshOverrides();
+    await LmsFactory.getLmsService().refreshOverrides();
     setState(() {
-      overrides = MoodleLmsService().overrides;
+      overrides = LmsFactory.getLmsService().overrides;
       overrides?.sort((a, b) => a.fullname.compareTo(b.fullname));
     });
     ScaffoldMessenger.of(context).showSnackBar(

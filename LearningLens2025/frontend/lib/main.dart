@@ -8,8 +8,10 @@ import 'package:learninglens_app/Views/program_assessment_view.dart';
 import 'package:learninglens_app/Views/user_settings.dart';
 import 'package:learninglens_app/notifiers/login_notifier.dart';
 import 'package:learninglens_app/notifiers/theme_notifier.dart';
+import 'package:learninglens_app/services/gamification_service.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/program_assessment_service.dart';
+import 'package:learninglens_app/services/reflection_service.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,6 +32,8 @@ void main() async {
   await AILoggingSingleton().createDb();
   await AILoggingSingleton().clearOldDatabaseEntries();
   await ProgramAssessmentService.createDb();
+  await GamificationService.createDb();
+  await ReflectionService.createDb();
 
   runApp(
     MultiProvider(
@@ -98,7 +102,7 @@ class MyApp extends StatelessWidget {
         '/user': (context) => UserSettings(),
         //'/send_essay_to_moodle': (context) => EssayAssignmentSettings(''),
         '/assessments': (context) => AssessmentsView(),
-        // '/viewExams': (context) => const ViewExamPage(),
+        // '/viewExams': (context) => const View Exam Page(),
         // '/settings': (context) => Setting(themeModeNotifier: _themeModeNotifier)
         '/gamification': (context) => GamificationView(),
         '/evaluate': (context) => ProgramAssessmentView()

@@ -34,6 +34,10 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
+import 'package:markdown/markdown.dart' as md;
+import 'package:super_clipboard/super_clipboard.dart';
+import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart'
+    as qh;
 
 // Api
 import 'package:learninglens_app/Api/database/ai_logging_singleton.dart';
@@ -44,10 +48,8 @@ import 'package:learninglens_app/Api/llm/llm_api_modules_base.dart';
 import 'package:learninglens_app/Api/llm/openai_api.dart';
 import 'package:learninglens_app/Api/llm/perplexity_api.dart';
 import 'package:learninglens_app/Api/lms/factory/lms_factory.dart';
-import 'package:learninglens_app/Api/lms/moodle/moodle_lms_service.dart';
 // Controller
 import 'package:learninglens_app/Controller/custom_appbar.dart';
-// Views
 // beans
 import 'package:learninglens_app/beans/ai_log.dart';
 import 'package:learninglens_app/beans/assignment.dart';
@@ -59,6 +61,8 @@ import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/services/LLMContextBuilder.dart';
 import 'package:learninglens_app/services/local_storage_service.dart';
 import 'package:learninglens_app/services/prompt_builder_service.dart';
+import 'package:learninglens_app/Api/llm/local_llm_service.dart'; // local llm
+import 'package:flutter/foundation.dart';
 
 /* ────────────────────────────────────────────────────────────────────────────
  * 2) Top-level types / utilities
@@ -129,11 +133,14 @@ Future<Course?> getCourseForEssay(Assignment essay) async {
 }
 
 Future<Participant?> getStudentForEssay(int courseId) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
   final lms = LmsFactory.getLmsService();
-  final uid = (lms as MoodleLmsService).userId;
+  final uid = prefs.getString('userId');
+  final int? uidInt = uid != null ? int.tryParse(uid) : null;
+
   final participants = await lms.getCourseParticipants(courseId.toString());
   for (final p in participants) {
-    if (p.id == uid) return p;
+    if (p.id == uidInt) return p;
   }
   return null;
 }
@@ -147,6 +154,67 @@ String removeHtmlTags(String htmlText) {
 // Check if user has API key for selected LLM
 bool _hasKeyFor(LlmType llm) {
   return LocalStorageService.userHasLlmKey(llm);
+}
+
+/// Convert markdown text to HTML
+String _markdownToHTML(String markdownText) {
+  return md.markdownToHtml(markdownText);
+}
+
+String _markdownToPlain(String mdText) {
+  // lightweight, good enough for fallback
+  var s = mdText;
+
+  // Replace fenced code blocks
+  s = s.replaceAllMapped(RegExp(r'```[\s\S]*?```'), (m) {
+    final inner = m
+        .group(0)!
+        .replaceFirst(RegExp(r'^```[^\n]*\n'), '')
+        .replaceAll('```', '');
+    return inner;
+  });
+
+  // Inline code
+  s = s.replaceAll(RegExp(r'`([^`]*)`'), r'\1');
+
+  // Images
+  s = s.replaceAll(RegExp(r'!\[.*?\]\(.*?\)'), '');
+
+  // Links → "text (url)"
+  s = s.replaceAllMapped(
+      RegExp(r'\[([^\]]+)\]\(([^)]+)\)'), (m) => '${m[1]} (${m[2]})');
+
+  // Remove emphasis, quotes, tildes
+  s = s.replaceAll(RegExp(r'(^|\s)[*_]{1,3}|\~\~|^>+\s*', multiLine: true), '');
+
+  // Bullet points
+  s = s.replaceAll(RegExp(r'^\s*[-*]\s+', multiLine: true), '• ');
+
+  // Collapse triple newlines
+  s = s.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+
+  s = s.replaceAll(RegExp(r'\r\n?'), '\n'); // unify line endings
+  s = s.replaceAll(
+      RegExp(r'\n{2,}'), '\n\n'); // one blank line between paragraphs
+
+  return s.trim();
+}
+
+/// Copy rich markdown as HTML to clipboard
+Future<void> _copyMarkdown(BuildContext context, String mdText) async {
+  final htmlText = _markdownToHTML(mdText);
+  final plain = _markdownToPlain(mdText);
+
+  final item = DataWriterItem();
+  item.add(Formats.htmlText(htmlText));
+  item.add(Formats.plainText(plain));
+  await SystemClipboard.instance?.write([item]);
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copied rich text to clipboard.')),
+    );
+  }
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -188,10 +256,11 @@ class _EssayAssistantState extends State<EssayAssistant> {
       getCourseForEssay(_currentSession!.essay); // course of current essay
   Future<Participant?> get _currentStudent => getStudentForEssay(
       _currentSession!.essay.courseId); // student using the assistant
-
   bool get _sessionActive =>
       _currentSession != null; // Check if a session is active
   String get essayID => _currentSession?.id ?? ''; // Current essay/session ID
+
+  bool _localLlmAvail = !kIsWeb;
 
   /// Start or continue a session for the given essay.
   Future<void> _startSessionFor(Assignment essay, {bool replay = true}) async {
@@ -261,6 +330,12 @@ class _EssayAssistantState extends State<EssayAssistant> {
   void _cancelStreaming() async {
     if (!_isStreaming) return;
 
+    // local LLM has its own cancel
+    if (_selectedLLM == LlmType.LOCAL) {
+      LocalLLMService().cancel();
+      return;
+    }
+
     _isStreaming = false;
     await _streamSub?.cancel();
     _streamSub = null;
@@ -305,7 +380,6 @@ class _EssayAssistantState extends State<EssayAssistant> {
   // ---------------- Left sidebar (essays) state ----------------
   int? _selectedSidebarIndex; // selected essay index in the left list
   List<Assignment> _essays = []; // loaded from LMS (all courses or filtered)
-  bool _isReloadingEssays = false; // loading state
   final Map<String, EssayStatus> _statusCache =
       {}; // key = essayKey , value = EssayStatus
 
@@ -378,21 +452,9 @@ class _EssayAssistantState extends State<EssayAssistant> {
     _postIntroMsg();
 
     // Quill controller with basic config (external rich paste enabled)
-    _quillDraftController = quill.QuillController.basic(
-      config: const quill.QuillControllerConfig(
-        clipboardConfig: quill.QuillClipboardConfig(
-          enableExternalRichPaste: true,
-        ),
-      ),
-    );
+    _quillDraftController = quill.QuillController.basic();
     // Notes editor
-    _quillNotesController = quill.QuillController.basic(
-      config: const quill.QuillControllerConfig(
-        clipboardConfig: quill.QuillClipboardConfig(
-          enableExternalRichPaste: true,
-        ),
-      ),
-    );
+    _quillNotesController = quill.QuillController.basic();
 
     // Load essays from LMS into left sidebar
     _loadEssays();
@@ -444,13 +506,13 @@ These are pre-built tools that perform focused tasks — such as checking gramma
 Use this to capture quick ideas, reminders, or references as you work. Notes stay linked to your essay session so you won’t lose your thoughts between sessions.
 
 **Draft Editor:**\n
-This is your main writing space. You can write freely, review feedback from the assistant, and make revisions directly here. When you’re ready, you can export or submit your final essay.
+This is your main writing space. You can write freely, review feedback from the assistant, and make revisions directly here. When you’re ready, you can export or submit your final essay.\n
 
-**Select an essay from the left sidebar to get started!**
+**Select an essay from the left sidebar to get started!**\n
 
-Tip: The assistant adapts to your mode and notes, so the more context you provide, the better it can help.
+Tip: The assistant adapts to your mode and notes, so the more context you provide, the better it can help.\n
 
-⚠️ **Important Notice** ⚠️
+⚠️ **Important Notice** ⚠️\n
 
 **The Essay Assistant provides AI-generated feedback and content suggestions. While it strives for accuracy and quality, it is your responsibility to verify all information, citations, and factual claims before submission. Always review and edit the final essay to ensure it meets your academic standards and requirements.**
       ''');
@@ -627,8 +689,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         if (key.isEmpty) return _appendError('Deepseek key missing');
         aiModel = DeepseekLLM(key);
       case LlmType.LOCAL:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        aiModel = LocalLLMService();
     }
     final fullContext = generateContext(
       permTokens: permContext,
@@ -637,7 +698,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
       llmContextSize: aiModel.contextSize,
       maxOutputTokens: aiModel.maxOutputTokens,
     );
-    print('Full context for LLM:\n$fullContext');
+    //print('Full context for LLM:\n$fullContext');
 
     // Log the user's turn immediately
     _currentSession!.chatLog.add(ChatTurn(role: 'user', content: userPrompt));
@@ -777,8 +838,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         _selectedLLM,
         microReflection ?? '',
       );
-
       await AILoggingSingleton().addLog(log);
+      print('AI interaction logged successfully.');
     } catch (err, st) {
       print('AI logging failed: $err\n$st');
     }
@@ -980,16 +1041,11 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
    * ────────────────────────────────────────────────────────────────────────── */
 
   /// Load essays for the current user (all courses). Pass a courseId if needed.
-  Future<void> _loadEssays({int? courseId, bool toast = false}) async {
+  Future<void> _loadEssays({int? courseId}) async {
     if (!mounted) return;
-    setState(() => _isReloadingEssays = true);
-
     try {
       final all = await getAllEssays(courseId);
-
-      final filtered = all
-          .where((a) => !_isOverdue(a)) // keep your “not overdue” filter
-          .toList()
+      final filtered = all.where((a) => !_isOverdue(a)).toList()
         ..sort((a, b) {
           final ad = _effectiveDue(a);
           final bd = _effectiveDue(b);
@@ -1000,13 +1056,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
         });
 
       if (mounted) setState(() => _essays = filtered);
-      if (toast && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Essays reloaded')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isReloadingEssays = false);
+    } catch (_) {
+      // optional: you can log or ignore silently
     }
   }
 
@@ -1216,9 +1267,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
           SizedBox(
             width: 280,
             child: Material(
-              color: Theme.of(context).colorScheme.surface,
-              child: Column(
-                children: [
+                color: Theme.of(context).colorScheme.surface,
+                child: Column(children: [
                   // Sidebar header row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
@@ -1229,20 +1279,7 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         Text('Essay Assignments',
                             style: Theme.of(context).textTheme.titleMedium),
                         const Spacer(),
-                        IconButton(
-                          tooltip: 'Reload',
-                          onPressed: _isReloadingEssays
-                              ? null
-                              : () => _loadEssays(toast: true),
-                          icon: _isReloadingEssays
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: const CircularProgressIndicator(
-                                      strokeWidth: 2),
-                                )
-                              : const Icon(Icons.refresh),
-                        ),
+                        // (removed reload button)
                       ],
                     ),
                   ),
@@ -1250,55 +1287,49 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
 
                   // List of essay items (from LMS)
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () => _loadEssays(),
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                        itemCount: _essays.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final assignment = _essays[i];
-                          final selected = _selectedSidebarIndex == i;
-                          final dueText = assignment.dueDate == null
-                              ? 'No due date'
-                              : assignment.dueDate!
-                                  .toLocal()
-                                  .toIso8601String()
-                                  .split('T')
-                                  .first;
-                          final status = _statusOf(assignment);
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                      itemCount: _essays.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, i) {
+                        final assignment = _essays[i];
+                        final selected = _selectedSidebarIndex == i;
+                        final dueText = assignment.dueDate == null
+                            ? 'No due date'
+                            : assignment.dueDate!
+                                .toLocal()
+                                .toIso8601String()
+                                .split('T')
+                                .first;
+                        final status = _statusOf(assignment);
 
-                          return ListTile(
-                            dense: true,
-                            selected: selected,
-                            selectedTileColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.08),
-                            title: Text(
-                              assignment.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text('Due: $dueText'),
-                            trailing: _statusChip(status),
-                            onTap: () async {
-                              setState(() => _selectedSidebarIndex = i);
-                              final started =
-                                  await _openEssayDialog(context, assignment);
-                              if (!started && mounted) {
-                                _selectActiveEssayIfAny();
-                              }
-                            },
-                          );
-                        },
-                      ),
+                        return ListTile(
+                          dense: true,
+                          selected: selected,
+                          selectedTileColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.08),
+                          title: Text(
+                            assignment.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text('Due: $dueText'),
+                          trailing: _statusChip(status),
+                          onTap: () async {
+                            setState(() => _selectedSidebarIndex = i);
+                            final started =
+                                await _openEssayDialog(context, assignment);
+                            if (!started && mounted) {
+                              _selectActiveEssayIfAny();
+                            }
+                          },
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  )
+                ])),
           ),
 
           // =================== CENTER: Chat column ===================
@@ -1344,34 +1375,38 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 8.0, horizontal: 12.0),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primaryContainer,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: MarkdownBody(
-                                    data: text,
-                                    selectable:
-                                        true, // lets users highlight/copy text
-                                    styleSheet: MarkdownStyleSheet.fromTheme(
-                                            Theme.of(context))
-                                        .copyWith(
-                                      p: const TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black87,
-                                          height: 1.46),
-                                      strong: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                      em: const TextStyle(
-                                          fontStyle: FontStyle.italic),
-                                      a: const TextStyle(
-                                        color: Colors.blueAccent,
-                                        decoration: TextDecoration.underline,
-                                      ),
+                                child: _AssistantMessageCard(
+                                  text:
+                                      text, // raw markdown that you already computed above
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: MarkdownBody(
+                                      data: text,
+                                      selectable:
+                                          true, // lets users highlight/copy text
+                                      styleSheet: MarkdownStyleSheet.fromTheme(
+                                              Theme.of(context))
+                                          .copyWith(
+                                              p: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
+                                                  height: 1.46),
+                                              strong: const TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                              em: const TextStyle(
+                                                  fontStyle: FontStyle.italic),
+                                              a: const TextStyle(
+                                                color: Colors.blueAccent,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                              )),
                                     ),
                                   ),
                                 ),
@@ -1693,7 +1728,8 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                         underline: const SizedBox.shrink(),
                         onChanged: (LlmType? newValue) {
                           if (newValue == null) return;
-                          if (_hasKeyFor(newValue)) {
+                          if (newValue == LlmType.LOCAL ||
+                              _hasKeyFor(newValue)) {
                             setState(() => _selectedLLM = newValue);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1704,7 +1740,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                           }
                         },
                         items: LlmType.values.map((llm) {
-                          final enabled = _hasKeyFor(llm);
+                          final enabled = (llm == LlmType.LOCAL &&
+                                  LocalStorageService.getLocalLLMPath() != "" &&
+                                  _localLlmAvail) ||
+                              _hasKeyFor(llm);
                           return DropdownMenuItem<LlmType>(
                             value: llm,
                             enabled: enabled,
@@ -2016,10 +2055,137 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
     }
   }
 
+  Future<void> _richPaste(
+      BuildContext editorCtx, quill.QuillController controller) async {
+    final sys = SystemClipboard.instance;
+    if (sys == null) {
+      // super_clipboard not available → let default paste run
+      Actions.invoke(
+          editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
+      return;
+    }
+
+    final reader = await sys.read();
+
+    String normalizeLineBreaks(String rawHtml) {
+      var h = rawHtml;
+      final startIdx = h.indexOf('<!--StartFragment-->');
+      final endIdx = h.indexOf('<!--EndFragment-->');
+      if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
+        h = h.substring(startIdx + '<!--StartFragment-->'.length, endIdx);
+      }
+      h = h.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+      h = h.replaceAll(RegExp(r'\n{2,}'), '</p><p>');
+      if (!RegExp(r'</?(p|div|ul|ol|h[1-6])\b', caseSensitive: false)
+          .hasMatch(h)) {
+        h = '<p>$h</p>';
+      }
+      h = h.replaceAll('\n', '<br/>');
+      return h;
+    }
+
+    if (reader.canProvide(Formats.htmlText)) {
+      var html = await reader.readValue(Formats.htmlText);
+      if (html != null && html.trim().isNotEmpty) {
+        html = normalizeLineBreaks(html);
+        final delta = qh.HtmlToDelta().convert(html);
+
+        final sel = controller.selection;
+        final base = sel.baseOffset;
+        final extent = sel.extentOffset;
+        final deleteLen = (extent - base).abs();
+
+        controller.replaceText(
+          base,
+          deleteLen,
+          '',
+          TextSelection.collapsed(offset: base),
+        );
+        controller.compose(
+            delta, controller.selection, quill.ChangeSource.local);
+        controller.updateSelection(
+          TextSelection.collapsed(offset: base + delta.length),
+          quill.ChangeSource.local,
+        );
+        return;
+      }
+    }
+
+    // fallback to normal paste (plain text)
+    Actions.invoke(
+        editorCtx, const PasteTextIntent(SelectionChangedCause.keyboard));
+  }
+
+  Widget _richPasteWrapper({
+    required quill.QuillController controller,
+    required Widget child,
+    void Function(BuildContext ctx)? onInnerContext,
+  }) {
+    late BuildContext editorCtx;
+
+    return Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyV):
+            const PasteTextIntent(SelectionChangedCause.keyboard),
+        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyV):
+            const PasteTextIntent(SelectionChangedCause.keyboard),
+      },
+      child: Actions(
+        actions: {
+          PasteTextIntent: CallbackAction<PasteTextIntent>(
+            onInvoke: (_) => _richPaste(editorCtx, controller),
+          ),
+        },
+        child: Builder(
+          builder: (inner) {
+            editorCtx = inner;
+            onInnerContext?.call(editorCtx);
+            return child;
+          },
+        ),
+      ),
+    );
+  }
+
   /// Open the Quill editor dialog for a given essay (or "general draft" if null).
   /// Saves the draft (Quill delta JSON) locally in `_drafts` and via stubbed backend.
   void _openQuillEditorDialogFor(Assignment? essay) async {
     if (!_sessionActive) return;
+
+    BuildContext? draftEditorCtx;
+
+    Widget editorWithContextMenuForDraft() {
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onSecondaryTapDown: (details) async {
+          // Show a desktop-style context menu with Paste (rich)
+          final selected = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+            ),
+            items: const [
+              PopupMenuItem(value: 'paste_rich', child: Text('Paste (rich)')),
+            ],
+          );
+          if (selected == 'paste_rich' && draftEditorCtx != null) {
+            _richPaste(draftEditorCtx!, _quillDraftController);
+          }
+        },
+        child: quill.QuillEditor(
+          focusNode: _draftFocus,
+          scrollController: _quillDraftScrollController,
+          controller: _quillDraftController,
+          config: const quill.QuillEditorConfig(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
+            placeholder: 'Write your essay here…',
+          ),
+        ),
+      );
+    }
 
     // Load current session draft
     if (_currentSession!.draftDeltaOps != null) {
@@ -2078,13 +2244,28 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                     // ----- Toolbar (simple) -----
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: quill.QuillSimpleToolbar(
-                        controller: _quillDraftController,
-                        config: const quill.QuillSimpleToolbarConfig(
-                          multiRowsDisplay: true,
-                          showDividers: true,
-                          showClipboardPaste: true,
-                        ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Paste (rich)',
+                            icon: const Icon(Icons.content_paste),
+                            onPressed: () {
+                              final ctx = draftEditorCtx ?? context;
+                              _richPaste(ctx, _quillDraftController);
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: quill.QuillSimpleToolbar(
+                              controller: _quillDraftController,
+                              config: const quill.QuillSimpleToolbarConfig(
+                                multiRowsDisplay: true,
+                                showDividers: true,
+                                showClipboardPaste: false,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Divider(height: 1),
@@ -2105,15 +2286,10 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                               ),
                             ],
                           ),
-                          child: quill.QuillEditor(
-                            focusNode: _draftFocus,
-                            scrollController: _quillDraftScrollController,
+                          child: _richPasteWrapper(
                             controller: _quillDraftController,
-                            config: const quill.QuillEditorConfig(
-                              // feels like page margins
-                              padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
-                              placeholder: 'Write your essay here…',
-                            ),
+                            onInnerContext: (ctx) => draftEditorCtx = ctx,
+                            child: editorWithContextMenuForDraft(),
                           ),
                         ),
                       ),
@@ -2222,6 +2398,42 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
   void _openNotesEditorDialogFor(Assignment? essay) async {
     if (!_sessionActive) return;
 
+    BuildContext? notesEditorCtx;
+
+    Widget editorWithContextMenuForNotes() {
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onSecondaryTapDown: (details) async {
+          // Show a desktop-style context menu with Paste (rich)
+          final selected = await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+              details.globalPosition.dx,
+              details.globalPosition.dy,
+            ),
+            items: const [
+              PopupMenuItem(value: 'paste_rich', child: Text('Paste (rich)')),
+            ],
+          );
+          // ignore: unnecessary_null_comparison
+          if (selected == 'paste_rich' && notesEditorCtx != null) {
+            _richPaste(notesEditorCtx!, _quillNotesController);
+          }
+        },
+        child: quill.QuillEditor(
+          focusNode: _notesFocus,
+          scrollController: _quillNotesScrollController,
+          controller: _quillNotesController,
+          config: const quill.QuillEditorConfig(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
+            placeholder: 'Take your notes here…',
+          ),
+        ),
+      );
+    }
+
     if (_currentSession!.notesDeltaOps != null) {
       _quillNotesController.document =
           quill.Document.fromJson(_currentSession!.notesDeltaOps!);
@@ -2269,13 +2481,28 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                 // Toolbar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: quill.QuillSimpleToolbar(
-                    controller: _quillNotesController,
-                    config: const quill.QuillSimpleToolbarConfig(
-                      multiRowsDisplay: true,
-                      showDividers: true,
-                      showClipboardPaste: true,
-                    ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Paste (rich)',
+                        icon: const Icon(Icons.content_paste),
+                        onPressed: () {
+                          final ctx = notesEditorCtx ?? context;
+                          _richPaste(ctx, _quillNotesController);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: quill.QuillSimpleToolbar(
+                          controller: _quillNotesController,
+                          config: const quill.QuillSimpleToolbarConfig(
+                            multiRowsDisplay: true,
+                            showDividers: true,
+                            showClipboardPaste: false,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const Divider(height: 1),
@@ -2285,31 +2512,24 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
                   child: Padding(
                     padding: const EdgeInsets.all(8),
                     child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: quill.QuillEditor(
-                        focusNode: _notesFocus,
-                        scrollController: _quillNotesScrollController,
-                        controller: _quillNotesController,
-                        config: const quill.QuillEditorConfig(
-                          // feels like page margins
-                          padding: EdgeInsets.fromLTRB(24, 20, 24, 28),
-                          placeholder: 'Write your notes here…',
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
+                        child: _richPasteWrapper(
+                          controller: _quillNotesController,
+                          onInnerContext: (ctx) => notesEditorCtx = ctx,
+                          child: editorWithContextMenuForNotes(),
+                        )),
                   ),
                 ),
-
                 // Footer
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
@@ -2364,6 +2584,29 @@ Tip: The assistant adapts to your mode and notes, so the more context you provid
  *  - _EssayModalContent: the centered dialog content for an assignment
  *  - _LabeledRow: neat label/value row used in the dialog body
  * ──────────────────────────────────────────────────────────────────────────── */
+
+class _AssistantMessageCard extends StatelessWidget {
+  const _AssistantMessageCard({
+    required this.text,
+    required this.child,
+  });
+  final String text;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      child,
+      Positioned(
+          right: 8,
+          top: 8,
+          child: IconButton(
+            tooltip: 'Copy to clipboard',
+            icon: const Icon(Icons.copy, size: 18),
+            onPressed: () => _copyMarkdown(context, text),
+          ))
+    ]);
+  }
+}
 
 /// Essay details modal content (title, due, description, actions).
 class _EssayModalContent extends StatelessWidget {

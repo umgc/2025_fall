@@ -1,5 +1,6 @@
 import 'package:learninglens_app/beans/learning_lens_interface.dart';
 import 'package:learninglens_app/beans/moodle_rubric_criteria.dart';
+import 'package:learninglens_app/beans/level.dart';
 
 class MoodleRubric implements LearningLensInterface {
   final String title;
@@ -26,8 +27,38 @@ class MoodleRubric implements LearningLensInterface {
 
   @override
   MoodleRubric fromGoogleJson(Map<String, dynamic> json) {
-    // TODO: Dinesh, try to map the Google JSON to the MoodleRubric object and maybe change this class to be more generic
-    throw UnimplementedError();
+    final criteriaJson = json['criteria'] as List<dynamic>? ?? const [];
+    final criteria = <MoodleRubricCriteria>[];
+
+    for (var i = 0; i < criteriaJson.length; i++) {
+      final criterionJson = criteriaJson[i] as Map<String, dynamic>;
+      final levelsJson = criterionJson['levels'] as List<dynamic>? ?? const [];
+
+      final levels = <Level>[];
+      for (var j = 0; j < levelsJson.length; j++) {
+        final levelMap = levelsJson[j] as Map<String, dynamic>;
+        levels.add(Level.empty().fromGoogleJson(levelMap));
+      }
+
+      final rawCriterionId = criterionJson['criterionId'];
+      criteria.add(
+        MoodleRubricCriteria(
+          id: rawCriterionId is int
+              ? rawCriterionId
+              : rawCriterionId is String
+                  ? rawCriterionId.hashCode
+                  : i,
+          description:
+              (criterionJson['description'] as String?) ?? 'Criterion ${i + 1}',
+          levels: levels,
+        ),
+      );
+    }
+
+    return MoodleRubric(
+      title: json['title'] as String? ?? json['name'] as String? ?? 'Rubric',
+      criteria: criteria,
+    );
   }
 
   Map<String, dynamic> toJson() {

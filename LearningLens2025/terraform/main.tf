@@ -200,7 +200,7 @@ resource "aws_dsql_cluster" "edulense" {
   deletion_protection_enabled = true
 
   tags = {
-    Name = "EduLenseAILoggingDatabase"
+    Name = "EduLenseDatabaseCluster"
   }
 }
 
@@ -244,25 +244,25 @@ resource "aws_iam_role_policy_attachment" "logging" {
 }
 
 # Run npm install before zipping
-resource "null_resource" "npm_install_gettoken" {
+resource "null_resource" "npm_install_ai_log" {
   triggers = {
     # Trigger npm install when package.json or lock file changes
-    package_json = filemd5("../lambda/gettoken/package.json")
-    package_lock = filemd5("../lambda/gettoken/package-lock.json")
+    package_json = filemd5("../lambda/ai_log/package.json")
+    package_lock = filemd5("../lambda/ai_log/package-lock.json")
   }
 
   provisioner "local-exec" {
-    command = "cd ../lambda/gettoken && npm install"
+    command = "cd ../lambda/ai_log && npm install"
   }
 }
 
-data "archive_file" "get_token" {
+data "archive_file" "ai_log" {
   type = "zip"
-  source_dir = "../lambda/gettoken"
-  excludes = ["../lambda/gettoken/gettoken.zip"]
-  output_path = "../lambda/gettoken/gettoken.zip"
+  source_dir = "../lambda/ai_log"
+  excludes = ["../lambda/ai_log/ai_log.zip"]
+  output_path = "../lambda/ai_log/ai_log.zip"
 
-  depends_on = [null_resource.npm_install_gettoken]
+  depends_on = [null_resource.npm_install_ai_log]
 }
 
 data "archive_file" "zip_plugin" {
@@ -271,12 +271,12 @@ data "archive_file" "zip_plugin" {
   output_path = "../MoodlePlugin/learninglens.zip"
 }
 
-resource "aws_lambda_function" "get_token" {
-  filename = data.archive_file.get_token.output_path
-  function_name = "get_db_token"
+resource "aws_lambda_function" "ai_log" {
+  filename = data.archive_file.ai_log.output_path
+  function_name = "ai_log"
   role = aws_iam_role.lambda_token.arn
   handler = "index.handler"
-  source_code_hash = data.archive_file.get_token.output_base64sha256
+  source_code_hash = data.archive_file.ai_log.output_base64sha256
   runtime = "nodejs20.x"
   timeout = "10"
   environment {
@@ -288,8 +288,106 @@ resource "aws_lambda_function" "get_token" {
   }
 }
 
-resource "aws_lambda_function_url" "get_token_url" {
-  function_name = aws_lambda_function.get_token.function_name
+resource "aws_lambda_function_url" "get_ai_log_url" {
+  function_name = aws_lambda_function.ai_log.function_name
+  authorization_type = "NONE"
+  cors {
+    allow_methods = ["GET", "POST"]
+    allow_origins = ["*"]
+    allow_headers = ["content-type"]
+  }
+}
+
+# Run npm install before zipping
+resource "null_resource" "npm_install_game_data" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/game_data/package.json")
+    package_lock = filemd5("../lambda/game_data/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/game_data && npm install"
+  }
+}
+
+data "archive_file" "game_data" {
+  type = "zip"
+  source_dir = "../lambda/game_data"
+  excludes = ["../lambda/game_data/game_data.zip"]
+  output_path = "../lambda/game_data/game_data.zip"
+
+  depends_on = [null_resource.npm_install_game_data]
+}
+
+resource "aws_lambda_function" "game_data" {
+  filename = data.archive_file.game_data.output_path
+  function_name = "game_data"
+  role = aws_iam_role.lambda_token.arn
+  handler = "index.handler"
+  source_code_hash = data.archive_file.game_data.output_base64sha256
+  runtime = "nodejs20.x"
+  timeout = "10"
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL = "info"
+      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "get_game_data_url" {
+  function_name = aws_lambda_function.game_data.function_name
+  authorization_type = "NONE"
+  cors {
+    allow_methods = ["GET", "POST", "DELETE"]
+    allow_origins = ["*"]
+    allow_headers = ["content-type"]
+  }
+}
+
+# Run npm install before zipping
+resource "null_resource" "npm_install_reflections" {
+  triggers = {
+    # Trigger npm install when package.json or lock file changes
+    package_json = filemd5("../lambda/reflections/package.json")
+    package_lock = filemd5("../lambda/reflections/package-lock.json")
+  }
+
+  provisioner "local-exec" {
+    command = "cd ../lambda/reflections && npm install"
+  }
+}
+
+data "archive_file" "reflections" {
+  type = "zip"
+  source_dir = "../lambda/reflections"
+  excludes = ["../lambda/reflections/reflections.zip"]
+  output_path = "../lambda/reflections/reflections.zip"
+
+  depends_on = [null_resource.npm_install_reflections]
+}
+
+resource "aws_lambda_function" "reflections" {
+  filename = data.archive_file.reflections.output_path
+  function_name = "reflections"
+  role = aws_iam_role.lambda_token.arn
+  handler = "index.handler"
+  source_code_hash = data.archive_file.reflections.output_base64sha256
+  runtime = "nodejs20.x"
+  timeout = "10"
+  environment {
+    variables = {
+      ENVIRONMENT = "production"
+      LOG_LEVEL = "info"
+      AWS_DB_CLUSTER = format("%s.dsql.%s.on.aws", aws_dsql_cluster.edulense.identifier, data.aws_region.current.region)
+    }
+  }
+}
+
+resource "aws_lambda_function_url" "get_reflections_url" {
+  function_name = aws_lambda_function.reflections.function_name
   authorization_type = "NONE"
   cors {
     allow_methods = ["GET", "POST"]

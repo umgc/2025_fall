@@ -15,6 +15,9 @@ class Assignment implements LearningLensInterface {
 
   final List<SubmissionWithGrade>? submissionsWithGrades;
 
+  List<int> individualStudentsOptions = [];
+  int? maxScore;
+
   Assignment({
     required this.id,
     required this.name,
@@ -67,7 +70,7 @@ class Assignment implements LearningLensInterface {
 
   @override
   Assignment fromGoogleJson(Map<String, dynamic> json) {
-    return Assignment(
+    Assignment a = Assignment(
       id: int.parse(json['id']),
       name: json['title'] ?? 'Untitled',
       description: json['description'] ?? '',
@@ -87,6 +90,13 @@ class Assignment implements LearningLensInterface {
       gradingStatus: 0, // TODO: figure out grading status
       courseId: int.parse(json['courseId']),
     );
+    if (json['AssigneeMode']?.toString() == "INDIVIDUAL_STUDENTS") {
+      final studentOptions = json["studentIds"] as List<dynamic>;
+      a.individualStudentsOptions
+          .addAll(studentOptions.map((e) => int.parse(e.toString())));
+    }
+    a.maxScore = json["maxPoints"];
+    return a;
   }
 
   @override

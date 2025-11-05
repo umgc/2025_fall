@@ -201,7 +201,7 @@ class GoogleClassroomApi {
     int day = int.parse(dateParts[2]);
     int hours = int.parse(dateParts[3]);
     int minutes = int.parse(dateParts[4]);
-    String? topicId = await getTopicId(courseId, 'Quiz') ?? '755868506953';
+    String? topicId = await getTopicId(courseId, 'quiz') ?? '755868506953';
 
     print('topic id is : $topicId');
 
@@ -675,6 +675,130 @@ Future<void> updateCourseWorkMaterial(String courseId, String materialId, String
       print('Error updating course work: $e');
       return null;
     }
+  }
+
+  // -----------------------------------------------------------------------
+  // Rubric helpers (courses.courseWork.rubrics)
+  // -----------------------------------------------------------------------
+
+  Future<Map<String, dynamic>?> createRubric(
+    String courseId,
+    String courseWorkId,
+    Map<String, dynamic> rubricBody,
+  ) async {
+    final token = await _getToken();
+    if (token == null) return null;
+
+    final url = Uri.parse(
+      'https://classroom.googleapis.com/v1/courses/$courseId/courseWork/$courseWorkId/rubrics',
+    );
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+
+    final response =
+        await http.post(url, headers: headers, body: jsonEncode(rubricBody));
+    print('createRubric → ${response.statusCode} :: ${response.body}');
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> listRubrics(
+    String courseId,
+    String courseWorkId,
+  ) async {
+    final token = await _getToken();
+    if (token == null) return const [];
+
+    final url = Uri.parse(
+      'https://classroom.googleapis.com/v1/courses/$courseId/courseWork/$courseWorkId/rubrics',
+    );
+    final headers = {'Authorization': 'Bearer $token'};
+
+    final response = await http.get(url, headers: headers);
+    print('listRubrics → ${response.statusCode} :: ${response.body}');
+    if (response.statusCode != 200) return const [];
+
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    final rubrics = payload['rubrics'] as List<dynamic>? ?? const [];
+    return rubrics.cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>?> getRubric(
+    String courseId,
+    String courseWorkId,
+    String rubricId,
+  ) async {
+    final token = await _getToken();
+    if (token == null) return null;
+
+    final url = Uri.parse(
+      'https://classroom.googleapis.com/v1/courses/$courseId/courseWork/$courseWorkId/rubrics/$rubricId',
+    );
+    final headers = {'Authorization': 'Bearer $token'};
+
+    final response = await http.get(url, headers: headers);
+    print('getRubric → ${response.statusCode} :: ${response.body}');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> patchRubric(
+    String courseId,
+    String courseWorkId,
+    String rubricId,
+    Map<String, dynamic> rubricBody, {
+    List<String>? updateFields,
+  }) async {
+    final token = await _getToken();
+    if (token == null) return null;
+
+    final queryParameters = <String, String>{};
+    if (updateFields != null && updateFields.isNotEmpty) {
+      queryParameters['updateMask'] = updateFields.join(',');
+    }
+
+    final uri = Uri.https(
+      'classroom.googleapis.com',
+      '/v1/courses/$courseId/courseWork/$courseWorkId/rubrics/$rubricId',
+      queryParameters.isEmpty ? null : queryParameters,
+    );
+
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+
+    final response =
+        await http.patch(uri, headers: headers, body: jsonEncode(rubricBody));
+    print('patchRubric → ${response.statusCode} :: ${response.body}');
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  Future<bool> deleteRubric(
+    String courseId,
+    String courseWorkId,
+    String rubricId,
+  ) async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final url = Uri.parse(
+      'https://classroom.googleapis.com/v1/courses/$courseId/courseWork/$courseWorkId/rubrics/$rubricId',
+    );
+    final headers = {'Authorization': 'Bearer $token'};
+
+    final response = await http.delete(url, headers: headers);
+    print('deleteRubric → ${response.statusCode}');
+    return response.statusCode == 200 || response.statusCode == 204;
   }
 
   // -----------------------------------------------------------------------

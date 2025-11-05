@@ -6,8 +6,10 @@ import 'package:learninglens_app/beans/course.dart';
 import 'package:learninglens_app/beans/grade.dart';
 import 'package:learninglens_app/beans/lesson_plan.dart';
 import 'package:learninglens_app/beans/moodle_rubric.dart';
+import 'package:learninglens_app/beans/override.dart';
 import 'package:learninglens_app/beans/participant.dart';
 import 'package:learninglens_app/beans/quiz.dart';
+import 'package:learninglens_app/beans/quiz_override';
 import 'package:learninglens_app/beans/quiz_type.dart';
 import 'package:learninglens_app/beans/submission.dart';
 import 'package:learninglens_app/beans/submission_status.dart';
@@ -53,6 +55,9 @@ class ApiSingleton implements LmsInterface {
 
   @override
   List<Course>? courses;
+
+  @override
+  List<Override>? overrides;
 
   // Authentication/Login methods
   @override
@@ -305,6 +310,48 @@ class ApiSingleton implements LmsInterface {
   Future<Map<String, dynamic>> getSubmissionStatusRaw(
       {required int assignId, int? forUserId}) {
     // TODO: implement getSubmissionStatusRaw
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getSubmissionAttachments(
+      {required int assignId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> refreshOverrides() {
+    // TODO: implement refreshOverrides
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String> addEssayOverride(
+      {required int assignid,
+      int? userId,
+      int? groupId,
+      int? allowsubmissionsfromdate,
+      int? dueDate,
+      int? cutoffDate,
+      int? timelimit,
+      int? sortorder,
+      int? courseId}) {
+    // TODO: implement addEssayOverride
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<QuizOverride> addQuizOverride(
+      {required int quizId,
+      int? userId,
+      int? groupId,
+      int? timeOpen,
+      int? timeClose,
+      int? timeLimit,
+      int? attempts,
+      String? password,
+      int? courseId}) {
+    // TODO: implement addQuizOverride
     throw UnimplementedError();
   }
 }
