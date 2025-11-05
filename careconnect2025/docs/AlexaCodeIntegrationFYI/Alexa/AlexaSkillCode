@@ -1,0 +1,555 @@
+const Alexa = require('ask-sdk-core');
+const https = require('https');
+
+const API_BASE = 'CHANGEME'; // Example : const API_BASE = 'https://0ba8a5c33dba.ngrok-free.app';
+const TASKS_PATH = 'v1/api/alexa/calendarTasks/get';
+const ADD_TASKS_PATH = 'v1/api/alexa/calendarTasks/add';
+
+// ============================
+// 🔒 Helper: call backend with auth
+// ============================
+function httpsRequest(path, method, token, body = null) {
+  return new Promise((resolve) => {
+    const url = new URL(path, API_BASE);
+    const data = body ? JSON.stringify(body) : null;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    };
+
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (data) headers['Content-Length'] = Buffer.byteLength(data);
+
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + (url.search || ''),
+      method,
+      headers
+    };
+
+    const req = https.request(options, (res) => {
+      let responseBody = '';
+      res.on('data', (chunk) => (responseBody += chunk));
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(responseBody);
+          resolve(parsed);
+        } catch (e) {
+          console.error('❌ Parse error:', e, responseBody);
+          resolve(responseBody);
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      console.error('❌ HTTPS Error:', err);
+      resolve({ error: err.message });
+    });
+
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+// ============================
+// 📅 TASK HELPERS
+// ============================
+async function getCalendarTasks(token) {
+  const tasks = await httpsRequest(TASKS_PATH, 'GET', token, {});
+  console.log('📥 Tasks:', tasks);
+  return tasks;
+}
+
+async function addCalendarTask(token, taskBody) {
+  const result = await httpsRequest(ADD_TASKS_PATH, 'POST', token, taskBody);
+  console.log('📤 Add task result:', result);
+  return result;
+}
+
+// ============================
+// SMART DEFAULTS & DERIVATION
+// ============================
+
+// Generate task title based on type, date, time, and description
+function generateTaskTitle(taskType, taskDate, taskTime, description) {
+  const dateStr = formatDateNaturally(taskDate);
+  const timeStr = formatTimeNaturally(taskTime);
+  
+  // If user provided a description, use that as part of the title
+  if (description) {
+    const capitalizedType = taskType.charAt(0).toUpperCase() + taskType.slice(1);
+    return `${capitalizedType} - ${description}`;
+  }
+  
+  // Generate contextual title based on type
+  const typeBasedTitles = {
+    'medication': `Medication reminder for ${dateStr}`,
+    'appointment': timeStr ? `Appointment at ${timeStr}` : `Appointment on ${dateStr}`,
+    'exercise': timeStr ? `Exercise at ${timeStr}` : `Exercise session on ${dateStr}`,
+    'lab': timeStr ? `Lab work at ${timeStr}` : `Lab work on ${dateStr}`,
+    'pharmacy': timeStr ? `Pharmacy pickup at ${timeStr}` : `Pharmacy pickup on ${dateStr}`,
+    'general': timeStr ? `Task at ${timeStr}` : `Task for ${dateStr}`
+  };
+  
+  return typeBasedTitles[taskType.toLowerCase()] || `${taskType} task`;
+}
+
+// Smart reminder defaults based on task type
+function getDefaultReminder(taskType) {
+  const reminderDefaults = {
+    'medication': 5,      // 5 minutes before
+    'appointment': 30,    // 30 minutes before
+    'exercise': 15,       // 15 minutes before
+    'lab': 30,            // 30 minutes before
+    'pharmacy': 15,       // 15 minutes before
+    'general': 15         // 15 minutes before (catches meals and other tasks)
+  };
+  
+  return reminderDefaults[taskType.toLowerCase()] || 15;
+}
+
+// Determine if time is required based on task type
+function requiresTime(taskType) {
+  // All task types should have time for better scheduling
+  return true;
+}
+
+// Smart date defaulting - only used as fallback, not for slot elicitation
+function getDefaultDate(taskType) {
+  const today = new Date();
+  return today.toISOString().split('T')[0]; // Always default to today if needed
+}
+
+function formatDateNaturally(dateStr) {
+  if (!dateStr) return 'the selected date';
+  
+  const date = new Date(dateStr);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  if (date.toDateString() === today.toDateString()) {
+    return 'today';
+  }
+  if (date.toDateString() === tomorrow.toDateString()) {
+    return 'tomorrow';
+  }
+  
+  const options = { weekday: 'long', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+
+function formatTimeNaturally(timeStr) {
+  if (!timeStr) return null;
+  
+  const [hours, minutes] = timeStr.split(':');
+  const hour = parseInt(hours);
+  const min = minutes || '00';
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  
+  return `${hour12}:${min} ${period}`;
+}
+
+function parseRecurrenceDays(daysString) {
+  if (!daysString) return null;
+  
+  const dayMap = {
+    'sunday': 0, 'sun': 0,
+    'monday': 1, 'mon': 1,
+    'tuesday': 2, 'tue': 2, 'tues': 2,
+    'wednesday': 3, 'wed': 3,
+    'thursday': 4, 'thu': 4, 'thur': 4, 'thurs': 4,
+    'friday': 5, 'fri': 5,
+    'saturday': 6, 'sat': 6,
+    'weekdays': [1, 2, 3, 4, 5],
+    'weekends': [0, 6],
+    'every day': [0, 1, 2, 3, 4, 5, 6]
+  };
+  
+  // Check if it's a shorthand like "weekdays"
+  if (dayMap[daysString.toLowerCase()]) {
+    const result = dayMap[daysString.toLowerCase()];
+    return Array.isArray(result) ? result : [result];
+  }
+  
+  // Parse multiple days
+  const days = daysString.toLowerCase().split(/[\s,and]+/);
+  const parsed = [];
+  days.forEach(d => {
+    if (dayMap[d] !== undefined) {
+      const val = dayMap[d];
+      if (Array.isArray(val)) {
+        parsed.push(...val);
+      } else {
+        parsed.push(val);
+      }
+    }
+  });
+  
+  return parsed.length > 0 ? [...new Set(parsed)] : null;
+}
+
+function formatReminderMinutes(reminderSlot) {
+  const reminderMap = {
+    'five minutes': 5,
+    '5 minutes': 5,
+    'ten minutes': 10,
+    '10 minutes': 10,
+    'fifteen minutes': 15,
+    '15 minutes': 15,
+    'thirty minutes': 30,
+    '30 minutes': 30,
+    'one hour': 60,
+    '1 hour': 60,
+    'two hours': 120,
+    '2 hours': 120,
+    'no thanks': 0,
+    'no': 0
+  };
+  
+  return reminderMap[reminderSlot?.toLowerCase()] || null;
+}
+
+// ============================
+// ENHANCED READ TASKS INTENT
+// ============================
+const ReadCalendarTasksIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReadCalendarTasksIntent'
+    );
+  },
+  async handle(handlerInput) {
+    let token = null;
+    if (
+      handlerInput &&
+      handlerInput.requestEnvelope &&
+      handlerInput.requestEnvelope.session &&
+      handlerInput.requestEnvelope.session.user &&
+      handlerInput.requestEnvelope.session.user.accessToken
+    ) {
+      token = handlerInput.requestEnvelope.session.user.accessToken;
+    }
+
+    if (!token) {
+      return handlerInput.responseBuilder
+        .speak('It looks like your CareConnect account isn\'t linked yet. You can link it in the Alexa app to get started!')
+        .withLinkAccountCard()
+        .getResponse();
+    }
+
+    const tasks = await getCalendarTasks(token);
+
+    if (!tasks || tasks.length === 0) {
+      return handlerInput.responseBuilder
+        .speak("Good news! You're all caught up with no scheduled tasks at the moment.")
+        .getResponse();
+    }
+
+    const taskNames = (Array.isArray(tasks) ? tasks : tasks.data || [])
+      .map((t) => t.name || t.taskName || 'Unnamed task');
+
+    const speakOutput =
+      taskNames.length > 0
+        ? `You have ${taskNames.length} task${taskNames.length > 1 ? 's' : ''} coming up. ${taskNames.slice(0, 5).join(', ')}.`
+        : "You're all set! No tasks on your calendar right now.";
+
+    return handlerInput.responseBuilder.speak(speakOutput).getResponse();
+  }
+};
+
+// ============================
+// INTELLIGENT ADD TASK INTENT
+// ============================
+const AddCalendarTaskIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'AddCalendarTaskIntent'
+    );
+  },
+  async handle(handlerInput) {
+    const currentIntent = handlerInput.requestEnvelope.request.intent;
+    const dialogState = handlerInput.requestEnvelope.request.dialogState;
+    
+    console.log('🔍 Dialog State:', dialogState);
+    console.log('🔍 Intent Slots:', JSON.stringify(currentIntent.slots, null, 2));
+    
+    // Check if we need to customize prompts based on task type
+    if (dialogState !== 'COMPLETED') {
+      const slots = currentIntent.slots;
+      const taskType = slots.taskType?.value?.toLowerCase();
+      
+      console.log('🔍 Current Task Type:', taskType);
+      
+      // 1. FIRST: Get task type if not present
+      if (!slots.taskType || !slots.taskType.value) {
+        console.log('❌ No task type, delegating to get it');
+        return handlerInput.responseBuilder
+          .addDelegateDirective(currentIntent)
+          .getResponse();
+      }
+      
+      // 2. SECOND: Get date (with custom prompt for medication)
+      if (!slots.taskDate || !slots.taskDate.value) {
+        console.log('❌ No date, asking for it');
+        if (taskType === 'medication') {
+          return handlerInput.responseBuilder
+            .speak('What day should I schedule this medication?')
+            .reprompt('Which day do you need to take this medication?')
+            .addElicitSlotDirective('taskDate', currentIntent)
+            .getResponse();
+        } else {
+          return handlerInput.responseBuilder
+            .addDelegateDirective(currentIntent)
+            .getResponse();
+        }
+      }
+      
+      // 3. THIRD: Get time
+      if (!slots.taskTime || !slots.taskTime.value) {
+        console.log('❌ No time, delegating to get it');
+        return handlerInput.responseBuilder
+          .addDelegateDirective(currentIntent)
+          .getResponse();
+      }
+      
+      // 4. FOURTH: Ask about recurrence for recurring-friendly tasks
+      const recurringFriendlyTypes = ['medication', 'exercise', 'general'];
+      if (recurringFriendlyTypes.includes(taskType) && 
+          (!slots.isRecurring || !slots.isRecurring.value)) {
+        console.log('❌ No recurrence answer, asking for it');
+        return handlerInput.responseBuilder
+          .speak('Should this repeat?')
+          .reprompt('Would you like this to be a recurring task?')
+          .addElicitSlotDirective('isRecurring', currentIntent)
+          .getResponse();
+      }
+      
+      // 5. FIFTH: If user said yes to recurring, ask for recurrence type
+      const isRecurringValue = slots.isRecurring?.resolutions?.resolutionsPerAuthority?.[0]?.values?.[0]?.value?.id;
+      console.log('🔍 Is Recurring Value:', isRecurringValue);
+      
+      if (isRecurringValue === 'yes' && (!slots.recurrenceType || !slots.recurrenceType.value)) {
+        console.log('❌ User said yes to recurring, asking for type');
+        return handlerInput.responseBuilder
+          .speak('How often? Daily, weekly, monthly, or yearly?')
+          .reprompt('What\'s the recurrence pattern?')
+          .addElicitSlotDirective('recurrenceType', currentIntent)
+          .getResponse();
+      }
+      
+      // 6. SIXTH: If weekly recurrence, ask for days
+      if (slots.recurrenceType?.value?.toLowerCase() === 'weekly' && 
+          (!slots.recurrenceDays || !slots.recurrenceDays.value)) {
+        console.log('❌ Weekly recurrence, asking for days');
+        return handlerInput.responseBuilder
+          .speak('Which days? You can say weekdays, weekends, or specific days.')
+          .reprompt('What days should this repeat on?')
+          .addElicitSlotDirective('recurrenceDays', currentIntent)
+          .getResponse();
+      }
+      
+      // 7. SEVENTH: Ask for reminder (ALWAYS ASK)
+      if (!slots.reminderTime || !slots.reminderTime.value) {
+        console.log('❌ No reminder time, asking for it');
+        return handlerInput.responseBuilder
+          .speak('Want a reminder? I can do 5, 10, 15, or 30 minutes before, or just say no thanks.')
+          .reprompt('Would you like a reminder before this task?')
+          .addElicitSlotDirective('reminderTime', currentIntent)
+          .getResponse();
+      }
+      
+      // 8. EIGHTH: Ask for description (ALWAYS ASK)
+      if (!slots.taskDescription || !slots.taskDescription.value) {
+        console.log('❌ No description, asking for it');
+        return handlerInput.responseBuilder
+          .speak('Any notes you want to add?')
+          .reprompt('Would you like to add any details?')
+          .addElicitSlotDirective('taskDescription', currentIntent)
+          .getResponse();
+      }
+      
+      // If we get here, all required slots are filled - mark as COMPLETED
+      console.log('✅ All slots filled, marking as COMPLETED');
+      return handlerInput.responseBuilder
+        .addDelegateDirective(currentIntent)
+        .getResponse();
+    }
+    
+    // Dialog is complete, now process the task
+    let token = null;
+    if (
+      handlerInput &&
+      handlerInput.requestEnvelope &&
+      handlerInput.requestEnvelope.session &&
+      handlerInput.requestEnvelope.session.user &&
+      handlerInput.requestEnvelope.session.user.accessToken
+    ) {
+      token = handlerInput.requestEnvelope.session.user.accessToken;
+    }
+
+    if (!token) {
+      return handlerInput.responseBuilder
+        .speak('I\'ll need you to link your CareConnect account first. You can do that in the Alexa app.')
+        .withLinkAccountCard()
+        .getResponse();
+    }
+
+    const slots = handlerInput.requestEnvelope.request.intent.slots;
+    
+    // Extract core values from slots
+    const taskType = (slots.taskType && slots.taskType.value) 
+      ? slots.taskType.value.toLowerCase() 
+      : 'general';
+    
+    const taskDescription = (slots.taskDescription && slots.taskDescription.value)
+      ? slots.taskDescription.value
+      : null;
+    
+    // Date handling - ONLY use smart default if slot is completely empty
+    let taskDate;
+    if (slots.taskDate && slots.taskDate.value) {
+      taskDate = slots.taskDate.value;
+      console.log('📅 Using provided date:', taskDate);
+    } else {
+      taskDate = getDefaultDate(taskType);
+      console.log('📅 Using smart default date:', taskDate);
+    }
+    
+    // Time handling - use provided value or null
+    const taskTime = (slots.taskTime && slots.taskTime.value) 
+      ? slots.taskTime.value 
+      : null;
+    
+    // Generate intelligent title based on context
+    const taskTitle = generateTaskTitle(taskType, taskDate, taskTime, taskDescription);
+    
+    // Smart reminder - use provided or type-based default
+    let reminderMinutes;
+    if (slots.reminderTime && slots.reminderTime.value) {
+      const parsed = formatReminderMinutes(slots.reminderTime.value);
+      reminderMinutes = parsed !== null ? parsed : getDefaultReminder(taskType);
+    } else {
+      reminderMinutes = getDefaultReminder(taskType);
+    }
+    
+    // Recurrence handling
+    const isRecurring = (slots.isRecurring && slots.isRecurring.resolutions?.resolutionsPerAuthority?.[0]?.values?.[0]?.value?.id)
+      ? slots.isRecurring.resolutions.resolutionsPerAuthority[0].values[0].value.id === 'yes'
+      : false;
+    
+    const recurrenceType = (slots.recurrenceType && slots.recurrenceType.value)
+      ? slots.recurrenceType.value.toLowerCase()
+      : null;
+    
+    const recurrenceDays = (slots.recurrenceDays && slots.recurrenceDays.value)
+      ? slots.recurrenceDays.value
+      : null;
+    
+    const endDate = (slots.endDate && slots.endDate.value)
+      ? slots.endDate.value
+      : null;
+
+    // Build the task body
+    const taskBody = {
+      name: taskTitle,
+      description: taskDescription,
+      date: taskDate,
+      timeOfDay: taskTime,
+      isCompleted: false,
+      taskType: taskType
+    };
+    
+    // Only add reminderMinutes if it's not 0 (user said no thanks)
+    if (reminderMinutes > 0) {
+      taskBody.reminderMinutes = reminderMinutes;
+    }
+
+    // Add recurrence fields if applicable
+    if (isRecurring && recurrenceType) {
+      taskBody.frequency = recurrenceType;
+      
+      if (recurrenceType === 'weekly' && recurrenceDays) {
+        taskBody.daysOfWeek = parseRecurrenceDays(recurrenceDays);
+      }
+      
+      if (endDate) {
+        taskBody.endDate = endDate;
+      }
+    }
+
+    console.log('📦 Sending task to backend:', taskBody);
+
+    const result = await addCalendarTask(token, taskBody);
+
+    if (result && !result.error) {
+      // Build natural confirmation
+      const dateStr = formatDateNaturally(taskDate);
+      const timeStr = formatTimeNaturally(taskTime);
+      
+      // More natural type names
+      const friendlyTypes = {
+        'medication': 'medication',
+        'appointment': 'appointment',
+        'exercise': 'workout',
+        'lab': 'lab appointment',
+        'pharmacy': 'pharmacy stop',
+        'general': taskDescription || 'task'
+      };
+      const friendlyType = friendlyTypes[taskType] || taskType;
+      
+      let confirmation = `Perfect! I've got your ${friendlyType} `;
+      
+      if (timeStr) {
+        confirmation += `scheduled for ${dateStr} at ${timeStr}`;
+      } else {
+        confirmation += `scheduled for ${dateStr}`;
+      }
+      
+      // Add recurrence info to confirmation
+      if (isRecurring && recurrenceType) {
+        if (recurrenceType === 'weekly' && recurrenceDays) {
+          confirmation += `, repeating weekly`;
+        } else {
+          confirmation += `, repeating ${recurrenceType}`;
+        }
+        
+        if (endDate) {
+          confirmation += ` until ${formatDateNaturally(endDate)}`;
+        }
+      }
+      
+      // Mention custom reminder if set
+      if (slots.reminderTime && slots.reminderTime.value) {
+        const reminderText = reminderMinutes === 60 ? 'an hour' : 
+                            reminderMinutes === 120 ? 'two hours' :
+                            `${reminderMinutes} minutes`;
+        confirmation += `. I'll remind you ${reminderText} before`;
+      }
+      
+      confirmation += '. All set!';
+      
+      return handlerInput.responseBuilder
+        .speak(confirmation)
+        .getResponse();
+    } else {
+      return handlerInput.responseBuilder
+        .speak('Hmm, I ran into a problem adding that task. Could you try again in a moment?')
+        .getResponse();
+    }
+  }
+};
+
+// ============================
+// EXPORT HANDLERS
+// ============================
+exports.handler = Alexa.SkillBuilders.custom()
+  .addRequestHandlers(
+    ReadCalendarTasksIntentHandler,
+    AddCalendarTaskIntentHandler
+  )
+  .lambda();
