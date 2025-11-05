@@ -1,0 +1,692 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "care connect",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "ReadCalendarTasksIntent",
+                    "slots": [],
+                    "samples": [
+                        "what's on my calendar",
+                        "what tasks do I have",
+                        "what's coming up",
+                        "show me my tasks",
+                        "what do I have scheduled",
+                        "read my calendar",
+                        "what's on my schedule",
+                        "list my tasks",
+                        "what appointments do I have",
+                        "check my calendar"
+                    ]
+                },
+                {
+                    "name": "AddCalendarTaskIntent",
+                    "slots": [
+                        {
+                            "name": "taskType",
+                            "type": "TaskType",
+                            "samples": [
+                                "a {taskType}",
+                                "{taskType}",
+                                "my {taskType}",
+                                "the {taskType}"
+                            ]
+                        },
+                        {
+                            "name": "taskDate",
+                            "type": "AMAZON.DATE",
+                            "samples": [
+                                "for {taskDate}",
+                                "on {taskDate}",
+                                "{taskDate}"
+                            ]
+                        },
+                        {
+                            "name": "taskTime",
+                            "type": "AMAZON.TIME",
+                            "samples": [
+                                "at {taskTime}",
+                                "{taskTime}",
+                                "for {taskTime}"
+                            ]
+                        },
+                        {
+                            "name": "taskDescription",
+                            "type": "AMAZON.SearchQuery",
+                            "samples": [
+                                "{taskDescription}"
+                            ]
+                        },
+                        {
+                            "name": "reminderTime",
+                            "type": "ReminderTime",
+                            "samples": [
+                                "remind me {reminderTime}",
+                                "{reminderTime}"
+                            ]
+                        },
+                        {
+                            "name": "isRecurring",
+                            "type": "YesNoType",
+                            "samples": [
+                                "{isRecurring}"
+                            ]
+                        },
+                        {
+                            "name": "recurrenceType",
+                            "type": "RecurrenceType",
+                            "samples": [
+                                "{recurrenceType}",
+                                "every {recurrenceType}"
+                            ]
+                        },
+                        {
+                            "name": "recurrenceDays",
+                            "type": "AMAZON.SearchQuery",
+                            "samples": [
+                                "on {recurrenceDays}",
+                                "{recurrenceDays}"
+                            ]
+                        },
+                        {
+                            "name": "endDate",
+                            "type": "AMAZON.DATE",
+                            "samples": [
+                                "until {endDate}",
+                                "through {endDate}"
+                            ]
+                        }
+                    ],
+                    "samples": [
+                        "schedule a {taskType}",
+                        "add a {taskType}",
+                        "create a {taskType}",
+                        "schedule {taskType}",
+                        "add {taskType}",
+                        "create {taskType}",
+                        "schedule a {taskType} for {taskDate}",
+                        "add a {taskType} on {taskDate}",
+                        "create a {taskType} for {taskDate}",
+                        "schedule a {taskType} at {taskTime}",
+                        "add a {taskType} for {taskTime}",
+                        "schedule a {taskType} on {taskDate} at {taskTime}",
+                        "add a {taskType} for {taskDate} at {taskTime}",
+                        "create a {taskType} on {taskDate} at {taskTime}",
+                        "add {taskType} every {recurrenceType}",
+                        "schedule {taskType} {recurrenceType}",
+                        "create a repeating {taskType}",
+                        "create a {isRecurring} {taskType}",
+                        "schedule my {taskType}",
+                        "add my {taskType}",
+                        "I need to schedule a {taskType}",
+                        "I need to add a {taskType}",
+                        "remind me to {taskDescription}",
+                        "remind me {reminderTime} about {taskType}",
+                        "add a task",
+                        "schedule something",
+                        "create a task",
+                        "new task",
+                        "add to calendar",
+                        "schedule for {taskDate}",
+                        "add something for {taskDate} at {taskTime}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "TaskType",
+                    "values": [
+                        {
+                            "id": "medication",
+                            "name": {
+                                "value": "medication",
+                                "synonyms": [
+                                    "medicine",
+                                    "pill",
+                                    "pills",
+                                    "meds",
+                                    "med",
+                                    "prescription",
+                                    "prescriptions",
+                                    "drug",
+                                    "drugs",
+                                    "take medicine",
+                                    "take meds",
+                                    "take my medicine",
+                                    "take my meds",
+                                    "take my pills",
+                                    "dose"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "appointment",
+                            "name": {
+                                "value": "appointment",
+                                "synonyms": [
+                                    "doctor appointment",
+                                    "doctor visit",
+                                    "doctors appointment",
+                                    "visit",
+                                    "checkup",
+                                    "check up",
+                                    "meeting",
+                                    "see doctor",
+                                    "see the doctor",
+                                    "dentist",
+                                    "dentist appointment",
+                                    "physical",
+                                    "doctor",
+                                    "medical appointment"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "exercise",
+                            "name": {
+                                "value": "exercise",
+                                "synonyms": [
+                                    "workout",
+                                    "work out",
+                                    "physical therapy",
+                                    "therapy",
+                                    "walk",
+                                    "walking",
+                                    "activity",
+                                    "run",
+                                    "running",
+                                    "jog",
+                                    "jogging",
+                                    "bike ride",
+                                    "bike",
+                                    "biking",
+                                    "cycling",
+                                    "cycle",
+                                    "swim",
+                                    "swimming",
+                                    "yoga",
+                                    "gym",
+                                    "fitness",
+                                    "cardio",
+                                    "training",
+                                    "hike",
+                                    "hiking"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "lab",
+                            "name": {
+                                "value": "lab",
+                                "synonyms": [
+                                    "lab work",
+                                    "labs",
+                                    "blood work",
+                                    "bloodwork",
+                                    "test",
+                                    "tests",
+                                    "lab test",
+                                    "lab tests",
+                                    "laboratory",
+                                    "blood test",
+                                    "blood tests",
+                                    "x-ray",
+                                    "xray",
+                                    "x ray",
+                                    "scan",
+                                    "ct scan",
+                                    "mri",
+                                    "ultrasound",
+                                    "imaging"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "pharmacy",
+                            "name": {
+                                "value": "pharmacy",
+                                "synonyms": [
+                                    "pick up prescription",
+                                    "pick up prescriptions",
+                                    "get meds",
+                                    "get medicine",
+                                    "pharmacy pickup",
+                                    "pharmacy pick up",
+                                    "refill",
+                                    "pick up medicine",
+                                    "get prescription",
+                                    "get my prescription",
+                                    "pick up my prescription",
+                                    "drugstore"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "general",
+                            "name": {
+                                "value": "general",
+                                "synonyms": [
+                                    "task",
+                                    "tasks",
+                                    "reminder",
+                                    "reminders",
+                                    "todo",
+                                    "to do",
+                                    "something",
+                                    "event",
+                                    "meal",
+                                    "meals",
+                                    "breakfast",
+                                    "lunch",
+                                    "dinner",
+                                    "snack",
+                                    "eating",
+                                    "eat",
+                                    "call",
+                                    "phone call",
+                                    "errand",
+                                    "errands",
+                                    "shopping",
+                                    "shop",
+                                    "grocery shopping",
+                                    "groceries"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "ReminderTime",
+                    "values": [
+                        {
+                            "id": "0",
+                            "name": {
+                                "value": "no thanks",
+                                "synonyms": [
+                                    "no",
+                                    "nope",
+                                    "no reminder",
+                                    "skip",
+                                    "none"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "5",
+                            "name": {
+                                "value": "five minutes before",
+                                "synonyms": [
+                                    "five minutes",
+                                    "5 minutes before",
+                                    "5 minutes"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "10",
+                            "name": {
+                                "value": "ten minutes before",
+                                "synonyms": [
+                                    "ten minutes",
+                                    "10 minutes before",
+                                    "10 minutes"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "15",
+                            "name": {
+                                "value": "fifteen minutes before",
+                                "synonyms": [
+                                    "fifteen minutes",
+                                    "15 minutes before",
+                                    "15 minutes"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "30",
+                            "name": {
+                                "value": "thirty minutes before",
+                                "synonyms": [
+                                    "thirty minutes",
+                                    "30 minutes before",
+                                    "30 minutes",
+                                    "half an hour",
+                                    "half hour"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "60",
+                            "name": {
+                                "value": "one hour before",
+                                "synonyms": [
+                                    "one hour",
+                                    "1 hour before",
+                                    "1 hour",
+                                    "an hour"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "120",
+                            "name": {
+                                "value": "two hours before",
+                                "synonyms": [
+                                    "two hours",
+                                    "2 hours before",
+                                    "2 hours"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "RecurrenceType",
+                    "values": [
+                        {
+                            "id": "daily",
+                            "name": {
+                                "value": "daily",
+                                "synonyms": [
+                                    "day",
+                                    "every day",
+                                    "each day"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "weekly",
+                            "name": {
+                                "value": "weekly",
+                                "synonyms": [
+                                    "week",
+                                    "every week",
+                                    "each week"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "monthly",
+                            "name": {
+                                "value": "monthly",
+                                "synonyms": [
+                                    "month",
+                                    "every month",
+                                    "each month"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "yearly",
+                            "name": {
+                                "value": "yearly",
+                                "synonyms": [
+                                    "year",
+                                    "every year",
+                                    "annually",
+                                    "each year"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "YesNoType",
+                    "values": [
+                        {
+                            "id": "yes",
+                            "name": {
+                                "value": "yes",
+                                "synonyms": [
+                                    "yeah",
+                                    "yep",
+                                    "sure",
+                                    "ok",
+                                    "okay",
+                                    "affirmative",
+                                    "correct",
+                                    "right",
+                                    "true",
+                                    "recurring"
+                                ]
+                            }
+                        },
+                        {
+                            "id": "no",
+                            "name": {
+                                "value": "no",
+                                "synonyms": [
+                                    "nope",
+                                    "nah",
+                                    "not really",
+                                    "negative",
+                                    "false",
+                                    "one time",
+                                    "just once"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "AddCalendarTaskIntent",
+                    "confirmationRequired": false,
+                    "prompts": {},
+                    "slots": [
+                        {
+                            "name": "taskType",
+                            "type": "TaskType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1730896540267.1412677268081"
+                            }
+                        },
+                        {
+                            "name": "taskDate",
+                            "type": "AMAZON.DATE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1730896553738.309407003800"
+                            }
+                        },
+                        {
+                            "name": "taskTime",
+                            "type": "AMAZON.TIME",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.1730896568370.1130098632482"
+                            }
+                        },
+                        {
+                            "name": "taskDescription",
+                            "type": "AMAZON.SearchQuery",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "reminderTime",
+                            "type": "ReminderTime",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "isRecurring",
+                            "type": "YesNoType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "recurrenceType",
+                            "type": "RecurrenceType",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "recurrenceDays",
+                            "type": "AMAZON.SearchQuery",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        },
+                        {
+                            "name": "endDate",
+                            "type": "AMAZON.DATE",
+                            "confirmationRequired": false,
+                            "elicitationRequired": false,
+                            "prompts": {}
+                        }
+                    ]
+                }
+            ],
+            "delegationStrategy": "SKILL_RESPONSE"
+        },
+        "prompts": [
+            {
+                "id": "Elicit.Slot.1730896540267.1412677268081",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What type of task? Appointment, medication, exercise, meal, or something else?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What kind of task is this?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896553738.309407003800",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What day works for you?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Which day should I schedule this?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896568370.1130098632482",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What time?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What time should I set this for?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896600835.504166677788",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Any details you'd like me to note?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Want to add any notes?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896619283.641825429847",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "When should I remind you? I can do five minutes, ten minutes, fifteen minutes, thirty minutes, one hour, or two hours before."
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "How far in advance would you like a reminder?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896635170.1093664949289",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Should this repeat?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Is this a recurring task?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896650738.1408348195626",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "How often? Daily, weekly, monthly, or yearly?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What's the recurrence pattern?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896667354.191568773036",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Which days? You can say weekdays, weekends, or specific days."
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What days should this repeat on?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.1730896683826.852765223381",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "When should this stop repeating?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What's the last day for this recurring task?"
+                    }
+                ]
+            }
+        ]
+    }
+}

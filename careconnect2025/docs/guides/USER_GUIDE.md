@@ -290,6 +290,10 @@ The following sections describe each feature in operational detail. Screenshots 
 3. The top banner highlights shift assignments, offline items pending sync, and broadcast announcements from administrators.
 4. Integrated `Invoice Overview` cards display unpaid counts, linking directly to relevant invoice filters.
 
+**Video walkthrough:**  
+![Dashboard new features walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/TeamC_CDashboard_NewFeatures.mov)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/TeamC_CDashboard_NewFeatures.mov)
+
 #### 4.4.3 Global Navigation & Quick Actions
 1. The universal hamburger menu exposes modules: Dashboard, EVV, Invoice Assistant, AI Notetaker, Files, Wearables, USPS Digest, Settings, and Help Center.
 2. `More` drawers differ by role—patients see wellness and financial tools; caregivers see documentation and scheduling utilities.
@@ -316,8 +320,8 @@ The following sections describe each feature in operational detail. Screenshots 
 4. Sync with external calendars (Google, Outlook) by authorizing integration; read-only links are available for family.
 
 **Video walkthrough:**  
-![Calendar assistant walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)
+![Calendar assistant walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/calendar-assistant.mp4)
 
 #### 4.5.4 Notification Channels & Quiet Hours
 1. Navigate to `Settings > Notifications`.
@@ -391,8 +395,8 @@ The following sections describe each feature in operational detail. Screenshots 
 4. Reprint after any profile update so responders always have the latest information.
 
 **Video walkthrough:**  
-![Vial of Life walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/vial-of-life.mov)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/vial-of-life.mov)
+![Vial of Life walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/vial-of-life.mov)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/vial-of-life.mov)
 
 ### 4.9 Device & Third-Party Integrations
 
@@ -407,8 +411,8 @@ The following sections describe each feature in operational detail. Screenshots 
 3. Use automation rules to turn on lights or notify caregivers when movement patterns change unexpectedly.
 
 **Video walkthrough:**  
-![Smart devices integration walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)
+![Smart devices integration walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/smart-devices-alexa.mp4)
 
 #### 4.9.3 USPS Digest & Informed Delivery
 See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
@@ -457,11 +461,11 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 
 #### 4.13.5 EVV Video Walkthroughs
 - **Mobile caregiver app tour**  
-  ![EVV mobile caregiver walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-mobile.mp4)  
-  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-mobile.mp4)
+  ![EVV mobile caregiver walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/evv-mobile.mp4)  
+  [Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/evv-mobile.mp4)
 - **Web console tour**  
-  ![EVV web console walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-web.mp4)  
-  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/evv-web.mp4)
+  ![EVV web console walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/evv-web.mp4)  
+  [Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/evv-web.mp4)
 
 ### 4.14 Invoice & Billing Assistant
 
@@ -489,8 +493,8 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 4. Configure invoice notifications (overdue reminders, new upload alerts) in `Invoice Settings` within the module.
 
 #### 4.14.5 Video Walkthrough
-![Invoice Assistant walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)
+![Invoice Assistant walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/invoice-assistant.mp4)
 
 ### 4.15 Clinical Documentation & Note Taking
 
@@ -512,11 +516,11 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 
 #### 4.15.4 Video Walkthroughs
 - **Notetaker overview and setup**  
-  ![Notetaker overview walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)  
-  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)
+  ![Notetaker overview walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)  
+  [Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/notetaker-overview.mp4)
 - **Detailed transcription workflow**  
-  ![Notetaker transcription workflow walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)  
-  [Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)
+  ![Notetaker transcription workflow walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)  
+  [Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/notetaker-workflow.mp4)
 
 ### 4.16 Safety Monitoring & Fall Alerts
 
@@ -553,8 +557,8 @@ See Section [4.17](#417-postal--delivery-insights) for a full walkthrough.
 3. Download envelope images or share with caregivers responsible for medication-by-mail coordination.
 
 #### 4.17.4 USPS Digest Video Walkthrough
-![USPS digest walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)
+![USPS digest walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/InformedDelivery_USPS.mov)
 
 ### 4.18 Localization & Multilingual Experience
 CareConnect supports multilingual caregivers and patients through dynamic localization and regional formatting.
@@ -564,8 +568,8 @@ CareConnect supports multilingual caregivers and patients through dynamic locali
 2. Verify RTL (right-to-left) layouts and translated UI strings using the localization preview panel before rolling changes into production.
 3. Combine localization with accessibility settings (text scaling, high contrast) to tailor experiences for diverse users.
 
-![Localization experience walkthrough](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/localization.mp4)  
-[Download video](https://raw.githubusercontent.com/umgc/2025_fall/main/careconnect2025/docs/user-videos/localization.mp4)
+![Localization experience walkthrough](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/localization.mp4)  
+[Download video](https://github.com/umgc/2025_fall/raw/main/careconnect2025/docs/user-videos/localization.mp4)
 
 ---
 
