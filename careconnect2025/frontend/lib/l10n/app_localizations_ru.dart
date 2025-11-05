@@ -81,8 +81,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get pleaseLogIn => 'Пожалуйста, войдите';
 
   @override
-  String get loginRequiredMessage =>
-      'Вам необходимо войти, чтобы получить доступ к меню';
+  String get loginRequiredMessage => 'Вам необходимо войти, чтобы получить доступ к меню';
 
   @override
   String get login => 'Войти';
@@ -166,12 +165,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNotifications => 'Уведомления';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'Загрузка настроек уведомлений...';
+  String get settingsLoadingNotificationSettings => 'Загрузка настроек уведомлений...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'Не удалось загрузить настройки уведомлений';
+  String get settingsUnableToLoadNotificationSettings => 'Не удалось загрузить настройки уведомлений';
 
   @override
   String get settingsRefresh => 'Обновить';
@@ -180,15 +177,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsDarkMode => 'Темный режим';
 
   @override
-  String get settingsToggleThemeDesc =>
-      'Переключение между светлой и темной темой';
+  String get settingsToggleThemeDesc => 'Переключение между светлой и темной темой';
 
   @override
   String get settingsNotifEmergency => 'Экстренные оповещения';
 
   @override
-  String get settingsNotifEmergencyDesc =>
-      'Критические оповещения о здоровье и чрезвычайные ситуации';
+  String get settingsNotifEmergencyDesc => 'Критические оповещения о здоровье и чрезвычайные ситуации';
 
   @override
   String get settingsNotifVideoCall => 'Уведомления о видеозвонках';
@@ -206,8 +201,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'Важные показатели';
 
   @override
-  String get settingsNotifSignificantVitalsDesc =>
-      'Важные изменения в жизненных показателях';
+  String get settingsNotifSignificantVitalsDesc => 'Важные изменения в жизненных показателях';
 
   @override
   String get settingsNotifSMS => 'SMS-уведомления';
@@ -219,8 +213,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNotifGamification => 'Игрофикация';
 
   @override
-  String get settingsNotifGamificationDesc =>
-      'Уведомления о достижениях и прогрессе';
+  String get settingsNotifGamificationDesc => 'Уведомления о достижениях и прогрессе';
 
   @override
   String get settingsSnackUpdated => 'Настройки уведомлений обновлены';
@@ -238,8 +231,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAIConfiguration => 'Конфигурация AI';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'Настройте параметры вашего AI-помощника';
+  String get settingsAIConfigurationDesc => 'Настройте параметры вашего AI-помощника';
 
   @override
   String get settingsSubscription => 'Подписка';
@@ -248,19 +240,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsManageSubscription => 'Управление подпиской';
 
   @override
-  String get settingsManageSubscriptionDesc =>
-      'Просмотр или обновление вашего плана подписки';
+  String get settingsManageSubscriptionDesc => 'Просмотр или обновление вашего плана подписки';
 
   @override
   String get settingsNotetakerAssistant => 'Помощник по заметкам';
 
   @override
-  String get settingsNotetakerConfiguration =>
-      'Конфигурация помощника по заметкам';
+  String get settingsNotetakerConfiguration => 'Конфигурация помощника по заметкам';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'Настройте параметры вашего помощника по заметкам';
+  String get settingsNotetakerConfigurationDesc => 'Настройте параметры вашего помощника по заметкам';
 
   @override
   String get settingsGeneral => 'Общие';
@@ -269,12 +258,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsClearCache => 'Очистить кэш';
 
   @override
-  String get settingsClearCacheShortDesc =>
-      'Удалить временные файлы и данные кэша';
+  String get settingsClearCacheShortDesc => 'Удалить временные файлы и данные кэша';
 
   @override
-  String get settingsClearCacheDesc =>
-      'Это очистит все временные файлы и данные кэша. Приложению может потребоваться больше времени для первоначальной загрузки контента после очистки кэша.';
+  String get settingsClearCacheDesc => 'Это очистит все временные файлы и данные кэша. Приложению может потребоваться больше времени для первоначальной загрузки контента после очистки кэша.';
 
   @override
   String get settingsSignOut => 'Выйти';
@@ -289,30 +276,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsDeleteAccount => 'Удалить аккаунт';
 
   @override
-  String get settingsDeleteAccountShortDesc =>
-      'Безвозвратно удалить ваш аккаунт';
+  String get settingsDeleteAccountShortDesc => 'Безвозвратно удалить ваш аккаунт';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно.';
+  String get settingsDeleteAccountDesc => 'Это действие нельзя отменить. Все ваши данные будут удалены безвозвратно.';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'Запрошено удаление аккаунта. Пожалуйста, свяжитесь со службой поддержки.';
+  String get settingsDeleteAccountRequested => 'Запрошено удаление аккаунта. Пожалуйста, свяжитесь со службой поддержки.';
 
   @override
   String get settingsDeleteAccountAction => 'Удалить аккаунт';
 
   @override
-  String get welcomeInitializingHealthcare =>
-      'Инициализация вашего медицинского опыта...';
+  String get welcomeInitializingHealthcare => 'Инициализация вашего медицинского опыта...';
 
   @override
   String get welcomeReadyToConnect => 'Готовы подключить вашу заботу!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'Серверная служба неисправна. Возможности приложения ограничены.';
+  String get welcomeBackendNotHealthyWarning => 'Серверная служба неисправна. Возможности приложения ограничены.';
 
   @override
   String get welcomeContinue => 'Продолжить';
@@ -327,26 +309,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get welcomeComplianceBadgeSecure => '🛡️ Безопасно';
 
   @override
-  String get welcome_subtitle =>
-      'Соединяя заботу, расширяя возможности здоровья';
+  String get welcome_subtitle => 'Соединяя заботу, расширяя возможности здоровья';
 
   @override
   String get welcome_description => 'Ваш спутник в здравоохранении для';
 
   @override
-  String get welcome_tagline =>
-      'Лучшей заботы • Лучших результатов • Лучшей жизни';
+  String get welcome_tagline => 'Лучшей заботы • Лучших результатов • Лучшей жизни';
 
   @override
-  String get login_tagline =>
-      'Подключайтесь к заботе, отслеживайте с уверенностью';
+  String get login_tagline => 'Подключайтесь к заботе, отслеживайте с уверенностью';
 
   @override
   String get login_signInTitle => 'Войдите в свой аккаунт';
 
   @override
-  String get login_signInSubtitle =>
-      'Введите свои учетные данные для доступа к CareConnect';
+  String get login_signInSubtitle => 'Введите свои учетные данные для доступа к CareConnect';
 
   @override
   String get login_usernameLabel => 'Имя пользователя';

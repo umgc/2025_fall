@@ -12,17 +12,14 @@ import com.careconnect.service.security.ResponseSanitizationService;
 import com.careconnect.service.security.LangChainGovernanceService;
 import com.careconnect.service.security.SecurityAuditService;
 import com.careconnect.service.cache.AIChatCacheService;
-import lombok.Builder;
 import com.careconnect.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 
 import java.time.LocalDateTime;
 import java.util.*;

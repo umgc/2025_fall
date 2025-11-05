@@ -81,8 +81,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pleaseLogIn => 'Veuillez vous connecter';
 
   @override
-  String get loginRequiredMessage =>
-      'Vous devez être connecté pour accéder au menu';
+  String get loginRequiredMessage => 'Vous devez être connecté pour accéder au menu';
 
   @override
   String get login => 'Se connecter';
@@ -166,12 +165,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNotifications => 'Notifications';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'Chargement des paramètres de notification...';
+  String get settingsLoadingNotificationSettings => 'Chargement des paramètres de notification...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'Impossible de charger les paramètres de notification';
+  String get settingsUnableToLoadNotificationSettings => 'Impossible de charger les paramètres de notification';
 
   @override
   String get settingsRefresh => 'Rafraîchir';
@@ -186,8 +183,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNotifEmergency => 'Alertes d’urgence';
 
   @override
-  String get settingsNotifEmergencyDesc =>
-      'Alertes critiques de santé et urgences';
+  String get settingsNotifEmergencyDesc => 'Alertes critiques de santé et urgences';
 
   @override
   String get settingsNotifVideoCall => 'Notifications d’appel vidéo';
@@ -205,29 +201,25 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'Signes vitaux significatifs';
 
   @override
-  String get settingsNotifSignificantVitalsDesc =>
-      'Changements importants dans les signes vitaux';
+  String get settingsNotifSignificantVitalsDesc => 'Changements importants dans les signes vitaux';
 
   @override
   String get settingsNotifSMS => 'Notifications SMS';
 
   @override
-  String get settingsNotifSMSDesc =>
-      'Alertes de messages texte vers votre téléphone';
+  String get settingsNotifSMSDesc => 'Alertes de messages texte vers votre téléphone';
 
   @override
   String get settingsNotifGamification => 'Gamification';
 
   @override
-  String get settingsNotifGamificationDesc =>
-      'Notifications de réalisations et progression';
+  String get settingsNotifGamificationDesc => 'Notifications de réalisations et progression';
 
   @override
   String get settingsSnackUpdated => 'Paramètres de notification mis à jour';
 
   @override
-  String get settingsSnackUpdateFailed =>
-      'Échec de la mise à jour des paramètres';
+  String get settingsSnackUpdateFailed => 'Échec de la mise à jour des paramètres';
 
   @override
   String get settingsCacheCleared => 'Cache effacée avec succès';
@@ -239,8 +231,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsAIConfiguration => 'Configuration IA';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'Personnalisez les paramètres de votre assistant IA';
+  String get settingsAIConfigurationDesc => 'Personnalisez les paramètres de votre assistant IA';
 
   @override
   String get settingsSubscription => 'Abonnement';
@@ -249,19 +240,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsManageSubscription => 'Gérer l’abonnement';
 
   @override
-  String get settingsManageSubscriptionDesc =>
-      'Voir ou mettre à jour votre plan d’abonnement';
+  String get settingsManageSubscriptionDesc => 'Voir ou mettre à jour votre plan d’abonnement';
 
   @override
   String get settingsNotetakerAssistant => 'Assistant de prise de notes';
 
   @override
-  String get settingsNotetakerConfiguration =>
-      'Configuration de l’assistant de notes';
+  String get settingsNotetakerConfiguration => 'Configuration de l’assistant de notes';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'Personnalisez les paramètres de l’assistant de notes';
+  String get settingsNotetakerConfigurationDesc => 'Personnalisez les paramètres de l’assistant de notes';
 
   @override
   String get settingsGeneral => 'Général';
@@ -270,12 +258,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsClearCache => 'Vider le cache';
 
   @override
-  String get settingsClearCacheShortDesc =>
-      'Supprimer les fichiers temporaires et données en cache';
+  String get settingsClearCacheShortDesc => 'Supprimer les fichiers temporaires et données en cache';
 
   @override
-  String get settingsClearCacheDesc =>
-      'Cela effacera tous les fichiers temporaires et les données en cache. L’application pourrait prendre plus de temps à charger le contenu après le nettoyage du cache.';
+  String get settingsClearCacheDesc => 'Cela effacera tous les fichiers temporaires et les données en cache. L’application pourrait prendre plus de temps à charger le contenu après le nettoyage du cache.';
 
   @override
   String get settingsSignOut => 'Déconnexion';
@@ -284,37 +270,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsSignOutDesc => 'Se déconnecter de votre compte';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'Êtes-vous sûr de vouloir vous déconnecter ?';
+  String get settingsSignOutConfirmMessage => 'Êtes-vous sûr de vouloir vous déconnecter ?';
 
   @override
   String get settingsDeleteAccount => 'Supprimer le compte';
 
   @override
-  String get settingsDeleteAccountShortDesc =>
-      'Supprimer définitivement votre compte';
+  String get settingsDeleteAccountShortDesc => 'Supprimer définitivement votre compte';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'Cette action ne peut pas être annulée. Toutes vos données seront définitivement supprimées.';
+  String get settingsDeleteAccountDesc => 'Cette action ne peut pas être annulée. Toutes vos données seront définitivement supprimées.';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'Demande de suppression de compte envoyée. Veuillez contacter le support.';
+  String get settingsDeleteAccountRequested => 'Demande de suppression de compte envoyée. Veuillez contacter le support.';
 
   @override
   String get settingsDeleteAccountAction => 'Supprimer le compte';
 
   @override
-  String get welcomeInitializingHealthcare =>
-      'Initialisation de votre expérience de santé…';
+  String get welcomeInitializingHealthcare => 'Initialisation de votre expérience de santé…';
 
   @override
   String get welcomeReadyToConnect => 'Prêt à connecter vos soins !';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'Le service principal n’est pas en bonne santé. L’application dispose de capacités limitées.';
+  String get welcomeBackendNotHealthyWarning => 'Le service principal n’est pas en bonne santé. L’application dispose de capacités limitées.';
 
   @override
   String get welcomeContinue => 'Continuer';
@@ -335,19 +315,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get welcome_description => 'Votre compagnon de santé pour';
 
   @override
-  String get welcome_tagline =>
-      'Meilleurs soins • Meilleurs résultats • Meilleure vie';
+  String get welcome_tagline => 'Meilleurs soins • Meilleurs résultats • Meilleure vie';
 
   @override
-  String get login_tagline =>
-      'Connectez-vous avec soin, suivez en toute confiance';
+  String get login_tagline => 'Connectez-vous avec soin, suivez en toute confiance';
 
   @override
   String get login_signInTitle => 'Connectez-vous à votre compte';
 
   @override
-  String get login_signInSubtitle =>
-      'Entrez vos identifiants pour accéder à CareConnect';
+  String get login_signInSubtitle => 'Entrez vos identifiants pour accéder à CareConnect';
 
   @override
   String get login_usernameLabel => 'Nom d\'utilisateur';

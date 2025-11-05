@@ -165,12 +165,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsNotifications => 'اطلاعات';
 
   @override
-  String get settingsLoadingNotificationSettings =>
-      'اطلاعات کی ترتیبات لوڈ ہو رہی ہیں...';
+  String get settingsLoadingNotificationSettings => 'اطلاعات کی ترتیبات لوڈ ہو رہی ہیں...';
 
   @override
-  String get settingsUnableToLoadNotificationSettings =>
-      'اطلاعات کی ترتیبات لوڈ نہیں ہو سکیں';
+  String get settingsUnableToLoadNotificationSettings => 'اطلاعات کی ترتیبات لوڈ نہیں ہو سکیں';
 
   @override
   String get settingsRefresh => 'تازہ کریں';
@@ -179,8 +177,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsDarkMode => 'ڈارک موڈ';
 
   @override
-  String get settingsToggleThemeDesc =>
-      'لائٹ اور ڈارک تھیم کے درمیان سوئچ کریں';
+  String get settingsToggleThemeDesc => 'لائٹ اور ڈارک تھیم کے درمیان سوئچ کریں';
 
   @override
   String get settingsNotifEmergency => 'ہنگامی الرٹس';
@@ -192,8 +189,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsNotifVideoCall => 'ویڈیو کال اطلاعات';
 
   @override
-  String get settingsNotifVideoCallDesc =>
-      'درآمد ہونے والی ویڈیو کالز کی اطلاع';
+  String get settingsNotifVideoCallDesc => 'درآمد ہونے والی ویڈیو کالز کی اطلاع';
 
   @override
   String get settingsNotifAudioCall => 'آڈیو کال اطلاعات';
@@ -205,8 +201,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsNotifSignificantVitals => 'اہم حیاتیاتی اشاریے';
 
   @override
-  String get settingsNotifSignificantVitalsDesc =>
-      'حیاتیاتی اشاروں میں اہم تبدیلیاں';
+  String get settingsNotifSignificantVitalsDesc => 'حیاتیاتی اشاروں میں اہم تبدیلیاں';
 
   @override
   String get settingsNotifSMS => 'ایس ایم ایس اطلاعات';
@@ -218,8 +213,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsNotifGamification => 'گییمیفیکیشن';
 
   @override
-  String get settingsNotifGamificationDesc =>
-      'کامیابیوں اور پیش رفت کی اطلاعات';
+  String get settingsNotifGamificationDesc => 'کامیابیوں اور پیش رفت کی اطلاعات';
 
   @override
   String get settingsSnackUpdated => 'اطلاعات کی ترتیبات اپ ڈیٹ کی گئیں';
@@ -237,8 +231,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsAIConfiguration => 'اے آئی ترتیب';
 
   @override
-  String get settingsAIConfigurationDesc =>
-      'اپنے اے آئی اسسٹنٹ کی ترتیبات حسبِ منشا کریں';
+  String get settingsAIConfigurationDesc => 'اپنے اے آئی اسسٹنٹ کی ترتیبات حسبِ منشا کریں';
 
   @override
   String get settingsSubscription => 'سبسکرپشن';
@@ -247,8 +240,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsManageSubscription => 'سبسکرپشن کا انتظام کریں';
 
   @override
-  String get settingsManageSubscriptionDesc =>
-      'اپنی سبسکرپشن پلان دیکھیں یا اپ ڈیٹ کریں';
+  String get settingsManageSubscriptionDesc => 'اپنی سبسکرپشن پلان دیکھیں یا اپ ڈیٹ کریں';
 
   @override
   String get settingsNotetakerAssistant => 'نوٹ ٹیکر اسسٹنٹ';
@@ -257,8 +249,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsNotetakerConfiguration => 'نوٹ ٹیکر ترتیب';
 
   @override
-  String get settingsNotetakerConfigurationDesc =>
-      'نوٹ ٹیکر اسسٹنٹ کی ترتیبات حسبِ منشا کریں';
+  String get settingsNotetakerConfigurationDesc => 'نوٹ ٹیکر اسسٹنٹ کی ترتیبات حسبِ منشا کریں';
 
   @override
   String get settingsGeneral => 'جنرل';
@@ -267,12 +258,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsClearCache => 'کیش صاف کریں';
 
   @override
-  String get settingsClearCacheShortDesc =>
-      'عارضی فائلیں اور کیش ڈیٹا حذف کریں';
+  String get settingsClearCacheShortDesc => 'عارضی فائلیں اور کیش ڈیٹا حذف کریں';
 
   @override
-  String get settingsClearCacheDesc =>
-      'یہ تمام عارضی فائلیں اور کیش ڈیٹا حذف کرے گا۔ کیش صاف کرنے کے بعد ایپ کو مواد لوڈ کرنے میں زیادہ وقت لگ سکتا ہے۔';
+  String get settingsClearCacheDesc => 'یہ تمام عارضی فائلیں اور کیش ڈیٹا حذف کرے گا۔ کیش صاف کرنے کے بعد ایپ کو مواد لوڈ کرنے میں زیادہ وقت لگ سکتا ہے۔';
 
   @override
   String get settingsSignOut => 'سائن آؤٹ';
@@ -281,37 +270,31 @@ class AppLocalizationsUr extends AppLocalizations {
   String get settingsSignOutDesc => 'اپنے اکاؤنٹ سے سائن آؤٹ کریں';
 
   @override
-  String get settingsSignOutConfirmMessage =>
-      'کیا آپ واقعی سائن آؤٹ کرنا چاہتے ہیں؟';
+  String get settingsSignOutConfirmMessage => 'کیا آپ واقعی سائن آؤٹ کرنا چاہتے ہیں؟';
 
   @override
   String get settingsDeleteAccount => 'کھاتہ ختم کریں';
 
   @override
-  String get settingsDeleteAccountShortDesc =>
-      'اپنا اکاؤنٹ مستقل طور پر حذف کریں';
+  String get settingsDeleteAccountShortDesc => 'اپنا اکاؤنٹ مستقل طور پر حذف کریں';
 
   @override
-  String get settingsDeleteAccountDesc =>
-      'یہ کارروائی واپس نہیں کی جا سکتی۔ آپ کے تمام ڈیٹا مستقل طور پر حذف ہو جائیں گے۔';
+  String get settingsDeleteAccountDesc => 'یہ کارروائی واپس نہیں کی جا سکتی۔ آپ کے تمام ڈیٹا مستقل طور پر حذف ہو جائیں گے۔';
 
   @override
-  String get settingsDeleteAccountRequested =>
-      'کھاتہ حذف کرنے کی درخواست کی گئی ہے۔ براہِ کرم سپورٹ سے رابطہ کریں۔';
+  String get settingsDeleteAccountRequested => 'کھاتہ حذف کرنے کی درخواست کی گئی ہے۔ براہِ کرم سپورٹ سے رابطہ کریں۔';
 
   @override
   String get settingsDeleteAccountAction => 'کھاتہ حذف کریں';
 
   @override
-  String get welcomeInitializingHealthcare =>
-      'آپ کا ہیلتھ کیئر تجربہ شروع کیا جا رہا ہے...';
+  String get welcomeInitializingHealthcare => 'آپ کا ہیلتھ کیئر تجربہ شروع کیا جا رہا ہے...';
 
   @override
   String get welcomeReadyToConnect => 'آپ کی دیکھ بھال سے جڑنے کے لیے تیار!';
 
   @override
-  String get welcomeBackendNotHealthyWarning =>
-      'بیک اینڈ سروس درست کام نہیں کر رہی۔ ایپلیکیشن کی صلاحیتیں محدود ہیں۔';
+  String get welcomeBackendNotHealthyWarning => 'بیک اینڈ سروس درست کام نہیں کر رہی۔ ایپلیکیشن کی صلاحیتیں محدود ہیں۔';
 
   @override
   String get welcomeContinue => 'جاری رکھیں';
@@ -341,8 +324,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get login_signInTitle => 'اپنے اکاؤنٹ میں سائن ان کریں';
 
   @override
-  String get login_signInSubtitle =>
-      'CareConnect تک رسائی کے لیے اپنی تفصیلات درج کریں';
+  String get login_signInSubtitle => 'CareConnect تک رسائی کے لیے اپنی تفصیلات درج کریں';
 
   @override
   String get login_usernameLabel => 'صارف نام';

@@ -1,57 +1,50 @@
 package com.careconnect.service;
 
+import com.careconnect.dto.GoogleTokenResponse;
 import com.careconnect.model.EmailCredential;
 import com.careconnect.repository.EmailCredentialRepository;
-import com.careconnect.dto.GoogleTokenResponse;
 import com.careconnect.security.TokenCryptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class GoogleOAuthService {
 
-    private final WebClient http;
+    private static final String TOKEN_URL = "https://oauth2.googleapis.com/token";
+
+    private final RestTemplate http;
     private final EmailCredentialRepository credRepo;
     private final TokenCryptor tokenCryptor;
 
-    @Value("${google.oauth.client-id}")    String clientId;
-    @Value("${google.oauth.client-secret}")String clientSecret;
-    @Value("${google.oauth.redirect-uri}") String redirectUri;
+    @Value("${google.oauth.client-id}")     String clientId;
+    @Value("${google.oauth.client-secret}") String clientSecret;
+    @Value("${google.oauth.redirect-uri}")  String redirectUri;
 
     public void exchange(String userId, String code) {
         try {
             System.out.println("[GoogleOAuth] Starting token exchange for userId: " + userId);
-            System.out.println("[GoogleOAuth] Using clientId: " + (clientId != null ? clientId.substring(0, Math.min(12, clientId.length())) + "..." : "null"));
+            System.out.println("[GoogleOAuth] Using clientId: " + safeId(clientId));
             System.out.println("[GoogleOAuth] Using redirectUri: " + redirectUri);
 
-            GoogleTokenResponse token = http.post()
-                    .uri("https://oauth2.googleapis.com/token")
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(BodyInserters.fromFormData("code", code)
-                            .with("client_id", clientId)
-                            .with("client_secret", clientSecret)
-                            .with("redirect_uri", redirectUri)
-                            .with("grant_type", "authorization_code"))
-                    .retrieve()
-                    .bodyToMono(GoogleTokenResponse.class)
-                    .block();
+            GoogleTokenResponse token = postForToken(formForAuthCode(code));
 
             System.out.println("[GoogleOAuth] Token response received: " + (token != null ? "yes" : "null"));
-
             if (token == null || token.accessToken() == null) {
                 throw new IllegalStateException("Google token exchange failed - no access token received");
             }
 
             System.out.println("[GoogleOAuth] Access token received, creating EmailCredential");
 
-            var ec = new EmailCredential();
+            EmailCredential ec = new EmailCredential();
             ec.setUserId(userId);
             ec.setProvider(EmailCredential.Provider.GMAIL);
             ec.setAccessTokenEnc(tokenCryptor.encrypt(token.accessToken()));
@@ -61,10 +54,12 @@ public class GoogleOAuthService {
                 ec.setRefreshTokenEnc(tokenCryptor.encrypt(token.refreshToken()));
             } else {
                 System.out.println("[GoogleOAuth] No refresh token, checking for existing one");
-                // keep last refresh token if this response omitted it
-                credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.GMAIL)
-                        .map(EmailCredential::getRefreshTokenEnc)
-                        .ifPresent(ec::setRefreshTokenEnc);
+                // keep last refresh token if Google omitted it on a subsequent grant
+                Optional.ofNullable(
+                        credRepo.findFirstByUserIdAndProviderOrderByIdDesc(userId, EmailCredential.Provider.GMAIL)
+                                .map(EmailCredential::getRefreshTokenEnc)
+                                .orElse(null)
+                ).ifPresent(ec::setRefreshTokenEnc);
             }
 
             Instant exp = token.computeExpiryFromNow();
@@ -88,19 +83,11 @@ public class GoogleOAuthService {
                 current.getExpiresAt().isAfter(Instant.now().plusSeconds(120))) {
             return current; // still fresh
         }
+
         String refresh = tokenCryptor.decrypt(current.getRefreshTokenEnc());
         if (refresh == null || refresh.isBlank()) return current;
 
-        GoogleTokenResponse token = http.post()
-                .uri("https://oauth2.googleapis.com/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData("refresh_token", refresh)
-                        .with("client_id", clientId)
-                        .with("client_secret", clientSecret)
-                        .with("grant_type", "refresh_token"))
-                .retrieve()
-                .bodyToMono(GoogleTokenResponse.class)
-                .block();
+        GoogleTokenResponse token = postForToken(formForRefresh(refresh));
 
         if (token != null && token.accessToken() != null) {
             current.setAccessTokenEnc(tokenCryptor.encrypt(token.accessToken()));
@@ -108,5 +95,47 @@ public class GoogleOAuthService {
             credRepo.save(current);
         }
         return current;
+    }
+
+    private GoogleTokenResponse postForToken(MultiValueMap<String, String> form) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+
+        HttpEntity<MultiValueMap<String, String>> req = new HttpEntity<>(form, headers);
+
+        ResponseEntity<GoogleTokenResponse> resp =
+                http.postForEntity(TOKEN_URL, req, GoogleTokenResponse.class);
+
+        if (resp.getStatusCode().is2xxSuccessful()) {
+            return resp.getBody();
+        }
+        System.err.println("[GoogleOAuth] Non-2xx from token endpoint: " + resp.getStatusCode());
+        return null;
+        // If you want stronger error handling, inspect resp.getBody() for error and throw.
+    }
+
+    private MultiValueMap<String, String> formForAuthCode(String code) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("code", code);
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
+        form.add("redirect_uri", redirectUri);
+        form.add("grant_type", "authorization_code");
+        return form;
+    }
+
+    private MultiValueMap<String, String> formForRefresh(String refreshToken) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("refresh_token", refreshToken);
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
+        form.add("grant_type", "refresh_token");
+        return form;
+    }
+
+    private String safeId(String id) {
+        if (id == null) return "null";
+        return id.length() <= 12 ? id : id.substring(0, 12) + "...";
     }
 }
